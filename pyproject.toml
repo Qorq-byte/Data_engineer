@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "data-engineer"
+version = "0.1.0"
+description = "NL2SQL Data Engineering Agent - natural language to SQL with RAG, multi-LLM, and multi-DB support"
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Web framework
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "sse-starlette>=2.1.0",
+
+    # LLM routing
+    "litellm>=1.52.0",
+
+    # MCP framework
+    "fastmcp>=2.0.0",
+
+    # Vector & search
+    "lancedb>=0.17.0",
+
+    # Database drivers
+    "duckdb>=1.1.0",
+    "asyncpg>=0.30.0",
+    "psycopg2-binary>=2.9.0",
+    "aiomysql>=0.2.0",
+    "pymysql>=1.1.0",
+
+    # SQL parsing & transformation
+    "sqlglot>=25.0.0",
+    "sqlparse>=0.5.0",
+
+    # Data & validation
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "sqlalchemy>=2.0.0",
+
+    # NLP
+    "jieba>=0.42.0",
+
+    # Config
+    "pyyaml>=6.0.0",
+
+
+    # Auth
+    "bcrypt>=4.0.0",
+    "pyjwt>=2.9.0",
+
+    # Utils
+    "httpx>=0.28.0",
+    "python-dateutil>=2.9.0",
+    "structlog>=24.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.14.0",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
