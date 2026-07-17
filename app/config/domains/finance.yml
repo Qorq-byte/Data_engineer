@@ -1,0 +1,73 @@
+# Finance domain configuration
+
+name: finance
+label:
+  zh: "金融"
+  en: "Finance"
+
+description:
+  zh: "金融领域：账户、交易、资产、风控、合规"
+  en: "Finance: accounts, transactions, assets, risk control, compliance"
+
+databases:
+  - name: finance
+    type: postgresql
+    tables: [accounts, transactions, assets, portfolios, trades, risk_metrics, compliance_logs]
+
+timezone: "UTC"
+currency: "USD"
+
+keywords:
+  - "账户"
+  - "交易"
+  - "资产"
+  - "风控"
+  - "合规"
+  - "投资"
+  - "理财"
+  - "借贷"
+  - "利率"
+  - "account"
+  - "transaction"
+  - "asset"
+  - "portfolio"
+  - "trade"
+  - "risk"
+  - "compliance"
+  - "investment"
+  - "loan"
+  - "interest"
+  - "balance"
+
+glossary:
+  - term: "净资产"
+    term_en: "net asset value (NAV)"
+    description: "总资产减去总负债"
+    mapping:
+      expression: "SUM(assets.value) - SUM(liabilities.value)"
+      type: derived_column
+
+  - term: "日收益率"
+    term_en: "daily return rate"
+    description: "当日收益率 = (当日净值 - 前日净值) / 前日净值"
+    mapping:
+      expression: "(today.nav - yesterday.nav) / yesterday.nav"
+      type: derived_column
+
+  - term: "风险敞口"
+    term_en: "risk exposure"
+    description: "某一资产或组合在不利市场条件下的最大潜在损失"
+    mapping:
+      expression: "SUM(position.market_value * risk_factor.beta)"
+      type: derived_column
+
+rules:
+  - id: "fin_amount_precision"
+    description: "金融金额字段保留4位小数"
+    pattern: "金额|amount|value|nav|balance"
+    enforce: ["precision=4"]
+
+  - id: "fin_compliance"
+    description: "风控查询必须包含时间范围限制"
+    pattern: "risk|exposure|compliance"
+    enforce: ["require_time_range=true"]

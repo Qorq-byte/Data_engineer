@@ -1,0 +1,16 @@
+# Default / generic domain configuration
+# See SPEC §4.2.2
+
+name: default
+label:
+  zh: 默认领域
+  en: Default Domain
+description:
+  zh: 通用数据查询领域，不限定特定业务场景
+  en: General-purpose data query domain, not tied to a specific business scenario
+databases:
+  - alias: local_sqlite
+    connection: sqlite:///./data/local.db
+keywords: []
+timezone: UTC
+currency: USD

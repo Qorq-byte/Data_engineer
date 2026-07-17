@@ -1,0 +1,124 @@
+name: ecommerce
+label:
+  zh: 电商
+  en: E-Commerce
+description:
+  zh: 电商领域：订单、商品、用户、营销、库存、物流
+  en: 'E-Commerce domain: orders, products, users, marketing, inventory, logistics'
+databases:
+- name: ecommerce
+  type: sqlite
+  tables:
+  - users
+  - orders
+  - products
+  - order_items
+  - inventory
+  - categories
+keywords:
+- 订单
+- 商品
+- 用户
+- 营销
+- 库存
+- 物流
+- 销售额
+- 转化率
+- GMV
+- ARPU
+- order
+- product
+- user
+- customer
+- revenue
+- sales
+- inventory
+- marketing
+- conversion
+- retention
+timezone: Asia/Shanghai
+currency: CNY
+glossary:
+- term: ARPU
+  term_en: ARPU
+  description: Updated test
+  mapping:
+    expression: SUM(revenue)/COUNT(DISTINCT user_id)
+    type: derived_column
+  tags:
+  - test
+- term: GMV
+  term_en: Gross Merchandise Volume
+  description: 网站成交总额，只统计已支付订单
+  mapping:
+    expression: SUM(order_amount) WHERE status = 'paid'
+    type: derived_column
+  tags:
+  - 电商
+  - KPI
+- term: 复购率
+  term_en: Repurchase Rate
+  description: 多次购买的用户占比
+  mapping:
+    expression: COUNT(DISTINCT CASE WHEN order_count > 1 THEN user_id END) * 1.0 /
+      COUNT(DISTINCT user_id)
+    type: derived_column
+  tags:
+  - 电商
+  - 用户
+- term: 客单价
+  term_en: Average Order Value
+  description: 平均每笔订单金额
+  mapping:
+    expression: SUM(order_amount) / COUNT(DISTINCT order_id)
+    type: derived_column
+  tags:
+  - 电商
+  - KPI
+- term: 订单金额
+  term_en: Order Amount
+  description: 订单总金额
+  mapping:
+    expression: SUM(order_amount)
+    type: derived_column
+  tags:
+  - 电商
+  - 订单
+- term: 转化率
+  term_en: Conversion Rate
+  description: 下单用户数 / 访问用户数
+  mapping:
+    expression: COUNT(DISTINCT CASE WHEN has_order THEN user_id END) * 1.0 / COUNT(DISTINCT
+      user_id)
+    type: derived_column
+  tags:
+  - 电商
+  - KPI
+rules:
+- id: ecom_price_precision
+  description: 电商价格精度规则，金额字段保留两位小数
+  pattern: price|amount|金额|价格
+  enforce:
+  - 金额字段必须使用 ROUND(, 2) 保留两位小数
+  sql_template: ROUND(price, 2)
+- id: rule_arpu_dedup
+  description: ARPU 计算必须去重用户
+  pattern: ARPU|人均消费|arpu
+  enforce:
+  - 分母必须使用 COUNT(DISTINCT user_id)
+  - 不能使用 COUNT(user_id)
+  sql_template: GMV / COUNT(DISTINCT user_id)
+- id: rule_conversion_rate
+  description: 转化率计算需要区分分子分母
+  pattern: 转化率|conversion
+  enforce:
+  - 分子为下单用户数
+  - 分母为访问用户数
+  sql_template: COUNT(DISTINCT CASE WHEN has_order THEN user_id END) / COUNT(DISTINCT
+    user_id)
+- id: rule_gmv_paid_only
+  description: Updated rule
+  pattern: GMV
+  enforce:
+  - must_exclude_unpaid
+  sql_template: SUM(order_amount) WHERE status=paid

@@ -1,0 +1,40 @@
+# E-commerce Data Analyst Subagent
+# See SPEC §4.10.2 for the full specification.
+
+name: ecommerce_analyst
+label:
+  zh: 电商数据分析助手
+  en: E-commerce Data Analyst
+domain: ecommerce
+description: 专注于电商业务的日常数据查询和分析
+
+context:
+  databases:
+    - alias: main_db
+      connection_ref: "connections/ecommerce_pg"
+  max_turns: 20
+  enable_sql_edit: true
+  enable_execution: true
+  enable_multi_candidate: true
+
+capabilities:
+  - nl_query
+  - metric_query
+  - explain
+
+delivery:
+  - type: web
+    path: /subagents/ecommerce_analyst
+  - type: api
+    endpoint: /api/v1/subagents/ecommerce_analyst
+  - type: mcp
+    tool_prefix: "ecommerce_"
+
+llm_config:
+  model: claude-sonnet-4
+  temperature: 0.3
+  max_tokens: 4096
+
+access_control:
+  allowed_users: ["*"]
+  rate_limit: 100
