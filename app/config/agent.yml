@@ -1,0 +1,180 @@
+# agent.yml —— 声明式配置，LLM 无法突破 harness 约束
+# See SPEC §3.4.5
+
+agent:
+  name: "NL2SQL Agent"
+  version: "0.1.0"
+
+  # LLM provider (via LiteLLM)
+  provider:
+    default: deepseek-v4-flash
+    fallback: []  # 无其他提供商密钥时留空; 可加如 [gpt-4.1, claude-sonnet-4]
+
+  # Node → model/tool/permission mapping
+  nodes:
+    schema_linking:
+      model: deepseek-v4-flash
+      tools: [hybrid_search, lookup_term]
+      permissions:
+        hybrid_search: allow
+        lookup_term: allow
+      skills: []
+
+    generate_sql:
+      model: deepseek-v4-flash
+      tools: [build_prompt, call_llm]
+      permissions:
+        call_llm: ask
+      streaming: true
+
+    execute_sql:
+      model: none  # non-LLM node
+      tools: [execute_read_query]
+      permissions:
+        execute_read_query: allow
+        execute_write_query: deny
+
+    validate_sql:
+      model: deepseek-v4-flash
+      tools: [validate_syntax, check_schema_refs, explain_plan]
+      permissions:
+        validate_syntax: allow
+        check_schema_refs: allow
+        explain_plan: allow
+
+    parse_nl:
+      model: deepseek-v4-flash
+      tools: [parse_language, extract_time_entities]
+      permissions:
+        parse_language: allow
+        extract_time_entities: allow
+
+    reflection:
+      model: deepseek-v4-flash
+      tools: [analyze_error, compare_results]
+      permissions:
+        analyze_error: allow
+
+    hybrid_search:
+      model: none
+      tools: [bm25_search, vector_search, rrf_fusion]
+      permissions:
+        bm25_search: allow
+        vector_search: allow
+        rrf_fusion: allow
+
+    metric_resolve:
+      model: deepseek-v4-flash
+      tools: [metricflow_query, lookup_metric]
+      permissions:
+        metricflow_query: allow
+        lookup_metric: allow
+
+    explain_plan:
+      model: deepseek-v4-flash
+      tools: [execute_explain, interpret_plan]
+      permissions:
+        execute_explain: allow
+        interpret_plan: allow
+
+    dialect_translate:
+      model: none  # PlainNode — non-LLM, uses sqlglot
+      tools: [dialect_translate]
+      permissions:
+        dialect_translate: allow
+
+    format_sql:
+      model: none  # PlainNode — non-LLM, uses sqlparse
+      tools: [format_sql]
+      permissions:
+        format_sql: allow
+
+    respond:
+      model: deepseek-v4-flash
+      tools: [call_llm]
+      permissions:
+        call_llm: allow
+      streaming: false
+
+  # Multi-agent system (Phase 4)
+  agents:
+    enabled: true
+    default_collaboration_mode: pipeline  # pipeline | retry_correction | parallel_debate | negotiation | multi_step
+    max_feedback_rounds: 3
+    parallel_agents: 2
+    trace:
+      enabled: true
+      sse_events: true
+      emit_handoff: true
+      emit_collaboration: true
+    agent_configs:
+      orchestrator:
+        model: deepseek-v4-flash  # only for complex decision-making
+      nl_understander:
+        model: none  # rule engine, no LLM
+      schema_retriever:
+        model: none  # RAG retrieval, no LLM
+      sql_generator:
+        model: deepseek-v4-flash
+        strategies: [temperature, multi_perspective]
+      sql_validator:
+        model: deepseek-v4-flash  # only for EXPLAIN interpretation
+      tool_executor:
+        model: none
+      feedback_processor:
+        model: none
+
+  # Subagent system (Phase 4)
+  subagents:
+    enabled: true
+    config_dir: "app/config/subagents"
+    auto_activate: false
+    max_instances: 50
+
+  # Skills
+  skills:
+    mode: auto  # auto | manual
+    directory: "./skills"
+    preload: []
+
+  # Workflow binding
+  workflow:
+    default: gensql_agentic
+    auto_select: true  # Phase 3: PlanSelector with 3-layer routing (L1 rules → L2 history → L3 LLM)
+
+  # Memory strategy (by node type)
+  memory:
+    builtin_subagents:
+      gen_sql: false
+      schema_linking: false
+      validate_sql: false
+      execute_sql: false
+      reflection: false
+
+    chat: true
+
+    user_subagents:
+      default: true
+
+    storage:
+      subagent: ":memory:"
+      top_level: "~/.data_engineer/sessions/"
+
+    isolation: node_name
+
+  # AGENTS.md as global project context
+  global_context:
+    source: "AGENTS.md"
+    inject_lines: 200
+    auto_reload: true
+
+  # Global constraints (Harness-enforced, LLM cannot bypass)
+  constraints:
+    max_llm_calls_per_query: 10
+    max_node_retries: 3
+    reflection_max_rounds: 3
+    reflection_on_exhausted: force_output
+    session_ttl_seconds: 3600
+    read_only: true
+    max_result_rows: 1000
+    statement_timeout_ms: 30000
