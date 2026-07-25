@@ -1,0 +1,33 @@
+# ez_query workflow plan — fast path for simple queries
+# See SPEC §3.4.2
+
+id: ez_query
+name: "快速查询"
+description: "简单查询跳过验证，直接 Schema 链接 → 生成 → 执行"
+
+plan:
+  node_order:
+    - id: link
+      node: schema_linking
+
+    - id: gen
+      node: generate_sql
+      depends_on: [link]
+      config:
+        temperature: 0.1
+        max_candidates: 1
+
+    - id: exec
+      node: execute_sql
+      depends_on: [gen]
+      config:
+        max_rows: 100
+        timeout_ms: 10000
+
+  failure_policy:
+    max_retries: 1
+    on_exhausted: abort
+
+  evaluation:
+    enabled: false
+    metrics: []

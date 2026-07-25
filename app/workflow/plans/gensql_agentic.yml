@@ -1,0 +1,38 @@
+# gensql_agentic workflow plan — standard NL→SQL single turn
+# See SPEC §3.4.2
+
+id: gensql_agentic
+name: "标准 NL→SQL 生成"
+description: "单轮自然语言查询转 SQL，含 Schema 链接、生成、验证、执行"
+
+plan:
+  node_order:
+    - id: link
+      node: schema_linking
+      on_failure: abort
+
+    - id: gen
+      node: generate_sql
+      depends_on: [link]
+      config:
+        temperature: 0.3
+        max_candidates: 1
+
+    - id: validate
+      node: validate_sql
+      depends_on: [gen]
+
+    - id: exec
+      node: execute_sql
+      depends_on: [validate]
+      config:
+        max_rows: 100
+        timeout_ms: 30000
+
+  failure_policy:
+    max_retries: 1
+    on_exhausted: abort
+
+  evaluation:
+    enabled: true
+    metrics: [syntax_valid, schema_compliant, execution_success]
