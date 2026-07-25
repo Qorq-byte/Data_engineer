@@ -1,0 +1,65 @@
+# reflection workflow plan — execution feedback loop for complex queries
+# See SPEC §3.4.2 and implementation-plan §4.9.1
+#
+# DAG: schema_linking → generate_sql → execute_sql → reflect
+#                                                    ↓ (needs_revision)
+#                                                  revise → execute_sql → reflect
+#                                                    ↓ (pass)
+#                                                  done
+
+id: reflection
+name: "反射式查询（自愈循环）"
+description: "复杂查询含执行反馈，失败时自动分析→修正→重试，适用于需要执行验证的场景"
+
+plan:
+  node_order:
+    - id: link
+      node: schema_linking
+      on_failure: abort
+
+    - id: gen
+      node: generate_sql
+      depends_on: [link]
+      config:
+        temperature: 0.3
+        max_candidates: 1
+
+    - id: exec
+      node: execute_sql
+      depends_on: [gen]
+      config:
+        max_rows: 100
+        timeout_ms: 30000
+
+    - id: reflect
+      node: reflection
+      depends_on: [exec]
+      on_pass: "output"
+      on_fail: "revise"
+      config:
+        auto_revise: true
+
+    - id: revise
+      node: generate_sql
+      depends_on: [reflect]
+      config:
+        temperature: 0.5
+        mode: self_heal
+
+    - id: exec2
+      node: execute_sql
+      depends_on: [revise]
+      config:
+        max_rows: 100
+        timeout_ms: 30000
+
+  failure_policy:
+    max_retries: 3
+    on_exhausted: abort
+
+  evaluation:
+    enabled: true
+    metrics: [syntax_valid, schema_compliant, execution_success]
+
+  max_iterations: 10
+  on_exhausted: force_output

@@ -1,0 +1,45 @@
+# explore workflow plan — schema exploration (no SQL execution)
+# See SPEC §3.4.2 and implementation-plan §4.9.1
+#
+# DAG: parse_nl → hybrid_search → format
+#
+# Lightweight exploration plan for browsing schema, discovering metrics,
+# and finding relevant tables/documents without generating or executing SQL.
+
+id: explore
+name: "Schema 探索"
+description: "Schema 探索模式，NL 解析 + 混合检索 + 格式化输出，不生成也不执行 SQL"
+
+plan:
+  node_order:
+    - id: parse
+      node: parse_nl
+      on_failure: abort
+      config:
+        timeout_ms: 10000
+
+    - id: search
+      node: hybrid_search
+      depends_on: [parse]
+      config:
+        target: all
+        top_k: 15
+
+    - id: format
+      node: format_sql
+      depends_on: [search]
+      config:
+        keyword_case: upper
+        indent_width: 2
+        reindent: true
+
+  failure_policy:
+    max_retries: 1
+    on_exhausted: abort
+
+  evaluation:
+    enabled: false
+    metrics: []
+
+  max_iterations: 3
+  on_exhausted: force_output

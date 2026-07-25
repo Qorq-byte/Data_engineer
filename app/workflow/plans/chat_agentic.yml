@@ -1,0 +1,55 @@
+# chat_agentic workflow plan — conversational multi-turn NL→SQL
+# See SPEC §3.4.2 and implementation-plan §4.9.1
+#
+# DAG: parse_nl → hybrid_search → generate_sql → validate_sql → respond
+#
+# Designed for multi-turn conversational scenarios where context accumulates
+# across turns and hybrid search enriches each query with domain knowledge.
+
+id: chat_agentic
+name: "对话式查询（多轮）"
+description: "多轮对话增量查询，含 NL 解析、混合检索、SQL 生成、验证和自然语言回复"
+
+plan:
+  node_order:
+    - id: parse
+      node: parse_nl
+      on_failure: abort
+      config:
+        timeout_ms: 10000
+
+    - id: search
+      node: hybrid_search
+      depends_on: [parse]
+      config:
+        target: all
+        top_k: 10
+
+    - id: gen
+      node: generate_sql
+      depends_on: [search]
+      config:
+        temperature: 0.3
+        max_candidates: 1
+
+    - id: validate
+      node: validate_sql
+      depends_on: [gen]
+
+    - id: respond
+      node: respond
+      depends_on: [validate]
+      config:
+        language: zh
+        preview_rows: 5
+
+  failure_policy:
+    max_retries: 2
+    on_exhausted: abort
+
+  evaluation:
+    enabled: true
+    metrics: [syntax_valid, schema_compliant]
+
+  max_iterations: 5
+  on_exhausted: force_output
