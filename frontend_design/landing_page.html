@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NL2SQL — 数据工程智能体</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+<!-- Three.js (vanilla, from reliable CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.159.0/build/three.min.js"></script>
+
+<style>
+/* ===== Base ===== */
+html { scroll-behavior: smooth; }
+html, body { margin: 0; }
+body { font-family: 'Barlow', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+::selection { background: rgba(0,255,198,0.35); color: #000; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }
+
+/* ===== Cyan glow CTA (spec: bg-[#00ffc6] font-black shadow glow) ===== */
+.cta-cyan {
+  background: #00ffc6; color: #000; font-weight: 900;
+  box-shadow: 0 0 20px rgba(0,255,198,0.4);
+  transition: background 0.15s ease;
+}
+.cta-cyan:hover { background: #00e5b2; }
+
+/* ===== Ghost dark pill ===== */
+.pill-dark {
+  background: #111; color: #fff; font-weight: 700;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.pill-dark:hover { background: #333; transform: translateY(-1px); }
+
+/* ===== Fade-up entrance ===== */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.15s; }
+.fade-up-3 { animation-delay: 0.25s; }
+
+/* ===== Navbar pill hover underline (spec: framer-motion layoutId border-b-[3px]) ===== */
+.nav-pill {
+  position: relative; overflow: hidden;
+}
+.nav-pill::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0;
+  height: 3px; background: #000;
+  transform: scaleX(0);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.nav-pill:hover::after { transform: scaleX(1); }
+
+/* ===== Antenna logo hover (spec: group-hover translate / scaleY) ===== */
+.antenna-ear-left, .antenna-ear-right { transition: transform 0.3s ease; }
+.antenna-logo:hover .antenna-ear-left  { transform: translateX(-4px); }
+.antenna-logo:hover .antenna-ear-right { transform: translateX(4px); }
+.eq-bar { transition: transform 0.2s ease; }
+.antenna-logo:hover .eq-bar { transform: scaleY(0.2); }
+
+/* ===== Nav divider ===== */
+.nav-divider { transition: opacity 0.15s linear; }
+
+/* ===== Robot canvas: allow vertical scroll on touch ===== */
+#robot-canvas canvas { display: block; touch-action: pan-y; }
+
+/* ===== Responsive ===== */
+@media (max-width: 1023px) {
+  .hero-stats { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+   Hero — faithful port of Landing Page.txt RobotHero spec
+   ════════════════════════════════════════════════════════════════════════════ -->
+<section id="hero" class="relative w-full h-dvh min-h-[600px] overflow-hidden"
+  style="background: linear-gradient(to bottom, #cecbcb 0%, #cecbcb 55%, #9a9a9a 65%, #bebebe 100%);">
+
+  <!-- Giant background text (spec: opacity 0.13, tracking -0.05em, translateY 40px) -->
+  <div class="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden" style="z-index:0;">
+    <h1 style="color:#000;opacity:0.13;letter-spacing:-0.05em;font-size:clamp(4rem,15vw,14rem);line-height:1;transform:translateY(40px);font-family:'Barlow',sans-serif;font-weight:900;user-select:none;white-space:nowrap;">
+      NL2SQL
+    </h1>
+  </div>
+
+  <!-- Three.js canvas -->
+  <div id="robot-canvas" class="absolute inset-0 z-10"></div>
+
+  <!-- Overlay: navbar + bottom content -->
+  <div class="absolute inset-0 z-20 pointer-events-none flex flex-col">
+
+    <!-- AntennaNavbar -->
+    <nav class="sticky top-0 w-full pt-8 px-8 pointer-events-none">
+      <div class="w-full max-w-[1400px] mx-auto flex flex-col relative pointer-events-auto">
+
+        <div class="flex flex-col lg:flex-row items-center justify-between relative gap-4 lg:gap-0">
+
+          <!-- Left pills (spec: rounded-full bg-white text-black font-bold) -->
+          <div class="flex flex-wrap justify-center lg:justify-start items-center gap-2 sm:gap-3 z-20">
+            <a href="#features" class="nav-pill px-7 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-sm font-bold transition-all no-underline shadow-[0_4px_14px_rgba(255,255,255,0.15)]">产品功能</a>
+            <a href="#how-it-works" class="nav-pill px-7 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-sm font-bold transition-all no-underline shadow-[0_4px_14px_rgba(255,255,255,0.15)]">工作流</a>
+            <a href="#stats" class="nav-pill px-7 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-sm font-bold transition-all no-underline shadow-[0_4px_14px_rgba(255,255,255,0.15)]">数据亮点</a>
+            <a href="/docs" class="nav-pill px-7 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-sm font-bold transition-all no-underline shadow-[0_4px_14px_rgba(255,255,255,0.15)]">API 文档</a>
+          </div>
+
+          <!-- Center antenna logo (spec: ears + glass tile + dual cyan eyes) -->
+          <a href="/" class="antenna-logo hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center justify-center cursor-pointer group z-10 no-underline">
+            <div class="relative flex items-center justify-center h-12 w-16">
+              <div class="antenna-ear-left absolute left-2 w-1.5 h-4 bg-zinc-300 rounded-l-md"></div>
+              <div class="antenna-ear-right absolute right-2 w-1.5 h-4 bg-zinc-300 rounded-r-md"></div>
+              <div class="z-10 w-10 h-10 bg-white/10 border-2 border-white/20 backdrop-blur-md rounded-[12px] flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-300 group-hover:bg-white/20 group-hover:shadow-[0_4px_25px_rgba(255,255,255,0.15)]">
+                <div class="w-[70%] h-[60%] bg-[#0a0a0a] rounded-lg flex items-center justify-center gap-1.5 overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]">
+                  <div class="eq-bar w-1.5 h-3 bg-[#00ffc6] rounded-[2px] shadow-[0_0_8px_#00ffc6]"></div>
+                  <div class="eq-bar w-1.5 h-3 bg-[#00ffc6] rounded-[2px] shadow-[0_0_8px_#00ffc6]"></div>
+                </div>
+              </div>
+            </div>
+          </a>
+
+          <!-- Right: contact + CTA (spec: white pill + cyan pill w/ shopping bag) -->
+          <div class="flex flex-wrap justify-center lg:justify-end items-center gap-2 sm:gap-3 w-full lg:w-auto mt-4 lg:mt-0 z-20">
+            <a href="/login" class="px-5 sm:px-7 py-2.5 rounded-full bg-white text-black hover:bg-zinc-200 text-xs sm:text-sm font-bold transition-all no-underline shadow-[0_4px_14px_rgba(255,255,255,0.15)]">登录</a>
+            <a href="/login" class="px-5 sm:px-7 py-2.5 rounded-full cta-cyan text-xs sm:text-sm no-underline inline-flex items-center gap-2">
+              免费开始
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1.2 12.1a1 1 0 0 1-1 1.1H5.8a1 1 0 0 1-1-1.1L6 8z"/><path d="M9 11V7a3 3 0 0 1 6 0v4"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <div id="nav-divider" class="nav-divider w-full mt-6 border-b-2 border-dotted border-white/30"></div>
+      </div>
+    </nav>
+
+    <!-- Bottom content -->
+    <div class="relative w-full max-w-[1400px] mx-auto px-8 flex-1 flex flex-col">
+      <div class="mt-auto flex justify-between items-end pb-12 w-full gap-6">
+
+        <div class="max-w-xl">
+          <p class="mono text-[11px] tracking-[0.35em] text-black/50 mb-4 fade-up fade-up-1">
+            NL → SQL · RAG · MULTI-DB · MCP
+          </p>
+          <h2 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] text-[#111] m-0 fade-up fade-up-2">
+            自然语言，<br/>直达数据。
+          </h2>
+          <p class="text-black/60 text-sm sm:text-base mt-4 mb-6 max-w-md fade-up fade-up-2">
+            领域感知的数据工程智能体 — 你说业务问题，它生成 SQL、执行查询、给出洞察。Harness 确定性工作流，安全可控。
+          </p>
+          <div class="flex items-center gap-3 flex-wrap pointer-events-auto fade-up fade-up-3">
+            <a href="/login" class="inline-flex items-center gap-2 px-7 py-3 rounded-full cta-cyan border-none text-sm no-underline">
+              立即开始
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1.2 12.1a1 1 0 0 1-1 1.1H5.8a1 1 0 0 1-1-1.1L6 8z"/><path d="M9 11V7a3 3 0 0 1 6 0v4"/></svg>
+            </a>
+            <a href="/workspace" class="inline-flex items-center px-7 py-3 rounded-full pill-dark border-none text-sm no-underline">在线演示</a>
+          </div>
+        </div>
+
+        <div class="hero-stats hidden md:flex flex-col items-end gap-4 text-right fade-up fade-up-3">
+          <div class="flex gap-6">
+            <div class="flex flex-col items-end"><span class="text-2xl font-black text-[#111] leading-none">11+</span><span class="text-[11px] text-black/50 mt-1">数据库方言</span></div>
+            <div class="flex flex-col items-end"><span class="text-2xl font-black text-[#111] leading-none">4</span><span class="text-[11px] text-black/50 mt-1">确定性工作流节点</span></div>
+            <div class="flex flex-col items-end"><span class="text-2xl font-black text-[#111] leading-none">2</span><span class="text-[11px] text-black/50 mt-1">MCP 双角色</span></div>
+          </div>
+          <p class="mono text-[11px] text-black/40 m-0">移动鼠标与机器人互动 · 点击它试试</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+   Vanilla Three.js — faithful 1:1 port of Landing Page.txt robot-hero.tsx
+   Fresnel GlassCapsule · LatheGeometry neck · CurvePath eyes · HeartCurve
+   Studio environment (PMREM) · shadow-only directional light (ContactShadows)
+   ════════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+  const container = document.getElementById('robot-canvas');
+  if (!container || !window.THREE) return;
+
+  const THREE = window.THREE;
+
+  // ── Spec constants (entorno / design / config from robot-hero.tsx) ───────
+  const ENTORNO = {
+    luzAmbiente: 0.75,
+    sombraOpacidad: 0.85,
+    sombraBlur: 1.7,
+  };
+  const DESIGN = {
+    pantallaColor: '#00ffc6',
+    pantallaGrosor: 3.8,
+    pantallaBrillo: 1.2,
+    separacionOjos: 0.07,
+    tamañoOrejas: 1.3,
+    escalaOjos: 1.1,
+    parpadeoFrecuencia: 3.0,
+    parpadeoDuracion: 0.45,
+    colorChasis: '#c4c4c4',
+    alturaCabeza: 0.60,
+  };
+  const CONFIG = {
+    moveSpeed: 0.35,
+    bodyRotSpeed: 10.0,
+    headRotSpeed: 20.0,
+    bodyTiltX: 0.0,
+    bodyTiltY: 0.95,
+    headLookX: 0.30,
+    headLookY: 1.80,
+  };
+  const NECK = { baseR: 0.215, baseH: -0.050, midR: 0.280, midH: 0.020, lipBottomR: 0.295, lipBottomH: 0.045, lipTopR: 0.270, lipTopH: 0.055, innerR: 0.100, innerDropH: 0.000 };
+  const BODY = { bodyBevelR: 0.235, bodyBevelY: 0.340, bodyBevelT: 0.025 };
+
+  // ── Scene setup (spec: camera position [0, 0.2, 6], fov 40) ─────────────
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(40, container.clientWidth / Math.max(container.clientHeight, 1), 0.1, 100);
+  camera.position.set(0, 0.2, 6);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFShadowMap; // shadow.radius works with PCF
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; // fiber default
+  renderer.toneMappingExposure = 1.0;
+  container.appendChild(renderer.domElement);
+
+  // ── Studio environment (spec: Environment preset="studio" blur=0.5) ──────
+  // Hand-built softbox room → PMREM. Body materials use envMapIntensity 0
+  // per spec; head/ears/metals pick up the studio reflections (default 1).
+  function buildStudioEnvironment() {
+    const envScene = new THREE.Scene();
+
+    const roomMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 0.35, 0.35), side: THREE.BackSide });
+    const room = new THREE.Mesh(new THREE.BoxGeometry(20, 20, 20), roomMat);
+    envScene.add(room);
+
+    function softbox(w, h, intensity, pos, lookAt) {
+      const mat = new THREE.MeshBasicMaterial();
+      mat.color.setScalar(intensity);
+      const box = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+      box.position.set(pos[0], pos[1], pos[2]);
+      box.lookAt(lookAt[0], lookAt[1], lookAt[2]);
+      envScene.add(box);
+    }
+
+    // Key softbox overhead + side strips (studio preset approximation)
+    softbox(8, 8, 6.0, [0, 9.5, 0], [0, 0, 0]);       // top
+    softbox(6, 3, 3.0, [-8, 3, 2], [0, 0, 0]);        // left
+    softbox(6, 3, 2.5, [8, 2, 3], [0, 0, 0]);         // right
+    softbox(10, 4, 1.2, [0, 2, -9], [0, 0, 0]);       // back rim
+
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envRT = pmrem.fromScene(envScene, 0.12); // slight blur
+    pmrem.dispose();
+    room.geometry.dispose(); roomMat.dispose();
+    return envRT.texture;
+  }
+
+  scene.environment = buildStudioEnvironment();
+
+  // ── Lighting (spec: ambiente 0.75, principal 0.0, relleno 0.0) ──────────
+  scene.add(new THREE.AmbientLight('#ffffff', ENTORNO.luzAmbiente));
+
+  // Shadow-only key light: spec has castShadow directional at [0,6,3] with
+  // intensity 0 — intensity does not gate shadow-map rendering, so this
+  // reproduces drei's ContactShadows without adding visible light.
+  const shadowLight = new THREE.DirectionalLight('#00ffe2', 0.0);
+  shadowLight.position.set(0, 6, 3);
+  shadowLight.castShadow = true;
+  shadowLight.shadow.mapSize.set(2048, 2048);
+  shadowLight.shadow.bias = -0.0005;
+  shadowLight.shadow.radius = 5; // approximates sombraBlur 1.7
+  shadowLight.shadow.camera.left = -1.5;
+  shadowLight.shadow.camera.right = 1.5;
+  shadowLight.shadow.camera.top = 1.5;
+  shadowLight.shadow.camera.bottom = -1.5;
+  shadowLight.shadow.camera.near = 0.1;
+  shadowLight.shadow.camera.far = 20;
+  scene.add(shadowLight);
+  scene.add(shadowLight.target);
+
+  // ── Contact shadow plane (spec: ContactShadows y=-0.79, opacity .85, scale 15)
+  const shadowPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(15, 15),
+    new THREE.ShadowMaterial({ opacity: ENTORNO.sombraOpacidad })
+  );
+  shadowPlane.rotation.x = -Math.PI / 2;
+  shadowPlane.position.y = -0.79;
+  shadowPlane.receiveShadow = true;
+  scene.add(shadowPlane);
+
+  // ── Procedural PBR textures (spec: generatePbrTexturesAsync) ─────────────
+  function generateTextures() {
+    const size = 512;
+    const canvasC = document.createElement('canvas');
+    const canvasB = document.createElement('canvas');
+    canvasC.width = canvasB.width = size;
+    canvasC.height = canvasB.height = size;
+    const ctxC = canvasC.getContext('2d');
+    const ctxB = canvasB.getContext('2d');
+
+    ctxC.fillStyle = '#dcdcdc';
+    ctxC.fillRect(0, 0, size, size);
+    ctxB.fillStyle = '#808080';
+    ctxB.fillRect(0, 0, size, size);
+
+    for (let i = 0; i < 10000; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = 0.5 + Math.random() * 1.5;
+      const isDark = Math.random() > 0.15;
+
+      ctxC.beginPath();
+      ctxC.arc(x, y, r, 0, Math.PI * 2);
+      ctxC.fillStyle = isDark ? '#222222' : '#dddddd';
+      ctxC.fill();
+
+      ctxB.beginPath();
+      ctxB.arc(x, y, r, 0, Math.PI * 2);
+      ctxB.fillStyle = isDark ? '#000000' : '#ffffff';
+      ctxB.fill();
+    }
+
+    const colorTex = new THREE.CanvasTexture(canvasC);
+    const bumpTex = new THREE.CanvasTexture(canvasB);
+    colorTex.wrapS = bumpTex.wrapS = THREE.RepeatWrapping;
+    colorTex.wrapT = bumpTex.wrapT = THREE.RepeatWrapping;
+    colorTex.repeat.set(6, 3);
+    bumpTex.repeat.set(6, 3);
+    colorTex.needsUpdate = true;
+    bumpTex.needsUpdate = true;
+    return { colorMap: colorTex, bumpMap: bumpTex };
+  }
+
+  const textures = generateTextures();
+
+  // ── Materials (spec: module-level constants) ─────────────────────────────
+  // Body material factory — envMapIntensity 0.0 per spec
+  function makeBodyMat() {
+    return new THREE.MeshStandardMaterial({
+      color: DESIGN.colorChasis,
+      map: textures.colorMap,
+      bumpMap: textures.bumpMap,
+      bumpScale: 0.005,
+      roughness: 1.0,
+      metalness: 0.0,
+      envMapIntensity: 0.0,
+    });
+  }
+
+  const headMat = new THREE.MeshStandardMaterial({
+    color: '#111111',
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+
+  const eyeMat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(2, 2, 2), // HDR white
+    toneMapped: false,
+    transparent: true,
+  });
+
+  const heartMat = new THREE.MeshBasicMaterial({
+    color: '#ff3366',
+    toneMapped: false,
+  });
+
+  const earBaseMat = new THREE.MeshStandardMaterial({ color: '#f0f0f0', roughness: 0.5 });
+  const earRingMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3 });
+  const earCenterMat = new THREE.MeshStandardMaterial({ color: '#cccccc', roughness: 0.8 });
+  const antennaBaseMat = new THREE.MeshStandardMaterial({ color: '#999999', roughness: 0.4, metalness: 0.5 });
+  const antennaStickMat = new THREE.MeshStandardMaterial({ color: '#d0d0d0', roughness: 0.4, metalness: 0.2 });
+  const antennaTipMat = new THREE.MeshStandardMaterial({ color: '#ff3366', roughness: 0.2, toneMapped: false });
+
+  // ── HeartCurve (spec: parametric heart, ×0.002 scale, y offset +6) ───────
+  class HeartCurve extends THREE.Curve {
+    constructor() { super(); }
+    getPoint(t, optionalTarget) {
+      const target = optionalTarget || new THREE.Vector3();
+      t = t * Math.PI * 2;
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      return target.set(x * 0.002, (y + 6) * 0.002, 0);
+    }
+  }
+  const sharedHeartCurve = new HeartCurve();
+
+  // ── Robot assembly ───────────────────────────────────────────────────────
+  // robotRoot  = ResponsiveGroup (scale by viewport)
+  // bodyGroup  = bodyRef in spec (position [-0, -0.3, 0], pointer-driven)
+  // headGroup  = headRef in spec
+  const robotRoot = new THREE.Group();
+  const bodyGroup = new THREE.Group();
+  bodyGroup.position.set(0, -0.3, 0);
+  robotRoot.add(bodyGroup);
+  scene.add(robotRoot);
+
+  // Body capsule (spec: sphere [0.43, 64, 64, 0, 2π, 0.15π, 0.85π])
+  const bodyMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.43, 64, 64, 0, Math.PI * 2, Math.PI * 0.15, Math.PI * 0.85),
+    makeBodyMat()
+  );
+  bodyMesh.castShadow = true;
+  bodyMesh.receiveShadow = true;
+  bodyGroup.add(bodyMesh);
+
+  // Body bevel torus (spec: rendered only when bodyBevelT > 0)
+  if (BODY.bodyBevelT > 0) {
+    const bevelMesh = new THREE.Mesh(
+      new THREE.TorusGeometry(BODY.bodyBevelR, BODY.bodyBevelT, 32, 64),
+      makeBodyMat()
+    );
+    bevelMesh.position.y = BODY.bodyBevelY;
+    bevelMesh.rotation.x = Math.PI / 2;
+    bevelMesh.castShadow = true;
+    bevelMesh.receiveShadow = true;
+    bodyGroup.add(bevelMesh);
+  }
+
+  // Neck lathe (spec: 7-point profile, innerDropH collapses last two points)
+  const neckPoints = [
+    new THREE.Vector2(NECK.innerR, NECK.baseH),
+    new THREE.Vector2(NECK.baseR, NECK.baseH),
+    new THREE.Vector2(NECK.midR, NECK.midH),
+    new THREE.Vector2(NECK.lipBottomR, NECK.lipBottomH),
+    new THREE.Vector2(NECK.lipTopR, NECK.lipTopH),
+    new THREE.Vector2(NECK.innerR, NECK.lipTopH),
+    new THREE.Vector2(NECK.innerR, NECK.lipTopH - NECK.innerDropH),
+  ];
+  const neckMesh = new THREE.Mesh(new THREE.LatheGeometry(neckPoints, 64), makeBodyMat());
+  neckMesh.position.y = 0.38;
+  neckMesh.castShadow = true;
+  neckMesh.receiveShadow = true;
+  bodyGroup.add(neckMesh);
+
+  // Head group (spec: alturaCabeza 0.60)
+  const headGroup = new THREE.Group();
+  headGroup.position.y = DESIGN.alturaCabeza;
+  bodyGroup.add(headGroup);
+
+  // Head dome (spec: sphere [0.28, 64, 64, 0, 2π, 0, π] — full sphere)
+  const headMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28, 64, 64, 0, Math.PI * 2, 0, Math.PI),
+    headMat
+  );
+  headMesh.castShadow = true;
+  headMesh.receiveShadow = true;
+  headGroup.add(headMesh);
+
+  // ── GlassCapsule (spec: fresnel shader, additive, depthWrite off) ────────
+  const glassMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      color: { value: new THREE.Color(DESIGN.pantallaColor) },
+      power: { value: DESIGN.pantallaGrosor },
+      intensity: { value: DESIGN.pantallaBrillo },
+    },
+    vertexShader: /* glsl */ `
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vViewPosition = -mvPosition.xyz;
+        vNormal = normalize(normalMatrix * normal);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 color;
+      uniform float power;
+      uniform float intensity;
+      varying vec3 vNormal;
+      varying vec3 vViewPosition;
+      void main() {
+        vec3 normal = normalize(vNormal);
+        vec3 viewDir = normalize(vViewPosition);
+        float fresnel = 1.0 - max(dot(viewDir, normal), 0.0);
+        fresnel = pow(fresnel, power);
+        gl_FragColor = vec4(color, fresnel * intensity);
+      }
+    `,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+
+  const glassMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.30, 64, 64, 0, Math.PI * 2, 0, Math.PI),
+    glassMaterial
+  );
+  headGroup.add(glassMesh);
+
+  // ── Eyes (spec: CurvePath tubes, blink scaleY, heart swap on love) ───────
+  const eyesGroup = new THREE.Group();
+  eyesGroup.position.set(0, -0.02, 0.29);
+  headGroup.add(eyesGroup);
+
+  function createEyeCurvePaths() {
+    const w = 0.025;
+    const h = 0.035;
+    const r = 0.02;
+    const g = 0.005;
+
+    const topPath = new THREE.CurvePath();
+    topPath.add(new THREE.LineCurve3(
+      new THREE.Vector3(-w, g, 0),
+      new THREE.Vector3(-w, h - r, 0)
+    ));
+    topPath.add(new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(-w, h - r, 0),
+      new THREE.Vector3(-w, h, 0),
+      new THREE.Vector3(-w + r, h, 0)
+    ));
+    topPath.add(new THREE.LineCurve3(
+      new THREE.Vector3(-w + r, h, 0),
+      new THREE.Vector3(w - r, h, 0)
+    ));
+    topPath.add(new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(w - r, h, 0),
+      new THREE.Vector3(w, h, 0),
+      new THREE.Vector3(w, h - r, 0)
+    ));
+    topPath.add(new THREE.LineCurve3(
+      new THREE.Vector3(w, h - r, 0),
+      new THREE.Vector3(w, g, 0)
+    ));
+
+    const bottomPath = new THREE.CurvePath();
+    bottomPath.add(new THREE.LineCurve3(
+      new THREE.Vector3(-w, -g, 0),
+      new THREE.Vector3(-w, -(h - r), 0)
+    ));
+    bottomPath.add(new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(-w, -(h - r), 0),
+      new THREE.Vector3(-w, -h, 0),
+      new THREE.Vector3(-w + r, -h, 0)
+    ));
+    bottomPath.add(new THREE.LineCurve3(
+      new THREE.Vector3(-w + r, -h, 0),
+      new THREE.Vector3(w - r, -h, 0)
+    ));
+    bottomPath.add(new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(w - r, -h, 0),
+      new THREE.Vector3(w, -h, 0),
+      new THREE.Vector3(w, -(h - r), 0)
+    ));
+    bottomPath.add(new THREE.LineCurve3(
+      new THREE.Vector3(w, -(h - r), 0),
+      new THREE.Vector3(w, -g, 0)
+    ));
+
+    return { topPath, bottomPath };
+  }
+
+  const eyePaths = createEyeCurvePaths();
+
+  function createEye(isLeft) {
+    const eye = new THREE.Group();
+    eye.position.set(isLeft ? -DESIGN.separacionOjos : DESIGN.separacionOjos, 0, 0);
+    eye.rotation.y = isLeft ? -0.2 : 0.2;
+    eye.scale.setScalar(DESIGN.escalaOjos);
+
+    const normalGroup = new THREE.Group();
+    normalGroup.add(new THREE.Mesh(new THREE.TubeGeometry(eyePaths.topPath, 20, 0.0035, 8, false), eyeMat));
+    normalGroup.add(new THREE.Mesh(new THREE.TubeGeometry(eyePaths.bottomPath, 20, 0.0035, 8, false), eyeMat));
+
+    const heartMesh = new THREE.Mesh(
+      new THREE.TubeGeometry(sharedHeartCurve, 64, 0.0035, 8, true),
+      heartMat
+    );
+    heartMesh.visible = false;
+
+    eye.add(normalGroup);
+    eye.add(heartMesh);
+    eyesGroup.add(eye);
+    return { group: eye, normal: normalGroup, heart: heartMesh };
+  }
+
+  const leftEye = createEye(true);
+  const rightEye = createEye(false);
+
+  // ── Ears (spec: RobotEar — base cyl, ring torus, center disc, antenna) ───
+  function createEar(isLeft) {
+    const dir = isLeft ? -1 : 1;
+    const ear = new THREE.Group();
+    ear.position.set(dir * 0.29, 0, 0);
+    ear.scale.setScalar(DESIGN.tamañoOrejas);
+
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.025, 32), earBaseMat);
+    base.rotation.z = Math.PI / 2;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    ear.add(base);
+
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.008, 16, 32), earRingMat);
+    ring.rotation.z = Math.PI / 2;
+    ring.position.x = dir * 0.012;
+    ring.castShadow = true;
+    ring.receiveShadow = true;
+    ear.add(ring);
+
+    const center = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.005, 32), earCenterMat);
+    center.rotation.z = Math.PI / 2;
+    center.position.x = dir * 0.012;
+    center.castShadow = true;
+    center.receiveShadow = true;
+    ear.add(center);
+
+    // Antenna — spec: rotation=[-0.4, 0, 0] (tilt around X axis)
+    const antennaGroup = new THREE.Group();
+    antennaGroup.position.set(dir * 0.015, 0.035, 0);
+    antennaGroup.rotation.x = -0.4;
+
+    const aBase = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.008, 0.02, 16), antennaBaseMat);
+    aBase.position.y = 0.01;
+    aBase.castShadow = true;
+    aBase.receiveShadow = true;
+    antennaGroup.add(aBase);
+
+    const aStick = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.1, 8), antennaStickMat);
+    aStick.position.y = 0.06;
+    aStick.castShadow = true;
+    aStick.receiveShadow = true;
+    antennaGroup.add(aStick);
+
+    const aTip = new THREE.Mesh(new THREE.SphereGeometry(0.006, 16, 16), antennaTipMat);
+    aTip.position.y = 0.11;
+    aTip.castShadow = true;
+    aTip.receiveShadow = true;
+    antennaGroup.add(aTip);
+
+    ear.add(antennaGroup);
+    headGroup.add(ear);
+    return ear;
+  }
+
+  createEar(true);
+  createEar(false);
+
+  // ── ResponsiveGroup (spec: scale = min(1.1, viewport.width / 3.5)) ───────
+  // viewport.width = visible width in world units at the robot's depth (z=0)
+  function viewportWidthAtOrigin() {
+    const dist = camera.position.z; // robot sits near z=0
+    const visibleH = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * dist;
+    return visibleH * camera.aspect;
+  }
+
+  function updateRobotScale() {
+    const scale = Math.min(1.1, viewportWidthAtOrigin() / 3.5);
+    robotRoot.scale.setScalar(scale);
+  }
+  updateRobotScale();
+
+  // ── Pointer state (spec: state.pointer normalized -1..1 over canvas) ─────
+  const pointer = { x: 0, y: 0 };
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  let isHoveringRobot = false;
+  let isLoved = false;
+  let loveTimeout = null;
+
+  function setPointerFromEvent(clientX, clientY) {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    ndc.set(pointer.x, pointer.y);
+  }
+
+  const heroSection = document.getElementById('hero');
+  heroSection.addEventListener('mousemove', function(e) {
+    setPointerFromEvent(e.clientX, e.clientY);
+  });
+  heroSection.addEventListener('touchmove', function(e) {
+    setPointerFromEvent(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+
+  // Click robot → heart eyes for 2s (spec: onPointerDown on body group)
+  renderer.domElement.addEventListener('pointerdown', function(e) {
+    setPointerFromEvent(e.clientX, e.clientY);
+    raycaster.setFromCamera(ndc, camera);
+    if (raycaster.intersectObject(bodyGroup, true).length === 0) return;
+    isLoved = true;
+    if (loveTimeout) clearTimeout(loveTimeout);
+    loveTimeout = setTimeout(function() { isLoved = false; }, 2000);
+  });
+
+  // ── Render loop (spec: useFrame — lerp body/head toward pointer) ─────────
+  const clock = new THREE.Clock();
+
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const dt = Math.min(clock.getDelta(), 0.1);
+    const tx = pointer.x;
+    const ty = pointer.y;
+
+    // Body X drift (spec: moveSpeed 0.35, maxMoveX = viewport.width / 3.5)
+    const maxMoveX = viewportWidthAtOrigin() / 3.5;
+    const targetPosX = tx * maxMoveX;
+    bodyGroup.position.x = THREE.MathUtils.lerp(bodyGroup.position.x, targetPosX, CONFIG.moveSpeed * dt);
+
+    const relativeX = tx - (bodyGroup.position.x / 2.5);
+
+    // Body rotation (spec: bodyTiltY 0.95, tiltX 0.0, tiltZ -0.15)
+    const bodyTargetRotY = -relativeX * CONFIG.bodyTiltY;
+    const bodyTargetRotX = (relativeX * relativeX * CONFIG.bodyTiltX) - (ty * 0.25);
+    const bodyTargetRotZ = -relativeX * 0.15;
+    bodyGroup.rotation.y = THREE.MathUtils.lerp(bodyGroup.rotation.y, bodyTargetRotY, CONFIG.bodyRotSpeed * dt);
+    bodyGroup.rotation.x = THREE.MathUtils.lerp(bodyGroup.rotation.x, bodyTargetRotX, CONFIG.bodyRotSpeed * dt);
+    bodyGroup.rotation.z = THREE.MathUtils.lerp(bodyGroup.rotation.z, bodyTargetRotZ, CONFIG.bodyRotSpeed * dt);
+
+    // Head look (spec: headLookY 1.80, headLookX 0.30)
+    const headTargetRotY = relativeX * CONFIG.headLookY;
+    const headTargetRotX = -ty * CONFIG.headLookX;
+    headGroup.rotation.y = THREE.MathUtils.lerp(headGroup.rotation.y, headTargetRotY, CONFIG.headRotSpeed * dt);
+    headGroup.rotation.x = THREE.MathUtils.lerp(headGroup.rotation.x, headTargetRotX, CONFIG.headRotSpeed * dt);
+
+    // Blink (spec: blinkCycle 3.0s, blinkDuration 0.45s, sin envelope)
+    const elapsed = clock.getElapsedTime();
+    const cycle = elapsed % DESIGN.parpadeoFrecuencia;
+    let blinkScaleY = 1;
+    if (cycle < DESIGN.parpadeoDuracion && !isLoved) {
+      const progress = cycle / DESIGN.parpadeoDuracion;
+      const blinkClose = Math.sin(progress * Math.PI);
+      blinkScaleY = Math.max(0.05, 1.0 - blinkClose);
+    }
+    const s = DESIGN.escalaOjos;
+    leftEye.group.scale.set(s, s * blinkScaleY, s);
+    rightEye.group.scale.set(s, s * blinkScaleY, s);
+
+    // Normal ↔ heart eye swap
+    leftEye.normal.visible = !isLoved;
+    leftEye.heart.visible = isLoved;
+    rightEye.normal.visible = !isLoved;
+    rightEye.heart.visible = isLoved;
+
+    // Hover cursor (spec: onPointerOver/Out on body group)
+    raycaster.setFromCamera(ndc, camera);
+    const hovering = raycaster.intersectObject(bodyGroup, true).length > 0;
+    if (hovering !== isHoveringRobot) {
+      isHoveringRobot = hovering;
+      document.body.style.cursor = hovering ? 'pointer' : 'auto';
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  // ── Resize ───────────────────────────────────────────────────────────────
+  window.addEventListener('resize', function() {
+    camera.aspect = container.clientWidth / Math.max(container.clientHeight, 1);
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    updateRobotScale();
+  });
+
+  // ── Nav divider fade (spec: scrollY [0,50] → opacity [1,0]) ─────────────
+  window.addEventListener('scroll', function() {
+    var divider = document.getElementById('nav-divider');
+    if (divider) {
+      divider.style.opacity = Math.max(0, 1 - window.scrollY / 50);
+    }
+  }, { passive: true });
+
+  // ── Start ───────────────────────────────────────────────────────────────
+  animate();
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════════════
+   Content sections
+   ════════════════════════════════════════════════════════════════════════════ -->
+
+<!-- ── Features 产品功能 ───────────────────────────────────────────────────── -->
+<section id="features" class="relative bg-white py-24 lg:py-32">
+  <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
+    <div class="text-center mb-16 fade-up">
+      <p class="mono text-[11px] tracking-[0.3em] text-black/40 mb-3">CAPABILITIES</p>
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111] leading-[1.15]">
+        为数据工程而生
+      </h2>
+      <p class="text-black/50 text-sm sm:text-base mt-4 max-w-lg mx-auto">
+        确定性工作流引擎 + LLM 智能调度 + 混合 RAG 检索 — 安全、可控、领域感知
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12">
+      <!-- Card 1: Multi-DB -->
+      <div class="group relative bg-[#f8f8f8] hover:bg-[#f0f0f0] rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] fade-up fade-up-1">
+        <div class="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center mb-5 group-hover:bg-black/10 transition-colors">
+          <svg class="w-6 h-6 text-[#111]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="12" cy="5" rx="9" ry="3"/>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#111] mb-2">多数据库支持</h3>
+        <p class="text-sm text-black/55 leading-relaxed">
+          覆盖 MySQL、PostgreSQL、SQLite、DuckDB 等 11 种数据库方言，统一 Schema 抽取与 SQL 翻译。
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-4">
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">MySQL</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">PostgreSQL</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">DuckDB</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">+8 more</span>
+        </div>
+      </div>
+
+      <!-- Card 2: Deterministic Harness -->
+      <div class="group relative bg-[#f8f8f8] hover:bg-[#f0f0f0] rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] fade-up fade-up-1">
+        <div class="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center mb-5 group-hover:bg-black/10 transition-colors">
+          <svg class="w-6 h-6 text-[#111]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#111] mb-2">确定性工作流</h3>
+        <p class="text-sm text-black/55 leading-relaxed">
+          YAML 驱动节点顺序，LLM 绝不决策流向。只读强制 + 关键字黑名单，安全可控。
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-4">
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-[#00ffc6]/30 text-black/60">Harness</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">YAML plans</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Hybrid RAG -->
+      <div class="group relative bg-[#f8f8f8] hover:bg-[#f0f0f0] rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] fade-up fade-up-1">
+        <div class="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center mb-5 group-hover:bg-black/10 transition-colors">
+          <svg class="w-6 h-6 text-[#111]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            <path d="M8 11h6"/><path d="M11 8v6"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#111] mb-2">混合 RAG 检索</h3>
+        <p class="text-sm text-black/55 leading-relaxed">
+          LanceDB 稠密向量 + BM25 稀疏关键词 — RRF 双路融合召回，Schema / Metrics / Documents 三命名空间。
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-4">
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">LanceDB</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">BM25</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">RRF</span>
+        </div>
+      </div>
+
+      <!-- Card 4: MCP Dual-role -->
+      <div class="group relative bg-[#f8f8f8] hover:bg-[#f0f0f0] rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] fade-up fade-up-2">
+        <div class="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center mb-5 group-hover:bg-black/10 transition-colors">
+          <svg class="w-6 h-6 text-[#111]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/>
+            <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#111] mb-2">MCP 双角色</h3>
+        <p class="text-sm text-black/55 leading-relaxed">
+          同时作为 MCP Server（暴露 NL2SQL 工具给外部 AI）与 MCP Client（消费数据库、知识库等外部 MCP 工具）。
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-4">
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">FastMCP</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">4 servers</span>
+        </div>
+      </div>
+
+      <!-- Card 5: Domain-aware -->
+      <div class="group relative bg-[#f8f8f8] hover:bg-[#f0f0f0] rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] fade-up fade-up-2">
+        <div class="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center mb-5 group-hover:bg-black/10 transition-colors">
+          <svg class="w-6 h-6 text-[#111]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>
+            <path d="M9 9v.01"/><path d="M9 12v.01"/><path d="M9 15v.01"/><path d="M9 18v.01"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#111] mb-2">领域感知</h3>
+        <p class="text-sm text-black/55 leading-relaxed">
+          YAML 定义术语表 + 业务规则（GMV、ARPU 等），按领域隔离上下文，自动注入 SQL 生成。
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-4">
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">Glossary</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">Rules</span>
+        </div>
+      </div>
+
+      <!-- Card 6: Multi-Agent -->
+      <div class="group relative bg-[#f8f8f8] hover:bg-[#f0f0f0] rounded-2xl p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_48px_rgba(0,0,0,0.08)] fade-up fade-up-2">
+        <div class="w-12 h-12 rounded-xl bg-black/5 flex items-center justify-center mb-5 group-hover:bg-black/10 transition-colors">
+          <svg class="w-6 h-6 text-[#111]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-bold text-[#111] mb-2">多智能体协作</h3>
+        <p class="text-sm text-black/55 leading-relaxed">
+          6 个专职子 Agent（语义理解、Schema 检索、SQL 生成、校验、执行、反馈），Orchestrator 统一调度。
+        </p>
+        <div class="flex flex-wrap gap-1.5 mt-4">
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">Orchestrator</span>
+          <span class="text-[10px] mono px-2 py-0.5 rounded-full bg-black/8 text-black/50">6 agents</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── How it Works 工作流程 ────────────────────────────────────────────────── -->
+<section id="how-it-works" class="relative bg-[#111] py-24 lg:py-32 overflow-hidden">
+  <div class="absolute inset-0 opacity-[0.03]" style="background-image:radial-gradient(circle,#fff 1px,transparent 1px);background-size:24px 24px;"></div>
+  <div class="relative max-w-[1200px] mx-auto px-6 sm:px-8">
+    <div class="text-center mb-16 fade-up">
+      <p class="mono text-[11px] tracking-[0.3em] text-white/40 mb-3">PIPELINE</p>
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-[1.15]">
+        NL → SQL 全链路
+      </h2>
+      <p class="text-white/40 text-sm sm:text-base mt-4 max-w-lg mx-auto">
+        从自然语言到安全执行的 SQL，YAML 计划驱动，节点确定性编排
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-12">
+      <!-- Step 1 -->
+      <div class="relative fade-up fade-up-1">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 h-full hover:bg-white/[0.07] transition-colors">
+          <div class="w-10 h-10 rounded-full bg-[#00ffc6] text-black flex items-center justify-center text-sm font-black mb-4">1</div>
+          <h3 class="text-white font-bold text-base mb-2">自然语言输入</h3>
+          <p class="text-white/45 text-sm leading-relaxed">
+            用户以业务语言提问：<br/>
+            <span class="text-white/60 mono text-xs">"上个月GMV最高的5个品类"</span>
+          </p>
+          <div class="flex gap-1.5 mt-4">
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/45">Domain Detect</span>
+          </div>
+        </div>
+        <div class="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/20">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="relative fade-up fade-up-2">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 h-full hover:bg-white/[0.07] transition-colors">
+          <div class="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center text-sm font-black mb-4">2</div>
+          <h3 class="text-white font-bold text-base mb-2">Schema Linking</h3>
+          <p class="text-white/45 text-sm leading-relaxed">
+            RAG 混合检索匹配表结构，领域术语注入上下文，自动关联外键。
+          </p>
+          <div class="flex gap-1.5 mt-4">
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/45">RAG</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/45">Glossary</span>
+          </div>
+        </div>
+        <div class="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/20">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="relative fade-up fade-up-3">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 h-full hover:bg-white/[0.07] transition-colors">
+          <div class="w-10 h-10 rounded-full bg-white/20 text-white flex items-center justify-center text-sm font-black mb-4">3</div>
+          <h3 class="text-white font-bold text-base mb-2">SQL 生成</h3>
+          <p class="text-white/45 text-sm leading-relaxed">
+            LLM 结合领域规则 + 方言适配生成 SQL，explain_plan 节点预览执行计划。
+          </p>
+          <div class="flex gap-1.5 mt-4">
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/45">LLM</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/45">Dialect</span>
+          </div>
+        </div>
+        <div class="hidden lg:flex absolute -right-3 top-1/2 -translate-y-1/2 z-10 text-white/20">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </div>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="fade-up fade-up-3">
+        <div class="bg-white/5 border border-white/10 rounded-2xl p-6 h-full hover:bg-white/[0.07] transition-colors">
+          <div class="w-10 h-10 rounded-full bg-[#00ffc6] text-black flex items-center justify-center text-sm font-black mb-4">4</div>
+          <h3 class="text-white font-bold text-base mb-2">校验与执行</h3>
+          <p class="text-white/45 text-sm leading-relaxed">
+            只读校验 → 关键字黑名单 → 行数限制 → 执行 → 结果格式化返回。
+          </p>
+          <div class="flex gap-1.5 mt-4">
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-[#00ffc6]/20 text-[#00ffc6]">Read-only</span>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/45">Safe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats 数据亮点 ───────────────────────────────────────────────────────── -->
+<section id="stats" class="relative bg-white py-20 border-y border-black/5">
+  <div class="max-w-[1000px] mx-auto px-6 sm:px-8">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 text-center">
+      <div class="fade-up fade-up-1">
+        <div class="text-3xl sm:text-4xl font-black text-[#111]">11<span class="text-[#00c090]">+</span></div>
+        <div class="text-xs text-black/40 mt-1">数据库方言</div>
+      </div>
+      <div class="fade-up fade-up-1">
+        <div class="text-3xl sm:text-4xl font-black text-[#111]">12</div>
+        <div class="text-xs text-black/40 mt-1">内置节点</div>
+      </div>
+      <div class="fade-up fade-up-2">
+        <div class="text-3xl sm:text-4xl font-black text-[#111]">6</div>
+        <div class="text-xs text-black/40 mt-1">工作流计划</div>
+      </div>
+      <div class="fade-up fade-up-2">
+        <div class="text-3xl sm:text-4xl font-black text-[#111]">4</div>
+        <div class="text-xs text-black/40 mt-1">MCP 服务器</div>
+      </div>
+      <div class="fade-up fade-up-3">
+        <div class="text-3xl sm:text-4xl font-black text-[#111]">3</div>
+        <div class="text-xs text-black/40 mt-1">RAG 命名空间</div>
+      </div>
+      <div class="fade-up fade-up-3">
+        <div class="text-3xl sm:text-4xl font-black text-[#111]">6</div>
+        <div class="text-xs text-black/40 mt-1">子 Agent</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ──────────────────────────────────────────────────────────────────── -->
+<section id="cta" class="relative bg-[#f5f5f5] py-24 lg:py-32">
+  <div class="max-w-[700px] mx-auto px-6 sm:px-8 text-center">
+    <p class="mono text-[11px] tracking-[0.3em] text-black/40 mb-4 fade-up">GET STARTED</p>
+    <h2 class="text-3xl sm:text-4xl lg:text-5xl font-black text-[#111] leading-[1.15] fade-up fade-up-1">
+      准备好用自然语言<br/>查询数据了吗？
+    </h2>
+    <p class="text-black/50 text-sm sm:text-base mt-5 mb-8 max-w-md mx-auto fade-up fade-up-2">
+      连接数据库、定义领域术语，即刻开始 NL2SQL 之旅。免费，开源。
+    </p>
+    <div class="flex items-center justify-center gap-3 flex-wrap fade-up fade-up-3">
+      <a href="/login" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full cta-cyan text-sm no-underline">
+        免费开始
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l1.2 12.1a1 1 0 0 1-1 1.1H5.8a1 1 0 0 1-1-1.1L6 8z"/><path d="M9 11V7a3 3 0 0 1 6 0v4"/></svg>
+      </a>
+      <a href="/workspace" class="inline-flex items-center gap-2 px-8 py-3.5 rounded-full pill-dark text-sm no-underline">
+        在线演示
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ───────────────────────────────────────────────────────────────── -->
+<footer class="relative bg-[#111] py-12 border-t border-white/10">
+  <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-white/10 rounded-lg flex items-center justify-center">
+          <div class="w-4 h-2 bg-[#00ffc6] rounded-[2px] shadow-[0_0_8px_#00ffc6]"></div>
+        </div>
+        <span class="text-white/70 font-bold text-sm">NL2SQL</span>
+        <span class="text-white/25 text-xs mono ml-2">v0.1.0</span>
+      </div>
+      <div class="flex items-center gap-6 text-xs text-white/40">
+        <a href="/workspace" class="hover:text-white/70 transition-colors no-underline">工作区</a>
+        <a href="/docs" class="hover:text-white/70 transition-colors no-underline">API 文档</a>
+        <a href="#" class="hover:text-white/70 transition-colors no-underline">GitHub</a>
+        <a href="#" class="hover:text-white/70 transition-colors no-underline">关于</a>
+      </div>
+      <p class="text-[11px] text-white/25 mono">&copy; 2026 NL2SQL Data Engineering Agent</p>
+    </div>
+  </div>
+</footer>
+
+<!-- Scroll-reveal observer -->
+<script>
+(function() {
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) {
+        e.target.style.animationPlayState = 'running';
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.fade-up').forEach(function(el) {
+    el.style.animationPlayState = 'paused';
+    observer.observe(el);
+  });
+})();
+</script>
+
+</body>
+</html>

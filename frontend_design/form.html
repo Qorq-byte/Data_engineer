@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NL2SQL — Log in / Sign up</title>
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Google Fonts — Archivo -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+
+<style>
+/* ===== Neubrutalism form system (per reference image) ===== */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; width: 100%; }
+body {
+  background: #E7E7E7;
+  font-family: 'Archivo', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: #2a2a2a;
+}
+#root { height: 100%; width: 100%; }
+
+/* ===== Card ===== */
+.brutal-card {
+  background: #D4D4D4;
+  border: 3px solid #383838;
+  border-radius: 22px;
+  box-shadow: 8px 8px 0 rgba(56, 56, 56, 0.28);
+}
+
+/* ===== Inputs — white, thick border, hard bottom edge ===== */
+.brutal-input {
+  width: 100%;
+  background: #ffffff;
+  border: 3px solid #383838;
+  border-radius: 14px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #2a2a2a;
+  outline: none;
+  box-shadow: 0 5px 0 #383838;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.brutal-input::placeholder { color: #8f8f8f; font-weight: 500; }
+.brutal-input:focus { transform: translateY(2px); box-shadow: 0 3px 0 #383838; }
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #2a2a2a;
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ===== Button — white pill, hard offset shadow ===== */
+.brutal-btn {
+  background: #ffffff;
+  border: 3px solid #383838;
+  border-radius: 14px;
+  padding: 10px 30px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #2a2a2a;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 #383838;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.brutal-btn:hover:not(:disabled) { transform: translate(1px, 1px); box-shadow: 3px 3px 0 #383838; }
+.brutal-btn:active:not(:disabled) { transform: translate(4px, 4px); box-shadow: 0 0 0 #383838; }
+.brutal-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* ===== Mode toggle switch (Log in ⇄ Sign up) ===== */
+.mode-label {
+  background: none; border: none; padding: 0;
+  font-family: inherit; font-size: 17px; font-weight: 500;
+  color: #6a6a6a; cursor: pointer;
+  transition: color 0.2s ease;
+}
+.mode-label:hover { color: #3a3a3a; }
+.mode-label.active {
+  color: #2a2a2a; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 2px;
+}
+.switch-track {
+  width: 62px; height: 32px;
+  background: #ffffff;
+  border: 3px solid #383838;
+  border-radius: 999px;
+  box-shadow: 3px 3px 0 #383838;
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.25s ease;
+}
+.switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 4px;
+  width: 18px; height: 18px;
+  background: #ffffff;
+  border: 3px solid #383838;
+  border-radius: 6px;
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch-track.on .switch-knob { left: calc(100% - 28px); }
+
+/* ===== 3D flip ===== */
+.flip-container {
+  perspective: 1400px;
+  width: 100%;
+  max-width: 440px;
+}
+.flip-inner {
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.flip-inner.flipped { transform: rotateY(180deg); }
+.flip-face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.flip-back { transform: rotateY(180deg); }
+
+/* ===== Error box ===== */
+.brutal-error {
+  background: #f6e3e3;
+  border: 2.5px solid #a14646;
+  border-radius: 12px;
+  color: #7c2f2f;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ===== Toast ===== */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.brutal-toast {
+  animation: toast-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: #ffffff;
+  border: 3px solid #383838;
+  border-radius: 14px;
+  box-shadow: 5px 5px 0 #383838;
+  color: #2a2a2a;
+  font-weight: 600;
+  font-size: 14px;
+}
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- ==================== CDN SCRIPTS ==================== -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script>
+
+<!-- ==================== REACT APP ==================== -->
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+// ── API base — uses relative path so it works on any host ──
+const API = '/api/v1/auth';
+
+// ── Icons ─────────────────────────────────────────────────
+const Spinner = () => (
+  <svg className="inline-block h-4 w-4 animate-spin align-[-2px] mr-1.5" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3.5" strokeDasharray="31.4 31.4" strokeLinecap="round"/>
+  </svg>
+);
+
+/* ================================================================================================
+   Toast
+   ================================================================================================ */
+function Toast({ message, onClose }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <div className="brutal-toast fixed top-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3">
+      <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="#2f7a4d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+      <span>{message}</span>
+      <button onClick={onClose} className="ml-1 text-[#8a8a8a] hover:text-[#2a2a2a] transition-colors bg-transparent border-none cursor-pointer p-0">
+        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+/* ================================================================================================
+   LoginForm — Email / Password / Let's go!
+   ================================================================================================ */
+function LoginForm({ onSuccess }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim()) { setError('请输入邮箱地址'); return; }
+    if (!password) { setError('请输入密码'); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || '登入失败');
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('nl2sql_token', data.access_token);
+      localStorage.setItem('nl2sql_user', JSON.stringify(data.user));
+      onSuccess('登入成功！正在跳转…');
+    } catch {
+      setError('无法连接到服务器，请检查后端是否启动');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      <h2 className="text-center font-extrabold text-[#2a2a2a] text-3xl tracking-tight mb-8">Log in</h2>
+
+      {error && <div className="brutal-error mb-5">{error}</div>}
+
+      <div className="flex flex-col gap-5 mb-9">
+        <input
+          type="email"
+          className="brutal-input"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+        <input
+          type="password"
+          className="brutal-input"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          autoComplete="current-password"
+        />
+      </div>
+
+      <div className="flex justify-center">
+        <button type="submit" className="brutal-btn" disabled={loading}>
+          {loading ? <><Spinner />登入中…</> : 'Let’s go!'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ================================================================================================
+   RegisterForm — Username / Email / Password / Confirm / Let's go!
+   ================================================================================================ */
+function RegisterForm({ onSuccess }) {
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!username.trim()) { setError('请输入用户名'); return; }
+    if (username.trim().length < 2) { setError('用户名至少需要 2 个字符'); return; }
+    if (!email.trim()) { setError('请输入邮箱地址'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('请输入有效的邮箱地址'); return; }
+    if (!password) { setError('请输入密码'); return; }
+    if (password.length < 6) { setError('密码至少需要 6 个字符'); return; }
+    if (password !== confirm) { setError('两次输入的密码不一致'); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), email: email.trim(), password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.detail || '注册失败');
+        setLoading(false);
+        return;
+      }
+      localStorage.setItem('nl2sql_token', data.access_token);
+      localStorage.setItem('nl2sql_user', JSON.stringify(data.user));
+      onSuccess('注册成功！正在跳转…');
+    } catch {
+      setError('无法连接到服务器，请检查后端是否启动');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col">
+      <h2 className="text-center font-extrabold text-[#2a2a2a] text-3xl tracking-tight mb-7">Sign up</h2>
+
+      {error && <div className="brutal-error mb-5">{error}</div>}
+
+      <div className="flex flex-col gap-4 mb-7">
+        <input
+          type="text"
+          className="brutal-input"
+          placeholder="Username"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          autoComplete="username"
+        />
+        <input
+          type="email"
+          className="brutal-input"
+          placeholder="Email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          autoComplete="email"
+        />
+        <input
+          type="password"
+          className="brutal-input"
+          placeholder="Password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          autoComplete="new-password"
+        />
+        <input
+          type="password"
+          className="brutal-input"
+          placeholder="Confirm password"
+          value={confirm}
+          onChange={e => setConfirm(e.target.value)}
+          autoComplete="new-password"
+        />
+      </div>
+
+      <div className="flex justify-center">
+        <button type="submit" className="brutal-btn" disabled={loading}>
+          {loading ? <><Spinner />注册中…</> : 'Let’s go!'}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ================================================================================================
+   FlipCard — 3D flip container driven by the mode toggle
+   ================================================================================================ */
+function FlipCard({ mode, onSuccess }) {
+  const flipped = mode === 'signup';
+  return (
+    <div className="flip-container">
+      <div className={`flip-inner${flipped ? ' flipped' : ''}`}>
+        {/* Front — Log in */}
+        <div className="flip-face brutal-card px-8 py-10 sm:px-10">
+          <LoginForm onSuccess={onSuccess} />
+        </div>
+        {/* Back — Sign up */}
+        <div className="flip-face flip-back brutal-card px-8 py-10 sm:px-10">
+          <RegisterForm onSuccess={onSuccess} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================================================
+   APP
+   ================================================================================================ */
+function App() {
+  const [mode, setMode] = useState('login');
+  const [toast, setToast] = useState(null);
+
+  const handleSuccess = useCallback((msg) => {
+    setToast({ message: msg });
+    setTimeout(() => {
+      window.location.href = '/workspace';
+    }, 1200);
+  }, []);
+
+  // Already logged in → go to workspace
+  useEffect(() => {
+    const token = localStorage.getItem('nl2sql_token');
+    if (token) {
+      fetch(`${API}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(res => {
+        if (res.ok) {
+          setToast({ message: '已登入，正在跳转…' });
+          setTimeout(() => { window.location.href = '/workspace'; }, 800);
+        } else {
+          localStorage.removeItem('nl2sql_token');
+          localStorage.removeItem('nl2sql_user');
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10 relative">
+
+      {/* Back to home */}
+      <a href="/"
+        className="absolute top-6 left-6 text-[#6a6a6a] hover:text-[#2a2a2a] text-sm font-medium no-underline transition-colors flex items-center gap-1.5">
+        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+        </svg>
+        返回首页
+      </a>
+
+      {/* Mode toggle — Log in | switch | Sign up */}
+      <div className="flex items-center gap-4 mb-8 select-none">
+        <button
+          type="button"
+          className={`mode-label${mode === 'login' ? ' active' : ''}`}
+          onClick={() => setMode('login')}
+        >
+          Log in
+        </button>
+        <button
+          type="button"
+          aria-label="切换登入/注册"
+          className={`switch-track${mode === 'signup' ? ' on' : ''}`}
+          onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+        >
+          <span className="switch-knob"></span>
+        </button>
+        <button
+          type="button"
+          className={`mode-label${mode === 'signup' ? ' active' : ''}`}
+          onClick={() => setMode('signup')}
+        >
+          Sign up
+        </button>
+      </div>
+
+      {/* Flip card */}
+      <FlipCard mode={mode} onSuccess={handleSuccess} />
+
+      {/* Toast */}
+      {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+
+</body>
+</html>
