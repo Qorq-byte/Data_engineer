@@ -182,3 +182,107 @@ def reset_default_router() -> None:
     """Drop the cached singleton (tests / config reload)."""
     global _default_router
     _default_router = None
+
+
+# ── Settings-driven router (user-configured providers from the API) ───
+
+_ENV_KEYS = {
+    "openai": "OPENAI_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "gemini": "GOOGLE_API_KEY",
+}
+
+
+def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
+    """Resolve a provider's API key from settings, falling back to env."""
+    from app.security.crypto import decrypt_secret
+
+    enc = cfg.get("api_key_enc") or ""
+    if enc:
+        key = decrypt_secret(enc)
+        if key:
+            return key
+    # Fallback: env key for built-in providers (agent.yml / .env setup)
+    return os.getenv(_ENV_KEYS.get(name, ""), "") or ""
+
+
+def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
+    """Build a router from the persisted ``llm`` settings section.
+
+    Only *enabled* providers with a usable API key are registered.
+    ``default_model`` must belong to some registered provider's models;
+    otherwise it falls back to the first available model. When nothing is
+    usable, a mock router is returned so the app stays runnable offline.
+
+    Args:
+        llm_settings: The ``llm`` dict from ``app.api.settings``
+            (``providers``, ``default_model``, ``fallback_model``, …).
+
+    Returns:
+        A router in real mode when at least one provider is usable,
+        otherwise a mock-mode router.
+    """
+    providers: dict[str, ProviderConfig] = {}
+    provider_cfg: dict[str, Any] = llm_settings.get("providers") or {}
+
+    for name, cfg in provider_cfg.items():
+        if not cfg.get("enabled", True):
+            continue
+        api_key = _provider_api_key(name, cfg)
+        if not api_key:
+            continue  # No usable key — provider stays out of the chain
+        models = [m for m in (cfg.get("models") or []) if m]
+        providers[name] = ProviderConfig(
+            provider=name,
+            api_key_env=_ENV_KEYS.get(name, f"{name.upper()}_API_KEY"),
+            api_key=api_key,
+            base_url=cfg.get("base_url") or None,
+            models=models,
+        )
+
+    available_models = [m for pc in providers.values() for m in pc.models]
+    default_model = llm_settings.get("default_model") or ""
+    if default_model not in available_models:
+        default_model = available_models[0] if available_models else (
+            llm_settings.get("default_model") or "mock"
+        )
+
+    fallback_model = llm_settings.get("fallback_model") or ""
+    fallback_chain: list[str] = []
+    if fallback_model and fallback_model in available_models and fallback_model != default_model:
+        fallback_chain = [fallback_model]
+
+    config = RouterConfig(
+        providers=providers,
+        default_model=default_model,
+        fallback_chain=fallback_chain,
+    )
+    mock = _mock_forced() or not providers
+    return LiteLLMRouter(config, mock_mode=mock)
+
+
+def apply_llm_settings(llm_settings: dict[str, Any] | None = None) -> LiteLLMRouter:
+    """Rebuild and replace the shared router from persisted LLM settings.
+
+    Called after the user saves LLM settings (immediate effect) and at
+    startup (persisted settings survive restarts).
+
+    Args:
+        llm_settings: Optional ``llm`` settings dict. When omitted, the
+            current in-memory settings store is read.
+
+    Returns:
+        The new shared router instance.
+    """
+    global _default_router
+    if llm_settings is None:
+        try:
+            from app.api.settings import _settings_store
+
+            llm_settings = _settings_store.get("llm") or {}
+        except Exception:  # noqa: BLE001
+            llm_settings = {}
+    _default_router = build_router_from_settings(llm_settings)
+    return _default_router

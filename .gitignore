@@ -15,10 +15,17 @@ venv/
 
 # Test / tooling caches
 .pytest_cache/
+.pytest_tmp*/
+.pytest_tools/
 .ruff_cache/
 .mypy_cache/
 htmlcov/
 .coverage
+.pip_tmp/
+pip-*/
+.verify_tmp*/
+.verify_e2e/
+_vendor_pytest/
 
 # Runtime data
 data/

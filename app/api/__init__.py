@@ -42,6 +42,22 @@ async def _lifespan(app: FastAPI):
     except Exception:
         logger.warning("RAG engine not available — hybrid search disabled")
 
+    # Startup: load persisted LLM settings and rebuild the router
+    try:
+        from app.api.settings import reload_llm_router_from_db
+        from app.llm.factory import get_default_router
+
+        await reload_llm_router_from_db()
+        llm_router = get_default_router()
+        logger.info(
+            "LLM router rebuilt from persisted settings: default=%s mock=%s providers=%s",
+            llm_router.config.default_model,
+            llm_router.mock_mode,
+            list(llm_router.config.providers),
+        )
+    except Exception:
+        logger.warning("LLM settings reload failed — using agent.yml defaults")
+
     yield
     # Shutdown: close MySQL pool
     try:

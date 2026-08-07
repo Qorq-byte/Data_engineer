@@ -50,6 +50,7 @@ dependencies = [
     # Auth
     "bcrypt>=4.0.0",
     "pyjwt>=2.9.0",
+    "cryptography>=42.0.0",
 
     # Utils
     "httpx>=0.28.0",

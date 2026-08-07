@@ -43,6 +43,30 @@ router = APIRouter()
 # ── Schema resolution helper ────────────────────────────────────────────
 
 
+def _validate_model(model: str | None) -> None:
+    """Reject unknown / disabled models with 422 before running the pipeline."""
+    if not model:
+        return
+    try:
+        from app.api.settings import _settings_store
+
+        providers = _settings_store.get("llm", {}).get("providers", {})
+        known = {
+            m
+            for cfg in providers.values()
+            if cfg.get("enabled", True)
+            for m in (cfg.get("models") or [])
+        }
+    except Exception:  # noqa: BLE001 — settings unavailable, skip validation
+        return
+    if known and model not in known:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown or disabled model '{model}'. "
+            f"Available: {sorted(known)}",
+        )
+
+
 async def _resolve_schema(
     database: str, warnings: list[str]
 ) -> SchemaSnapshot | None:
@@ -317,6 +341,10 @@ class QueryRequest(BaseModel):
         validation_alias="validate",
     )
     link_schema: bool = Field(default=True, description="Run schema linking")
+    model: str | None = Field(
+        default=None,
+        description="LLM model override (must be an enabled model; defaults to system default)",
+    )
 
 
 class CandidateResult(BaseModel):
@@ -371,6 +399,9 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     warnings: list[str] = []
     linked_tables: list[str] = []
     linked_columns: list[dict[str, Any]] = []
+
+    # ── Model override validation ───────────────────────────────────
+    _validate_model(body.model)
 
     # ── Resolve domain config (for glossary + business rules) ──────
     domain_config = None
@@ -562,6 +593,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
                             "rag_context": None,
                             "multi_table_hint": db_hint,
                             "database_name": db_name,
+                            "model": body.model,
                         },
                     )
                 )
@@ -1155,6 +1187,13 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
         def _emit(event: str, data: dict[str, Any]) -> str:
             return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
+        # ── Model override validation ───────────────────────────────
+        try:
+            _validate_model(body.model)
+        except HTTPException as e:
+            yield _emit("error", {"message": e.detail})
+            return
+
         # ── SPEC §6.7: emit ``workflow`` event as the very first event ──
         # Declare the plan that will be used for this query so the
         # frontend can render the expected pipeline immediately.
@@ -1394,6 +1433,7 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                                 "rag_context": None,
                                 "multi_table_hint": db_hint,
                                 "database_name": db_name,
+                                "model": body.model,
                             },
                         })
                         gen_output = await gen_node.execute(gen_input)

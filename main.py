@@ -144,7 +144,7 @@ async def initialize():
         print("   No subagent configs found in app/config/subagents/")
 
     # 9. Initialize RAG engine (schema + metric + document hybrid search)
-    print("\n[9/9] Initializing RAG engine (schema + metric + document hybrid search)...")
+    print("\n[9/10] Initializing RAG engine (schema + metric + document hybrid search)...")
     try:
         from app.rag.engine import initialize_rag_engine
 
@@ -157,6 +157,21 @@ async def initialize():
         print(f"   Document index: {doc_stats}")
     except Exception as e:
         print(f"   WARNING: RAG engine unavailable ({e}) — hybrid search disabled")
+
+    # 10. Load persisted LLM settings (user-configured providers/keys)
+    print("\n[10/10] Loading persisted LLM settings...")
+    try:
+        from app.api.settings import reload_llm_router_from_db
+        from app.llm.factory import get_default_router
+
+        await reload_llm_router_from_db()
+        llm_router = get_default_router()
+        print(
+            f"   LLM router ready: default={llm_router.config.default_model} "
+            f"mock={llm_router.mock_mode} providers={list(llm_router.config.providers)}"
+        )
+    except Exception as e:
+        print(f"   WARNING: LLM settings reload failed ({e}) — using agent.yml defaults")
 
     print("\n" + "=" * 60)
     print("  Initialization complete. Starting server...")

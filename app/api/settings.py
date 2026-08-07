@@ -5,12 +5,14 @@ See SPEC §4.8 (Frontend & API) for the full specification.
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # ── In-memory settings store (MySQL fallback) ────────
 
@@ -82,31 +84,43 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
                 "enabled": True,
                 "models": ["gpt-4.1", "gpt-4.1-mini", "gpt-4o"],
                 "api_key_configured": False,
+                "api_key_enc": "",
+                "base_url": None,
             },
             "anthropic": {
                 "enabled": True,
                 "models": ["claude-sonnet-4", "claude-haiku-4.5"],
                 "api_key_configured": False,
+                "api_key_enc": "",
+                "base_url": None,
             },
             "deepseek": {
                 "enabled": True,
                 "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
                 "api_key_configured": False,
+                "api_key_enc": "",
+                "base_url": None,
             },
             "google": {
                 "enabled": True,
                 "models": ["gemini-2.0-flash", "gemini-2.5-pro"],
                 "api_key_configured": False,
+                "api_key_enc": "",
+                "base_url": None,
             },
             "qwen": {
                 "enabled": False,
                 "models": ["qwen-max", "qwen-plus"],
                 "api_key_configured": False,
+                "api_key_enc": "",
+                "base_url": None,
             },
             "groq": {
                 "enabled": False,
                 "models": ["llama-3.1-70b", "mixtral-8x7b"],
                 "api_key_configured": False,
+                "api_key_enc": "",
+                "base_url": None,
             },
         },
     },
@@ -152,6 +166,7 @@ _DEFAULT_SETTINGS: dict[str, Any] = {
 class LLMProviderUpdate(BaseModel):
     enabled: bool | None = None
     api_key: str | None = Field(default=None, max_length=512)
+    base_url: str | None = None
     models: list[str] | None = None
 
 
@@ -213,6 +228,7 @@ async def get_llm_settings() -> dict:
             "enabled": cfg["enabled"],
             "models": cfg["models"],
             "api_key_configured": cfg["api_key_configured"],
+            "base_url": cfg.get("base_url"),
         }
     return {
         "status": "ok",
@@ -247,25 +263,53 @@ async def update_llm_settings(body: LLMSettingsUpdate) -> dict:
     if body.max_tokens is not None:
         llm["max_tokens"] = body.max_tokens
     if body.providers:
+        from app.security.crypto import encrypt_secret
+
         for name, update in body.providers.items():
             if name in llm["providers"]:
+                cfg = llm["providers"][name]
                 if update.enabled is not None:
-                    llm["providers"][name]["enabled"] = update.enabled
+                    cfg["enabled"] = update.enabled
                 if update.api_key is not None:
-                    # In production, store securely (e.g., env vars, vault)
-                    llm["providers"][name]["api_key_configured"] = bool(update.api_key.strip())
+                    # Non-empty key → encrypt and persist; empty → keep old key
+                    if update.api_key.strip():
+                        cfg["api_key_enc"] = encrypt_secret(update.api_key.strip())
+                        cfg["api_key_configured"] = True
+                if update.base_url is not None:
+                    cfg["base_url"] = update.base_url.strip() or None
                 if update.models is not None:
-                    llm["providers"][name]["models"] = update.models
+                    cfg["models"] = update.models
             else:
                 # New provider — add it
                 llm["providers"][name] = {
                     "enabled": update.enabled if update.enabled is not None else True,
                     "models": update.models if update.models is not None else [],
-                    "api_key_configured": bool(update.api_key.strip()) if update.api_key else False,
+                    "api_key_configured": bool(update.api_key and update.api_key.strip()),
+                    "api_key_enc": (
+                        encrypt_secret(update.api_key.strip())
+                        if update.api_key and update.api_key.strip()
+                        else ""
+                    ),
+                    "base_url": update.base_url.strip() if update.base_url else None,
                 }
 
     await _persist_section("llm")
-    return {"status": "updated", "message": "LLM 配置已更新"}
+    # Rebuild the runtime router so the new settings take effect immediately
+    try:
+        from app.llm.factory import apply_llm_settings
+
+        router = apply_llm_settings(llm)
+        return {
+            "status": "updated",
+            "message": "LLM 配置已更新",
+            "active_model": router.config.default_model,
+            "mock_mode": router.mock_mode,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"LLM 配置已保存但应用失败,请检查模型与密钥配置: {e}",
+        ) from e
 
 
 @router.get("/settings/harness")
@@ -333,24 +377,52 @@ async def update_rag_settings(body: RagSettingsUpdate) -> dict:
 
 @router.get("/settings/available-models")
 async def get_available_models() -> dict:
-    """List all available LLM models across all providers."""
+    """List all available LLM models across all providers.
+
+    A model is ``available`` when its provider is enabled and either has a
+    configured API key or the router is running in mock mode.
+    """
     await _load_setting_section("llm")
+    try:
+        from app.llm.factory import get_default_router
+
+        mock_mode = get_default_router().mock_mode
+    except Exception:
+        mock_mode = False
+
     models = []
     for provider_name, cfg in _settings_store["llm"]["providers"].items():
-        if cfg["enabled"]:
-            for model in cfg["models"]:
-                models.append({
-                    "model": model,
-                    "provider": provider_name,
-                    "api_key_configured": cfg["api_key_configured"],
-                    "available": cfg["api_key_configured"],
-                })
+        if not cfg["enabled"]:
+            continue
+        has_key = bool(cfg.get("api_key_configured"))
+        for model in cfg["models"]:
+            models.append({
+                "model": model,
+                "provider": provider_name,
+                "api_key_configured": has_key,
+                "available": has_key or mock_mode,
+            })
     return {
         "status": "ok",
         "models": models,
         "total": len(models),
         "default": _settings_store["llm"]["default_model"],
     }
+
+
+async def reload_llm_router_from_db() -> None:
+    """Load persisted LLM settings from MySQL and rebuild the runtime router.
+
+    Called at startup so user-configured providers/keys survive restarts.
+    Falls back to agent.yml/.env defaults when nothing is persisted.
+    """
+    await _load_setting_section("llm")
+    try:
+        from app.llm.factory import apply_llm_settings
+
+        apply_llm_settings(_settings_store["llm"])
+    except Exception:
+        logger.warning("Failed to rebuild LLM router from persisted settings", exc_info=True)
 
 
 @router.delete("/settings/llm/providers/{provider_name}")

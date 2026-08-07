@@ -54,6 +54,7 @@ class ProviderConfig:
     models: list[str] = field(default_factory=list)
     base_url: str | None = None
     rate_limit_rpm: int = 0
+    api_key: str | None = None
 
 
 @dataclass
@@ -224,6 +225,46 @@ class ProviderServerError(_RetryableError):
 
 class ProviderConnectionError(_RetryableError):
     """DNS / TCP connection failure."""
+
+
+class ProviderConfigurationError(Exception):
+    """Provider misconfigured (missing key / base_url) — non-retryable.
+
+    Raised instead of attempting a call: retrying cannot fix a missing
+    configuration, and falling back to another provider would mask the
+    user's setup mistake.
+    """
+
+
+# Provider names LiteLLM understands natively (``{name}/{model}`` routing).
+# Anything else is treated as a custom OpenAI-compatible endpoint and
+# requires an explicit ``base_url``.
+_LITELLM_KNOWN_PROVIDERS: frozenset[str] = frozenset(
+    {
+        "openai",
+        "anthropic",
+        "deepseek",
+        "google",
+        "gemini",
+        "azure",
+        "azure_ai",
+        "bedrock",
+        "vertex_ai",
+        "cohere",
+        "mistral",
+        "groq",
+        "qwen",
+        "together_ai",
+        "ollama",
+        "xai",
+        "fireworks_ai",
+        "perplexity",
+        "moonshot",
+        "zhipu",
+        "openrouter",
+        "deepinfra",
+    }
+)
 
 
 class LiteLLMRouter:
@@ -474,8 +515,27 @@ class LiteLLMRouter:
                 "litellm is not installed. Install with: pip install litellm"
             )
 
-        api_key = os.getenv(provider.api_key_env, "")
-        litellm_model = f"{provider.provider}/{model}"
+        # ── Key resolution: explicit (settings-provided) key wins ──
+        api_key = provider.api_key or os.getenv(provider.api_key_env, "") or None
+        if not api_key:
+            raise ProviderConfigurationError(
+                f"Provider '{provider.provider}' has no API key configured."
+            )
+
+        # ── Provider routing ─────────────────────────────────────────
+        # Known LiteLLM provider → ``{provider}/{model}``. Custom provider →
+        # OpenAI-compatible endpoint (requires base_url).
+        if provider.provider in _LITELLM_KNOWN_PROVIDERS:
+            litellm_provider = provider.provider
+        else:
+            if not provider.base_url:
+                raise ProviderConfigurationError(
+                    f"Custom provider '{provider.provider}' requires a base_url "
+                    "(OpenAI-compatible endpoint)."
+                )
+            litellm_provider = "openai"
+
+        litellm_model = f"{litellm_provider}/{model}"
 
         # Build call kwargs
         call_kwargs: dict[str, Any] = {
@@ -483,7 +543,7 @@ class LiteLLMRouter:
             "messages": messages,
             "temperature": temperature,
             "n": n,
-            "api_key": api_key or None,
+            "api_key": api_key,
             "timeout": self.config.timeout_seconds,
         }
         if provider.base_url:
