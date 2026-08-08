@@ -29,6 +29,11 @@ def real_mode(monkeypatch):
     monkeypatch.setattr(settings, "llm_mock_mode", False)
     for env in ("DEEPSEEK_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY"):
         monkeypatch.delenv(env, raising=False)
+    # .env-loaded key attributes must be cleared too (dotenv bridge consults them)
+    monkeypatch.setattr(settings, "deepseek_api_key", None)
+    monkeypatch.setattr(settings, "openai_api_key", None)
+    monkeypatch.setattr(settings, "anthropic_api_key", None)
+    monkeypatch.setattr(settings, "google_api_key", None)
     return monkeypatch
 
 

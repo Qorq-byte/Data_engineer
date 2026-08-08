@@ -692,10 +692,14 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
                 rag_results = await schema_rag.find_relevant_tables(
                     body.nl_text, top_k=10, db_id=None
                 )
-                # Only use RAG if at least one result has a BM25 (sparse) match —
-                # dense-only matches (sparse_rank=None) are unreliable with
-                # MockEmbeddingProvider and often return unrelated schema.
-                rag_relevant = [r for r in rag_results if r.sparse_rank is not None]
+                # Include RAG hits from either retrieval path: BM25 (sparse)
+                # covers literal matches, dense covers semantic matches —
+                # essential for cross-language queries (Chinese question vs
+                # English schema) where sparse_rank is always None.
+                rag_relevant = [
+                    r for r in rag_results
+                    if r.sparse_rank is not None or r.dense_rank is not None
+                ]
                 if rag_relevant:
                     rag_lines = ["RAG-indexed schema knowledge (from previous connections):"]
                     for r in rag_relevant[:15]:
@@ -1544,10 +1548,13 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                         rag_results = await schema_rag.find_relevant_tables(
                             body.nl_text, top_k=10, db_id=None
                         )
-                        # Only use RAG if at least one result has a BM25 (sparse) match —
-                        # dense-only matches (sparse_rank=None) are unreliable with
-                        # MockEmbeddingProvider and often return unrelated schema.
-                        rag_relevant = [r for r in rag_results if r.sparse_rank is not None]
+                        # Include RAG hits from either retrieval path: BM25
+                        # (sparse) for literal matches, dense for semantic
+                        # matches — essential for cross-language queries.
+                        rag_relevant = [
+                            r for r in rag_results
+                            if r.sparse_rank is not None or r.dense_rank is not None
+                        ]
                         # SPEC §6.7: rag_result event — surface the retrieval
                         # summary to the frontend for transparency.
                         yield _emit("rag_result", {

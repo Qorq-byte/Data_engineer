@@ -359,6 +359,12 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 # Mock 模式（开发/离线用，不调用真实 LLM）
 LLM_MOCK_MODE=1
 
+# RAG 语义检索 — 本地 Ollama 嵌入（无需 API Key）
+RAG_EMBEDDING_PROVIDER=ollama       # ollama | openai | bge | mock
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_EMBEDDING_MODEL=embeddinggemma
+OLLAMA_EMBEDDING_DIM=768
+
 # MySQL 用户数据库（用于持久化，可选）
 AUTH_MYSQL_HOST=127.0.0.1
 AUTH_MYSQL_PORT=3306
@@ -371,6 +377,11 @@ JWT_SECRET=change-me-in-production
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=1440
 ```
+
+> **本地语义检索(Ollama):** `RAG_EMBEDDING_PROVIDER=ollama` 时,向量检索由本机
+> Ollama 提供(默认模型 `embeddinggemma`,768 维),无需 API Key;首次使用前执行
+> `ollama pull embeddinggemma` 并保持 `ollama serve` 运行。切换不同维度的嵌入
+> 模型时,系统会自动重建 LanceDB 向量表并重新索引。
 
 ### Agent 配置（`app/config/agent.yml`）
 

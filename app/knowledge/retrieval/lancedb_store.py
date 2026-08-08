@@ -24,11 +24,14 @@ from __future__ import annotations
 
 import contextlib
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
 
 import pyarrow as pa
+
+logger = logging.getLogger(__name__)
 
 # ── LanceDB integration (optional — graceful degradation) ─────────────
 try:
@@ -222,19 +225,49 @@ class LanceDBStore:
         for namespace, schema in schemas.items():
             if overwrite:
                 self._drop_table_safe(db, namespace)
-            try:
-                tables[namespace] = db.open_table(namespace)
-            except Exception:
-                tables[namespace] = db.create_table(
-                    namespace, schema=schema, mode="create"
-                )
+            tables[namespace] = self._open_or_create(namespace, schema)
         return tables
+
+    @staticmethod
+    def _table_vector_dim(table: Any) -> int | None:
+        """Read the fixed list size of the ``vector`` column, if present."""
+        try:
+            field = table.schema.field(VECTOR_COL)
+            list_size = getattr(field.type, "list_size", None)
+            return int(list_size) if list_size is not None else None
+        except Exception:  # noqa: BLE001 — schema introspection failure
+            return None
 
     @staticmethod
     def _drop_table_safe(db: Any, name: str) -> None:
         """Drop a table if it exists, swallow errors otherwise."""
         with contextlib.suppress(Exception):
             db.drop_table(name)
+
+    def _open_or_create(self, namespace: str, schema: pa.Schema) -> Any:
+        """Open *namespace*, recreating it when the vector dimension differs.
+
+        Embedding model switches (e.g. mock 256 → ollama 768) leave stale
+        vectors behind; a fixed-size list column cannot hold vectors of a
+        different length, so the table must be rebuilt and reindexed.
+        """
+        db = self._ensure_connected()
+        try:
+            table = db.open_table(namespace)
+        except Exception:
+            return db.create_table(namespace, schema=schema, mode="create")
+
+        existing_dim = self._table_vector_dim(table)
+        if existing_dim is not None and existing_dim != self._dimension:
+            logger.warning(
+                "LanceDB table '%s' dimension mismatch "
+                "(existing=%s, expected=%s) — dropping and recreating; "
+                "indexes will be rebuilt.",
+                namespace, existing_dim, self._dimension,
+            )
+            self._drop_table_safe(db, namespace)
+            return db.create_table(namespace, schema=schema, mode="create")
+        return table
 
     def ensure_namespace(self, namespace: str) -> Any:
         """Ensure a single namespace table exists, creating it if necessary.
@@ -253,21 +286,13 @@ class LanceDBStore:
                 f"Unknown namespace '{namespace}'. "
                 f"Expected one of: {ALL_NAMESPACES}"
             )
-        db = self._ensure_connected()
         schemas = {
             NAMESPACE_SCHEMA_METADATA: _make_schema_metadata_schema,
             NAMESPACE_METRICS: _make_metrics_schema,
             NAMESPACE_DOCUMENTS: _make_documents_schema,
             NAMESPACE_QUERY_CACHE: _make_query_cache_schema,
         }
-        try:
-            return db.open_table(namespace)
-        except Exception:
-            return db.create_table(
-                namespace,
-                schema=schemas[namespace](self._dimension),
-                mode="create",
-            )
+        return self._open_or_create(namespace, schemas[namespace](self._dimension))
 
     # ── CRUD operations ────────────────────────────────────────────────
 

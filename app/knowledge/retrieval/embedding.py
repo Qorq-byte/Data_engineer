@@ -218,6 +218,108 @@ class BGEEmbeddingProvider(EmbeddingProvider):
         )
 
 
+# ── Ollama local provider (local semantic search, no API key) ────────
+
+
+class OllamaEmbeddingProvider(EmbeddingProvider):
+    """Local embeddings via a running Ollama server (default ``embeddinggemma``).
+
+    Calls ``POST {base_url}/api/embeddings`` per text with bounded
+    concurrency. Requires ``ollama serve`` and the model pulled
+    (``ollama pull embeddinggemma``). Vectors are L2-normalised so LanceDB's
+    L2 distance is equivalent to cosine similarity.
+
+    Configuration (environment variables):
+        - ``OLLAMA_BASE_URL`` — server URL (default ``http://127.0.0.1:11434``)
+        - ``OLLAMA_EMBEDDING_MODEL`` — model name (default ``embeddinggemma``)
+        - ``OLLAMA_EMBEDDING_DIM`` — output dimension (default 768)
+    """
+
+    DEFAULT_MODEL = "embeddinggemma"
+    DEFAULT_BASE_URL = "http://127.0.0.1:11434"
+    DEFAULT_DIM = 768
+    MAX_CONCURRENCY = 8
+
+    def __init__(
+        self,
+        model: str | None = None,
+        base_url: str | None = None,
+        dimension: int | None = None,
+        client: Any = None,
+    ):
+        self._model = model or os.getenv("OLLAMA_EMBEDDING_MODEL", self.DEFAULT_MODEL)
+        self._base_url = (
+            base_url or os.getenv("OLLAMA_BASE_URL", self.DEFAULT_BASE_URL)
+        ).rstrip("/")
+        raw_dim = dimension or int(os.getenv("OLLAMA_EMBEDDING_DIM", str(self.DEFAULT_DIM)))
+        self._dim = raw_dim
+        self._client = client  # injectable for tests
+        self._semaphore = asyncio.Semaphore(self.MAX_CONCURRENCY)
+
+    @property
+    def dimension(self) -> int:
+        return self._dim
+
+    @property
+    def model_name(self) -> str:
+        return f"ollama:{self._model}"
+
+    async def _get_client(self) -> Any:
+        if self._client is None:
+            import httpx
+
+            self._client = httpx.AsyncClient(timeout=120.0)
+        return self._client
+
+    async def _embed_one(self, text: str) -> list[float]:
+        import httpx
+
+        client = await self._get_client()
+        try:
+            async with self._semaphore:
+                resp = await client.post(
+                    f"{self._base_url}/api/embeddings",
+                    json={"model": self._model, "prompt": text},
+                )
+                resp.raise_for_status()
+                data = resp.json()
+        except httpx.ConnectError as e:
+            raise RuntimeError(
+                f"Ollama 不可达({self._base_url})——请确认已运行 `ollama serve` "
+                f"且已拉取模型 `ollama pull {self._model}`"
+            ) from e
+        except httpx.HTTPStatusError as e:
+            raise RuntimeError(
+                f"Ollama 返回错误 {e.response.status_code}:{e.response.text[:200]} "
+                f"(模型 '{self._model}' 是否已 `ollama pull`?)"
+            ) from e
+
+        vec = data.get("embedding")
+        if not vec:
+            raise RuntimeError(
+                f"Ollama 未返回 embedding(模型 '{self._model}'),响应: {str(data)[:200]}"
+            )
+        return self._normalize([float(x) for x in vec])
+
+    @staticmethod
+    def _normalize(vec: list[float]) -> list[float]:
+        norm = math.sqrt(sum(v * v for v in vec))
+        if norm <= 0:
+            return vec
+        return [v / norm for v in vec]
+
+    async def embed(self, texts: list[str]) -> EmbeddingResult:
+        if not texts:
+            raise ValueError("texts must be non-empty")
+        vectors = await asyncio.gather(*(self._embed_one(t) for t in texts))
+        return EmbeddingResult(
+            vectors=vectors,
+            model=self.model_name,
+            dimension=self._dim,
+            tokens_used=0,
+        )
+
+
 # ── Mock provider (testing, no external deps) ─────────────────────────
 
 

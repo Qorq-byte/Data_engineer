@@ -23,6 +23,7 @@ from app.knowledge.retrieval.embedding import (
     BGEEmbeddingProvider,
     EmbeddingGenerator,
     MockEmbeddingProvider,
+    OllamaEmbeddingProvider,
     OpenAIEmbeddingProvider,
 )
 from app.knowledge.retrieval.lancedb_store import LanceDBStore
@@ -102,14 +103,26 @@ def get_index_refresher() -> Any:
 def _create_embedding_provider() -> Any:
     """Pick an embedding provider based on environment and settings.
 
-    Reads ``RAG_EMBEDDING_PROVIDER`` env var:
+    Reads ``RAG_EMBEDDING_PROVIDER`` (Settings / env):
+        - ``"ollama"`` → OllamaEmbeddingProvider (local, no API key;
+          default model ``embeddinggemma`` via ``OLLAMA_EMBEDDING_MODEL``)
         - ``"openai"`` → OpenAIEmbeddingProvider (needs OPENAI_API_KEY)
         - ``"bge"`` → BGEEmbeddingProvider (needs sentence-transformers)
         - ``"mock"`` or unset → MockEmbeddingProvider (deterministic, no deps)
     """
-    provider_name = os.getenv("RAG_EMBEDDING_PROVIDER", "mock").lower().strip()
+    from app.config.settings import settings
 
-    if provider_name == "openai" and os.getenv("OPENAI_API_KEY"):
+    provider_name = (
+        os.getenv("RAG_EMBEDDING_PROVIDER", "") or settings.rag_embedding_provider
+    ).lower().strip()
+
+    if provider_name == "ollama":
+        return OllamaEmbeddingProvider(
+            model=settings.ollama_embedding_model,
+            base_url=settings.ollama_base_url,
+            dimension=settings.ollama_embedding_dim,
+        )
+    elif provider_name == "openai" and os.getenv("OPENAI_API_KEY"):
         return OpenAIEmbeddingProvider()
     elif provider_name == "bge":
         return BGEEmbeddingProvider()
