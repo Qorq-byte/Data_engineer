@@ -205,7 +205,15 @@ def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
         if key:
             return key
     # Fallback: env key for built-in providers (agent.yml / .env setup)
-    return os.getenv(_ENV_KEYS.get(name, ""), "") or ""
+    key_env = _ENV_KEYS.get(name, "")
+    env_key = os.getenv(key_env, "") if key_env else ""
+    if env_key:
+        return env_key
+    # Bridge keys that only live in .env (pydantic Settings) into runtime
+    attr = _SETTINGS_KEY_ATTR.get(key_env)
+    if attr:
+        return getattr(settings, attr, None) or ""
+    return ""
 
 
 def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:

@@ -82,6 +82,16 @@ class TestBuildFromSettings:
         assert router.mock_mode is True
         assert router.config.providers == {}
 
+    def test_key_falls_back_to_dotenv_settings(self, real_mode):
+        """A key stored only in .env (pydantic Settings, not os.environ) is
+        bridged into the settings-built router."""
+        real_mode.setattr(settings, "deepseek_api_key", "sk-from-dotenv")
+        settings_dict = _llm_settings()
+        settings_dict["providers"]["deepseek"]["api_key_enc"] = ""
+        router = build_router_from_settings(settings_dict)
+        assert router.mock_mode is False
+        assert router.config.providers["deepseek"].api_key == "sk-from-dotenv"
+
     def test_disabled_provider_excluded(self, real_mode):
         settings_dict = _llm_settings()
         settings_dict["providers"]["deepseek"]["enabled"] = False
