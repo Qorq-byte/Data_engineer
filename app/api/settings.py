@@ -394,7 +394,7 @@ async def get_available_models() -> dict:
     for provider_name, cfg in _settings_store["llm"]["providers"].items():
         if not cfg["enabled"]:
             continue
-        has_key = bool(cfg.get("api_key_configured"))
+        has_key = bool(cfg.get("api_key_configured")) or _env_key_available(provider_name)
         for model in cfg["models"]:
             models.append({
                 "model": model,
@@ -423,6 +423,27 @@ async def reload_llm_router_from_db() -> None:
         apply_llm_settings(_settings_store["llm"])
     except Exception:
         logger.warning("Failed to rebuild LLM router from persisted settings", exc_info=True)
+
+
+def _env_key_available(provider_name: str) -> bool:
+    """Whether a built-in provider has a usable key in env / .env (no API
+    call involved). Used by available-models so keys configured via .env
+    count as configured even when nothing was saved via the settings UI."""
+    import os
+
+    from app.config.settings import settings as _settings
+
+    mapping = {
+        "openai": ("OPENAI_API_KEY", "openai_api_key"),
+        "anthropic": ("ANTHROPIC_API_KEY", "anthropic_api_key"),
+        "deepseek": ("DEEPSEEK_API_KEY", "deepseek_api_key"),
+        "google": ("GOOGLE_API_KEY", "google_api_key"),
+    }
+    pair = mapping.get(provider_name)
+    if not pair:
+        return False
+    env_name, attr = pair
+    return bool(os.getenv(env_name) or getattr(_settings, attr, None))
 
 
 @router.delete("/settings/llm/providers/{provider_name}")
