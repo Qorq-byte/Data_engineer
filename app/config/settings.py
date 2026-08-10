@@ -20,6 +20,11 @@ class Settings(BaseSettings):
 
     # --- Database ---
     database_url: str = "sqlite:///./data/app.db"
+    mysql_host: str = "127.0.0.1"
+    mysql_port: int = 3306
+    mysql_user: str = "root"
+    mysql_password: str = ""
+    mysql_database: str = "nl2sql_engine"
 
     # --- LLM API Keys (optional in dev) ---
     openai_api_key: str | None = None
@@ -30,6 +35,12 @@ class Settings(BaseSettings):
     # --- LLM Routing ---
     deepseek_base_url: str = "https://api.deepseek.com/v1"
     llm_mock_mode: bool = False  # force mock router (no real LLM calls)
+
+    # --- RAG Embedding ---
+    rag_embedding_provider: str = "ollama"  # ollama | openai | bge | mock
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_embedding_model: str = "embeddinggemma"
+    ollama_embedding_dim: int = 768
 
     @field_validator("llm_mock_mode", mode="before")
     @classmethod

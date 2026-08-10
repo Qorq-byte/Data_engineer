@@ -27,16 +27,18 @@ from typing import Any
 
 import aiomysql
 
+from app.config.settings import settings
+
 logger = logging.getLogger("storage.mysql")
 
 # ── Default MySQL connection config ────────────────────────────────────
 
 DEFAULT_MYSQL_CONFIG = {
-    "host": os.environ.get("MYSQL_HOST", "127.0.0.1"),
-    "port": int(os.environ.get("MYSQL_PORT", "3306")),
-    "user": os.environ.get("MYSQL_USER", "root"),
-    "password": os.environ.get("MYSQL_PASSWORD", ""),
-    "db": os.environ.get("MYSQL_DATABASE", "nl2sql_engine"),
+    "host": settings.mysql_host,
+    "port": settings.mysql_port,
+    "user": settings.mysql_user,
+    "password": settings.mysql_password,
+    "db": settings.mysql_database,
     "charset": "utf8mb4",
     "autocommit": True,
 }
