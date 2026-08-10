@@ -35,6 +35,8 @@
 | 🧠 持续学习 | 反馈打分 + 查询对存储 + 规则提取 + 质量趋势 |
 | 🧩 多数据库适配 | SQLite / DuckDB / PostgreSQL / MySQL / Snowflake / StarRocks |
 | 🔌 多 LLM 提供商 | OpenAI / Claude / Gemini / DeepSeek / Qwen 等 10+（LiteLLM 统一路由） |
+| 🔑 前端切换模型 | 设置面板填 API Key / 选默认模型**即生效**（AES 加密存储），聊天面板每次查询可选模型 |
+| 🧠 本地语义检索 | 默认使用 Ollama `embeddinggemma`（768 维）做向量检索，零 API Key、离线可用 |
 | 🔄 MCP 双重角色 | 既是 MCP Server（对外暴露 NL2SQL），也是 MCP Client（消费外部工具） |
 | 🗃️ MySQL 持久化 | Write-Through 模式，用户数据不丢失 |
 
@@ -81,6 +83,10 @@ POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
 
 - Python 3.12+
 - （可选）MySQL 8.0+（用于用户数据持久化）
+- （推荐）Ollama + `embeddinggemma` 模型（RAG 本地语义检索，无需 API Key）：
+  ```bash
+  ollama pull embeddinggemma   # 约 600MB，保持 ollama serve 运行即可
+  ```
 
 ### 安装
 
@@ -113,6 +119,9 @@ cp .env.example .env
 ```
 
 > 开发/离线模式：设置 `LLM_MOCK_MODE=1` 可以使用 Mock LLM 不调用真实 API。
+>
+> API Key 也可以在 **Web 工作台 → 系统设置 → LLM** 中配置（加密存 MySQL、保存即生效），
+> 不必写进 `.env`；`.env` 中的 Key 同样会被识别为"已配置"。
 
 ### 启动服务
 
@@ -145,10 +154,13 @@ uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
 核心功能，将自然语言转换为 SQL 并执行。
 
 **操作步骤：**
-1. 在底部输入框输入自然语言查询（中文或英文）
-2. 按 `Enter` 或点击发送按钮
-3. 系统逐步执行 Pipeline，实时显示进度
-4. 结果展示：SQL 代码、执行结果表格、验证报告
+1. （可选）在输入框上方的「模型:」下拉选择本次查询使用的大模型（默认"跟随系统设置"，模型列表来自系统设置中已配置 Key 的提供商）
+2. 在底部输入框输入自然语言查询（中文或英文）
+3. 按 `Enter` 或点击发送按钮
+4. 系统逐步执行 Pipeline，实时显示进度
+5. 结果展示：SQL 代码、执行结果表格、验证报告
+
+**模型选择说明：** 聊天面板的模型下拉与「系统设置 → LLM」联动——只有在设置中启用并配置了有效 API Key 的提供商模型才会出现在列表中；未配置任何 Key 时提示"未配置可用模型"。
 
 **查询示例：**
 
@@ -251,10 +263,10 @@ uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
 
 系统配置管理。
 
-- **LLM 设置**：管理 LLM 提供商、API Key、模型选择
-- **Harness 设置**：运行时配置
-- **数据库设置**：连接管理
-- **RAG 检索设置**：重建 Schema 索引、刷新所有 RAG 索引、文档上传
+- **LLM 设置**：为各提供商填写 API Key（**AES-256-GCM 加密**存储于 MySQL，任何接口不回显明文，留空则保持原 Key）、选择默认模型与回退模型、启用/停用提供商；支持**添加自定义提供商**（名称 + Key + 模型列表 + 可选 OpenAI 兼容 base_url）；点击"保存配置"后**立即生效**，无需重启
+- **Harness 设置**：运行时约束（只读模式、最大 LLM 调用、结果行数上限等）
+- **数据库设置**：方言开关与连接池参数
+- **RAG 检索设置**：混合检索权重与阈值、重建 Schema 索引、刷新所有 RAG 索引、文档上传（语义检索默认走本地 Ollama，见 [配置说明](#配置说明)）
 - **系统状态**：API 在线状态、版本号
 
 ---
@@ -274,7 +286,7 @@ uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
 ### 核心查询 API
 
 ```bash
-# NL → SQL 完整管线
+# NL → SQL 完整管线（model 参数可选，指定本次查询使用的大模型）
 curl -X POST http://localhost:8001/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
@@ -284,7 +296,8 @@ curl -X POST http://localhost:8001/api/v1/query \
     "num_candidates": 1,
     "execute": false,
     "validate": true,
-    "link_schema": true
+    "link_schema": true,
+    "model": "deepseek-v4-flash"
   }'
 ```
 
@@ -300,14 +313,40 @@ curl -X POST http://localhost:8001/api/v1/query \
 | `execute` | bool | 否 | 是否执行 SQL（默认 false） |
 | `validate` | bool | 否 | 是否运行验证（默认 true） |
 | `link_schema` | bool | 否 | 是否运行 Schema 链接（默认 true） |
+| `model` | string | 否 | 本次查询使用的大模型（必须是已启用且配置了 Key 的提供商模型；缺省用系统默认模型，未知模型返回 422） |
 
 ### 流式查询（SSE）
 
 ```bash
 curl -X POST http://localhost:8001/api/v1/query/stream \
   -H "Content-Type: application/json" \
-  -d '{"nl_text": "查询所有用户", "dialect": "postgresql"}'
+  -d '{"nl_text": "查询所有用户", "dialect": "postgresql", "model": "deepseek-v4-flash"}'
 ```
+
+### LLM 设置（切换模型 / 配置 Key）
+
+```bash
+# 为提供商配置 API Key + 切换默认模型（保存后立即生效，密钥加密存储，接口不回显明文）
+curl -X PUT http://localhost:8001/api/v1/settings/llm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "default_model": "deepseek-v4-pro",
+    "providers": {
+      "deepseek": {"enabled": true, "api_key": "sk-xxx"},
+      "myproxy": {"enabled": true, "api_key": "sk-xxx",
+                  "models": ["local-model"],
+                  "base_url": "https://proxy.example.com/v1"}
+    }
+  }'
+
+# 查看当前配置（api_key 只返回"是否已配置"布尔值）
+curl http://localhost:8001/api/v1/settings/llm
+
+# 列出所有可用模型（已启用且配置了 Key 的提供商）
+curl http://localhost:8001/api/v1/settings/available-models
+```
+
+> 说明：自定义提供商若使用 LiteLLM 已知名称（openai/anthropic/deepseek/google/groq/qwen…）无需 base_url；否则按 **OpenAI 兼容端点**调用，必须提供 `base_url`。API Key 留空表示保持原值；设置保存后立即重建运行中的路由，重启服务后自动从 MySQL 回载。
 
 ### 其他 API 端点
 
@@ -333,7 +372,8 @@ curl -X POST http://localhost:8001/api/v1/query/stream \
 | `/api/v1/auth/login` | POST | 用户登入 |
 | `/api/v1/auth/register` | POST | 用户注册 |
 | `/api/v1/settings/rag` | GET/PUT | RAG 设置 |
-| `/api/v1/settings/llm` | GET/PUT | LLM 设置 |
+| `/api/v1/settings/llm` | GET/PUT | LLM 设置（Key 加密存储、保存即生效） |
+| `/api/v1/settings/available-models` | GET | 可用模型列表 |
 | `/api/v1/sql/explain` | POST | SQL 解释 |
 | `/api/v1/sql/translate` | POST | SQL 方言翻译 |
 | `/api/v1/sql/format` | POST | SQL 格式化 |
@@ -378,10 +418,14 @@ JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=1440
 ```
 
-> **本地语义检索(Ollama):** `RAG_EMBEDDING_PROVIDER=ollama` 时,向量检索由本机
+> **本地语义检索(Ollama):** `RAG_EMBEDDING_PROVIDER=ollama`(默认)时,向量检索由本机
 > Ollama 提供(默认模型 `embeddinggemma`,768 维),无需 API Key;首次使用前执行
 > `ollama pull embeddinggemma` 并保持 `ollama serve` 运行。切换不同维度的嵌入
 > 模型时,系统会自动重建 LanceDB 向量表并重新索引。
+>
+> 其他可选值:`openai`(需 `OPENAI_API_KEY`)、`bge`(需 `sentence-transformers`)、
+> `mock`(哈希伪向量,无语义,仅开发用)。RAG 为 **BM25 + 向量 + RRF** 混合检索,
+> 向量路径解决同义/跨语言语义匹配(如中文问题匹配英文 Schema),BM25 路径解决字面匹配。
 
 ### Agent 配置（`app/config/agent.yml`）
 
@@ -411,12 +455,13 @@ YAML 驱动的 Agent 配置，包含：
 | **BM25 索引** | `data/bm25.db*` | 关键词检索索引 | 保留 |
 | **LanceDB 向量库** | `data/lancedb/*.lance` | 语义向量检索（schema_metadata, metrics） | 保留 |
 | **用户头像** | `data/avatars/` | 用户上传头像文件 | 保留 |
-| **MySQL 数据库** | 已连接的外部 MySQL 实例 | 领域、术语、规则、查询对、反馈、学习统计 | 保留 |
+| **MySQL 数据库** | 已连接的外部 MySQL 实例 | 领域、术语、规则、查询对、反馈、学习统计、LLM 设置（加密的 API Key） | 保留 |
 | **内存** | 服务器进程 RAM | 数据库连接、学习统计缓存、领域缓存 | **丢失** |
 
 ### 关键特性
 
 - **Write-Through 持久化** — 大多数 API 端点采用"先写内存，再写 MySQL/文件"模式，保证数据一致性
+- **API Key 加密存储** — 在设置面板配置的 LLM API Key 以 AES-256-GCM 密文写入 MySQL（密钥由 `JWT_SECRET` 派生），任何接口不回显明文；`.env` 中的 Key 同样可用
 - **无用户隔离** — 所有用户共享同一份数据（领域、查询历史、学习数据等）
 - **内存数据易失** — 数据库连接信息（`ConnectionFactory`）、学习统计缓存（`_learning_store`）在服务器重启后清空，需重新连接数据库
 - **MySQL 可选** — 不配置 `AUTH_MYSQL_*` 时，回退到 YAML 文件 + 内存模式
@@ -442,6 +487,9 @@ YAML 驱动的 Agent 配置，包含：
 
 OpenAI · Anthropic Claude · Google Gemini · DeepSeek · Qwen · 以及任何 OpenAI 兼容端点
 
+模型与 API Key 可在 **Web 工作台 → 系统设置 → LLM** 或 `PUT /api/v1/settings/llm` 动态配置，
+保存后立即生效、重启后保留，无需修改代码。
+
 ---
 
 ## 项目结构
@@ -464,6 +512,7 @@ data_engineer/
 │   ├── models/          # 数据模型（dataclass）
 │   ├── nodes/           # 计算节点（12 个内置节点）
 │   ├── rag/             # RAG 引擎（混合检索、索引刷新）
+│   ├── security/        # 密钥加密（AES-256-GCM，API Key 加密存储）
 │   ├── storage/         # MySQL 持久化
 │   ├── subagent/        # 子代理封装系统
 │   ├── web/             # Streamlit Web UI（备用）
