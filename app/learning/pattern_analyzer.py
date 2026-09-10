@@ -24,6 +24,7 @@ import hashlib
 import re
 from dataclasses import dataclass, field
 from typing import Any
+from uuid import uuid4
 
 # ── CandidateRule ─────────────────────────────────────────────────────────
 
@@ -46,7 +47,7 @@ class CandidateRule:
         created_at: ISO-8601 timestamp.
     """
 
-    rule_id: str = field(default="")
+    rule_id: str = field(default_factory=lambda: f"cr_{uuid4().hex[:8]}")
     domain_id: str = ""
     pattern_description: str = ""
     suggested_rule_name: str = ""
@@ -475,7 +476,7 @@ class PatternAnalyzer:
         candidates: list[CandidateRule] = []
 
         for key, items in clusters.items():
-            if len(items) < 1:  # need at least 1 edit to suggest a pattern
+            if len(items) < 2:  # a single edit is noise, not a repeating pattern
                 continue
 
             first = items[0]
