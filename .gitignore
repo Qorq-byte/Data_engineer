@@ -26,6 +26,13 @@ pip-*/
 .verify_tmp*/
 .verify_e2e/
 _vendor_pytest/
+.stress_*
+.guard_*
+.rag_bench*
+.aigrade*
+.check*.txt
+.reg.xml
+.final_check*
 
 # Runtime data
 data/

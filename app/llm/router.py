@@ -564,6 +564,10 @@ class LiteLLMRouter:
             raise ProviderConnectionError(str(e)) from e
         except litellm.exceptions.ServiceUnavailableError as e:
             raise ProviderServerError(str(e)) from e
+        except litellm.exceptions.InternalServerError as e:
+            # 5xx from the provider or a wrapped connection failure —
+            # retryable, so the fallback chain can take over.
+            raise ProviderServerError(str(e)) from e
         except litellm.exceptions.APIError as e:
             # 4xx errors are non-retryable
             if hasattr(e, "status_code") and 400 <= e.status_code < 500:
@@ -571,6 +575,18 @@ class LiteLLMRouter:
             raise ProviderServerError(str(e)) from e
         except TimeoutError as e:
             raise ProviderTimeoutError(f"Timeout from {provider.provider}") from e
+        except Exception as e:
+            # Safety net: some providers surface transport failures as a
+            # generic exception. Classify connection-ish failures as
+            # retryable so fallback / circuit-breaking actually engages.
+            msg = str(e).lower()
+            if any(
+                token in msg
+                for token in ("connection error", "connection refused", "connect error",
+                              "connection reset", "max retries exceeded", "timed out")
+            ):
+                raise ProviderConnectionError(str(e)) from e
+            raise
 
     @staticmethod
     async def _stream_to_async_gen(response: Any) -> AsyncIterator[str]:

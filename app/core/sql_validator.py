@@ -336,6 +336,44 @@ class SQLValidator:
     # Step 3 — Type compatibility check
     # ------------------------------------------------------------------
 
+    _NUMERIC_TYPES = frozenset({
+        "INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT", "DECIMAL", "NUMERIC",
+        "REAL", "DOUBLE", "FLOAT", "MONEY", "NUMBER",
+    })
+
+    def _check_aggregate_types(self, sql: str, schema: SchemaSnapshot) -> list[str]:
+        """Blocking type errors: numeric aggregates over non-numeric columns.
+
+        ``SUM``/``AVG`` applied to a text column is a semantic hallucination
+        that executes silently in many databases — catch it before execution.
+        """
+        errors: list[str] = []
+        aliases = self._extract_table_aliases(sql)
+        all_columns: dict[str, ColumnSchema] = {}
+        for t in schema.tables.values():
+            for c in t.columns:
+                all_columns[c.name] = c
+
+        try:
+            statements = sqlglot.parse(sql, read=self.dialect or None)
+        except Exception:  # noqa: BLE001 — syntax stage reports parse errors
+            return errors
+
+        fn_names = {exp.Sum: "SUM", exp.Avg: "AVG"}
+        for st in statements:
+            if st is None:
+                continue
+            for node in st.find_all(*fn_names.keys()):
+                target = node.this
+                if isinstance(target, exp.Column):
+                    col_type = self._resolve_expr_type(target.name, all_columns, aliases)
+                    if col_type and col_type.upper() not in self._NUMERIC_TYPES:
+                        errors.append(
+                            f"TYPE_ERROR: {fn_names[type(node)]}({target.name}) applied to "
+                            f"non-numeric column of type {col_type}"
+                        )
+        return errors
+
     def _check_types(
         self, sql: str, schema: SchemaSnapshot
     ) -> tuple[bool, list[str]]:
@@ -367,7 +405,9 @@ class SQLValidator:
                     f"in '{left} {op} {right}'"
                 )
 
-        return True, warnings  # type warnings are non-blocking
+        # Aggregate/column type errors are blocking; comparison mismatches warn.
+        agg_errors = self._check_aggregate_types(sql, schema)
+        return len(agg_errors) == 0, warnings + agg_errors
 
     @staticmethod
     def _resolve_expr_type(
