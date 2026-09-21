@@ -220,6 +220,14 @@ async def learning_stats() -> dict:
         except Exception:
             pass
 
+    # MySQL's AVG() is commonly returned as Decimal. FastAPI serializes Decimal
+    # values as JSON strings, while the workspace renders this field as a number.
+    # Keep the API contract numeric regardless of which stats store supplied it.
+    try:
+        result["avg_rating"] = float(result["avg_rating"] or 0.0)
+    except (TypeError, ValueError):
+        result["avg_rating"] = 0.0
+
     return result
 
 

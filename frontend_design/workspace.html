@@ -3353,6 +3353,7 @@ const LearningPanel = () => {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState({});
+  const averageRating = Number(stats?.avg_rating) || 0;
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -3424,7 +3425,7 @@ const LearningPanel = () => {
                 {[
                   [String(stats.total_queries || 0), "总查询数"],
                   [String(stats.total_feedback || 0), "反馈记录"],
-                  [(stats.avg_rating || 0).toFixed(1) + " / 5", "平均评分"],
+                  [averageRating.toFixed(1) + " / 5", "平均评分"],
                 ].map(([v, l]) => (
                   <Card key={l} className="p-4 text-center">
                     <div className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">{v}</div>
