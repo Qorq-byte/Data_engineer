@@ -795,6 +795,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   });
   const scrollRef = useRef(null);
   const streamRef = useRef(null); // AbortController for SSE
+  const sessionRef = useRef("");
   const composingRef = useRef(false); // IME composition state
   const notify = useNotify();
 
@@ -806,6 +807,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
       time: new Date().toLocaleString('zh-CN'),
       queryText: queryText || msgs.find(m => m.role === 'user')?.text || '',
       domain: domain || detectedDomain || '',
+      sessionId: sessionRef.current,
       messageCount: msgs.length,
       messages: msgs,
     };
@@ -815,6 +817,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   };
 
   const loadHistory = (entry) => {
+    sessionRef.current = entry.sessionId || "";
     setMessages(entry.messages || []);
     if (entry.domain) setDetectedDomain(entry.domain);
     setShowHistory(false);
@@ -894,6 +897,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
     try {
       const body = {
         nl_text: text,
+        session_id: sessionRef.current || undefined,
         domain: domain,
         database: database,
         dialect: dbDialect || "ansi",
@@ -933,6 +937,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           source: '', sourceNote: '',
         };
         let currentEvent = '';
+        let receivedDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -950,6 +955,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
               if (!dataStr) continue;
               try {
                 const data = JSON.parse(dataStr);
+                if (data.session_id) sessionRef.current = data.session_id;
 
                 switch (currentEvent) {
                   case 'workflow':
@@ -1038,6 +1044,13 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                     break;
                   case 'done':
                   case 'complete':
+                    receivedDone = true;
+                    if (data.session_id) sessionRef.current = data.session_id;
+                    if (data.status === 'failed') throw new Error((data.errors || []).join('; ') || '查询失败');
+                    if (data.validation) collected.validation = data.validation;
+                    if (data.execution) collected.execution = data.execution;
+                    if (data.warnings) collected.warnings = data.warnings;
+                    if (data.errors) collected.errors = data.errors;
                     if (data.primary_sql) collected.sql = data.primary_sql;
                     if (data.query_id) collected.queryId = data.query_id;
                     if (data.linked_tables) collected.tables = data.linked_tables;
@@ -1070,6 +1083,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           }
         }
 
+        if (!receivedDone) throw new Error('查询连接中断，未收到完成状态，请确认后重试');
         setPending(null);
         setStreamingText("");
 
@@ -1113,54 +1127,17 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           return;
         }
       } catch(streamErr) {
-        // SSE failed, fall back to regular query
         streamRef.current = null;
-        if (streamErr.message !== 'API_OFFLINE' && streamErr.message !== 'SSE error') {
-          console.warn('SSE stream failed, falling back to regular query:', streamErr.message);
-        }
+        throw streamErr;
       }
 
-      // Fallback: regular API call
-      const result = await api.query(body);
-
-      setPending(null);
-      setStreamingText("");
-
-      const msg = {
-        role: "assistant",
-        kind: "result",
-        feedback: null,
-        queryId: result.query_id,
-        // Preserve the original user query text for feedback submissions.
-        text: text,
-        language: result.language,
-        intent: result.intent,
-        confidence: result.confidence,
-        summary: `查询完成 — 领域: ${domain}, 语言: ${result.language}, 意图: ${result.intent}`,
-        candidates: result.candidates || [],
-        primarySql: result.primary_sql,
-        validation: result.validation,
-        linkedTables: result.linked_tables,
-        linkedColumns: result.linked_columns,
-        execution: result.execution,
-        errors: result.errors,
-        warnings: result.warnings,
-        detectedDomain: domain,
-        source: result.source || '',
-        sourceNote: result.source_note || '',
-      };
-
-      if (result.execution && result.execution.rows) {
-        msg.summary = `查询完成 — 返回 ${result.execution.row_count || result.execution.rows.length} 行。`;
-      }
-
-      setMessages(m => { const updated = [...m, msg]; saveToHistory(updated, text, domain); return updated; });
+      throw new Error('服务未返回查询结果');
     } catch (e) {
       setPending(null);
       setStreamingText("");
+      if (e.name === 'AbortError') return;
       if (e.message === 'API_OFFLINE' || e.code === 'API_OFFLINE') {
-        notify("API 离线，使用演示模式", 'warn', 4000);
-        setMessages(m => { const mockMsg = buildMockResponse(text, forceResult); const updated = [...m, mockMsg]; saveToHistory(updated, text, 'ecommerce'); return updated; });
+        setMessages(m => [...m, { role: "assistant", kind: "error", text: "API 离线，请恢复连接后重试" }]);
       } else if (e.message === 'API_TIMEOUT' || e.code === 'API_TIMEOUT') {
         notify("请求超时，请检查网络连接", 'error', 4000);
         setMessages(m => [...m, {
@@ -1351,7 +1328,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
         <button className={cn("btn-outline flex items-center gap-1", showHistory && "active")} onClick={() => setShowHistory(!showHistory)} title="历史查询">
           <IconClock className="h-3.5 w-3.5" /> 历史{history.length > 0 && ` (${history.length})`}
         </button>
-        <button className="btn-outline" onClick={() => { setMessages([]); notify("已清空对话", 'ok', 2000); }} title="新建对话">
+        <button className="btn-outline" onClick={() => { streamRef.current?.abort(); sessionRef.current = ""; setMessages([]); notify("已清空对话", 'ok', 2000); }} title="新建对话">
           + 新对话
         </button>
       </PanelHeader>
@@ -3843,7 +3820,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
       });
       if (r?.status === 'ok') {
         const c = r.cleared || {};
-        const parts: string[] = [];
+        const parts = [];
         if (c.schema) parts.push(`Schema: ${c.schema.before_lancedb} → ${c.schema.after_lancedb}`);
         if (c.metrics) parts.push(`Metrics: ${c.metrics.before_lancedb} → ${c.metrics.after_lancedb}`);
         if (c.documents) parts.push(`Documents: ${c.documents.before_lancedb} → ${c.documents.after_lancedb}`);

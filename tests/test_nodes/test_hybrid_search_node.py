@@ -168,15 +168,7 @@ class TestHybridSearchNodeConstruction:
 
 
 class TestHybridSearchNodeRegistry:
-    """NodeRegistry uses a class-level ``_nodes`` dict — we must clean
-    up between tests to avoid cross-test pollution."""
-
-    @pytest.fixture(autouse=True)
-    def _clear_registry(self):
-        from app.nodes.registry import NodeRegistry
-        NodeRegistry._nodes.clear()
-        yield
-        NodeRegistry._nodes.clear()
+    """Each registry owns its node instances."""
 
     def test_can_register(self):
         from app.nodes.registry import NodeRegistry

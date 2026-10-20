@@ -1,6 +1,7 @@
 # NL2SQL Data Engineering Agent
 
 > 优化分支进度与验收见[实施计划](docs/optimization/plan.md)、[阶段记录](docs/optimization/progress.md)。
+> 主查询固定走 request_query YAML 与 WorkflowRunner，JSON/SSE/MCP 共用执行服务；字段、失败语义和限制见[查询契约](docs/optimization/query-contract.md)。
 > 当前采用私有管理员共享工作台：必须配置至少32字符的随机JWT_SECRET，注册需REGISTRATION_TOKEN邀请，业务接口仅允许ADMIN_USER_IDS；详见[安全配置](docs/optimization/security.md)。
 
 基于 LLM 的自然语言 → SQL 数据工程智能体。支持**中英双语**输入，通过 **RAG 混合语义检索**、**Evolvable Context 活知识库**和**持续学习**，将自然语言准确转换为多方言 SQL 并执行。
@@ -59,7 +60,7 @@ POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
 ### 核心设计原则
 
 1. **LLM 不决定下一步** — WorkflowRunner 驱动固定的 YAML 节点序列
-2. **只读默认** — 所有 SQL 通过关键词黑名单过滤
+2. **只读默认** — SQL 使用单语句 AST 校验与驱动保护，禁止写操作
 3. **权限不可绕过** — 每个工具调用都经过 PermissionManager
 4. **硬性重试/迭代限制** — 每次执行有最大重试和反思轮次
 

@@ -106,6 +106,7 @@ class SQLCandidate:
     database_name: str = ""           # which database this SQL targets (for multi-DB)
     validation: dict | None = None   # per-candidate validation result
     execution: dict | None = None    # per-candidate execution result
+    db_id: str = ""
 
 
 @dataclass

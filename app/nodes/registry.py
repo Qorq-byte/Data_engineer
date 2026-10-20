@@ -8,9 +8,10 @@ from app.nodes.base import BaseNode
 
 
 class NodeRegistry:
-    """Thread-safe registry mapping node names → BaseNode instances."""
+    """Request-local registry mapping node names → BaseNode instances."""
 
-    _nodes: dict[str, BaseNode] = {}
+    def __init__(self) -> None:
+        self._nodes: dict[str, BaseNode] = {}
 
     def register(self, node: BaseNode) -> None:
         """Register a node instance.

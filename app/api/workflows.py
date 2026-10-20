@@ -2,25 +2,43 @@
 
 See SPEC 6.5 (Workflow Orchestration API) for the full specification.
 """
+
 from __future__ import annotations
 
 import contextlib
-import time
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
 router = APIRouter()
 
-_WORKFLOW_PLANS: list[dict[str, Any]] = [
-    {"id": "gensql_agentic", "name": "标准 NL→SQL 生成", "description": "单轮 NL→SQL，含 Schema 链接、生成、验证、执行", "node_count": 4, "nodes": [{"name": "schema_linking", "label": "Schema 链接", "icon": "\U0001f517"}, {"name": "generate_sql", "label": "SQL 生成", "icon": "\U0001f916"}, {"name": "validate_sql", "label": "SQL 验证", "icon": "\u2705"}, {"name": "execute_sql", "label": "SQL 执行", "icon": "\u25b6\ufe0f"}], "category": "standard"},
-    {"id": "ez_query", "name": "快速查询通道", "description": "跳过验证的快速查询", "node_count": 3, "nodes": [{"name": "schema_linking", "label": "Schema 链接", "icon": "\U0001f517"}, {"name": "generate_sql", "label": "SQL 生成", "icon": "\U0001f916"}, {"name": "execute_sql", "label": "SQL 执行", "icon": "\u25b6\ufe0f"}], "category": "express"},
-    {"id": "reflection", "name": "反射式生成", "description": "生成→执行→反思→修正", "node_count": 5, "nodes": [{"name": "schema_linking", "label": "Schema 链接", "icon": "\U0001f517"}, {"name": "generate_sql", "label": "SQL 生成", "icon": "\U0001f916"}, {"name": "execute_sql", "label": "SQL 执行", "icon": "\u25b6\ufe0f"}, {"name": "reflection", "label": "反思修正", "icon": "\U0001f504"}, {"name": "validate_sql", "label": "SQL 验证", "icon": "\u2705"}], "category": "deep"},
-    {"id": "chat_agentic", "name": "多轮对话查询", "description": "多轮对话增量查询", "node_count": 5, "nodes": [{"name": "parse_nl", "label": "NL 解析", "icon": "\U0001f4dd"}, {"name": "hybrid_search", "label": "混合检索", "icon": "\U0001f50d"}, {"name": "generate_sql", "label": "SQL 生成", "icon": "\U0001f916"}, {"name": "validate_sql", "label": "SQL 验证", "icon": "\u2705"}, {"name": "respond", "label": "结果响应", "icon": "\U0001f4ac"}], "category": "chat"},
-    {"id": "explore", "name": "Schema 探索", "description": "快速探索数据库 Schema", "node_count": 3, "nodes": [{"name": "parse_nl", "label": "NL 解析", "icon": "\U0001f4dd"}, {"name": "hybrid_search", "label": "混合检索", "icon": "\U0001f50d"}, {"name": "format", "label": "格式化输出", "icon": "\U0001f4cb"}], "category": "explore"},
-    {"id": "metric_query", "name": "MetricFlow 指标查询", "description": "通过 MetricFlow 语义层查询", "node_count": 4, "nodes": [{"name": "metric_resolve", "label": "指标解析", "icon": "\U0001f4d0"}, {"name": "generate_sql", "label": "SQL 生成", "icon": "\U0001f916"}, {"name": "validate_sql", "label": "SQL 验证", "icon": "\u2705"}, {"name": "execute_sql", "label": "SQL 执行", "icon": "\u25b6\ufe0f"}], "category": "metric"},
-]
+
+def _load_plan_catalog() -> list[dict[str, Any]]:
+    from app.harness.plan_loader import PlanLoader
+
+    loader = PlanLoader(str(Path(__file__).resolve().parents[1] / "workflow/plans"))
+    plans = []
+    for plan_id in loader.list_available():
+        plan = loader.load(plan_id)
+        plans.append(
+            {
+                "id": plan.id,
+                "name": plan.name,
+                "description": plan.description,
+                "node_count": len(plan.node_order),
+                "nodes": [
+                    {"name": node.node, "label": node.node, "icon": "⚙"} for node in plan.node_order
+                ],
+                "category": "active" if plan_id == "request_query" else "template",
+                "query_executable": plan_id == "request_query",
+            }
+        )
+    return plans
+
+
+_WORKFLOW_PLANS = _load_plan_catalog()
 
 # In-memory trace store — populated by real query executions
 _TRACE_STORE: list[dict[str, Any]] = []
@@ -42,19 +60,21 @@ def record_trace(
     now = datetime.now()
     trace_id = f"tr_{now.strftime('%Y%m%d')}_{_next_trace_id:06x}"
     _next_trace_id += 1
-    _TRACE_STORE.append({
-        "id": trace_id,
-        "plan": plan,
-        "status": status,
-        "duration": f"{duration_ms / 1000:.2f}s",
-        "duration_ms": duration_ms,
-        "time": now.strftime("%H:%M:%S"),
-        "nl_input": nl_input,
-        "sql_generated": sql_generated,
-        "row_count": row_count,
-        "nodes_executed": nodes_executed or [],
-        "error": error,
-    })
+    _TRACE_STORE.append(
+        {
+            "id": trace_id,
+            "plan": plan,
+            "status": status,
+            "duration": f"{duration_ms / 1000:.2f}s",
+            "duration_ms": duration_ms,
+            "time": now.strftime("%H:%M:%S"),
+            "nl_input": nl_input,
+            "sql_generated": sql_generated,
+            "row_count": row_count,
+            "nodes_executed": nodes_executed or [],
+            "error": error,
+        }
+    )
     # Keep only last 100 traces
     if len(_TRACE_STORE) > 100:
         _TRACE_STORE[:] = _TRACE_STORE[-100:]
@@ -80,7 +100,9 @@ async def workflow_stats() -> dict:
     avg_duration = sum(durations) / len(durations) if durations else 0.0
     return {
         "total_executions": len(_TRACE_STORE),
-        "success_rate": round(len(success_traces) / len(_TRACE_STORE) * 100, 1) if _TRACE_STORE else 0.0,
+        "success_rate": round(len(success_traces) / len(_TRACE_STORE) * 100, 1)
+        if _TRACE_STORE
+        else 0.0,
         "avg_duration_ms": round(avg_duration * 1000),
         "failed_count": len([t for t in _TRACE_STORE if t["status"] == "failed"]),
         "plans_used": sorted({t["plan"] for t in _TRACE_STORE}),
@@ -99,8 +121,14 @@ async def workflow_traces(limit: int = 20, plan: str = "") -> dict:
 async def workflow_history(workflow_id: str, limit: int = 20) -> dict:
     traces = [t for t in _TRACE_STORE if t["plan"].startswith(workflow_id)]
     if not traces:
-        raise HTTPException(status_code=404, detail=f"No history found for workflow '{workflow_id}'")
-    return {"workflow_id": workflow_id, "traces": list(reversed(traces[-limit:])), "total": len(traces)}
+        raise HTTPException(
+            status_code=404, detail=f"No history found for workflow '{workflow_id}'"
+        )
+    return {
+        "workflow_id": workflow_id,
+        "traces": list(reversed(traces[-limit:])),
+        "total": len(traces),
+    }
 
 
 @router.post("/workflows/custom", status_code=201)
@@ -130,6 +158,8 @@ async def create_custom_workflow(body: dict) -> dict:
         "node_count": len(nodes),
         "nodes": [{"name": n, "label": n, "icon": "\u2699\ufe0f"} for n in nodes],
         "category": body.get("category", "custom"),
+        "query_executable": False,
+        "persistence": "process-local catalog only",
     }
     _WORKFLOW_PLANS.append(new_plan)
     return {"status": "created", "workflow": new_plan}
@@ -158,7 +188,8 @@ async def simulate_routing(body: dict) -> dict:
 
     plan = next((p for p in _WORKFLOW_PLANS if p["id"] == selected), _WORKFLOW_PLANS[0])
     return {
-        "status": "ok",
+        "status": "simulation",
+        "actual_query_plan": "request_query",
         "nl_text": nl_text,
         "domain": domain,
         "selected_workflow": selected,

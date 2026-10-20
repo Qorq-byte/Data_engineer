@@ -252,7 +252,9 @@ class SQLGenerator:
                 )
             idx += 1
 
-        return candidates if candidates else [_fallback_candidate(sqr, dialect)]
+        if not candidates or not any(c.sql_text.strip() for c in candidates):
+            raise RuntimeError("All SQL generation attempts failed or returned empty output")
+        return [c for c in candidates if c.sql_text.strip()]
 
     async def _multi_perspective(
         self,
@@ -347,7 +349,9 @@ class SQLGenerator:
                     )
                 )
 
-        return candidates if candidates else [_fallback_candidate(sqr, dialect)]
+        if not candidates or not any(c.sql_text.strip() for c in candidates):
+            raise RuntimeError("All SQL generation attempts failed or returned empty output")
+        return [c for c in candidates if c.sql_text.strip()]
 
 
 # ── Helpers ────────────────────────────────────────────────────────────

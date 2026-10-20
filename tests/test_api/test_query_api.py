@@ -227,10 +227,12 @@ class TestStreamingEndpoint:
         body = resp.text
         assert "event: parse" in body
 
-    def test_stream_has_token_events(self, client):
+    def test_stream_reports_stages_without_fake_token_events(self, client):
         resp = client.post("/api/v1/query/stream", json={"nl_text": "查询所有订单"})
         body = resp.text
-        assert "event: token" in body
+        assert "event: stage" in body
+        assert "event: sql" in body
+        assert "event: token" not in body
 
     def test_stream_has_done_event(self, client):
         resp = client.post("/api/v1/query/stream", json={"nl_text": "查询订单"})

@@ -24,7 +24,8 @@ agent:
       model: deepseek-v4-flash
       tools: [build_prompt, call_llm]
       permissions:
-        call_llm: ask
+        build_prompt: allow
+        call_llm: allow  # authenticated operator explicitly requested generation
       streaming: true
 
     execute_sql:

@@ -84,7 +84,7 @@ class ExecuteSQLNode(AgenticNode):
                 metadata={"status": "no_connection"},
             )
 
-        sql = input.context.get("sql", input.query_text)
+        sql = input.context.get("sql") or input.context.get("primary_sql") or input.query_text
         if not sql or not sql.strip():
             return NodeOutput(
                 result=None,
@@ -105,6 +105,10 @@ class ExecuteSQLNode(AgenticNode):
                     "reason": "write_statement_blocked",
                 },
             )
+
+        if input.context.get("require_validation") and not input.context.get("validation_passed"):
+            return NodeOutput(errors=["SQL validation must pass before execution"],
+                              metadata={"status": "blocked"})
 
         # ── Execute ────────────────────────────────────────────
         max_rows = max(1, min(int(input.config.get("max_rows", 100)), settings.max_result_rows))

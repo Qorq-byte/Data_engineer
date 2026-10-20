@@ -389,9 +389,12 @@ class LiteLLMRouter:
 
         Returns the first successful response or raises the last error.
         """
+        from app.llm.budget import reserve_llm_call
+
         # Mock mode: skip provider resolution entirely
         if self.mock_mode:
             t0 = time.perf_counter()
+            reserve_llm_call()
             dummy = ProviderConfig(provider="mock", api_key_env="")
             response = await self._mock_call(dummy, model, messages, n, stream)
             latency = (time.perf_counter() - t0) * 1000
@@ -420,6 +423,7 @@ class LiteLLMRouter:
 
             try:
                 t0 = time.perf_counter()
+                reserve_llm_call()
                 response = await self._call_provider(
                     provider, provider_model, messages,
                     temperature, n, stream, **kwargs

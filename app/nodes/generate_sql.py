@@ -99,7 +99,7 @@ class GenerateSQLNode(AgenticNode):
 
             sqr = SQR(raw_text=input.query_text)
 
-        schema = input.context.get("schema")
+        schema = input.context.get("linked_schema") or input.context.get("schema")
         domain = input.context.get("domain")
         history = input.context.get("history")
         similar_pairs = input.context.get("similar_pairs")
@@ -114,14 +114,35 @@ class GenerateSQLNode(AgenticNode):
         multi_table_hint = input.config.get("multi_table_hint")
         database_name = input.config.get("database_name", "")
 
+        prepared = input.config.get("prepared_candidates")
+        if prepared is not None:
+            primary = prepared[0] if prepared else None
+            return NodeOutput(
+                result={
+                    "candidates": prepared,
+                    "primary_sql": primary.sql_text if primary else None,
+                },
+                context={
+                    "candidates": prepared,
+                    "primary_sql": primary.sql_text if primary else None,
+                    "primary_candidate": primary,
+                },
+                metadata={"status": "success"},
+            )
+
         try:
             if streaming:
                 # Streaming mode — accumulate tokens
                 collected: list[str] = []
                 async for chunk in self.generator.generate_stream(
-                    sqr, schema=schema, domain=domain,
-                    history=history, similar_pairs=similar_pairs,
-                    model=model, dialect=dialect, rag_context=rag_context,
+                    sqr,
+                    schema=schema,
+                    domain=domain,
+                    history=history,
+                    similar_pairs=similar_pairs,
+                    model=model,
+                    dialect=dialect,
+                    rag_context=rag_context,
                     error_context=error_context,
                     multi_table_hint=multi_table_hint,
                     database_name=database_name,
@@ -131,10 +152,10 @@ class GenerateSQLNode(AgenticNode):
                 raw_sql = "".join(collected)
                 sql_text = _extract_sql(raw_sql)
 
-                from app.models.query import SQLCandidate
-
                 # ── Split multi-table alternatives in streaming mode ──
                 import uuid as _uuid
+
+                from app.models.query import SQLCandidate
 
                 alternatives = _split_alternatives(raw_sql)
                 if len(alternatives) > 1:
@@ -165,10 +186,16 @@ class GenerateSQLNode(AgenticNode):
                     candidates = [candidate]
             else:
                 candidates = await self.generator.generate(
-                    sqr, schema=schema, domain=domain,
-                    history=history, similar_pairs=similar_pairs,
-                    num_candidates=num_candidates, strategy=strategy,
-                    model=model, dialect=dialect, rag_context=rag_context,
+                    sqr,
+                    schema=schema,
+                    domain=domain,
+                    history=history,
+                    similar_pairs=similar_pairs,
+                    num_candidates=num_candidates,
+                    strategy=strategy,
+                    model=model,
+                    dialect=dialect,
+                    rag_context=rag_context,
                     error_context=error_context,
                     multi_table_hint=multi_table_hint,
                     database_name=database_name,
@@ -226,5 +253,5 @@ def _extract_sql(text: str) -> str:
         "Generated SQL:",
     ]:
         if cleaned.lower().startswith(prefix.lower()):
-            cleaned = cleaned[len(prefix):].strip()
+            cleaned = cleaned[len(prefix) :].strip()
     return cleaned
