@@ -1,6 +1,7 @@
 """Health check endpoint."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
+from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
@@ -13,3 +14,28 @@ async def health_check() -> dict:
         "version": "0.1.0",
         "service": "NL2SQL Data Engineering Agent",
     }
+
+
+@router.get("/health/ready")
+async def readiness(request: Request) -> JSONResponse:
+    """Execution readiness is separate from process liveness; never runs a fake probe."""
+    from app.db.connections import ConnectionFactory
+    from app.llm.factory import get_default_router
+
+    components = dict(getattr(request.app.state, "components", {}))
+    components["llm"] = not get_default_router().mock_mode
+    database_count = len(ConnectionFactory.list_all())
+    initialized = bool(getattr(request.app.state, "initialized", False))
+    ready = (
+        initialized and components.get("auth", False) and components["llm"] and database_count > 0
+    )
+    return JSONResponse(
+        status_code=200 if ready else 503,
+        content={
+            "status": "ready" if ready else "not_ready",
+            "initialized": initialized,
+            "components": components,
+            "connected_database_count": database_count,
+            "database_probe": "registry only; no live database health query performed",
+        },
+    )

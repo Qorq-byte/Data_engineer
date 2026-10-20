@@ -157,10 +157,17 @@ def build_router(
     else:
         mock = _mock_forced() or default_provider not in providers
 
+    for provider in providers.values():
+        provider.rate_limit_rpm = settings.llm_rate_limit_rpm
+
     config = RouterConfig(
         providers=providers,
         default_model=model,
         fallback_chain=usable_fallback,
+        max_concurrency=settings.llm_max_concurrency,
+        max_retries=settings.llm_max_retries,
+        timeout_seconds=settings.llm_timeout_seconds,
+        cooldown_seconds=settings.llm_cooldown_seconds,
     )
     return LiteLLMRouter(config, mock_mode=mock)
 
@@ -248,13 +255,16 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
             api_key=api_key,
             base_url=cfg.get("base_url") or None,
             models=models,
+            rate_limit_rpm=int(cfg.get("rate_limit_rpm", settings.llm_rate_limit_rpm)),
         )
 
     available_models = [m for pc in providers.values() for m in pc.models]
     default_model = llm_settings.get("default_model") or ""
     if default_model not in available_models:
-        default_model = available_models[0] if available_models else (
-            llm_settings.get("default_model") or "mock"
+        default_model = (
+            available_models[0]
+            if available_models
+            else (llm_settings.get("default_model") or "mock")
         )
 
     fallback_model = llm_settings.get("fallback_model") or ""
@@ -266,6 +276,10 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
         providers=providers,
         default_model=default_model,
         fallback_chain=fallback_chain,
+        max_concurrency=settings.llm_max_concurrency,
+        max_retries=settings.llm_max_retries,
+        timeout_seconds=settings.llm_timeout_seconds,
+        cooldown_seconds=settings.llm_cooldown_seconds,
     )
     mock = _mock_forced() or not providers
     return LiteLLMRouter(config, mock_mode=mock)

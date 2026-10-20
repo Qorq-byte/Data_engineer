@@ -14,72 +14,70 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
-    """Application lifespan — initialize MySQL storage on startup."""
-    # Startup: init MySQL storage
+    """The sole owner of startup and awaited shutdown in all launch modes."""
+    import asyncio
+
+    from app.auth.database import close_auth_pool, init_auth_db
+    from app.bootstrap import initialize_catalogs
+    from app.db.connections import ConnectionFactory
+    from app.llm.factory import get_default_router, reset_default_router
+    from app.rag.engine import close_rag_engine, get_rag_engine, initialize_rag_engine
+    from app.storage.mysql_store import get_store, init_db
+
+    initialize_catalogs()
+    components = {"storage": False, "auth": False, "rag": False, "llm": False}
+    app.state.components = components
+    app.state.initialized = False
+    for name, initialize in [("storage", init_db), ("auth", init_auth_db)]:
+        try:
+            await asyncio.wait_for(initialize(), timeout=10)
+            components[name] = True
+        except Exception:
+            logger.warning("Startup component unavailable: %s", name, exc_info=True)
     try:
-        from app.storage.mysql_store import init_db
-
-        await init_db()
-        logger.info("MySQL storage initialized")
+        try:
+            get_rag_engine()
+        except RuntimeError:
+            await asyncio.wait_for(initialize_rag_engine(), timeout=10)
+        components["rag"] = True
     except Exception:
-        logger.warning("MySQL storage not available — using in-memory fallback")
-
-    # Startup: init auth database
-    try:
-        from app.auth.database import init_auth_db
-
-        await init_auth_db()
-        logger.info("Auth database initialized")
-    except Exception:
-        logger.warning("Auth database not available — auth endpoints may not work")
-
-    # Startup: init RAG engine (schema + metric + document hybrid search)
-    try:
-        from app.rag.engine import _engine, initialize_rag_engine
-
-        if _engine is None:
-            await initialize_rag_engine()
-            logger.info("RAG engine initialized")
-        else:
-            logger.info("RAG engine already initialized (via main.py)")
-    except Exception:
-        logger.warning("RAG engine not available — hybrid search disabled")
-
-    # Startup: load persisted LLM settings and rebuild the router
+        close_rag_engine()
+        logger.warning("RAG unavailable; schema linking will degrade explicitly", exc_info=True)
     try:
         from app.api.settings import reload_llm_router_from_db
-        from app.llm.factory import get_default_router
 
-        await reload_llm_router_from_db()
-        llm_router = get_default_router()
-        logger.info(
-            "LLM router rebuilt from persisted settings: default=%s mock=%s providers=%s",
-            llm_router.config.default_model,
-            llm_router.mock_mode,
-            list(llm_router.config.providers),
-        )
+        await asyncio.wait_for(reload_llm_router_from_db(), timeout=10)
+        components["llm"] = not get_default_router().mock_mode
     except Exception:
-        logger.warning("LLM settings reload failed — using agent.yml defaults")
-
-    yield
-    # Shutdown: close MySQL pool
+        logger.warning("Persisted LLM settings unavailable", exc_info=True)
+        components["llm"] = not get_default_router().mock_mode
+    app.state.initialized = True
     try:
-        from app.storage.mysql_store import get_store
+        yield
+    finally:
+        app.state.initialized = False
+        from app.background import stop_background
+        from app.subagent.manager import subagent_manager
 
+        # Uvicorn drains requests before lifespan shutdown; close async handles explicitly.
+        for name, close in [
+            ("background", stop_background),
+            ("subagents", subagent_manager.deactivate_all),
+            ("databases", ConnectionFactory.aclose_all),
+            ("auth", close_auth_pool),
+        ]:
+            try:
+                await close()
+            except Exception:
+                logger.exception("Resource shutdown failed: %s", name)
         store = get_store()
         if store is not None:
-            await store.close()
-            logger.info("MySQL storage closed")
-    except Exception:
-        pass
-
-    # Shutdown: close auth pool
-    try:
-        from app.auth.database import close_auth_pool
-
-        await close_auth_pool()
-    except Exception:
-        pass
+            try:
+                await store.close()
+            except Exception:
+                logger.exception("Storage shutdown failed")
+        close_rag_engine()
+        reset_default_router()
 
 
 def create_app() -> FastAPI:

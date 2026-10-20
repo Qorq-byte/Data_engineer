@@ -71,7 +71,7 @@ class ValidateSQLNode(AgenticNode):
             - ``skip_rules``: bool (default False)
             - ``dialect``: str | None (override)
         """
-        sql = input.context.get("primary_sql") or input.query_text
+        sql = input.context.get("primary_sql") or input.context.get("sql") or input.query_text
         schema = input.context.get("schema")
         business_rules = input.context.get("business_rules") or []
 
@@ -84,9 +84,7 @@ class ValidateSQLNode(AgenticNode):
 
         # Use a validator with the right dialect
         validator = (
-            self._validator
-            if self._validator is not None
-            else SQLValidator(dialect=dialect)
+            self._validator if self._validator is not None else SQLValidator(dialect=dialect)
         )
 
         if validator.dialect != dialect and self._validator is None:
@@ -110,9 +108,7 @@ class ValidateSQLNode(AgenticNode):
                 metadata={"status": "validation_error"},
             )
 
-        perf_warnings = (
-            report.plan_analysis.warnings if report.plan_analysis else []
-        )
+        perf_warnings = report.plan_analysis.warnings if report.plan_analysis else []
 
         return NodeOutput(
             result={

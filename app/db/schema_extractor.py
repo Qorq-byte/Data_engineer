@@ -4,7 +4,9 @@ Extracts TableSchema and SchemaSnapshot from live databases.
 Phase 1: PostgreSQL, SQLite, DuckDB full implementation. Others: NotImplementedError.
 """
 
+import copy
 import logging
+import time
 from datetime import datetime
 from typing import Any
 
@@ -21,8 +23,41 @@ from app.models.schema import (
 class SchemaExtractor:
     """Extracts database schema via dialect-specific introspection."""
 
+    _cache: dict[int, tuple[Any, float, SchemaSnapshot]] = {}
+
+    @classmethod
+    def invalidate(cls, connection: Any) -> None:
+        cls._cache.pop(id(connection), None)
+
+    @classmethod
+    async def cached_extract(
+        cls, connection: Any, db_type: DatabaseType, db_name: str = ""
+    ) -> SchemaSnapshot:
+        from app.config.settings import settings
+        from app.db.runtime import lease
+
+        # Cache population and execution share the connection gate.
+        async with lease(connection):
+            cached = cls._cache.get(id(connection))
+            if (
+                cached
+                and cached[0] is connection
+                and time.monotonic() - cached[1] < settings.schema_cache_seconds
+            ):
+                return copy.deepcopy(cached[2])
+            snapshot = await cls._extract_unlocked(connection, db_type, db_name)
+            cls._cache[id(connection)] = (connection, time.monotonic(), snapshot)
+            return copy.deepcopy(snapshot)
+
     @staticmethod
-    async def extract(
+    async def extract(connection: Any, db_type: DatabaseType, db_name: str = "") -> SchemaSnapshot:
+        from app.db.runtime import lease
+
+        async with lease(connection):
+            return await SchemaExtractor._extract_unlocked(connection, db_type, db_name)
+
+    @staticmethod
+    async def _extract_unlocked(
         connection: Any, db_type: DatabaseType, db_name: str = ""
     ) -> SchemaSnapshot:
         """Extract full schema snapshot from a connected database.
@@ -37,15 +72,19 @@ class SchemaExtractor:
             auto-flagged via :class:`~app.db.pii_detector.PiiDetector`
             (SPEC §9.2) so downstream prompt builders can mask them.
         """
+        from app.db.runtime import native_call
+
         match db_type:
             case DatabaseType.POSTGRESQL:
-                snapshot = await SchemaExtractor._extract_postgresql(
-                    connection, db_name
-                )
+                snapshot = await SchemaExtractor._extract_postgresql(connection, db_name)
             case DatabaseType.SQLITE:
-                snapshot = SchemaExtractor._extract_sqlite(connection, db_name)
+                snapshot = await native_call(
+                    connection, lambda: SchemaExtractor._extract_sqlite(connection, db_name)
+                )
             case DatabaseType.DUCKDB:
-                snapshot = SchemaExtractor._extract_duckdb(connection, db_name)
+                snapshot = await native_call(
+                    connection, lambda: SchemaExtractor._extract_duckdb(connection, db_name)
+                )
             case DatabaseType.MYSQL:
                 snapshot = await SchemaExtractor._extract_mysql(connection, db_name)
             case _:
@@ -68,9 +107,7 @@ class SchemaExtractor:
     # ── PostgreSQL ──────────────────────────────────────────────
 
     @staticmethod
-    async def _extract_postgresql(
-        conn: Any, db_name: str
-    ) -> SchemaSnapshot:
+    async def _extract_postgresql(conn: Any, db_name: str) -> SchemaSnapshot:
         """Extract schema from PostgreSQL using information_schema."""
         tables: dict[str, TableSchema] = {}
 
@@ -85,9 +122,9 @@ class SchemaExtractor:
         for tr in table_rows:
             table_name = tr["table_name"]
             try:
-
                 # Get columns
-                col_rows = await conn.fetch("""
+                col_rows = await conn.fetch(
+                    """
                     SELECT
                         column_name,
                         data_type,
@@ -101,10 +138,13 @@ class SchemaExtractor:
                     FROM information_schema.columns
                     WHERE table_schema = 'public' AND table_name = $1
                     ORDER BY ordinal_position
-                """, table_name)
+                """,
+                    table_name,
+                )
 
                 # Get primary keys
-                pk_rows = await conn.fetch("""
+                pk_rows = await conn.fetch(
+                    """
                     SELECT kcu.column_name
                     FROM information_schema.table_constraints tc
                     JOIN information_schema.key_column_usage kcu
@@ -112,11 +152,14 @@ class SchemaExtractor:
                     WHERE tc.table_schema = 'public'
                         AND tc.table_name = $1
                         AND tc.constraint_type = 'PRIMARY KEY'
-                """, table_name)
+                """,
+                    table_name,
+                )
                 pk_set = {r["column_name"] for r in pk_rows}
 
                 # Get foreign keys
-                fk_rows = await conn.fetch("""
+                fk_rows = await conn.fetch(
+                    """
                     SELECT
                         kcu.column_name,
                         ccu.table_name AS ref_table,
@@ -130,7 +173,9 @@ class SchemaExtractor:
                     WHERE tc.table_schema = 'public'
                         AND tc.table_name = $1
                         AND tc.constraint_type = 'FOREIGN KEY'
-                """, table_name)
+                """,
+                    table_name,
+                )
                 fk_set = {r["column_name"] for r in fk_rows}
 
                 columns = []
@@ -161,7 +206,7 @@ class SchemaExtractor:
                 row_count = 0
                 try:
                     cnt_row = await conn.fetchrow(
-                        'SELECT reltuples::bigint FROM pg_class WHERE relname = $1',
+                        "SELECT reltuples::bigint FROM pg_class WHERE relname = $1",
                         table_name,
                     )
                     if cnt_row:
@@ -170,11 +215,14 @@ class SchemaExtractor:
                     pass
 
                 # Get indexes
-                idx_rows = await conn.fetch("""
+                idx_rows = await conn.fetch(
+                    """
                     SELECT indexname, indexdef
                     FROM pg_indexes
                     WHERE schemaname = 'public' AND tablename = $1
-                """, table_name)
+                """,
+                    table_name,
+                )
                 indexes = []
                 for ir in idx_rows:
                     is_unique = "UNIQUE" in (ir["indexdef"] or "").upper()
@@ -369,9 +417,7 @@ class SchemaExtractor:
                 # Row estimate
                 row_count = 0
                 try:
-                    cnt = conn.execute(
-                        f'SELECT COUNT(*) FROM "{table_name}"'
-                    ).fetchone()
+                    cnt = conn.execute(f'SELECT COUNT(*) FROM "{table_name}"').fetchone()
                     row_count = cnt[0]
                 except Exception:
                     pass
@@ -488,8 +534,12 @@ class SchemaExtractor:
                     for cr in col_rows:
                         if len(cr) < 5:
                             _logger.warning(
-                                "Skipping column in table '%s.%s': expected >=5 columns, got %d: %s",
-                                schema_name, table_name, len(cr), cr,
+                                "Skipping column in table '%s.%s': "
+                                "expected >=5 columns, got %d: %s",
+                                schema_name,
+                                table_name,
+                                len(cr),
+                                cr,
                             )
                             continue
                         col_name = cr[0]
@@ -545,9 +595,7 @@ class SchemaExtractor:
                                     "is_unique": not non_unique,
                                 }
                             idx_map[idx_name]["columns"].append(col)
-                        indexes = [
-                            IndexInfo(**v) for v in idx_map.values()
-                        ]
+                        indexes = [IndexInfo(**v) for v in idx_map.values()]
                     except Exception:
                         pass  # SHOW INDEX may fail on some MySQL versions
 
@@ -562,7 +610,8 @@ class SchemaExtractor:
                 except Exception:
                     _logger.exception(
                         "Failed to extract schema for table '%s.%s'",
-                        schema_name, table_name,
+                        schema_name,
+                        table_name,
                     )
 
         finally:

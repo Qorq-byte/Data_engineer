@@ -3,7 +3,7 @@
 All runtime configuration flows through this module.
 """
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = True
     app_host: str = "0.0.0.0"
-    app_port: int = 8000
+    app_port: int = 8001
 
     # --- Database ---
     database_url: str = "sqlite:///./data/app.db"
@@ -35,6 +35,20 @@ class Settings(BaseSettings):
     # --- LLM Routing ---
     deepseek_base_url: str = "https://api.deepseek.com/v1"
     llm_mock_mode: bool = False  # force mock router (no real LLM calls)
+
+    llm_max_concurrency: int = Field(default=4, ge=1)
+    llm_max_retries: int = Field(default=1, ge=0, le=3)
+    llm_timeout_seconds: float = Field(default=30, gt=0)
+    llm_cooldown_seconds: float = Field(default=5, ge=0)
+    llm_rate_limit_rpm: int = Field(default=60, ge=0)
+
+    query_timeout_seconds: float = Field(default=120, gt=0)
+    max_concurrent_queries: int = Field(default=8, ge=1)
+    schema_cache_seconds: float = Field(default=30, ge=0)
+    session_max_entries: int = Field(default=1000, ge=1)
+    session_max_versions: int = Field(default=100, ge=1)
+    session_max_turns: int = Field(default=50, ge=1)
+    session_ttl_seconds: int = Field(default=3600, gt=0)
 
     # --- RAG Embedding ---
     rag_embedding_provider: str = "ollama"  # ollama | openai | bge | mock

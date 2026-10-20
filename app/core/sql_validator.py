@@ -27,9 +27,7 @@ from app.models.query import PlanAnalysis, ValidationReport
 from app.models.schema import ColumnSchema, SchemaSnapshot
 
 # sqlglot-recognised dialect names (lowercase keys)
-_SQLGLOT_DIALECTS: set[str] = {
-    d.name.lower() for d in sqlglot.Dialects if d.name != "DIALECT"
-}
+_SQLGLOT_DIALECTS: set[str] = {d.name.lower() for d in sqlglot.Dialects if d.name != "DIALECT"}
 
 
 def _read_dialect(dialect: str) -> str | None:
@@ -179,15 +177,18 @@ class SQLValidator:
 
         try:
             # Try parsing — sqlglot is lenient by default; raise on errors
-            parsed = sqlglot.parse(
-                sql, error_level=ErrorLevel.RAISE, **_read_kwargs(self.dialect)
-            )
+            parsed = sqlglot.parse(sql, error_level=ErrorLevel.RAISE, **_read_kwargs(self.dialect))
             if not parsed or not parsed[0]:
                 return False, ["SYNTAX_ERROR: Unable to parse SQL — empty result"]
         except ParseError as e:
             return False, [f"SYNTAX_ERROR: {e}"]
         except Exception as e:
             return False, [f"SYNTAX_ERROR: {e}"]
+
+        if len(parsed) != 1 or not isinstance(parsed[0], exp.Query):
+            return False, ["READ_ONLY_ERROR: Expected one SELECT query"]
+        if any(isinstance(node, exp.Select) and not node.expressions for node in parsed[0].walk()):
+            return False, ["SYNTAX_ERROR: SELECT requires a projection"]
 
         # Additional sanity checks
         errors: list[str] = []
@@ -202,9 +203,7 @@ class SQLValidator:
     # Step 2 — Schema reference validation
     # ------------------------------------------------------------------
 
-    def _check_schema_refs(
-        self, sql: str, schema: SchemaSnapshot
-    ) -> tuple[bool, list[str]]:
+    def _check_schema_refs(self, sql: str, schema: SchemaSnapshot) -> tuple[bool, list[str]]:
         """Extract table and column references, validate against schema."""
         errors: list[str] = []
         aliases = self._extract_table_aliases(sql)
@@ -213,17 +212,13 @@ class SQLValidator:
         tables = self._extract_table_names(sql)
         for table in tables:
             if table not in schema.tables and table not in aliases:
-                errors.append(
-                    f"SCHEMA_ERROR: Table '{table}' not found in schema"
-                )
+                errors.append(f"SCHEMA_ERROR: Table '{table}' not found in schema")
 
         # Extract column references
         columns = self._extract_column_refs(sql)
 
         # For single-table queries, restrict column search to the FROM table
-        from_tables = [
-            t for t in tables if t in schema.tables
-        ]
+        from_tables = [t for t in tables if t in schema.tables]
         single_table_mode = len(from_tables) == 1
 
         for col_ref in columns:
@@ -240,8 +235,7 @@ class SQLValidator:
                     )
                 elif col_name != "*" and tbl.get_column(col_name) is None:
                     errors.append(
-                        f"SCHEMA_ERROR: Column '{col_name}' not found in "
-                        f"table '{actual_table}'"
+                        f"SCHEMA_ERROR: Column '{col_name}' not found in table '{actual_table}'"
                     )
             else:
                 # Unqualified column — search across tables
@@ -261,9 +255,7 @@ class SQLValidator:
                             found = True
                             break
                     if not found and col_ref != "*":
-                        errors.append(
-                            f"SCHEMA_ERROR: Column '{col_ref}' not found in any table"
-                        )
+                        errors.append(f"SCHEMA_ERROR: Column '{col_ref}' not found in any table")
 
         return len(errors) == 0, errors
 
@@ -336,10 +328,22 @@ class SQLValidator:
     # Step 3 — Type compatibility check
     # ------------------------------------------------------------------
 
-    _NUMERIC_TYPES = frozenset({
-        "INTEGER", "INT", "BIGINT", "SMALLINT", "TINYINT", "DECIMAL", "NUMERIC",
-        "REAL", "DOUBLE", "FLOAT", "MONEY", "NUMBER",
-    })
+    _NUMERIC_TYPES = frozenset(
+        {
+            "INTEGER",
+            "INT",
+            "BIGINT",
+            "SMALLINT",
+            "TINYINT",
+            "DECIMAL",
+            "NUMERIC",
+            "REAL",
+            "DOUBLE",
+            "FLOAT",
+            "MONEY",
+            "NUMBER",
+        }
+    )
 
     def _check_aggregate_types(self, sql: str, schema: SchemaSnapshot) -> list[str]:
         """Blocking type errors: numeric aggregates over non-numeric columns.
@@ -374,9 +378,7 @@ class SQLValidator:
                         )
         return errors
 
-    def _check_types(
-        self, sql: str, schema: SchemaSnapshot
-    ) -> tuple[bool, list[str]]:
+    def _check_types(self, sql: str, schema: SchemaSnapshot) -> tuple[bool, list[str]]:
         """Check type compatibility in WHERE / JOIN ON comparisons.
 
         Extracts binary comparisons and verifies that the operand types
@@ -428,9 +430,7 @@ class SQLValidator:
         clean = ref.strip()
 
         # String literal
-        if (clean.startswith("'") and clean.endswith("'")) or clean.startswith(
-            "'"
-        ):
+        if (clean.startswith("'") and clean.endswith("'")) or clean.startswith("'"):
             return "VARCHAR"
 
         # Numeric literal
@@ -467,9 +467,7 @@ class SQLValidator:
         col = columns.get(clean)
         return col.type if col else None
 
-    def _extract_comparisons(
-        self, sql: str
-    ) -> list[tuple[str, str, str]]:
+    def _extract_comparisons(self, sql: str) -> list[tuple[str, str, str]]:
         """Extract binary comparisons from WHERE / JOIN ON clauses.
 
         Returns a list of ``(left_expression, operator, right_expression)``
@@ -485,8 +483,9 @@ class SQLValidator:
             if statement is None:
                 continue
             for node in statement.walk():
-                if isinstance(node, (exp.EQ, exp.NEQ, exp.GT, exp.GTE,
-                                     exp.LT, exp.LTE, exp.Like)):
+                if isinstance(
+                    node, exp.EQ | exp.NEQ | exp.GT | exp.GTE | exp.LT | exp.LTE | exp.Like
+                ):
                     left = node.left.sql() if hasattr(node.left, "sql") else str(node.left)
                     right = node.right.sql() if hasattr(node.right, "sql") else str(node.right)
                     op_str = node.sql_name() if hasattr(node, "sql_name") else type(node).__name__
@@ -524,10 +523,7 @@ class SQLValidator:
         b_base = _BASE_TYPE.get(b, b)
 
         # Same category → compatible
-        return any(
-            a_base in category and b_base in category
-            for category in _TYPE_CATEGORIES
-        )
+        return any(a_base in category and b_base in category for category in _TYPE_CATEGORIES)
 
     # ------------------------------------------------------------------
     # Step 4 — Performance analysis (static heuristics)
@@ -560,15 +556,12 @@ class SQLValidator:
 
             # 1. No WHERE + has FROM → full table scan risk
             if has_from and statement.find(exp.Where) is None:
-                warnings.append(
-                    "PERF_WARNING: No WHERE clause, potential full table scan"
-                )
+                warnings.append("PERF_WARNING: No WHERE clause, potential full table scan")
 
             # 2. SELECT * → no column pruning
             if self._has_star_projection(statement):
                 warnings.append(
-                    "PERF_WARNING: SELECT * fetches all columns; "
-                    "specify only the columns you need"
+                    "PERF_WARNING: SELECT * fetches all columns; specify only the columns you need"
                 )
 
             # 3. LIKE with leading wildcard → index cannot be used
@@ -580,23 +573,16 @@ class SQLValidator:
                     and str(pattern.this).startswith("%")
                 ):
                     warnings.append(
-                        f"PERF_WARNING: Leading wildcard LIKE "
-                        f"'{pattern.this}' prevents index usage"
+                        f"PERF_WARNING: Leading wildcard LIKE '{pattern.this}' prevents index usage"
                     )
 
             # 4. Non-aggregate query without LIMIT → unbounded result set
             is_aggregate = (
-                statement.find(exp.Group) is not None
-                or statement.find(exp.AggFunc) is not None
+                statement.find(exp.Group) is not None or statement.find(exp.AggFunc) is not None
             )
-            if (
-                has_from
-                and not is_aggregate
-                and statement.find(exp.Limit) is None
-            ):
+            if has_from and not is_aggregate and statement.find(exp.Limit) is None:
                 warnings.append(
-                    "PERF_WARNING: No LIMIT on non-aggregate query; "
-                    "result set size is unbounded"
+                    "PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded"
                 )
 
             # 5. JOIN without ON/USING → cartesian product
@@ -618,9 +604,7 @@ class SQLValidator:
             for projection in select.expressions:
                 if isinstance(projection, exp.Star):
                     return True
-                if isinstance(projection, exp.Column) and isinstance(
-                    projection.this, exp.Star
-                ):
+                if isinstance(projection, exp.Column) and isinstance(projection.this, exp.Star):
                     return True
         return False
 
@@ -657,9 +641,7 @@ class SQLValidator:
                 if score <= 0.0:
                     continue  # rule does not apply to this SQL
                 if not enforce:
-                    warnings.append(
-                        f"RULE_WARNING: [{rule_id}] Rule triggered: {description}"
-                    )
+                    warnings.append(f"RULE_WARNING: [{rule_id}] Rule triggered: {description}")
                     continue
 
             for directive in enforce:
@@ -700,14 +682,10 @@ class SQLValidator:
                 if value and value.upper() in upper_sql:
                     return f"Forbidden expression '{value}' present in SQL"
             case "require_where":
-                if value.lower() == "true" and not re.search(
-                    r"\bWHERE\b", sql, re.IGNORECASE
-                ):
+                if value.lower() == "true" and not re.search(r"\bWHERE\b", sql, re.IGNORECASE):
                     return "WHERE clause required but missing"
             case "require_limit":
-                if value.lower() == "true" and not re.search(
-                    r"\bLIMIT\b", sql, re.IGNORECASE
-                ):
+                if value.lower() == "true" and not re.search(r"\bLIMIT\b", sql, re.IGNORECASE):
                     return "LIMIT clause required but missing"
             case "require_time_range":
                 if value.lower() == "true" and not re.search(
@@ -727,9 +705,7 @@ class SQLValidator:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _calculate_score(
-        passed: bool, warning_count: int, soft_warning_count: int = 0
-    ) -> float:
+    def _calculate_score(passed: bool, warning_count: int, soft_warning_count: int = 0) -> float:
         """Compute a validation score (0.0 – 1.0).
 
         - Passed, 0 warnings  → 1.0
@@ -806,9 +782,9 @@ _BASE_TYPE: dict[str, str] = {
 }
 
 _TYPE_CATEGORIES: list[set[str]] = [
-    {"INTEGER", "FLOAT", "DECIMAL"},   # numeric
-    {"STRING", "JSON"},                 # text-like
-    {"TEMPORAL"},                       # time
-    {"BOOLEAN"},                        # bool
-    {"BINARY"},                         # binary
+    {"INTEGER", "FLOAT", "DECIMAL"},  # numeric
+    {"STRING", "JSON"},  # text-like
+    {"TEMPORAL"},  # time
+    {"BOOLEAN"},  # bool
+    {"BINARY"},  # binary
 ]

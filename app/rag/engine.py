@@ -265,3 +265,12 @@ async def _index_all_glossary_terms(engine: _RAGEngine) -> None:
                 pass
     except Exception:
         pass
+
+
+def close_rag_engine() -> None:
+    """Release persistent handles and remove the process singleton at shutdown."""
+    global _engine
+    engine, _engine = _engine, None
+    if engine is not None:
+        engine.bm25_index.close()
+        engine.lancedb_store.close()

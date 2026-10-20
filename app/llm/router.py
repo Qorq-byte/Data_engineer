@@ -16,9 +16,11 @@ Phase 2 MVP:
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import os
 import time
-from collections import defaultdict
+from collections import defaultdict, deque
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -73,7 +75,10 @@ class RouterConfig:
     default_model: str = "claude-sonnet-4"
     fallback_chain: list[str] = field(default_factory=lambda: ["gpt-4.1", "deepseek-v3"])
     max_retries: int = 3
-    timeout_seconds: int = 60
+    timeout_seconds: float = 60
+    max_concurrency: int = 4
+    retry_backoff_seconds: float = 0.1
+    cooldown_seconds: float = 5
 
 
 # ── Cost models ────────────────────────────────────────────────────────
@@ -118,6 +123,10 @@ class CostTracker:
 
     def __init__(self) -> None:
         self.records: list[CostRecord] = []
+        self._total_calls = 0
+        self._total_cost = 0.0
+        self._total_prompt_tokens = 0
+        self._total_completion_tokens = 0
         self._provider_totals: dict[str, float] = defaultdict(float)
         self._model_totals: dict[str, float] = defaultdict(float)
 
@@ -149,9 +158,7 @@ class CostTracker:
         if response is not None and hasattr(response, "usage"):
             usage = response.usage
             prompt_tokens = prompt_tokens or getattr(usage, "prompt_tokens", 0)
-            completion_tokens = completion_tokens or getattr(
-                usage, "completion_tokens", 0
-            )
+            completion_tokens = completion_tokens or getattr(usage, "completion_tokens", 0)
 
         price = self._PRICING.get((provider, model), (0.0, 0.0))
         cost = (prompt_tokens * price[0] + completion_tokens * price[1]) / 1_000_000
@@ -167,6 +174,11 @@ class CostTracker:
             success=success,
         )
         self.records.append(record)
+        del self.records[:-1000]
+        self._total_calls += 1
+        self._total_cost += record.cost_usd
+        self._total_prompt_tokens += prompt_tokens
+        self._total_completion_tokens += completion_tokens
         self._provider_totals[provider] += cost
         self._model_totals[model] += cost
         return record
@@ -174,18 +186,18 @@ class CostTracker:
     @property
     def total_cost(self) -> float:
         """Total accumulated cost in USD."""
-        return round(sum(r.cost_usd for r in self.records), 6)
+        return round(self._total_cost, 6)
 
     @property
     def total_calls(self) -> int:
         """Total number of recorded calls."""
-        return len(self.records)
+        return self._total_calls
 
     @property
     def total_tokens(self) -> dict[str, int]:
         """Aggregate prompt + completion token counts."""
-        prompt = sum(r.prompt_tokens for r in self.records)
-        completion = sum(r.completion_tokens for r in self.records)
+        prompt = self._total_prompt_tokens
+        completion = self._total_completion_tokens
         return {"prompt": prompt, "completion": completion}
 
     def provider_breakdown(self) -> dict[str, float]:
@@ -199,6 +211,10 @@ class CostTracker:
     def reset(self) -> None:
         """Clear all records (useful for testing)."""
         self.records.clear()
+        self._total_calls = 0
+        self._total_cost = 0.0
+        self._total_prompt_tokens = 0
+        self._total_completion_tokens = 0
         self._provider_totals.clear()
         self._model_totals.clear()
 
@@ -303,6 +319,8 @@ class LiteLLMRouter:
         # Runtime state
         self._provider_status: dict[str, bool] = {}  # True = healthy
         self._call_counter: dict[str, int] = defaultdict(int)
+        self._retry_after: dict[str, float] = {}
+        self._rate_windows: dict[str, deque[float]] = defaultdict(deque)
 
     # ------------------------------------------------------------------
     # Public API
@@ -369,6 +387,8 @@ class LiteLLMRouter:
     def reset(self) -> None:
         """Reset runtime state (counters, status). Useful for testing."""
         self._provider_status.clear()
+        self._retry_after.clear()
+        self._rate_windows.clear()
         self._call_counter.clear()
         self.cost_tracker.reset()
 
@@ -412,53 +432,113 @@ class LiteLLMRouter:
         for provider_name, provider_model in chain:
             provider = self.config.providers.get(provider_name)
             if provider is None:
-                last_error = ValueError(
-                    f"Provider '{provider_name}' not in config"
-                )
+                last_error = ValueError(f"Provider '{provider_name}' not in config")
                 continue
 
-            # Skip providers known to be unhealthy
-            if self._provider_status.get(provider_name) is False:
+            # Retry only after cooldown; a later request probes the provider again.
+            if self._provider_status.get(
+                provider_name
+            ) is False and time.monotonic() < self._retry_after.get(provider_name, float("inf")):
                 continue
-
-            try:
-                t0 = time.perf_counter()
-                reserve_llm_call()
-                response = await self._call_provider(
-                    provider, provider_model, messages,
-                    temperature, n, stream, **kwargs
-                )
-                latency = (time.perf_counter() - t0) * 1000
-
-                # Record success
-                self._provider_status[provider_name] = True
-                self._call_counter[provider_name] += 1
-                self.cost_tracker.record(
-                    provider=provider_name,
-                    model=provider_model,
-                    latency_ms=latency,
-                    response=response if not stream else None,
-                )
-
-                return response
-
-            except _RetryableError as e:
-                self._provider_status[provider_name] = False
-                last_error = e
-                continue
-            except Exception:
-                # Non-retryable — record and re-raise immediately
-                self.cost_tracker.record(
-                    provider=provider_name,
-                    model=provider_model,
-                    success=False,
-                )
-                raise
+            for attempt in range(min(max(0, self.config.max_retries), 3) + 1):
+                try:
+                    await self._wait_rate(provider_name, provider.rate_limit_rpm)
+                    t0 = time.perf_counter()
+                    response = await self._limited_call(
+                        provider, provider_model, messages, temperature, n, stream, **kwargs
+                    )
+                    latency = (time.perf_counter() - t0) * 1000
+                    self._provider_status[provider_name] = True
+                    self._retry_after.pop(provider_name, None)
+                    self._call_counter[provider_name] += 1
+                    self.cost_tracker.record(
+                        provider=provider_name,
+                        model=provider_model,
+                        latency_ms=latency,
+                        response=response if not stream else None,
+                    )
+                    return response
+                except _RetryableError as exc:
+                    last_error = exc
+                    self.cost_tracker.record(
+                        provider=provider_name, model=provider_model, success=False
+                    )
+                    if attempt < min(max(0, self.config.max_retries), 3):
+                        await asyncio.sleep(min(2, self.config.retry_backoff_seconds * 2**attempt))
+                        continue
+                    self._provider_status[provider_name] = False
+                    self._retry_after[provider_name] = time.monotonic() + max(
+                        0, self.config.cooldown_seconds
+                    )
+                except Exception:
+                    self.cost_tracker.record(
+                        provider=provider_name, model=provider_model, success=False
+                    )
+                    raise
 
         # All providers exhausted
-        raise last_error or RuntimeError(
-            f"All providers exhausted for model '{model}'"
-        )
+        raise last_error or RuntimeError(f"All providers exhausted for model '{model}'")
+
+    async def _wait_rate(self, provider_name: str, rpm: int) -> None:
+        if rpm <= 0:
+            return
+        window = self._rate_windows[provider_name]
+        while True:
+            now = time.monotonic()
+            while window and window[0] <= now - 60:
+                window.popleft()
+            if len(window) < rpm:
+                window.append(now)
+                return
+            await asyncio.sleep(max(0, window[0] + 60 - now))
+
+    async def _limited_call(
+        self,
+        provider: ProviderConfig,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        n: int,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
+        from app.db.runtime import gate
+
+        semaphore = gate("llm-calls", max(1, self.config.max_concurrency))
+        await semaphore.acquire()
+        handed_to_stream = False
+        try:
+            from app.llm.budget import reserve_llm_call
+
+            reserve_llm_call()
+            try:
+                response = await asyncio.wait_for(
+                    self._call_provider(
+                        provider, model, messages, temperature, n, stream, **kwargs
+                    ),
+                    self.config.timeout_seconds,
+                )
+            except TimeoutError as exc:
+                raise ProviderTimeoutError("Provider deadline exceeded") from exc
+            if not stream:
+                return response
+
+            async def guarded_stream() -> AsyncIterator[str]:
+                try:
+                    async with asyncio.timeout(self.config.timeout_seconds):
+                        async for chunk in response:
+                            yield chunk
+                finally:
+                    semaphore.release()
+                    if hasattr(response, "aclose"):
+                        with contextlib.suppress(Exception):
+                            await response.aclose()
+
+            handed_to_stream = True
+            return guarded_stream()
+        finally:
+            if not handed_to_stream:
+                semaphore.release()
 
     def _get_provider_chain(self, model: str) -> list[tuple[str, str]]:
         """Build the fallback chain for *model*.
@@ -515,9 +595,7 @@ class LiteLLMRouter:
             return await self._mock_call(provider, model, messages, n, stream)
 
         if not _LITELLM_AVAILABLE:
-            raise RuntimeError(
-                "litellm is not installed. Install with: pip install litellm"
-            )
+            raise RuntimeError("litellm is not installed. Install with: pip install litellm")
 
         # ── Key resolution: explicit (settings-provided) key wins ──
         api_key = provider.api_key or os.getenv(provider.api_key_env, "") or None
@@ -549,10 +627,12 @@ class LiteLLMRouter:
             "n": n,
             "api_key": api_key,
             "timeout": self.config.timeout_seconds,
+            "num_retries": 0,  # Harness budgets all physical retry attempts
         }
         if provider.base_url:
             call_kwargs["api_base"] = provider.base_url
         call_kwargs.update(kwargs)
+        call_kwargs["num_retries"] = 0
 
         try:
             if stream:
@@ -586,8 +666,14 @@ class LiteLLMRouter:
             msg = str(e).lower()
             if any(
                 token in msg
-                for token in ("connection error", "connection refused", "connect error",
-                              "connection reset", "max retries exceeded", "timed out")
+                for token in (
+                    "connection error",
+                    "connection refused",
+                    "connect error",
+                    "connection reset",
+                    "max retries exceeded",
+                    "timed out",
+                )
             ):
                 raise ProviderConnectionError(str(e)) from e
             raise
@@ -596,11 +682,7 @@ class LiteLLMRouter:
     async def _stream_to_async_gen(response: Any) -> AsyncIterator[str]:
         """Convert a litellm streaming response to an async generator of text chunks."""
         async for chunk in response:
-            if (
-                chunk.choices
-                and chunk.choices[0].delta
-                and chunk.choices[0].delta.content
-            ):
+            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
     async def _mock_call(
@@ -619,6 +701,7 @@ class LiteLLMRouter:
                 break
 
         if stream:
+
             async def _mock_stream():
                 for word in user_text.split():
                     yield word + " "
@@ -629,18 +712,20 @@ class LiteLLMRouter:
         n = max(1, n)
         choices = []
         for i in range(n):
-            choices.append({
-                "index": i,
-                "message": {
-                    "role": "assistant",
-                    "content": (
-                        f"[mock response from {provider.provider}/{model}]"
-                        if i == 0
-                        else f"[mock response {i+1} from {provider.provider}/{model}]"
-                    ),
-                },
-                "finish_reason": "stop",
-            })
+            choices.append(
+                {
+                    "index": i,
+                    "message": {
+                        "role": "assistant",
+                        "content": (
+                            f"[mock response from {provider.provider}/{model}]"
+                            if i == 0
+                            else f"[mock response {i + 1} from {provider.provider}/{model}]"
+                        ),
+                    },
+                    "finish_reason": "stop",
+                }
+            )
 
         return {
             "id": f"mock-{n:03d}",

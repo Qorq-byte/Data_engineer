@@ -127,3 +127,12 @@ async def test_schema_retriever_is_wired_and_filtered_columns_reach_prompt(
     assert calls[0]["db_id"] == "contract"
     assert "orders" in prompts[0]
     assert "irrelevant_detail" not in prompts[0]
+
+
+@pytest.mark.parametrize("sql", ["test", "DELETE FROM orders", "SELECT", "SELECT 1; SELECT 2"])
+async def test_validator_does_not_treat_nonquery_ast_as_valid(sql):
+    from app.nodes.base import NodeInput
+    from app.nodes.validate_sql import ValidateSQLNode
+
+    output = await ValidateSQLNode().execute(NodeInput("ignored", context={"sql": sql}))
+    assert output.result["passed"] is False

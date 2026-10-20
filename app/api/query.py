@@ -105,7 +105,7 @@ async def _resolve_schema(database: str, warnings: list[str]) -> SchemaSnapshot 
 
     # ── Extract schema ────────────────────────────────────────────
     try:
-        snapshot = await SchemaExtractor.extract(conn, info.db_type, info.database_name)
+        snapshot = await SchemaExtractor.cached_extract(conn, info.db_type, info.database_name)
         return snapshot
     except NotImplementedError:
         warnings.append(
@@ -150,7 +150,7 @@ async def _resolve_all_schemas(
     for info in all_conns:
         try:
             conn = ConnectionFactory.get(info.db_id)
-            snapshot = await SchemaExtractor.extract(conn, info.db_type, info.database_name)
+            snapshot = await SchemaExtractor.cached_extract(conn, info.db_type, info.database_name)
             result[info.db_id] = (snapshot, info.database_name, info.db_type.value)
         except NotImplementedError:
             warnings.append(
@@ -322,8 +322,10 @@ def _detect_metadata_query(
 class QueryRequest(BaseModel):
     """Request body for POST /api/v1/query."""
 
-    nl_text: str = Field(..., description="Natural language query text", min_length=1)
-    session_id: str = Field(default="", description="Session identifier")
+    nl_text: str = Field(
+        ..., description="Natural language query text", min_length=1, max_length=10000
+    )
+    session_id: str = Field(default="", max_length=128, description="Session identifier")
     domain: str = Field(default="default", description="Domain name (e.g., ecommerce)")
     database: str = Field(default="", description="Database identifier")
     dialect: str = Field(default="ansi", description="SQL dialect")
@@ -385,16 +387,31 @@ class QueryResponse(BaseModel):
 
 @router.post("/query", response_model=QueryResponse)
 async def submit_query(body: QueryRequest) -> QueryResponse:
-    from app.workflow.query_service import run_query
+    from app.config.settings import settings
+    from app.workflow.query_service import QueryCapacityError, run_query
 
     _validate_model(body.model)
-    return QueryResponse(**await run_query(body, llm_router=get_default_router()))
+    try:
+        response = await asyncio.wait_for(
+            run_query(body, llm_router=get_default_router()), settings.query_timeout_seconds
+        )
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=504, detail={"code": "QUERY_TIMEOUT", "message": "Query deadline exceeded"}
+        ) from exc
+    except QueryCapacityError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "QUERY_CAPACITY", "message": str(exc)},
+            headers={"Retry-After": "1"},
+        ) from exc
+    return QueryResponse(**response)
 
 
 class ExecuteRequest(BaseModel):
     """Request body for POST /api/v1/execute — direct SQL execution."""
 
-    sql: str = Field(..., description="SQL statement to execute", min_length=1)
+    sql: str = Field(..., description="SQL statement to execute", min_length=1, max_length=50000)
     database: str = Field(default="", description="Database identifier")
     dialect: str = Field(default="ansi", description="SQL dialect")
     max_rows: int = Field(default=100, ge=1, le=10000, description="Max rows to return")
@@ -513,9 +530,23 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
 
         async def execute() -> None:
             try:
-                result = await run_query(body, emit, llm_router=get_default_router())
+                from app.config.settings import settings
+
+                result = await asyncio.wait_for(
+                    run_query(body, emit, llm_router=get_default_router()),
+                    settings.query_timeout_seconds,
+                )
                 await queue.put(("done", result))
-            except Exception:
+            except TimeoutError:
+                await queue.put(
+                    ("error", {"code": "QUERY_TIMEOUT", "message": "Query deadline exceeded"})
+                )
+            except Exception as exc:
+                from app.workflow.query_service import QueryCapacityError
+
+                if isinstance(exc, QueryCapacityError):
+                    await queue.put(("error", {"code": "QUERY_CAPACITY", "message": str(exc)}))
+                    return
                 logger.exception("Query stream failed")
                 await queue.put(
                     (
@@ -555,16 +586,48 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
 _SESSION_STORE: dict[str, dict[str, Any]] = {}
 
 
+def _prune_sessions() -> None:
+    from app.config.settings import settings
+    from app.db.runtime import discard_gate, gate
+
+    now = datetime.now()
+    for key, session in list(_SESSION_STORE.items()):
+        updated = session.get("updated_at", session.get("created_at"))
+        if (
+            updated
+            and (now - datetime.fromisoformat(updated)).total_seconds()
+            > settings.session_ttl_seconds
+            and not gate(("session", key)).locked()
+        ):
+            _SESSION_STORE.pop(key, None)
+            discard_gate(("session", key))
+    while len(_SESSION_STORE) >= max(1, settings.session_max_entries):
+        key = next((key for key in _SESSION_STORE if not gate(("session", key)).locked()), None)
+        if key is None:
+            break
+        _SESSION_STORE.pop(key)
+        discard_gate(("session", key))
+
+
 def _get_or_create_session(session_id: str) -> dict[str, Any]:
     """Get or create an in-memory session record."""
     if session_id not in _SESSION_STORE:
+        _prune_sessions()
         _SESSION_STORE[session_id] = {
             "session_id": session_id,
             "turns": [],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
         }
-    return _SESSION_STORE[session_id]
+    session = _SESSION_STORE[session_id]
+    from app.config.settings import settings
+
+    if (
+        datetime.now() - datetime.fromisoformat(session["updated_at"])
+    ).total_seconds() > settings.session_ttl_seconds:
+        _SESSION_STORE.pop(session_id)
+        return _get_or_create_session(session_id)
+    return session
 
 
 @router.get("/sessions/{session_id}")
@@ -684,6 +747,10 @@ async def rollback_to_version(session_id: str, version_number: int) -> dict:
     versions = _ensure_versions_store(session)
     target = _find_version(versions, version_number)
 
+    from app.config.settings import settings
+
+    if len(versions) >= settings.session_max_versions:
+        raise HTTPException(status_code=409, detail="Session version capacity reached")
     new_number = len(versions) + 1
     new_version = {
         "version_number": new_number,
@@ -817,7 +884,15 @@ async def branch_from_version(
     edited_sql = ""
     if isinstance(body, dict):
         edited_sql = body.get("edited_sql", "")
+        if not isinstance(edited_sql, str) or len(edited_sql) > 50000:
+            raise HTTPException(
+                status_code=422, detail="edited_sql must be a string <= 50000 characters"
+            )
 
+    from app.config.settings import settings
+
+    if len(versions) >= settings.session_max_versions:
+        raise HTTPException(status_code=409, detail="Session version capacity reached")
     new_number = len(versions) + 1
     new_version = {
         "version_number": new_number,

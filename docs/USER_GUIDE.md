@@ -47,9 +47,9 @@ NL2SQL 是一个**将自然语言自动转换为 SQL 并执行**的数据工程�
 
 | 页面 | 地址 | 用途 |
 |------|------|------|
-| 落地页 | http://localhost:8000/ | 项目介绍，导航入口 |
-| 登入/注册 | http://localhost:8000/login | 创建账号或登入 |
-| 工作台 | http://localhost:8000/workspace | 主操作界面 |
+| 落地页 | http://localhost:8001/ | 项目介绍，导航入口 |
+| 登入/注册 | http://localhost:8001/login | 创建账号或登入 |
+| 工作台 | http://localhost:8001/workspace | 主操作界面 |
 
 **页面流程：** 落地页 → 点击"开始体验" → 登入/注册 → 自动跳转工作台
 
@@ -57,7 +57,7 @@ NL2SQL 是一个**将自然语言自动转换为 SQL 并执行**的数据工程�
 
 ## 3. 落地页
 
-打开 `http://localhost:8000/` 看到黑色全屏页面：
+打开 `http://localhost:8001/` 看到黑色全屏页面：
 
 **导航栏**（顶部）：关于 \| 能力 \| 使用指南 \| 开始体验
 
@@ -301,13 +301,13 @@ ORDER BY month;
 
 ## 13. 通过 API 调用
 
-除 Web 界面外，你还可以直接通过 HTTP API 使用各项功能。完整 API 文档见 `http://localhost:8000/docs` (Swagger)。
+除 Web 界面外，你还可以直接通过 HTTP API 使用各项功能。完整 API 文档见 `http://localhost:8001/docs` (Swagger)。
 
 ### 核心查询
 
 ```bash
 # NL → SQL 完整管线
-curl -X POST http://localhost:8000/api/v1/query \
+curl -X POST http://localhost:8001/api/v1/query \
   -H "Content-Type: application/json" \
   -d '{
     "nl_text": "上个月销售额最高的10个产品",
@@ -342,7 +342,7 @@ curl -X POST http://localhost:8000/api/v1/query \
 ### 流式生成（SSE）
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/query/stream \
+curl -X POST http://localhost:8001/api/v1/query/stream \
   -H "Content-Type: application/json" \
   -d '{"nl_text": "统计每天的订单数"}'
 ```
@@ -352,7 +352,7 @@ curl -X POST http://localhost:8000/api/v1/query/stream \
 ### 仅生成 SQL（轻量）
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/query/generate \
+curl -X POST http://localhost:8001/api/v1/query/generate \
   -H "Content-Type: application/json" \
   -d '{"nl_text": "SELECT all users", "dialect": "mysql"}'
 ```
@@ -361,22 +361,22 @@ curl -X POST http://localhost:8000/api/v1/query/generate \
 
 ```bash
 # 列出已连接数据库
-curl http://localhost:8000/api/v1/databases
+curl http://localhost:8001/api/v1/databases
 
 # 获取 Schema 快照
-curl http://localhost:8000/api/v1/schema/{db_id}
+curl http://localhost:8001/api/v1/schema/{db_id}
 
 # 搜索表和列
-curl "http://localhost:8000/api/v1/schema/{db_id}/search?q=order"
+curl "http://localhost:8001/api/v1/schema/{db_id}/search?q=order"
 
 # 刷新 Schema 缓存
-curl -X POST http://localhost:8000/api/v1/schema/{db_id}/refresh
+curl -X POST http://localhost:8001/api/v1/schema/{db_id}/refresh
 ```
 
 ### 添加数据库连接
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/databases/connect \
+curl -X POST http://localhost:8001/api/v1/databases/connect \
   -H "Content-Type: application/json" \
   -d '{
     "db_type": "sqlite",
@@ -389,16 +389,16 @@ curl -X POST http://localhost:8000/api/v1/databases/connect \
 
 ```bash
 # 列出所有领域
-curl http://localhost:8000/api/v1/domains
+curl http://localhost:8001/api/v1/domains
 
 # 查看某领域的术语表
-curl http://localhost:8000/api/v1/domains/ecommerce/glossary
+curl http://localhost:8001/api/v1/domains/ecommerce/glossary
 
 # 查看某领域的业务规则
-curl http://localhost:8000/api/v1/domains/ecommerce/rules
+curl http://localhost:8001/api/v1/domains/ecommerce/rules
 
 # 自动检测 NL 所属领域
-curl -X POST http://localhost:8000/api/v1/domains/detect \
+curl -X POST http://localhost:8001/api/v1/domains/detect \
   -H "Content-Type: application/json" \
   -d '{"query_text": "最近一周的订单数据"}'
 ```
@@ -407,17 +407,17 @@ curl -X POST http://localhost:8000/api/v1/domains/detect \
 
 ```bash
 # 注册
-curl -X POST http://localhost:8000/api/v1/auth/register \
+curl -X POST http://localhost:8001/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{"username": "demo", "email": "demo@example.com", "password": "demo123456"}'
 
 # 登入
-curl -X POST http://localhost:8000/api/v1/auth/login \
+curl -X POST http://localhost:8001/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "demo@example.com", "password": "demo123456"}'
 
 # 获取当前用户信息
-curl http://localhost:8000/api/v1/auth/me \
+curl http://localhost:8001/api/v1/auth/me \
   -H "Authorization: Bearer <token>"
 ```
 # 优化分支使用变更

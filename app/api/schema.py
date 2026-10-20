@@ -83,7 +83,7 @@ async def test_connection(body: dict) -> dict:
                 catalogs = [r[0] for r in rows]
             finally:
                 await cursor.close()
-        ConnectionFactory.close("test_probe")
+        await ConnectionFactory.aclose("test_probe")
         result: dict = {
             "status": "ok",
             "message": f"Successfully connected to {db_type_str}",
@@ -236,6 +236,8 @@ async def refresh_schema(db_id: str) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Schema extraction failed: {e}") from e
 
+    SchemaExtractor.invalidate(conn)
+
     # Rebuild RAG index for this database
     rag_indexed = False
     try:
@@ -363,7 +365,7 @@ async def disconnect_database(db_id: str) -> dict:
             detail=f"Database '{db_id}' not found.",
         ) from None
 
-    ConnectionFactory.close(db_id)
+    await ConnectionFactory.aclose(db_id)
 
     # Clean up RAG index for this database
     try:
@@ -491,7 +493,6 @@ def _schedule_background_schema_indexing(db_id: str) -> None:
     without waiting for schema extraction + embedding generation.
     """
     try:
-        import asyncio
 
         async def _index_schema_background(db_id: str) -> None:
             import contextlib
@@ -510,6 +511,8 @@ def _schedule_background_schema_indexing(db_id: str) -> None:
                 docs = snapshot_to_schema_docs(snapshot, db_id)
                 await get_schema_rag().index_schemas(docs, replace_db_id=db_id)
 
-        asyncio.create_task(_index_schema_background(db_id))
+        from app.background import start_background
+
+        start_background(_index_schema_background(db_id))
     except Exception:
         pass

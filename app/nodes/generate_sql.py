@@ -31,6 +31,7 @@ class GenerateSQLNode(AgenticNode):
         ``primary_candidate`` — ``SQLCandidate | None``
     """
 
+    required_tools = ("build_prompt", "call_llm")
     name = "generate_sql"
     description = "Generate SQL from natural language via LiteLLM multi-provider routing"
 

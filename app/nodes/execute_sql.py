@@ -61,10 +61,20 @@ class ExecuteSQLNode(AgenticNode):
     - Logs every execution to action history.
     """
 
+    required_tools = ("execute_read_query",)
     name = "execute_sql"
     description = "Safely execute a read-only SQL query and return results"
 
     async def execute(self, input: NodeInput) -> NodeOutput:
+        from app.db.runtime import lease
+
+        conn = input.context.get("connection")
+        if conn is None:
+            return await self._execute_locked(input)
+        async with lease(conn):
+            return await self._execute_locked(input)
+
+    async def _execute_locked(self, input: NodeInput) -> NodeOutput:
         """Execute SQL with safety checks.
 
         Expected input.context keys:
@@ -107,8 +117,9 @@ class ExecuteSQLNode(AgenticNode):
             )
 
         if input.context.get("require_validation") and not input.context.get("validation_passed"):
-            return NodeOutput(errors=["SQL validation must pass before execution"],
-                              metadata={"status": "blocked"})
+            return NodeOutput(
+                errors=["SQL validation must pass before execution"], metadata={"status": "blocked"}
+            )
 
         # ── Execute ────────────────────────────────────────────
         max_rows = max(1, min(int(input.config.get("max_rows", 100)), settings.max_result_rows))
@@ -121,17 +132,19 @@ class ExecuteSQLNode(AgenticNode):
         plan: PlanAnalysis | None = None
         result: dict | None = None
 
+        from app.db.runtime import native_call
+
         try:
             # Harden native connections before EXPLAIN/binding can inspect external files.
             if self._is_duckdb_connection(conn):
-                conn.execute("SET enable_external_access=false")
+                await native_call(conn, lambda: conn.execute("SET enable_external_access=false"))
             # Static plan analysis (no DB required)
             if analyze_plan:
                 plan = self._static_plan_analysis(sql)
 
             # EXPLAIN execution
             if do_explain:
-                explain_result = self._execute_explain(conn, sql)
+                explain_result = await native_call(conn, lambda: self._execute_explain(conn, sql))
                 plan = self._parse_explain_output(explain_result, plan)
 
             result = await self._execute_bounded(conn, sql, max_rows, timeout_ms)
@@ -190,6 +203,16 @@ class ExecuteSQLNode(AgenticNode):
                 raise
         if self._is_asyncpg_connection(conn):
             return await asyncio.wait_for(self._execute_asyncpg(conn, sql, max_rows), timeout)
+        from app.db.runtime import native_call
+
+        return await native_call(
+            conn, lambda: self._execute_native_bounded(conn, sql, max_rows, timeout_ms)
+        )
+
+    def _execute_native_bounded(
+        self, conn: Any, sql: str, max_rows: int, timeout_ms: int
+    ) -> dict[str, Any]:
+        timeout = timeout_ms / 1000
         if self._is_sqlite_connection(conn):
             deadline = time.monotonic() + timeout
             busy_timeout = conn.execute("PRAGMA busy_timeout").fetchone()[0]
@@ -230,11 +253,7 @@ class ExecuteSQLNode(AgenticNode):
 
     @staticmethod
     def _is_sqlite_connection(conn: object) -> bool:
-        return (
-            type(conn).__name__ == "Connection"
-            and hasattr(conn, "cursor")
-            and not hasattr(conn, "ensure_closed")
-        )
+        return isinstance(conn, sqlite3.Connection)
 
     @staticmethod
     def _is_duckdb_connection(conn: object) -> bool:

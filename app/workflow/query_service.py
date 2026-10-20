@@ -24,9 +24,40 @@ from app.nodes.schema_linking import SchemaLinkingNode
 from app.nodes.validate_sql import ValidateSQLNode
 
 _ROOT = Path(__file__).resolve().parents[1]
+_CONFIG_LOADER = ConfigLoader(str(_ROOT / "config/agent.yml"))
+_PLAN_LOADER = PlanLoader(str(_ROOT / "workflow/plans"))
+_PLAN_MTIME = -1
+
+
+def _request_plan() -> Any:
+    global _PLAN_MTIME
+    stamp = (_ROOT / "workflow/plans/request_query.yml").stat().st_mtime_ns
+    if stamp != _PLAN_MTIME:
+        plan = _PLAN_LOADER.reload("request_query")
+        _PLAN_MTIME = stamp
+        return plan
+    return _PLAN_LOADER.load("request_query")
+
+
+class QueryCapacityError(RuntimeError):
+    """The bounded request execution slots are occupied."""
 
 
 async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> dict[str, Any]:
+    from app.config.settings import settings
+    from app.db.runtime import gate
+
+    admission = gate("query-admission", max(1, settings.max_concurrent_queries))
+    if admission.locked():
+        raise QueryCapacityError("Query capacity reached; retry explicitly later")
+    async with admission:
+        if not body.session_id:
+            body.session_id = f"s_{uuid.uuid4().hex[:16]}"
+        async with gate(("session", body.session_id)):
+            return await _run_query(body, emit, llm_router=llm_router)
+
+
+async def _run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
     from app.api.query import _detect_metadata_query, _get_or_create_session, _resolve_all_schemas
@@ -38,7 +69,8 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
     session_id = body.session_id or f"s_{uuid.uuid4().hex[:16]}"
     warnings: list[str] = []
     errors: list[str] = []
-    config = ConfigLoader(str(_ROOT / "config/agent.yml")).load()
+    config = _CONFIG_LOADER.load()
+    plan = _request_plan()
     limits = ConstraintEnforcer(ConstraintLimits(**asdict(config.constraints)))
     router = llm_router or get_default_router()
     from app.knowledge.schema_retriever import SchemaRetriever
@@ -196,7 +228,6 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
                 elif node_id == "exec" and not output.errors:
                     await publish("execution", {"db_id": target_db_id, **(output.result or {})})
 
-            plan = PlanLoader(str(_ROOT / "workflow/plans")).load("request_query")
             runner = WorkflowRunner(plan, registry, constraints=limits)
             result = await runner.run(
                 body.nl_text,
@@ -217,6 +248,8 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
             sqr = context.get("sqr") or sqr
             if result.trace:
                 traces.append(result.trace.workflow_id)
+                if result.trace.persistence_error:
+                    warnings.append("Workflow trace could not be persisted")
             if result.error:
                 errors.append(f"{db_id or source}: {result.error}")
             linked_tables.extend(context.get("linked_tables", []))
@@ -274,7 +307,10 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
         "status": status,
         "timestamp": datetime.now().isoformat(),
     }
+    from app.config.settings import settings
+
     session["turns"].append(turn)
+    session["turns"][:] = session["turns"][-max(1, settings.session_max_turns) :]
     session["updated_at"] = turn["timestamp"]
     store = get_store()
     if store is not None:

@@ -48,6 +48,19 @@ async def test_permission_blocks_before_execute(permission):
     assert "permission" in result.error.lower()
 
 
+async def test_omitting_tool_declaration_cannot_bypass_default_deny():
+    node = CountingNode()
+    node.required_tools = ("call_llm",)
+    registry = NodeRegistry()
+    registry.register(node)
+    plan = WorkflowPlan(
+        id="missing-permission", name="missing", node_order=[NodeDef("n", node.name)]
+    )
+    result = await WorkflowRunner(plan, registry).run("hello", node_configs={"n": {"tools": []}})
+    assert result.status == "failed"
+    assert node.calls == 0
+
+
 async def test_node_errors_fail_even_without_evaluation():
     node = CountingNode(errors=["provider unavailable"])
     registry = NodeRegistry()
@@ -167,3 +180,5 @@ async def test_cancelled_run_persists_abort_and_does_not_advance(monkeypatch):
     assert after.calls == 0
     assert len(persisted) == 1
     assert persisted[0].completed_at is not None
+    assert persisted[0].status == "aborted"
+    assert persisted[0].nodes[0].error == "Request cancelled"

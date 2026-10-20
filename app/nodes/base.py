@@ -49,6 +49,7 @@ class BaseNode(ABC):
     have sensible defaults but can be overridden for custom behavior.
     """
 
+    required_tools: tuple[str, ...] = ()
     name: str = "base"
     description: str = ""
 

@@ -63,6 +63,31 @@ class WorkflowRunner:
         reset_constraints: bool = True,
         **kwargs: Any,
     ) -> WorkflowResult:
+        from app.llm.budget import active_budget
+
+        token = active_budget.set(self.constraints)
+        try:
+            return await self._run(
+                input_text,
+                session_id,
+                node_configs=node_configs,
+                on_node_event=on_node_event,
+                reset_constraints=reset_constraints,
+                **kwargs,
+            )
+        finally:
+            active_budget.reset(token)
+
+    async def _run(
+        self,
+        input_text: str,
+        session_id: str = "",
+        *,
+        node_configs: dict[str, dict[str, Any]] | None = None,
+        on_node_event: Any = None,
+        reset_constraints: bool = True,
+        **kwargs: Any,
+    ) -> WorkflowResult:
         """Execute a fixed plan. Protocol adapters cannot choose the next node."""
         from app.nodes.base import NodeOutput
 
@@ -78,6 +103,8 @@ class WorkflowRunner:
 
         async def finish(status: str, error: str | None = None) -> WorkflowResult:
             self.trace.completed_at = datetime.now()
+            self.trace.status = status
+            self.trace.error = error or ""
             await self.trace.persist()
             return WorkflowResult(
                 status=status,
@@ -129,7 +156,7 @@ class WorkflowRunner:
                     trace = NodeTrace(
                         node_id=definition.id,
                         node_name=definition.node,
-                        input_summary=input_text[:200],
+                        input_summary=f"input_chars={len(input_text)}",
                         started_at=datetime.now(),
                     )
                     if on_node_event:
@@ -144,11 +171,14 @@ class WorkflowRunner:
                         )
                         from app.harness.permission import PermissionManager
 
-                        manager = getattr(node, "permission_manager", None) or PermissionManager(
-                            rules=[config.get("permissions", {})]
+                        manager = (
+                            PermissionManager(rules=[config["permissions"]])
+                            if "permissions" in config
+                            else getattr(node, "permission_manager", None) or PermissionManager()
                         )
                         if config.get("enabled", True) and manager:
-                            for tool in config.get("tools", []):
+                            tools = set(config.get("tools", [])) | set(node.required_tools)
+                            for tool in sorted(tools):
                                 if manager.check(tool, context) != "allow":
                                     raise PermissionError(f"Tool permission not granted: {tool}")
                         if config.get("enabled", True):
@@ -159,7 +189,10 @@ class WorkflowRunner:
                             )
                         context = await node.update_context(output, context)
                         evaluation = await self.evaluate_result(definition, output)
-                        trace.output_summary = str(output.result)[:200]
+                        trace.output_summary = (
+                            f"type={type(output.result).__name__}; "
+                            f"status={output.metadata.get('status', 'unknown')}"
+                        )
                         trace.error = "; ".join(output.errors) or None
                     except Exception as exc:
                         trace.error = str(exc)
@@ -210,6 +243,10 @@ class WorkflowRunner:
                 index += 1
             return await finish("completed")
         except asyncio.CancelledError:
+            if "trace" in locals() and trace not in self.trace.nodes:
+                trace.error = "Request cancelled"
+                trace.completed_at = datetime.now()
+                self.trace.nodes.append(trace)
             await finish("aborted", "Request cancelled")
             raise
 

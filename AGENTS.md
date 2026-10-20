@@ -9,7 +9,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 pip install -e ".[dev]"
 
 # 启动应用
-python main.py                        # FastAPI 监听 :8000，启动时打印初始化步骤
+python main.py                        # FastAPI 默认 :8001；lifespan 统一初始化/关闭，APP_PORT 可覆盖
 
 # 测试
 pytest                                # 运行全部测试（asyncio_mode=auto）

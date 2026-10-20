@@ -3,7 +3,6 @@
 See SPEC §3.4.5 for the full agent.yml schema.
 """
 
-import os
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -60,9 +59,7 @@ class StorageMemory:
 
 @dataclass
 class MemoryConfig:
-    builtin_subagents: BuiltinSubagentsMemory = field(
-        default_factory=BuiltinSubagentsMemory
-    )
+    builtin_subagents: BuiltinSubagentsMemory = field(default_factory=BuiltinSubagentsMemory)
     chat: bool = True
     user_subagents: UserSubagentsMemory = field(default_factory=UserSubagentsMemory)
     storage: StorageMemory = field(default_factory=StorageMemory)
@@ -125,8 +122,8 @@ class ConfigLoader:
         if not self.path.exists():
             raise FileNotFoundError(f"Agent config not found: {self.path}")
 
-        current_mtime = os.path.getmtime(self.path)
-        if not force and self._config is not None and current_mtime <= self._last_mtime:
+        current_mtime = self.path.stat().st_mtime_ns
+        if not force and self._config is not None and current_mtime == self._last_mtime:
             return self._config
 
         import yaml
@@ -163,9 +160,7 @@ class ConfigLoader:
             skills=ConfigLoader._parse_skills(raw.get("skills", {})),
             workflow=ConfigLoader._parse_workflow(raw.get("workflow", {})),
             memory=ConfigLoader._parse_memory(raw.get("memory", {})),
-            global_context=ConfigLoader._parse_global_context(
-                raw.get("global_context", {})
-            ),
+            global_context=ConfigLoader._parse_global_context(raw.get("global_context", {})),
             constraints=ConfigLoader._parse_constraints(raw.get("constraints", {})),
         )
 
