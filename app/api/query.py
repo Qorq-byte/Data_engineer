@@ -62,14 +62,11 @@ def _validate_model(model: str | None) -> None:
     if known and model not in known:
         raise HTTPException(
             status_code=422,
-            detail=f"Unknown or disabled model '{model}'. "
-            f"Available: {sorted(known)}",
+            detail=f"Unknown or disabled model '{model}'. Available: {sorted(known)}",
         )
 
 
-async def _resolve_schema(
-    database: str, warnings: list[str]
-) -> SchemaSnapshot | None:
+async def _resolve_schema(database: str, warnings: list[str]) -> SchemaSnapshot | None:
     """Resolve a SchemaSnapshot from a connected database.
 
     Strategy:
@@ -154,10 +151,7 @@ async def _resolve_all_schemas(
     # Multi-database mode: resolve all (deduplicated by database_name)
     all_conns = ConnectionFactory.list_all()
     if not all_conns:
-        warnings.append(
-            "No database connected. "
-            "Connect first via POST /api/v1/databases/connect."
-        )
+        warnings.append("No database connected. Connect first via POST /api/v1/databases/connect.")
         return result
 
     seen_db_names: set[str] = set()
@@ -190,11 +184,28 @@ import re as _re_module
 
 _METADATA_PATTERNS: list[tuple[str, _re_module.Pattern[str]]] = [
     # ── Table count queries ──
-    ("table_count", _re_module.compile(r"(多少[张个]?(?:表|数据表)|表[的的]*数量|表[的的]*总数|count.*table|how\s+many\s+table)", _re_module.IGNORECASE)),
+    (
+        "table_count",
+        _re_module.compile(
+            r"(多少[张个]?(?:表|数据表)|表[的的]*数量|表[的的]*总数|count.*table|how\s+many\s+table)",
+            _re_module.IGNORECASE,
+        ),
+    ),
     # ── Table list queries ──
-    ("table_list", _re_module.compile(r"(所有表名?|表[的的]*列表?|列出表|显示表|show\s+table|list\s+table|所有表|全部表)", _re_module.IGNORECASE)),
+    (
+        "table_list",
+        _re_module.compile(
+            r"(所有表名?|表[的的]*列表?|列出表|显示表|show\s+table|list\s+table|所有表|全部表)",
+            _re_module.IGNORECASE,
+        ),
+    ),
     # ── Column/list queries about table structure ──
-    ("table_structure", _re_module.compile(r"(表结构|表定义|describe\s+table|表[的的]*字段|表[的的]*列)", _re_module.IGNORECASE)),
+    (
+        "table_structure",
+        _re_module.compile(
+            r"(表结构|表定义|describe\s+table|表[的的]*字段|表[的的]*列)", _re_module.IGNORECASE
+        ),
+    ),
 ]
 
 
@@ -408,6 +419,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     if body.domain and body.domain != "default":
         try:
             from app.api.domains import _domain_manager
+
             domain_config = _domain_manager.get(body.domain)
             if domain_config is None:
                 warnings.append(
@@ -459,7 +471,9 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
         ) from e
 
     # ── Step 2: Schema Linking (per database) ─────────────────────
-    schema_map: dict[str, tuple[SchemaSnapshot, str, str]] = {}  # db_id → (schema, db_name, db_type)
+    schema_map: dict[
+        str, tuple[SchemaSnapshot, str, str]
+    ] = {}  # db_id → (schema, db_name, db_type)
     all_multi_table_hints: dict[str, dict[str, Any]] = {}  # db_id → multi_table_hint
     all_linked_tables: dict[str, list[str]] = {}  # db_id → linked_tables
     if body.link_schema:
@@ -530,7 +544,9 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
                     db_multi_table_hint = link_output.context.get("multi_table_hint", {})
                     logger.debug(
                         "Schema linking for DB %s: %d tables linked, %d columns matched, hint_alternatives=%s",
-                        db_id, len(db_linked_tables), len(db_linked_columns),
+                        db_id,
+                        len(db_linked_tables),
+                        len(db_linked_columns),
                         db_multi_table_hint.get("has_alternatives", False),
                     )
             except Exception as e:
@@ -569,6 +585,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     primary_sql: str | None = None
 
     if schema_map:
+
         async def _gen_for_db(
             db_id: str, schema: SchemaSnapshot, db_name: str, db_type: str
         ) -> list[SQLCandidate]:
@@ -629,6 +646,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
                 # - strip trailing semicolons (so "SELECT 1" == "SELECT 1;")
                 # - strip SQL comments (so "-- note\nSELECT 1" == "SELECT 1")
                 from app.learning.pattern_analyzer import _strip_sql_comments
+
                 sql_clean = _strip_sql_comments(cand.sql_text).strip()
                 sql_key = " ".join(sql_clean.split()).lower().rstrip(";")
                 db_key = getattr(cand, "database_name", "") or ""
@@ -669,11 +687,11 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
         if not domain_config:
             try:
                 from app.api.domains import _domain_manager
+
                 _domain_manager.reload()
                 domain_matches = _domain_manager.detect(body.nl_text)
                 if domain_matches and (
-                    domain_matches[0].matched_keywords
-                    or domain_matches[0].matched_terms
+                    domain_matches[0].matched_keywords or domain_matches[0].matched_terms
                 ):
                     domain_match = domain_matches[0]
                     domain_config = domain_match.domain
@@ -688,6 +706,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
         if source == "database":
             try:
                 from app.rag import get_schema_rag
+
                 schema_rag = get_schema_rag()
                 rag_results = await schema_rag.find_relevant_tables(
                     body.nl_text, top_k=10, db_id=None
@@ -697,8 +716,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
                 # essential for cross-language queries (Chinese question vs
                 # English schema) where sparse_rank is always None.
                 rag_relevant = [
-                    r for r in rag_results
-                    if r.sparse_rank is not None or r.dense_rank is not None
+                    r for r in rag_results if r.sparse_rank is not None or r.dense_rank is not None
                 ]
                 if rag_relevant:
                     rag_lines = ["RAG-indexed schema knowledge (from previous connections):"]
@@ -860,8 +878,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
                 all_candidates.insert(0, healed)
                 primary_sql = healed.sql_text
                 warnings.append(
-                    f"SQL auto-corrected via self-heal retry "
-                    f"(rounds: {len(healer.history)})"
+                    f"SQL auto-corrected via self-heal retry (rounds: {len(healer.history)})"
                 )
             else:
                 warnings.append(
@@ -879,17 +896,15 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     # showing them to the user.
     if body.run_validation and all_candidates:
         filtered = [
-            cand for cand in all_candidates
+            cand
+            for cand in all_candidates
             if not cand.validation
             or cand.validation.get("passed", False)
             or not cand.validation.get("schema_errors")
         ]
         if filtered:
             all_candidates = filtered
-            if not primary_sql or (
-                all_candidates
-                and all_candidates[0].sql_text != primary_sql
-            ):
+            if not primary_sql or (all_candidates and all_candidates[0].sql_text != primary_sql):
                 primary_sql = all_candidates[0].sql_text
 
     # ── Step 5: Execute ONLY database-sourced candidates ───────────
@@ -951,13 +966,15 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     # is wrapped in try/except so a failure here never breaks the query.
     try:
         session = _get_or_create_session(session_id)
-        session["turns"].append({
-            "turn_id": query_id,
-            "nl_input": body.nl_text,
-            "sql": primary_sql or "",
-            "source": source,
-            "timestamp": datetime.now().isoformat(),
-        })
+        session["turns"].append(
+            {
+                "turn_id": query_id,
+                "nl_input": body.nl_text,
+                "sql": primary_sql or "",
+                "source": source,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         session["updated_at"] = datetime.now().isoformat()
     except Exception:
         pass
@@ -967,31 +984,36 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     store = get_store()
     if store is not None:
         try:
-            await store.save_query({
-                "session_id": session_id,
-                "query_id": query_id,
-                "nl_text": body.nl_text,
-                "sql_generated": primary_sql or "",
-                "sql_final": execution_result.get("sql", "") if execution_result else "",
-                "domain": detected_domain,
-                "db_id": body.database,
-                "response_time_ms": response_time_ms,
-                "rating": 0,
-            })
-            if primary_sql:
-                await store.save_query_pair({
+            await store.save_query(
+                {
                     "session_id": session_id,
+                    "query_id": query_id,
                     "nl_text": body.nl_text,
-                    "sql_text": primary_sql,
+                    "sql_generated": primary_sql or "",
+                    "sql_final": execution_result.get("sql", "") if execution_result else "",
                     "domain": detected_domain,
+                    "db_id": body.database,
+                    "response_time_ms": response_time_ms,
                     "rating": 0,
-                })
+                }
+            )
+            if primary_sql:
+                await store.save_query_pair(
+                    {
+                        "session_id": session_id,
+                        "nl_text": body.nl_text,
+                        "sql_text": primary_sql,
+                        "domain": detected_domain,
+                        "rating": 0,
+                    }
+                )
         except Exception as e:
             logger.warning("Failed to save query to MySQL: %s", e)
 
     # Record workflow trace for real-time stats
     try:
         from app.api.workflows import record_trace
+
         nodes_executed = ["parse_nl"]
         if body.link_schema:
             nodes_executed.append("schema_linking")
@@ -1017,6 +1039,7 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     # Record query for learning stats
     try:
         from app.api.learning import record_query
+
         record_query(
             nl_text=body.nl_text,
             sql_text=primary_sql or "",
@@ -1089,8 +1112,7 @@ async def execute_sql_direct(body: ExecuteRequest) -> dict:
             available = [c.db_id for c in ConnectionFactory.list_all()]
             raise HTTPException(
                 status_code=404,
-                detail=f"Database '{db_id}' not found. "
-                f"Available: {available or 'none'}",
+                detail=f"Database '{db_id}' not found. Available: {available or 'none'}",
             ) from None
     else:
         all_conns = ConnectionFactory.list_all()
@@ -1115,7 +1137,8 @@ async def execute_sql_direct(body: ExecuteRequest) -> dict:
         exec_output = await exec_node.execute(
             NodeInput(
                 query_text=body.sql,
-                context={"sql": body.sql, "connection": conn, "max_rows": body.max_rows},
+                context={"sql": body.sql, "connection": conn},
+                config={"max_rows": body.max_rows},
             )
         )
     except Exception as e:
@@ -1140,7 +1163,9 @@ async def execute_sql_direct(body: ExecuteRequest) -> dict:
         return {
             "status": "error",
             "database": db_id,
-            "errors": exec_output.errors if hasattr(exec_output, "errors") else ["Unknown execution error"],
+            "errors": exec_output.errors
+            if hasattr(exec_output, "errors")
+            else ["Unknown execution error"],
             "warnings": warnings,
         }
 
@@ -1202,18 +1227,22 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
         # Declare the plan that will be used for this query so the
         # frontend can render the expected pipeline immediately.
         workflow_stages = ["parse", "retrieve", "generate", "validate", "execute"]
-        yield _emit("workflow", {
-            "workflow_id": "gensql_agentic",
-            "name": "标准查询",
-            "estimated_cost": "medium",
-            "stages": workflow_stages,
-        })
+        yield _emit(
+            "workflow",
+            {
+                "workflow_id": "gensql_agentic",
+                "name": "标准查询",
+                "estimated_cost": "medium",
+                "stages": workflow_stages,
+            },
+        )
 
         # ── Resolve domain config (for glossary + business rules) ──
         stream_domain_config = None
         if body.domain and body.domain != "default":
             try:
                 from app.api.domains import _domain_manager
+
                 stream_domain_config = _domain_manager.get(body.domain)
             except Exception:
                 pass
@@ -1246,49 +1275,62 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 )
             )
             if parse_output.errors or parse_output.result is None:
-                yield _emit("error", {"message": "NL parsing failed",
-                           "errors": parse_output.errors})
+                yield _emit(
+                    "error", {"message": "NL parsing failed", "errors": parse_output.errors}
+                )
                 return
 
             sqr = parse_output.result
-            yield _emit("parse", {
-                "query_id": query_id,
-                "language": sqr.language,
-                "intent": sqr.intent.value,
-                "confidence": sqr.confidence,
-                "entities": len(sqr.entities),
-            })
-
-            # SPEC §6.7: agent_trace for parse_nl
-            yield _emit("agent_trace", {
-                "agent": "nl_understander",
-                "status": "completed",
-                "latency_ms": int((time.perf_counter() - stage_start) * 1000),
-                "output": {
+            yield _emit(
+                "parse",
+                {
+                    "query_id": query_id,
                     "language": sqr.language,
                     "intent": sqr.intent.value,
                     "confidence": sqr.confidence,
-                    "entities_count": len(sqr.entities),
+                    "entities": len(sqr.entities),
                 },
-            })
+            )
+
+            # SPEC §6.7: agent_trace for parse_nl
+            yield _emit(
+                "agent_trace",
+                {
+                    "agent": "nl_understander",
+                    "status": "completed",
+                    "latency_ms": int((time.perf_counter() - stage_start) * 1000),
+                    "output": {
+                        "language": sqr.language,
+                        "intent": sqr.intent.value,
+                        "confidence": sqr.confidence,
+                        "entities_count": len(sqr.entities),
+                    },
+                },
+            )
 
             # SPEC §6.7: ambiguity detection — emit if SQR has low confidence
             # or contains time/entity ambiguity markers.
             if sqr.confidence < 0.5:
-                yield _emit("ambiguity", {
-                    "aspect": "intent",
-                    "question": body.nl_text,
-                    "options": [],
-                    "confidence": sqr.confidence,
-                })
+                yield _emit(
+                    "ambiguity",
+                    {
+                        "aspect": "intent",
+                        "question": body.nl_text,
+                        "options": [],
+                        "confidence": sqr.confidence,
+                    },
+                )
 
             # SPEC §6.7: agent_handoff — parse → retrieve
-            yield _emit("agent_handoff", {
-                "from": "nl_understander",
-                "to": "schema_retriever",
-                "reason": "sqr_ready",
-                "context_summary": f"intent={sqr.intent.value}, entities={len(sqr.entities)}",
-            })
+            yield _emit(
+                "agent_handoff",
+                {
+                    "from": "nl_understander",
+                    "to": "schema_retriever",
+                    "reason": "sqr_ready",
+                    "context_summary": f"intent={sqr.intent.value}, entities={len(sqr.entities)}",
+                },
+            )
 
             # ── SPEC §6.7: stage event — retrieve ──
             yield _emit("stage", {"stage": "retrieve", "status": "started", "progress": 0.3})
@@ -1317,39 +1359,47 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 # tables.  The schema linker won't find matching tables, so we
                 # generate precise information_schema / sqlite_master SQL here.
                 if stream_schema_map:
-                    metadata_candidates = _detect_metadata_query(
-                        body.nl_text, stream_schema_map
-                    )
+                    metadata_candidates = _detect_metadata_query(body.nl_text, stream_schema_map)
                     if metadata_candidates is not None:
                         stream_is_metadata = True
                         stream_source = "database"
                         stream_source_note = ""
                         # Emit schema events for each database
                         for mc in metadata_candidates:
-                            yield _emit("schema", {
-                                "database": mc.database_name,
-                                "db_id": "",
-                                "tables": [],
-                                "columns_count": 0,
-                                "hint_alternatives": False,
-                            })
+                            yield _emit(
+                                "schema",
+                                {
+                                    "database": mc.database_name,
+                                    "db_id": "",
+                                    "tables": [],
+                                    "columns_count": 0,
+                                    "hint_alternatives": False,
+                                },
+                            )
                         # Emit SQL tokens for each candidate
                         for mc in metadata_candidates:
-                            yield _emit("database", {
-                                "name": mc.database_name, "db_id": "",
-                            })
+                            yield _emit(
+                                "database",
+                                {
+                                    "name": mc.database_name,
+                                    "db_id": "",
+                                },
+                            )
                             for word in mc.sql_text.split():
                                 yield _emit("token", {"text": word + " "})
                             if not primary_sql:
                                 primary_sql = mc.sql_text
                         stream_all_candidates = list(metadata_candidates)
                         # SPEC §6.7: agent_trace for metadata query handler
-                        yield _emit("agent_trace", {
-                            "agent": "schema_retriever",
-                            "status": "completed",
-                            "tables_found": [],
-                            "metadata_query": True,
-                        })
+                        yield _emit(
+                            "agent_trace",
+                            {
+                                "agent": "schema_retriever",
+                                "status": "completed",
+                                "tables_found": [],
+                                "metadata_query": True,
+                            },
+                        )
 
                 if stream_schema_map and not stream_is_metadata:
                     # Run schema linking for each database sequentially
@@ -1359,7 +1409,11 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                             link_output = await link_node.execute(
                                 NodeInput(
                                     query_text=body.nl_text,
-                                    context={"sqr": sqr, "schema": db_schema, "domain": stream_domain_config},
+                                    context={
+                                        "sqr": sqr,
+                                        "schema": db_schema,
+                                        "domain": stream_domain_config,
+                                    },
                                 )
                             )
                             db_linked_tables = link_output.result.get("tables", [])
@@ -1369,37 +1423,57 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
 
                             # Always keep the full schema — the multi_table_hint
                             # handles prioritization in the prompt builder.
-                            yield _emit("schema", {
-                                "database": db_name,
-                                "db_id": db_id,
-                                "tables": db_linked_tables,
-                                "columns_count": len(link_output.result.get("columns", [])),
-                                "hint_alternatives": db_multi_hint.get("has_alternatives", False),
-                            })
+                            yield _emit(
+                                "schema",
+                                {
+                                    "database": db_name,
+                                    "db_id": db_id,
+                                    "tables": db_linked_tables,
+                                    "columns_count": len(link_output.result.get("columns", [])),
+                                    "hint_alternatives": db_multi_hint.get(
+                                        "has_alternatives", False
+                                    ),
+                                },
+                            )
 
                             # SPEC §6.7: agent_trace for schema_retriever
-                            yield _emit("agent_trace", {
-                                "agent": "schema_retriever",
-                                "status": "completed",
-                                "tools_called": ["hybrid_search"],
-                                "tables_found": db_linked_tables,
-                                "database": db_name,
-                            })
+                            yield _emit(
+                                "agent_trace",
+                                {
+                                    "agent": "schema_retriever",
+                                    "status": "completed",
+                                    "tools_called": ["hybrid_search"],
+                                    "tables_found": db_linked_tables,
+                                    "database": db_name,
+                                },
+                            )
                         except Exception as e:
-                            yield _emit("warning", {"message": f"Schema linking error for '{db_name}': {e}"})
+                            yield _emit(
+                                "warning", {"message": f"Schema linking error for '{db_name}': {e}"}
+                            )
 
-            yield _emit("stage", {"stage": "retrieve", "status": "completed", "progress": 0.4,
-                                   "duration_ms": int((time.perf_counter() - stage_start) * 1000)})
+            yield _emit(
+                "stage",
+                {
+                    "stage": "retrieve",
+                    "status": "completed",
+                    "progress": 0.4,
+                    "duration_ms": int((time.perf_counter() - stage_start) * 1000),
+                },
+            )
 
             # ── SPEC §6.7: stage event — generate ──
             yield _emit("stage", {"stage": "generate", "status": "started", "progress": 0.5})
             stage_start = time.perf_counter()
             # SPEC §6.7: collaboration mode announcement
-            yield _emit("collaboration", {
-                "mode": "pipeline",
-                "agents": ["nl_understander", "schema_retriever", "sql_generator"],
-                "status": "started",
-            })
+            yield _emit(
+                "collaboration",
+                {
+                    "mode": "pipeline",
+                    "agents": ["nl_understander", "schema_retriever", "sql_generator"],
+                    "status": "started",
+                },
+            )
 
             # ── Step 3: Stream SQL generation (per database) ─
             gen_node = GenerateSQLNode(router=get_default_router())
@@ -1415,31 +1489,43 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                     # Skip SQL generation if no relevant tables or columns found
                     if not db_linked:
                         stream_skipped_dbs.append(db_name)
-                        yield _emit("warning", {
-                            "message": f"数据库 '{db_name}' 中未找到与查询相关的表或列，跳过SQL生成"
-                        })
+                        yield _emit(
+                            "warning",
+                            {
+                                "message": f"数据库 '{db_name}' 中未找到与查询相关的表或列，跳过SQL生成"
+                            },
+                        )
                         continue
 
-                    yield _emit("schema", {
-                        "database": db_name,
-                        "db_id": db_id,
-                        "generating": True,
-                    })
+                    yield _emit(
+                        "schema",
+                        {
+                            "database": db_name,
+                            "db_id": db_id,
+                            "generating": True,
+                        },
+                    )
 
                     try:
-                        gen_input = await gen_node.setup_input({
-                            "query_text": body.nl_text,
-                            "context": {"sqr": sqr, "schema": db_schema, "domain": stream_domain_config},
-                            "config": {
-                                "num_candidates": body.num_candidates,
-                                "dialect": db_dialect,
-                                "streaming": True,
-                                "rag_context": None,
-                                "multi_table_hint": db_hint,
-                                "database_name": db_name,
-                                "model": body.model,
-                            },
-                        })
+                        gen_input = await gen_node.setup_input(
+                            {
+                                "query_text": body.nl_text,
+                                "context": {
+                                    "sqr": sqr,
+                                    "schema": db_schema,
+                                    "domain": stream_domain_config,
+                                },
+                                "config": {
+                                    "num_candidates": body.num_candidates,
+                                    "dialect": db_dialect,
+                                    "streaming": True,
+                                    "rag_context": None,
+                                    "multi_table_hint": db_hint,
+                                    "database_name": db_name,
+                                    "model": body.model,
+                                },
+                            }
+                        )
                         gen_output = await gen_node.execute(gen_input)
                         db_candidates: list[SQLCandidate] = gen_output.result.get("candidates", [])
                         db_primary = gen_output.result.get("primary_sql", "")
@@ -1454,27 +1540,40 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                                 primary_sql = db_primary
 
                         if gen_output.errors:
-                            yield _emit("warning", {"message": f"Generation error for '{db_name}': {gen_output.errors}"})
+                            yield _emit(
+                                "warning",
+                                {
+                                    "message": f"Generation error for '{db_name}': {gen_output.errors}"
+                                },
+                            )
 
                         stream_all_candidates.extend(db_candidates)
 
                         # SPEC §6.7: agent_handoff — schema_retriever → sql_generator
-                        yield _emit("agent_handoff", {
-                            "from": "schema_retriever",
-                            "to": "sql_generator",
-                            "reason": "schema_ready",
-                            "context_summary": f"db={db_name}, tables={len(db_linked)}",
-                        })
+                        yield _emit(
+                            "agent_handoff",
+                            {
+                                "from": "schema_retriever",
+                                "to": "sql_generator",
+                                "reason": "schema_ready",
+                                "context_summary": f"db={db_name}, tables={len(db_linked)}",
+                            },
+                        )
                         # SPEC §6.7: agent_trace for sql_generator
-                        yield _emit("agent_trace", {
-                            "agent": "sql_generator",
-                            "status": "completed",
-                            "candidates_count": len(db_candidates),
-                            "primary_sql_length": len(db_primary),
-                            "database": db_name,
-                        })
+                        yield _emit(
+                            "agent_trace",
+                            {
+                                "agent": "sql_generator",
+                                "status": "completed",
+                                "candidates_count": len(db_candidates),
+                                "primary_sql_length": len(db_primary),
+                                "database": db_name,
+                            },
+                        )
                     except Exception as e:
-                        yield _emit("warning", {"message": f"Generation error for '{db_name}': {e}"})
+                        yield _emit(
+                            "warning", {"message": f"Generation error for '{db_name}': {e}"}
+                        )
 
                 # ── Deduplicate stream candidates by (sql_text, database_name) ──
                 # Same logic as non-streaming path: temperature sampling may
@@ -1483,6 +1582,7 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 # "SELECT 1" and "SELECT 1;" are treated as duplicates.
                 if stream_all_candidates:
                     from app.learning.pattern_analyzer import _strip_sql_comments as _stream_strip
+
                     _seen: dict[tuple[str, str], int] = {}
                     _deduped: list[SQLCandidate] = []
                     for cand in stream_all_candidates:
@@ -1501,13 +1601,23 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
 
                 # If all databases were skipped, fall through to domain/RAG/LLM-auto
                 if not stream_all_candidates and stream_skipped_dbs:
-                    yield _emit("warning", {
-                        "message": f"已连接的数据库中未找到相关表，正在尝试从领域知识/RAG知识库生成SQL..."
-                    })
+                    yield _emit(
+                        "warning",
+                        {
+                            "message": "已连接的数据库中未找到相关表，正在尝试从领域知识/RAG知识库生成SQL..."
+                        },
+                    )
                     stream_schema_map = {}  # Clear to trigger fallback below
 
-            yield _emit("stage", {"stage": "generate", "status": "completed", "progress": 0.7,
-                                   "duration_ms": int((time.perf_counter() - stage_start) * 1000)})
+            yield _emit(
+                "stage",
+                {
+                    "stage": "generate",
+                    "status": "completed",
+                    "progress": 0.7,
+                    "duration_ms": int((time.perf_counter() - stage_start) * 1000),
+                },
+            )
 
             # ── Fallback: no DB match (no DBs connected OR all skipped) ──
             if not stream_schema_map:
@@ -1518,24 +1628,30 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 if stream_domain_config:
                     domain_label = stream_domain_config.label.get("zh", stream_domain_config.name)
                     stream_source = "domain"
-                    stream_source_note = f"此SQL基于领域知识「{domain_label}」生成，不涉及已连接的数据库"
+                    stream_source_note = (
+                        f"此SQL基于领域知识「{domain_label}」生成，不涉及已连接的数据库"
+                    )
                     yield _emit("warning", {"message": stream_source_note})
 
                 # 1. Try domain detection (if not already set)
                 if not stream_domain_config:
                     try:
                         from app.api.domains import _domain_manager
+
                         _domain_manager.reload()
                         domain_matches = _domain_manager.detect(body.nl_text)
                         if domain_matches and (
-                            domain_matches[0].matched_keywords
-                            or domain_matches[0].matched_terms
+                            domain_matches[0].matched_keywords or domain_matches[0].matched_terms
                         ):
                             domain_match = domain_matches[0]
                             stream_domain_config = domain_match.domain
-                            domain_label = domain_match.domain.label.get("zh", domain_match.domain.name)
+                            domain_label = domain_match.domain.label.get(
+                                "zh", domain_match.domain.name
+                            )
                             stream_source = "domain"
-                            stream_source_note = f"此SQL基于领域知识「{domain_label}」生成，不涉及已连接的数据库"
+                            stream_source_note = (
+                                f"此SQL基于领域知识「{domain_label}」生成，不涉及已连接的数据库"
+                            )
                             yield _emit("warning", {"message": stream_source_note})
                     except Exception:
                         pass
@@ -1544,6 +1660,7 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 if stream_source == "database":
                     try:
                         from app.rag import get_schema_rag
+
                         schema_rag = get_schema_rag()
                         rag_results = await schema_rag.find_relevant_tables(
                             body.nl_text, top_k=10, db_id=None
@@ -1552,19 +1669,25 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                         # (sparse) for literal matches, dense for semantic
                         # matches — essential for cross-language queries.
                         rag_relevant = [
-                            r for r in rag_results
+                            r
+                            for r in rag_results
                             if r.sparse_rank is not None or r.dense_rank is not None
                         ]
                         # SPEC §6.7: rag_result event — surface the retrieval
                         # summary to the frontend for transparency.
-                        yield _emit("rag_result", {
-                            "matched_tables": sorted({r.table_name for r in rag_relevant}),
-                            "matched_terms": [],
-                            "similar_queries_found": len(rag_relevant),
-                            "total_candidates": len(rag_results),
-                        })
+                        yield _emit(
+                            "rag_result",
+                            {
+                                "matched_tables": sorted({r.table_name for r in rag_relevant}),
+                                "matched_terms": [],
+                                "similar_queries_found": len(rag_relevant),
+                                "total_candidates": len(rag_results),
+                            },
+                        )
                         if rag_relevant:
-                            rag_lines = ["RAG-indexed schema knowledge (from previous connections):"]
+                            rag_lines = [
+                                "RAG-indexed schema knowledge (from previous connections):"
+                            ]
                             for r in rag_relevant[:15]:
                                 rag_lines.append(
                                     f"  - {r.table_name}.{r.column_name} ({r.data_type})"
@@ -1580,21 +1703,25 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 # 3. If still no source, LLM auto-generate
                 if stream_source == "database":
                     stream_source = "llm_auto"
-                    stream_source_note = "此SQL由LLM自动生成，不涉及已连接数据库、领域知识或RAG知识库"
+                    stream_source_note = (
+                        "此SQL由LLM自动生成，不涉及已连接数据库、领域知识或RAG知识库"
+                    )
                     yield _emit("warning", {"message": stream_source_note})
 
                 # Generate SQL using the appropriate template
                 try:
-                    gen_input = await gen_node.setup_input({
-                        "query_text": body.nl_text,
-                        "context": {"sqr": sqr, "schema": None, "domain": stream_domain_config},
-                        "config": {
-                            "num_candidates": body.num_candidates,
-                            "dialect": stream_dialect,
-                            "streaming": True,
-                            "rag_context": stream_rag_context,
-                        },
-                    })
+                    gen_input = await gen_node.setup_input(
+                        {
+                            "query_text": body.nl_text,
+                            "context": {"sqr": sqr, "schema": None, "domain": stream_domain_config},
+                            "config": {
+                                "num_candidates": body.num_candidates,
+                                "dialect": stream_dialect,
+                                "streaming": True,
+                                "rag_context": stream_rag_context,
+                            },
+                        }
+                    )
                     gen_output = await gen_node.execute(gen_input)
                     primary_sql = gen_output.result.get("primary_sql") or ""
                     words = primary_sql.split()
@@ -1602,7 +1729,9 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                         yield _emit("token", {"text": word + " "})
                     stream_all_candidates = gen_output.result.get("candidates", [])
                     if gen_output.errors:
-                        yield _emit("error", {"message": "Generation error", "errors": gen_output.errors})
+                        yield _emit(
+                            "error", {"message": "Generation error", "errors": gen_output.errors}
+                        )
                         return
                 except Exception as e:
                     yield _emit("error", {"message": f"Generation error: {e}"})
@@ -1632,14 +1761,17 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                             "type_errors": [],
                             "warnings": [],
                         }
-                        yield _emit("validation", {
-                            "candidate_id": cand.id,
-                            "passed": True,
-                            "score": 1.0,
-                            "syntax_ok": True,
-                            "schema_valid": True,
-                            "type_valid": True,
-                        })
+                        yield _emit(
+                            "validation",
+                            {
+                                "candidate_id": cand.id,
+                                "passed": True,
+                                "score": 1.0,
+                                "syntax_ok": True,
+                                "schema_valid": True,
+                                "type_valid": True,
+                            },
+                        )
                         continue
                     cand_dialect = cand.dialect or stream_dialect
                     val_node = ValidateSQLNode(dialect=cand_dialect)
@@ -1671,14 +1803,17 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                                 "type_errors": report.type_errors,
                                 "warnings": report.warnings,
                             }
-                            yield _emit("validation", {
-                                "candidate_id": cand.id,
-                                "passed": report.passed,
-                                "score": report.score,
-                                "syntax_ok": report.syntax_ok,
-                                "schema_valid": report.schema_valid,
-                                "type_valid": report.type_valid,
-                            })
+                            yield _emit(
+                                "validation",
+                                {
+                                    "candidate_id": cand.id,
+                                    "passed": report.passed,
+                                    "score": report.score,
+                                    "syntax_ok": report.syntax_ok,
+                                    "schema_valid": report.schema_valid,
+                                    "type_valid": report.type_valid,
+                                },
+                            )
                     except Exception as e:
                         yield _emit("warning", {"message": f"Validation error: {e}"})
 
@@ -1727,33 +1862,43 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                         healed.database_name = primary_db_name
                         stream_all_candidates.insert(0, healed)
                         primary_sql = healed.sql_text
-                        yield _emit("candidate", {
-                            "id": healed.id,
-                            "sql": healed.sql_text,
-                            "confidence": healed.confidence,
-                            "generation_mode": healed.generation_mode,
-                            "database_name": primary_db_name,
-                        })
-                        yield _emit("warning", {
-                            "message": f"SQL auto-corrected via self-heal retry "
-                                       f"(rounds: {len(healer.history)})"
-                        })
+                        yield _emit(
+                            "candidate",
+                            {
+                                "id": healed.id,
+                                "sql": healed.sql_text,
+                                "confidence": healed.confidence,
+                                "generation_mode": healed.generation_mode,
+                                "database_name": primary_db_name,
+                            },
+                        )
+                        yield _emit(
+                            "warning",
+                            {
+                                "message": f"SQL auto-corrected via self-heal retry "
+                                f"(rounds: {len(healer.history)})"
+                            },
+                        )
                 except Exception as e:
                     yield _emit("warning", {"message": f"Self-heal skipped: {e}"})
 
                 # SPEC §6.7: agent_trace for sql_validator
-                yield _emit("agent_trace", {
-                    "agent": "sql_validator",
-                    "status": "completed",
-                    "candidates_validated": len(stream_all_candidates),
-                })
+                yield _emit(
+                    "agent_trace",
+                    {
+                        "agent": "sql_validator",
+                        "status": "completed",
+                        "candidates_validated": len(stream_all_candidates),
+                    },
+                )
 
                 # ── Filter out candidates that failed schema validation ──
                 # Remove candidates with schema_errors (wrong column/table names)
                 # so only executable SQL is shown to the user.
                 if stream_all_candidates:
                     _filtered = [
-                        cand for cand in stream_all_candidates
+                        cand
+                        for cand in stream_all_candidates
                         if not cand.validation
                         or cand.validation.get("passed", False)
                         or not cand.validation.get("schema_errors")
@@ -1761,8 +1906,15 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                     if _filtered:
                         stream_all_candidates = _filtered
 
-                yield _emit("stage", {"stage": "validate", "status": "completed", "progress": 0.9,
-                                       "duration_ms": int((time.perf_counter() - stage_start) * 1000)})
+                yield _emit(
+                    "stage",
+                    {
+                        "stage": "validate",
+                        "status": "completed",
+                        "progress": 0.9,
+                        "duration_ms": int((time.perf_counter() - stage_start) * 1000),
+                    },
+                )
 
             # ── Step 5: Execute ONLY database-sourced candidates ───
             # Same logic as non-streaming: skip execution for domain/RAG/
@@ -1794,12 +1946,15 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                         continue
 
                     # SPEC §6.7: agent_handoff — sql_generator → tool_executor
-                    yield _emit("agent_handoff", {
-                        "from": "sql_generator",
-                        "to": "tool_executor",
-                        "reason": "sql_ready",
-                        "context_summary": f"candidate={cand.id}, sql_length={len(cand.sql_text)}",
-                    })
+                    yield _emit(
+                        "agent_handoff",
+                        {
+                            "from": "sql_generator",
+                            "to": "tool_executor",
+                            "reason": "sql_ready",
+                            "context_summary": f"candidate={cand.id}, sql_length={len(cand.sql_text)}",
+                        },
+                    )
                     exec_start = time.perf_counter()
                     try:
                         exec_output = await exec_node.execute(
@@ -1810,11 +1965,14 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                         )
                         exec_duration_ms = int((time.perf_counter() - exec_start) * 1000)
                         # SPEC §6.7: mcp_call event — record DB tool execution
-                        yield _emit("mcp_call", {
-                            "tool": "execute_read_query",
-                            "server": cand_db_name or "default",
-                            "duration_ms": exec_duration_ms,
-                        })
+                        yield _emit(
+                            "mcp_call",
+                            {
+                                "tool": "execute_read_query",
+                                "server": cand_db_name or "default",
+                                "duration_ms": exec_duration_ms,
+                            },
+                        )
                         if exec_output.metadata.get("status") == "success":
                             cand.execution = {
                                 "columns": exec_output.result.get("columns", []),
@@ -1822,32 +1980,48 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                                 "row_count": exec_output.result.get("row_count", 0),
                                 "truncated": exec_output.result.get("truncated", False),
                             }
-                            if cand.id == (stream_all_candidates[0].id if stream_all_candidates else ""):
+                            if cand.id == (
+                                stream_all_candidates[0].id if stream_all_candidates else ""
+                            ):
                                 stream_execution = cand.execution
-                            yield _emit("execution", {
-                                "candidate_id": cand.id,
-                                "columns": cand.execution.get("columns", []),
-                                "rows": cand.execution.get("rows", []),
-                                "row_count": cand.execution.get("row_count", 0),
-                                "truncated": cand.execution.get("truncated", False),
-                            })
+                            yield _emit(
+                                "execution",
+                                {
+                                    "candidate_id": cand.id,
+                                    "columns": cand.execution.get("columns", []),
+                                    "rows": cand.execution.get("rows", []),
+                                    "row_count": cand.execution.get("row_count", 0),
+                                    "truncated": cand.execution.get("truncated", False),
+                                },
+                            )
                     except Exception as e:
                         yield _emit("warning", {"message": f"Execution skipped for {cand.id}: {e}"})
 
                 # SPEC §6.7: agent_trace for tool_executor + stage complete
-                yield _emit("agent_trace", {
-                    "agent": "tool_executor",
-                    "status": "completed",
-                    "candidates_executed": len(stream_all_candidates),
-                })
-                yield _emit("stage", {"stage": "execute", "status": "completed", "progress": 1.0,
-                                       "duration_ms": int((time.perf_counter() - stage_start) * 1000)})
+                yield _emit(
+                    "agent_trace",
+                    {
+                        "agent": "tool_executor",
+                        "status": "completed",
+                        "candidates_executed": len(stream_all_candidates),
+                    },
+                )
+                yield _emit(
+                    "stage",
+                    {
+                        "stage": "execute",
+                        "status": "completed",
+                        "progress": 1.0,
+                        "duration_ms": int((time.perf_counter() - stage_start) * 1000),
+                    },
+                )
 
             # ── Done ───────────────────────────────────────────
             # Record workflow trace for real-time stats
             response_time_ms = int((time.perf_counter() - start_time) * 1000)
             try:
                 from app.api.workflows import record_trace
+
                 nodes_executed = ["parse_nl"]
                 if body.link_schema:
                     nodes_executed.append("schema_linking")
@@ -1871,6 +2045,7 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
             # Record query for learning stats
             try:
                 from app.api.learning import record_query
+
                 record_query(
                     nl_text=body.nl_text,
                     sql_text=primary_sql,
@@ -1882,37 +2057,45 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
             # Serialize candidates for the done event
             stream_candidates_data = []
             for c in stream_all_candidates:
-                stream_candidates_data.append({
-                    "id": c.id,
-                    "sql_text": c.sql_text,
-                    "confidence": c.confidence,
-                    "generation_mode": c.generation_mode,
-                    "dialect": getattr(c, "dialect", None),
-                    "database_name": getattr(c, "database_name", ""),
-                    "validation": getattr(c, "validation", None),
-                    "execution": getattr(c, "execution", None),
-                })
+                stream_candidates_data.append(
+                    {
+                        "id": c.id,
+                        "sql_text": c.sql_text,
+                        "confidence": c.confidence,
+                        "generation_mode": c.generation_mode,
+                        "dialect": getattr(c, "dialect", None),
+                        "database_name": getattr(c, "database_name", ""),
+                        "validation": getattr(c, "validation", None),
+                        "execution": getattr(c, "execution", None),
+                    }
+                )
 
             # Collect all linked tables across databases
             stream_all_linked: list[str] = []
             for db_id, (_, db_name, _) in stream_schema_map.items():
                 stream_all_linked.append(db_name)
 
-            yield _emit("done", {
-                "query_id": query_id,
-                "primary_sql": primary_sql,
-                "linked_tables": stream_all_linked,
-                "execution": stream_execution,
-                "candidates": stream_candidates_data,
-                "source": stream_source,
-                "source_note": stream_source_note,
-            })
+            yield _emit(
+                "done",
+                {
+                    "query_id": query_id,
+                    "primary_sql": primary_sql,
+                    "linked_tables": stream_all_linked,
+                    "execution": stream_execution,
+                    "candidates": stream_candidates_data,
+                    "source": stream_source,
+                    "source_note": stream_source_note,
+                },
+            )
 
         except Exception as e:
-            yield _emit("error", {
-                "message": str(e),
-                "traceback": traceback.format_exc()[:500],
-            })
+            yield _emit(
+                "error",
+                {
+                    "message": str(e),
+                    "traceback": traceback.format_exc()[:500],
+                },
+            )
 
     return StreamingResponse(
         event_stream(),
@@ -1975,7 +2158,12 @@ async def get_session_versions(session_id: str) -> dict:
         if store is not None:
             versions = await store.get_session_versions(session_id)
             if versions:
-                return {"status": "ok", "session_id": session_id, "versions": versions, "total": len(versions)}
+                return {
+                    "status": "ok",
+                    "session_id": session_id,
+                    "versions": versions,
+                    "total": len(versions),
+                }
     except Exception:
         pass
 
@@ -2102,13 +2290,15 @@ async def diff_versions(
     sql2 = v2_data.get("sql_text", "")
 
     # Unified diff (text)
-    diff_lines = list(difflib.unified_diff(
-        sql1.splitlines(keepends=True),
-        sql2.splitlines(keepends=True),
-        fromfile=f"v{v1}",
-        tofile=f"v{v2}",
-        n=3,
-    ))
+    diff_lines = list(
+        difflib.unified_diff(
+            sql1.splitlines(keepends=True),
+            sql2.splitlines(keepends=True),
+            fromfile=f"v{v1}",
+            tofile=f"v{v2}",
+            n=3,
+        )
+    )
     unified_diff = "".join(diff_lines)
 
     # Structured diff (line-by-line)
@@ -2117,18 +2307,33 @@ async def diff_versions(
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
         if tag == "equal":
             for k in range(i1, i2):
-                structured.append({"tag": "equal", "old_line": k + 1, "new_line": k + 1, "content": sql1.splitlines()[k]})
+                structured.append(
+                    {
+                        "tag": "equal",
+                        "old_line": k + 1,
+                        "new_line": k + 1,
+                        "content": sql1.splitlines()[k],
+                    }
+                )
         elif tag == "replace":
             for k in range(i1, i2):
-                structured.append({"tag": "removed", "old_line": k + 1, "content": sql1.splitlines()[k]})
+                structured.append(
+                    {"tag": "removed", "old_line": k + 1, "content": sql1.splitlines()[k]}
+                )
             for k in range(j1, j2):
-                structured.append({"tag": "added", "new_line": k + 1, "content": sql2.splitlines()[k]})
+                structured.append(
+                    {"tag": "added", "new_line": k + 1, "content": sql2.splitlines()[k]}
+                )
         elif tag == "delete":
             for k in range(i1, i2):
-                structured.append({"tag": "removed", "old_line": k + 1, "content": sql1.splitlines()[k]})
+                structured.append(
+                    {"tag": "removed", "old_line": k + 1, "content": sql1.splitlines()[k]}
+                )
         elif tag == "insert":
             for k in range(j1, j2):
-                structured.append({"tag": "added", "new_line": k + 1, "content": sql2.splitlines()[k]})
+                structured.append(
+                    {"tag": "added", "new_line": k + 1, "content": sql2.splitlines()[k]}
+                )
 
     # Compute similarity ratio
     similarity = matcher.ratio()
@@ -2147,7 +2352,9 @@ async def diff_versions(
 
 
 @router.post("/sessions/{session_id}/versions/{version_number}/branch")
-async def branch_from_version(session_id: str, version_number: int, body: dict | None = None) -> dict:
+async def branch_from_version(
+    session_id: str, version_number: int, body: dict | None = None
+) -> dict:
     """Create a new branch from version N (SPEC §4.7.2).
 
     Unlike rollback (which copies the SQL verbatim), a branch creates an
@@ -2199,6 +2406,7 @@ async def branch_from_version(session_id: str, version_number: int, body: dict |
 async def explain_sql_alias(body: dict) -> dict:
     """Alias for POST /sql/explain — matches SPEC §6.1 path."""
     from app.api.sql_utils import SQLRequest, explain_sql
+
     req = SQLRequest(sql=body.get("sql", ""), dialect=body.get("dialect", "ansi"))
     return await explain_sql(req)
 

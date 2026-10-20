@@ -9,16 +9,16 @@ from __future__ import annotations
 import contextlib
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.api import create_app
 from app.db.connections import ConnectionFactory
+from tests.api_client import authenticated_client
 
 
 @pytest.fixture
 def client():
     app = create_app()
-    return TestClient(app)
+    return authenticated_client(app)
 
 
 @pytest.fixture
@@ -26,12 +26,15 @@ def connected_db_id(test_sqlite_db: str) -> str:
     """Connect a test SQLite database via the API and return its db_id."""
     # Use the API to connect
     app = create_app()
-    client = TestClient(app)
-    resp = client.post("/api/v1/databases/connect", json={
-        "db_type": "sqlite",
-        "config": {"path": test_sqlite_db},
-        "alias": "test_schema_api",
-    })
+    client = authenticated_client(app)
+    resp = client.post(
+        "/api/v1/databases/connect",
+        json={
+            "db_type": "sqlite",
+            "config": {"path": test_sqlite_db},
+            "alias": "test_schema_api",
+        },
+    )
     assert resp.status_code == 200, f"Failed to connect test DB: {resp.text}"
     db_id = resp.json()["db_id"]
     yield db_id
@@ -189,9 +192,7 @@ class TestSearchSchema:
         data = resp.json()
         assert data["total_matches"] >= 1
         # "amount" column is in orders table
-        orders = next(
-            (r for r in data["results"] if r["table_name"] == "orders"), None
-        )
+        orders = next((r for r in data["results"] if r["table_name"] == "orders"), None)
         assert orders is not None
         col_names = [c["name"] for c in orders["matched_columns"]]
         assert "amount" in col_names or "refund_amount" in col_names
@@ -242,10 +243,7 @@ class TestSearchSchema:
         assert data["total_matches"] >= 1
 
     def test_search_comments_disabled(self, client, connected_db_id):
-        resp = client.get(
-            f"/api/v1/schema/{connected_db_id}/search?q=user"
-            "&search_comments=false"
-        )
+        resp = client.get(f"/api/v1/schema/{connected_db_id}/search?q=user&search_comments=false")
         assert resp.status_code == 200
 
 
@@ -307,9 +305,7 @@ class TestSchemaIntegration:
 
         # Then search for each table
         for table in tables:
-            search_resp = client.get(
-                f"/api/v1/schema/{connected_db_id}/search?q={table}"
-            )
+            search_resp = client.get(f"/api/v1/schema/{connected_db_id}/search?q={table}")
             assert search_resp.status_code == 200
             results = search_resp.json()["results"]
             found = any(r["table_name"] == table for r in results)
@@ -334,7 +330,5 @@ class TestSchemaIntegration:
         data = resp.json()
         assert data["total_matches"] >= 1
         # "price" column is in products table
-        products = next(
-            (r for r in data["results"] if r["table_name"] == "products"), None
-        )
+        products = next((r for r in data["results"] if r["table_name"] == "products"), None)
         assert products is not None

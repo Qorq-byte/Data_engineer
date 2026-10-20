@@ -1,5 +1,8 @@
 # NL2SQL Data Engineering Agent
 
+> 优化分支进度与验收见[实施计划](docs/optimization/plan.md)、[阶段记录](docs/optimization/progress.md)。
+> 当前采用私有管理员共享工作台：必须配置至少32字符的随机JWT_SECRET，注册需REGISTRATION_TOKEN邀请，业务接口仅允许ADMIN_USER_IDS；详见[安全配置](docs/optimization/security.md)。
+
 基于 LLM 的自然语言 → SQL 数据工程智能体。支持**中英双语**输入，通过 **RAG 混合语义检索**、**Evolvable Context 活知识库**和**持续学习**，将自然语言准确转换为多方言 SQL 并执行。
 
 > 版本: v0.1 · 许可证: MIT · Python ≥ 3.12

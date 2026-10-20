@@ -11,10 +11,12 @@ DELETE /api/v1/auth/account   — delete account
 from __future__ import annotations
 
 import os
+import secrets
 import uuid
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.auth.database import get_connection
@@ -34,7 +36,7 @@ from app.auth.security import (
 )
 
 router = APIRouter()
-_security = HTTPBearer()
+_security = HTTPBearer(auto_error=False)
 
 # Avatar upload directory
 _AVATAR_DIR = Path(__file__).parent.parent.parent / "data" / "avatars"
@@ -55,7 +57,9 @@ def _row_to_response(row: dict) -> UserResponse:
         username=row["username"],
         email=row["email"],
         avatar_url=row.get("avatar_url", ""),
-        created_at=row["created_at"].isoformat() if hasattr(row["created_at"], "isoformat") else str(row["created_at"]),
+        created_at=row["created_at"].isoformat()
+        if hasattr(row["created_at"], "isoformat")
+        else str(row["created_at"]),
     )
 
 
@@ -74,9 +78,11 @@ def _row_to_token(row: dict) -> TokenResponse:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_security),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_security)],
 ) -> dict:
     """FastAPI dependency that validates the Bearer token and returns user info."""
+    if credentials is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
     try:
         payload = decode_access_token(credentials.credentials)
     except Exception:
@@ -87,15 +93,29 @@ async def get_current_user(
     if not user_id or not username:
         raise HTTPException(status_code=401, detail="无效的认证令牌")
 
-    return {"user_id": int(user_id), "username": username}
+    try:
+        numeric_id = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="Invalid token subject") from None
+    return {"user_id": numeric_id, "username": username}
 
 
 # ── Endpoints ───────────────────────────────────────────────────
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
-async def register(body: RegisterRequest) -> TokenResponse:
+async def register(
+    body: RegisterRequest,
+    registration_token: Annotated[str | None, Header(alias="X-Registration-Token")] = None,
+) -> TokenResponse:
     """Register a new user account. Returns a JWT token on success."""
+    from app.config.settings import settings
+
+    if not settings.registration_token or not secrets.compare_digest(
+        registration_token or "", settings.registration_token
+    ):
+        raise HTTPException(status_code=403, detail="A registration invitation is required")
+
     try:
         async with get_connection() as conn, conn.cursor() as cur:
             # Check for duplicate email
@@ -139,9 +159,7 @@ async def login(body: LoginRequest) -> TokenResponse:
     """Authenticate with email + password. Returns a JWT token."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
-            await cur.execute(
-                "SELECT * FROM users WHERE email = %s", (body.email,)
-            )
+            await cur.execute("SELECT * FROM users WHERE email = %s", (body.email,))
             row = await cur.fetchone()
             if row is None:
                 raise HTTPException(status_code=401, detail="邮箱或密码错误")
@@ -161,13 +179,11 @@ async def login(body: LoginRequest) -> TokenResponse:
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: dict = Depends(get_current_user)) -> UserResponse:
+async def me(current_user: Annotated[dict, Depends(get_current_user)]) -> UserResponse:
     """Return the currently authenticated user's profile."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
-            await cur.execute(
-                "SELECT * FROM users WHERE id = %s", (current_user["user_id"],)
-            )
+            await cur.execute("SELECT * FROM users WHERE id = %s", (current_user["user_id"],))
             row = await cur.fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail="用户不存在")
@@ -186,15 +202,13 @@ async def me(current_user: dict = Depends(get_current_user)) -> UserResponse:
 @router.put("/password")
 async def change_password(
     body: ChangePasswordRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
     """Change the current user's password."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
             # Fetch current user
-            await cur.execute(
-                "SELECT * FROM users WHERE id = %s", (current_user["user_id"],)
-            )
+            await cur.execute("SELECT * FROM users WHERE id = %s", (current_user["user_id"],))
             row = await cur.fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail="用户不存在")
@@ -223,8 +237,8 @@ async def change_password(
 
 @router.post("/avatar")
 async def upload_avatar(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user),
+    file: Annotated[UploadFile, File()],
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
     """Upload a new avatar image for the current user."""
     # Validate file type
@@ -269,15 +283,13 @@ async def upload_avatar(
 @router.delete("/account")
 async def delete_account(
     body: DeleteAccountRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict:
     """Permanently delete the current user's account."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
             # Fetch current user
-            await cur.execute(
-                "SELECT * FROM users WHERE id = %s", (current_user["user_id"],)
-            )
+            await cur.execute("SELECT * FROM users WHERE id = %s", (current_user["user_id"],))
             row = await cur.fetchone()
             if row is None:
                 raise HTTPException(status_code=404, detail="用户不存在")
@@ -290,9 +302,7 @@ async def delete_account(
                 raise HTTPException(status_code=400, detail="密码错误，无法注销账号")
 
             # Delete user
-            await cur.execute(
-                "DELETE FROM users WHERE id = %s", (current_user["user_id"],)
-            )
+            await cur.execute("DELETE FROM users WHERE id = %s", (current_user["user_id"],))
 
     except HTTPException:
         raise

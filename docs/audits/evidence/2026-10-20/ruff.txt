@@ -1,0 +1,18 @@
+104	E501  	[ ] line-too-long
+ 12	E402  	[ ] module-import-not-at-top-of-file
+ 12	I001  	[*] unsorted-imports
+ 11	SIM105	[ ] suppressible-exception
+ 10	B007  	[ ] unused-loop-control-variable
+  9	F401  	[*] unused-import
+  6	B008  	[ ] function-call-in-default-argument
+  5	F841  	[ ] unused-variable
+  4	W292  	[*] missing-newline-at-end-of-file
+  4	UP038 	[ ] non-pep604-isinstance
+  3	F821  	[ ] undefined-name
+  3	SIM102	[ ] collapsible-if
+  3	SIM117	[ ] multiple-with-statements
+  2	F541  	[*] f-string-missing-placeholders
+  2	SIM103	[ ] needless-bool
+  2	UP037 	[*] quoted-annotation
+Found 192 errors.
+[*] 29 fixable with the `--fix` option (27 hidden fixes can be enabled with the `--unsafe-fixes` option).

@@ -1,15 +1,15 @@
 """Tests for POST /api/v1/query — the full NL→SQL pipeline endpoint."""
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.api import create_app
+from tests.api_client import authenticated_client
 
 
 @pytest.fixture
 def client():
     app = create_app()
-    return TestClient(app)
+    return authenticated_client(app)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -96,37 +96,49 @@ class TestResponseStructure:
 
 class TestConfigOptions:
     def test_multiple_candidates(self, client):
-        resp = client.post("/api/v1/query", json={
-            "nl_text": "查询所有订单",
-            "num_candidates": 3,
-        })
+        resp = client.post(
+            "/api/v1/query",
+            json={
+                "nl_text": "查询所有订单",
+                "num_candidates": 3,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["candidates"]) == 3
 
     def test_skip_validation(self, client):
-        resp = client.post("/api/v1/query", json={
-            "nl_text": "查询所有订单",
-            "validate": False,  # maps to run_validation via validation_alias
-        })
+        resp = client.post(
+            "/api/v1/query",
+            json={
+                "nl_text": "查询所有订单",
+                "validate": False,  # maps to run_validation via validation_alias
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["validation"] is None
 
     def test_skip_schema_linking(self, client):
-        resp = client.post("/api/v1/query", json={
-            "nl_text": "查询所有订单",
-            "link_schema": False,
-        })
+        resp = client.post(
+            "/api/v1/query",
+            json={
+                "nl_text": "查询所有订单",
+                "link_schema": False,
+            },
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["linked_tables"] == []
 
     def test_dialect_override(self, client):
-        resp = client.post("/api/v1/query", json={
-            "nl_text": "find orders",
-            "dialect": "mysql",
-        })
+        resp = client.post(
+            "/api/v1/query",
+            json={
+                "nl_text": "find orders",
+                "dialect": "mysql",
+            },
+        )
         assert resp.status_code == 200
 
     def test_execute_false_by_default(self, client):
@@ -167,17 +179,15 @@ class TestEdgeCases:
         assert "candidates" in data
 
     def test_long_chinese_query(self, client):
-        resp = client.post("/api/v1/query", json={
-            "nl_text": "统计上个月各地区的销售额前10名按金额降序"
-        })
+        resp = client.post(
+            "/api/v1/query", json={"nl_text": "统计上个月各地区的销售额前10名按金额降序"}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["candidates"]) >= 1
 
     def test_query_with_entities(self, client):
-        resp = client.post("/api/v1/query", json={
-            "nl_text": '查找产品"iPhone 15"的销量'
-        })
+        resp = client.post("/api/v1/query", json={"nl_text": '查找产品"iPhone 15"的销量'})
         assert resp.status_code == 200
 
 
@@ -237,18 +247,24 @@ class TestStreamingEndpoint:
         assert resp.status_code == 422
 
     def test_stream_with_validation(self, client):
-        resp = client.post("/api/v1/query/stream", json={
-            "nl_text": "find all orders",
-            "validate": True,
-        })
+        resp = client.post(
+            "/api/v1/query/stream",
+            json={
+                "nl_text": "find all orders",
+                "validate": True,
+            },
+        )
         body = resp.text
         assert "event: validation" in body
 
     def test_stream_skip_validation(self, client):
-        resp = client.post("/api/v1/query/stream", json={
-            "nl_text": "find orders",
-            "validate": False,
-        })
+        resp = client.post(
+            "/api/v1/query/stream",
+            json={
+                "nl_text": "find orders",
+                "validate": False,
+            },
+        )
         body = resp.text
         assert "event: validation" not in body
 
@@ -271,5 +287,6 @@ class TestStreamingEndpoint:
                 data_start = event.index("data:") + 5
                 data_str = event[data_start:].strip()
                 import json
+
                 parsed = json.loads(data_str)
                 assert "query_id" in parsed

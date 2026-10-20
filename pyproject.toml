@@ -19,7 +19,8 @@ dependencies = [
     "litellm>=1.52.0",
 
     # MCP framework
-    "fastmcp>=2.0.0",
+    "fastmcp>=4.0.0,<5",
+    "mcp>=2.2.0,<3",
 
     # Vector & search
     "lancedb>=0.17.0",

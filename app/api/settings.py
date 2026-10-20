@@ -23,6 +23,7 @@ def _get_store():
     """Get the MySQL store, or return None if not available."""
     try:
         from app.storage.mysql_store import get_store
+
         return get_store()
     except Exception:
         return None
@@ -206,13 +207,25 @@ class RagSettingsUpdate(BaseModel):
 # ── Endpoints ──────────────────────────────────────────────────────────
 
 
+def _public_settings(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            k: _public_settings(v)
+            for k, v in value.items()
+            if k not in {"api_key", "api_key_enc", "password", "secret", "jwt_secret"}
+        }
+    if isinstance(value, list):
+        return [_public_settings(v) for v in value]
+    return value
+
+
 @router.get("/settings")
 async def get_all_settings() -> dict:
     """Get all system settings."""
     await _load_settings_from_db()
     return {
         "status": "ok",
-        "settings": _settings_store,
+        "settings": _public_settings(_settings_store),
     }
 
 
@@ -396,12 +409,14 @@ async def get_available_models() -> dict:
             continue
         has_key = bool(cfg.get("api_key_configured")) or _env_key_available(provider_name)
         for model in cfg["models"]:
-            models.append({
-                "model": model,
-                "provider": provider_name,
-                "api_key_configured": has_key,
-                "available": has_key or mock_mode,
-            })
+            models.append(
+                {
+                    "model": model,
+                    "provider": provider_name,
+                    "api_key_configured": has_key,
+                    "available": has_key or mock_mode,
+                }
+            )
     return {
         "status": "ok",
         "models": models,
@@ -458,7 +473,10 @@ async def delete_llm_provider(provider_name: str) -> dict:
     # Prevent deleting built-in providers
     builtin = {"openai", "anthropic", "deepseek", "google"}
     if provider_name in builtin:
-        raise HTTPException(status_code=400, detail=f"Cannot delete built-in provider '{provider_name}'. Disable it instead.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete built-in provider '{provider_name}'. Disable it instead.",
+        )
 
     del llm["providers"][provider_name]
     await _persist_section("llm")

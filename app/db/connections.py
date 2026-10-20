@@ -125,7 +125,7 @@ class ConnectionFactory:
         import duckdb
 
         path = config.get("path", ":memory:")
-        return duckdb.connect(path)
+        return duckdb.connect(path, config={"enable_external_access": False})
 
     @classmethod
     async def _connect_postgresql(cls, config: dict) -> Any:

@@ -18,7 +18,7 @@ from app.knowledge.domain_manager import DomainManager
 from app.knowledge.glossary import GlossaryManager
 from app.knowledge.rule_engine import RuleEngine
 from app.models.domain import BusinessRule, GlossaryTerm, TermMapping
-from app.storage.mysql_store import get_store, MySQLStore
+from app.storage.mysql_store import MySQLStore, get_store
 
 router = APIRouter()
 
@@ -38,9 +38,20 @@ _rule_engine.load_from_domains()
 # ── YAML persistence helper ──────────────────────────────────────────────
 
 
+def _safe_domain_path(domain_id: str) -> Path:
+    import re
+
+    if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", domain_id):
+        raise HTTPException(status_code=422, detail="Invalid domain identifier")
+    target = (DOMAINS_DIR / f"{domain_id}.yml").resolve()
+    if target.parent != DOMAINS_DIR.resolve():
+        raise HTTPException(status_code=422, detail="Invalid domain path")
+    return target
+
+
 def _persist_domain_yaml(domain_id: str) -> None:
     """Persist the current in-memory domain state (glossary + rules) back to YAML."""
-    yaml_path = DOMAINS_DIR / f"{domain_id}.yml"
+    yaml_path = _safe_domain_path(domain_id)
     if not yaml_path.exists():
         return
 
@@ -181,18 +192,23 @@ async def list_domains() -> dict[str, Any]:
             mysql_domains = await store.get_domains()
             domains: list[dict[str, Any]] = []
             for row in mysql_domains:
-                domains.append({
-                    "name": row.get("name", ""),
-                    "label": {"zh": row.get("label_zh", ""), "en": row.get("label_en", "")},
-                    "description": {"zh": row.get("description_zh", ""), "en": row.get("description_en", "")},
-                    "keywords": row.get("keywords", []),
-                    "databases": [],
-                    "timezone": row.get("timezone", "UTC"),
-                    "currency": row.get("currency", "USD"),
-                    "glossary_count": 0,
-                    "rules_count": 0,
-                    "is_active": bool(row.get("is_active", False)),
-                })
+                domains.append(
+                    {
+                        "name": row.get("name", ""),
+                        "label": {"zh": row.get("label_zh", ""), "en": row.get("label_en", "")},
+                        "description": {
+                            "zh": row.get("description_zh", ""),
+                            "en": row.get("description_en", ""),
+                        },
+                        "keywords": row.get("keywords", []),
+                        "databases": [],
+                        "timezone": row.get("timezone", "UTC"),
+                        "currency": row.get("currency", "USD"),
+                        "glossary_count": 0,
+                        "rules_count": 0,
+                        "is_active": bool(row.get("is_active", False)),
+                    }
+                )
             active_row = next((d for d in domains if d["is_active"]), None)
             return {
                 "domains": domains,
@@ -208,18 +224,20 @@ async def list_domains() -> dict[str, Any]:
         cfg = _domain_manager.get(name)
         if cfg is None:
             continue
-        domains.append({
-            "name": cfg.name,
-            "label": cfg.label,
-            "description": cfg.description,
-            "keywords": cfg.keywords,
-            "databases": cfg.databases,
-            "timezone": cfg.timezone,
-            "currency": cfg.currency,
-            "glossary_count": len(cfg.glossary),
-            "rules_count": len(cfg.rules),
-            "is_active": _domain_manager.active_name == name,
-        })
+        domains.append(
+            {
+                "name": cfg.name,
+                "label": cfg.label,
+                "description": cfg.description,
+                "keywords": cfg.keywords,
+                "databases": cfg.databases,
+                "timezone": cfg.timezone,
+                "currency": cfg.currency,
+                "glossary_count": len(cfg.glossary),
+                "rules_count": len(cfg.rules),
+                "is_active": _domain_manager.active_name == name,
+            }
+        )
 
     return {
         "domains": domains,
@@ -257,7 +275,7 @@ async def create_domain(req: DomainCreateRequest) -> dict[str, Any]:
     }
 
     # Write to disk
-    yaml_path = DOMAINS_DIR / f"{name}.yml"
+    yaml_path = _safe_domain_path(name)
     try:
         with open(yaml_path, "w", encoding="utf-8") as f:
             yaml.dump(domain_data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
@@ -271,17 +289,19 @@ async def create_domain(req: DomainCreateRequest) -> dict[str, Any]:
     store = _get_store()
     if store is not None:
         try:
-            await store.save_domain({
-                "name": name,
-                "label_zh": req.label_zh or name,
-                "label_en": req.label_en or name,
-                "description_zh": req.description_zh or "",
-                "description_en": req.description_en or "",
-                "keywords": req.keywords,
-                "timezone": req.timezone,
-                "currency": req.currency,
-                "is_active": False,
-            })
+            await store.save_domain(
+                {
+                    "name": name,
+                    "label_zh": req.label_zh or name,
+                    "label_en": req.label_en or name,
+                    "description_zh": req.description_zh or "",
+                    "description_en": req.description_en or "",
+                    "keywords": req.keywords,
+                    "timezone": req.timezone,
+                    "currency": req.currency,
+                    "is_active": False,
+                }
+            )
         except Exception:
             pass
 
@@ -303,7 +323,7 @@ async def update_domain(domain_id: str, req: DomainUpdateRequest) -> dict[str, A
     if cfg is None:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
 
-    yaml_path = DOMAINS_DIR / f"{domain_id}.yml"
+    yaml_path = _safe_domain_path(domain_id)
     if not yaml_path.exists():
         raise HTTPException(status_code=404, detail=f"Domain file for '{domain_id}' not found")
 
@@ -346,17 +366,19 @@ async def update_domain(domain_id: str, req: DomainUpdateRequest) -> dict[str, A
     store = _get_store()
     if store is not None:
         try:
-            await store.save_domain({
-                "name": domain_id,
-                "label_zh": current.get("label", {}).get("zh", ""),
-                "label_en": current.get("label", {}).get("en", ""),
-                "description_zh": current.get("description", {}).get("zh", ""),
-                "description_en": current.get("description", {}).get("en", ""),
-                "keywords": current.get("keywords", []),
-                "timezone": current.get("timezone", "Asia/Shanghai"),
-                "currency": current.get("currency", "CNY"),
-                "is_active": _domain_manager.active_name == domain_id,
-            })
+            await store.save_domain(
+                {
+                    "name": domain_id,
+                    "label_zh": current.get("label", {}).get("zh", ""),
+                    "label_en": current.get("label", {}).get("en", ""),
+                    "description_zh": current.get("description", {}).get("zh", ""),
+                    "description_en": current.get("description", {}).get("en", ""),
+                    "keywords": current.get("keywords", []),
+                    "timezone": current.get("timezone", "Asia/Shanghai"),
+                    "currency": current.get("currency", "CNY"),
+                    "is_active": _domain_manager.active_name == domain_id,
+                }
+            )
         except Exception:
             pass
 
@@ -397,7 +419,9 @@ async def list_glossary(domain_id: str) -> dict[str, Any]:
                                 "expression": t.get("expression", ""),
                                 "type": t.get("mapping_type", "derived_column"),
                                 "table": "",
-                            } if t.get("expression") else None,
+                            }
+                            if t.get("expression")
+                            else None,
                             "tags": t.get("tags", []),
                         }
                         for t in mysql_terms
@@ -419,7 +443,9 @@ async def list_glossary(domain_id: str) -> dict[str, Any]:
                     "expression": t.mapping.expression,
                     "type": t.mapping.type,
                     "table": t.mapping.table,
-                } if t.mapping else None,
+                }
+                if t.mapping
+                else None,
                 "tags": t.tags,
             }
             for t in terms
@@ -473,14 +499,17 @@ async def add_glossary_term(domain_id: str, req: TermAddRequest) -> dict[str, An
     store = _get_store()
     if store is not None:
         try:
-            await store.save_glossary_term(domain_id, {
-                "term": req.term,
-                "term_en": req.term_en,
-                "description": req.description,
-                "expression": req.expression,
-                "mapping_type": req.mapping_type,
-                "tags": req.tags,
-            })
+            await store.save_glossary_term(
+                domain_id,
+                {
+                    "term": req.term,
+                    "term_en": req.term_en,
+                    "description": req.description,
+                    "expression": req.expression,
+                    "mapping_type": req.mapping_type,
+                    "tags": req.tags,
+                },
+            )
         except Exception:
             pass
 
@@ -556,14 +585,17 @@ async def update_glossary_term(domain_id: str, term: str, req: TermAddRequest) -
         try:
             if req.term != term:
                 await store.delete_glossary_term(domain_id, term)
-            await store.save_glossary_term(domain_id, {
-                "term": req.term,
-                "term_en": req.term_en,
-                "description": req.description,
-                "expression": req.expression,
-                "mapping_type": req.mapping_type,
-                "tags": req.tags,
-            })
+            await store.save_glossary_term(
+                domain_id,
+                {
+                    "term": req.term,
+                    "term_en": req.term_en,
+                    "description": req.description,
+                    "expression": req.expression,
+                    "mapping_type": req.mapping_type,
+                    "tags": req.tags,
+                },
+            )
         except Exception:
             pass
 
@@ -590,7 +622,7 @@ async def delete_domain(domain_id: str) -> dict[str, Any]:
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
 
-    yaml_path = DOMAINS_DIR / f"{domain_id}.yml"
+    yaml_path = _safe_domain_path(domain_id)
     try:
         if yaml_path.exists():
             yaml_path.unlink()
@@ -749,13 +781,16 @@ async def add_rule(domain_id: str, req: RuleAddRequest) -> dict[str, Any]:
     store = _get_store()
     if store is not None:
         try:
-            await store.save_rule(domain_id, {
-                "rule_id": req.id,
-                "description": req.description,
-                "pattern": req.pattern,
-                "enforce": req.enforce,
-                "sql_template": req.sql_template,
-            })
+            await store.save_rule(
+                domain_id,
+                {
+                    "rule_id": req.id,
+                    "description": req.description,
+                    "pattern": req.pattern,
+                    "enforce": req.enforce,
+                    "sql_template": req.sql_template,
+                },
+            )
         except Exception:
             pass
 
@@ -821,13 +856,16 @@ async def update_rule(domain_id: str, rule_id: str, req: RuleAddRequest) -> dict
         try:
             if req.id != rule_id:
                 await store.delete_rule(domain_id, rule_id)
-            await store.save_rule(domain_id, {
-                "rule_id": req.id,
-                "description": req.description,
-                "pattern": req.pattern,
-                "enforce": req.enforce,
-                "sql_template": req.sql_template,
-            })
+            await store.save_rule(
+                domain_id,
+                {
+                    "rule_id": req.id,
+                    "description": req.description,
+                    "pattern": req.pattern,
+                    "enforce": req.enforce,
+                    "sql_template": req.sql_template,
+                },
+            )
         except Exception:
             pass
 
@@ -908,7 +946,9 @@ async def detect_domain(req: DetectRequest) -> dict[str, Any]:
             "score": round(best.score, 4),
             "matched_keywords": best.matched_keywords,
             "matched_terms": best.matched_terms,
-        } if best else None,
+        }
+        if best
+        else None,
         "recommendation": best.domain.name if best and best.score >= 0.6 else None,
     }
 
@@ -919,8 +959,8 @@ async def detect_domain(req: DetectRequest) -> dict[str, Any]:
 def _sync_glossary_term_to_rag(term: Any, domain_id: str) -> None:
     """Index a glossary term into MetricRAG (fire-and-forget, best-effort)."""
     try:
-        from app.rag.converters import glossary_term_to_metric_doc
         from app.rag import get_metric_rag
+        from app.rag.converters import glossary_term_to_metric_doc
 
         metric_doc = glossary_term_to_metric_doc(term, domain_id)
         import asyncio
@@ -939,8 +979,8 @@ def _sync_glossary_term_to_rag(term: Any, domain_id: str) -> None:
 def _sync_rule_to_rag(rule: Any, domain_id: str) -> None:
     """Index a business rule into MetricRAG (fire-and-forget, best-effort)."""
     try:
-        from app.rag.converters import business_rule_to_metric_doc
         from app.rag import get_metric_rag
+        from app.rag.converters import business_rule_to_metric_doc
 
         metric_doc = business_rule_to_metric_doc(rule, domain_id)
         import asyncio

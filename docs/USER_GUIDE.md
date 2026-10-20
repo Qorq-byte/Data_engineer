@@ -420,3 +420,6 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 curl http://localhost:8000/api/v1/auth/me \
   -H "Authorization: Bearer <token>"
 ```
+# 优化分支使用变更
+
+业务接口现在要求管理员Bearer令牌；默认禁止注册，开户需配置邀请令牌并通过X-Registration-Token提供。启动前必须配置至少32字符的随机JWT_SECRET。完整配置和已知边界见[安全说明](optimization/security.md)，阶段验证见[优化进度](optimization/progress.md)。本指南下方的既有功能说明应结合各阶段完成状态使用。

@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     auth_mysql_password: str = ""
     auth_mysql_database: str = "nl2sql_auth"
 
+    admin_user_ids: list[int] = [1]
+    registration_token: str | None = None
+    cors_origins: list[str] = ["http://localhost:8001", "http://127.0.0.1:8001"]
+
     # --- Auth: JWT ---
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"

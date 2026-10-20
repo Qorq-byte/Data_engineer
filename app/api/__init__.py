@@ -1,11 +1,11 @@
-"""REST API layer — FastAPI routes for query, schema, domains, auth, feedback, workflows, MCP, and SQL utilities."""
+"""FastAPI routes for queries, schemas, domains and workbench management."""
 
 from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
@@ -18,6 +18,7 @@ async def _lifespan(app: FastAPI):
     # Startup: init MySQL storage
     try:
         from app.storage.mysql_store import init_db
+
         await init_db()
         logger.info("MySQL storage initialized")
     except Exception:
@@ -26,6 +27,7 @@ async def _lifespan(app: FastAPI):
     # Startup: init auth database
     try:
         from app.auth.database import init_auth_db
+
         await init_auth_db()
         logger.info("Auth database initialized")
     except Exception:
@@ -33,7 +35,8 @@ async def _lifespan(app: FastAPI):
 
     # Startup: init RAG engine (schema + metric + document hybrid search)
     try:
-        from app.rag.engine import initialize_rag_engine, _engine
+        from app.rag.engine import _engine, initialize_rag_engine
+
         if _engine is None:
             await initialize_rag_engine()
             logger.info("RAG engine initialized")
@@ -62,6 +65,7 @@ async def _lifespan(app: FastAPI):
     # Shutdown: close MySQL pool
     try:
         from app.storage.mysql_store import get_store
+
         store = get_store()
         if store is not None:
             await store.close()
@@ -72,6 +76,7 @@ async def _lifespan(app: FastAPI):
     # Shutdown: close auth pool
     try:
         from app.auth.database import close_auth_pool
+
         await close_auth_pool()
     except Exception:
         pass
@@ -82,6 +87,12 @@ def create_app() -> FastAPI:
 
     Returns a fully configured FastAPI app with all routers mounted.
     """
+    from app.auth.access import require_operator
+    from app.config.settings import settings
+
+    if settings.jwt_secret == "change-me-in-production" or len(settings.jwt_secret) < 32:
+        raise ValueError("JWT_SECRET must be configured with at least 32 characters")
+
     app = FastAPI(
         title="NL2SQL Data Engineering Agent",
         description="Natural Language to SQL — domain-aware, multi-LLM, multi-DB",
@@ -94,7 +105,7 @@ def create_app() -> FastAPI:
     # CORS — allow standalone HTML pages (opened from filesystem) to call the API
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -118,18 +129,27 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health.router, tags=["Health"])
-    app.include_router(query.router, prefix="/api/v1", tags=["Query"])
-    app.include_router(schema.router, prefix="/api/v1", tags=["Schema"])
-    app.include_router(domains.router, prefix="/api/v1", tags=["Domains"])
+    protected = [Depends(require_operator)]
+    app.include_router(query.router, dependencies=protected, prefix="/api/v1", tags=["Query"])
+    app.include_router(schema.router, dependencies=protected, prefix="/api/v1", tags=["Schema"])
+    app.include_router(domains.router, dependencies=protected, prefix="/api/v1", tags=["Domains"])
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
-    app.include_router(workflows.router, prefix="/api/v1", tags=["Workflows"])
-    app.include_router(mcp_api.router, prefix="/api/v1", tags=["MCP"])
-    app.include_router(feedback.router, prefix="/api/v1", tags=["Feedback"])
-    app.include_router(learning.router, prefix="/api/v1", tags=["Learning"])
-    app.include_router(documents.router, prefix="/api/v1", tags=["Documents"])
-    app.include_router(sql_utils.router, prefix="/api/v1", tags=["SQL Utils"])
-    app.include_router(settings.router, prefix="/api/v1", tags=["Settings"])
-    app.include_router(subagents.router, prefix="/api/v1", tags=["Subagents"])
+    app.include_router(
+        workflows.router, dependencies=protected, prefix="/api/v1", tags=["Workflows"]
+    )
+    app.include_router(mcp_api.router, dependencies=protected, prefix="/api/v1", tags=["MCP"])
+    app.include_router(feedback.router, dependencies=protected, prefix="/api/v1", tags=["Feedback"])
+    app.include_router(learning.router, dependencies=protected, prefix="/api/v1", tags=["Learning"])
+    app.include_router(
+        documents.router, dependencies=protected, prefix="/api/v1", tags=["Documents"]
+    )
+    app.include_router(
+        sql_utils.router, dependencies=protected, prefix="/api/v1", tags=["SQL Utils"]
+    )
+    app.include_router(settings.router, dependencies=protected, prefix="/api/v1", tags=["Settings"])
+    app.include_router(
+        subagents.router, dependencies=protected, prefix="/api/v1", tags=["Subagents"]
+    )
 
     from pathlib import Path
 
@@ -157,6 +177,7 @@ def create_app() -> FastAPI:
         avatar_path = _data / "avatars" / filename
         if not avatar_path.exists():
             from fastapi.responses import PlainTextResponse
+
             return PlainTextResponse("Not Found", status_code=404)
         return FileResponse(str(avatar_path))
 

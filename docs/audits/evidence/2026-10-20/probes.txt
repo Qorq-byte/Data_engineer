@@ -1,0 +1,24 @@
+{"probe": "comment_delete", "detected_write": false, "status": {"status": "success", "row_count": 0, "truncated": false}, "remaining": 0}
+{"probe": "cte_delete", "detected_write": false, "status": {"status": "success", "row_count": 0, "truncated": false}, "remaining": 0}
+{"probe": "duckdb_multistatement", "detected_write": false, "status": {"status": "success", "row_count": 1, "truncated": false}, "remaining": 0}
+{"probe": "statement_timeout_not_enforced", "status": {"status": "success", "row_count": 1, "truncated": false}, "configured_ms": 1, "elapsed_ms": 51}
+{"probe": "unauthenticated_get", "path": "/api/v1/databases", "http_status": 200}
+{"probe": "unauthenticated_get", "path": "/api/v1/settings/harness", "http_status": 200}
+{"probe": "unauthenticated_get", "path": "/api/v1/workflows", "http_status": 200}
+{"probe": "unauthenticated_get", "path": "/health", "http_status": 200}
+{"probe": "direct_max_rows", "requested": 1, "http_status": 200, "returned": 100, "status": "success"}
+{"probe": "direct_max_rows", "requested": 120, "http_status": 200, "returned": 100, "status": "success"}
+{"probe": "blocked_sql_http_contract", "http_status": 200, "body": {"status": "error", "database": "audit_db", "errors": ["Write operation blocked: read_only mode is enabled. Set allow_write=True to execute write statements."], "warnings": []}}
+D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.632 seconds.
+Prefix dict has been built successfully.
+{"probe": "sync_query", "http_status": 200, "sql": "[mock response from mock/deepseek-v4-flash]", "execution": null, "errors": [], "warnings": ["LLM router is in MOCK mode �� generated SQL will be placeholder text. Configure an API key (e.g., DEEPSEEK_API_KEY) in .env for real SQL generation.", "Self-heal retry exhausted after 3 round(s) �� returning best-effort SQL"], "response_has_session_id": false, "session_saved": true}
+{"probe": "stream_query", "http_status": 200, "has_done": true, "has_error": false, "session_saved": false}
+{"probe": "request_alias", "run_validation_false": true, "validate_false": false}
+{"probe": "missing_node_runner", "status": "completed", "error": null}
+{"probe": "document_reindex_shorter", "before": {"lancedb_count": 9, "bm25_count": 9}, "after": {"lancedb_count": 1, "bm25_count": 9}}
+{"probe": "document_embedding_coverage", "content": "shared first line\n\nbody needle detail", "embedding_text": "audit �� shared first line"}
+{"probe": "schema_refresh_removed_column", "before": {"lancedb_count": 2, "bm25_count": 2}, "after": {"lancedb_count": 2, "bm25_count": 2}}
