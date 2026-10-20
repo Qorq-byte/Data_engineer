@@ -13,6 +13,7 @@ Usage::
     from app.knowledge.retrieval.embedding import MockEmbeddingProvider, EmbeddingGenerator
     from app.knowledge.retrieval.lancedb_store import LanceDBStore
     from app.knowledge.retrieval.bm25_index import BM25Index
+from app.knowledge.retrieval.filters import literal
 
     store = DocumentStore(
         lancedb_store=LanceDBStore(dimension=256),
@@ -31,13 +32,13 @@ Usage::
 
 from __future__ import annotations
 
-import contextlib
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.embedding import EmbeddingGenerator, MockEmbeddingProvider
+from app.knowledge.retrieval.filters import literal
 from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_DOCUMENTS,
     LanceDBStore,
@@ -52,7 +53,7 @@ _CHARS_PER_TOKEN = 4
 _MAX_CHUNK_TOKENS = 512
 _OVERLAP_TOKENS = 64
 _MAX_CHUNK_CHARS = _MAX_CHUNK_TOKENS * _CHARS_PER_TOKEN  # 2048
-_OVERLAP_CHARS = _OVERLAP_TOKENS * _CHARS_PER_TOKEN         # 256
+_OVERLAP_CHARS = _OVERLAP_TOKENS * _CHARS_PER_TOKEN  # 256
 
 # Sentinel for "no overlap" when chunk fitting is tight
 _MIN_CHUNK_CHARS = 128  # below this, don't split further
@@ -97,7 +98,9 @@ class DocumentSearchResult:
 # ── Chunking helpers ───────────────────────────────────────────────────
 
 
-def _split_markdown(content: str) -> list[str]:
+def _split_markdown(
+    content: str, max_chars: int = _MAX_CHUNK_CHARS, overlap: int = _OVERLAP_CHARS
+) -> list[str]:
     """Split Markdown *content* into token-budget-aware chunks.
 
     Strategy (two-tier):
@@ -127,22 +130,22 @@ def _split_markdown(content: str) -> list[str]:
     for section in sections:
         if not current:
             # Start a new accumulator
-            if len(section) <= _MAX_CHUNK_CHARS:
+            if len(section) <= max_chars:
                 current = section
             else:
                 # Section alone exceeds limit → paragraph-split it
-                chunks.extend(_split_long_section(section))
+                chunks.extend(_split_long_section(section, max_chars, overlap))
         else:
             combined = current + "\n\n" + section
-            if len(combined) <= _MAX_CHUNK_CHARS:
+            if len(combined) <= max_chars:
                 current = combined
             else:
                 # Current accumulator is full — flush and start new
                 chunks.append(current.strip())
-                if len(section) <= _MAX_CHUNK_CHARS:
+                if len(section) <= max_chars:
                     current = section
                 else:
-                    chunks.extend(_split_long_section(section))
+                    chunks.extend(_split_long_section(section, max_chars, overlap))
                     current = ""
 
     # Flush remaining
@@ -152,7 +155,9 @@ def _split_markdown(content: str) -> list[str]:
     return chunks
 
 
-def _split_long_section(text: str) -> list[str]:
+def _split_long_section(
+    text: str, max_chars: int = _MAX_CHUNK_CHARS, overlap: int = _OVERLAP_CHARS
+) -> list[str]:
     """Split a single oversized section on paragraph boundaries.
 
     Paragraphs shorter than ``_MAX_CHUNK_CHARS`` are accumulated; if a single
@@ -168,20 +173,20 @@ def _split_long_section(text: str) -> list[str]:
             continue
 
         if not current:
-            if len(para) <= _MAX_CHUNK_CHARS:
+            if len(para) <= max_chars:
                 current = para
             else:
-                chunks.extend(_force_split_block(para))
+                chunks.extend(_force_split_block(para, max_chars, overlap))
         else:
             combined = current + "\n\n" + para
-            if len(combined) <= _MAX_CHUNK_CHARS:
+            if len(combined) <= max_chars:
                 current = combined
             else:
                 chunks.append(current.strip())
-                if len(para) <= _MAX_CHUNK_CHARS:
+                if len(para) <= max_chars:
                     current = para
                 else:
-                    chunks.extend(_force_split_block(para))
+                    chunks.extend(_force_split_block(para, max_chars, overlap))
                     current = ""
 
     if current.strip():
@@ -190,7 +195,9 @@ def _split_long_section(text: str) -> list[str]:
     return chunks
 
 
-def _force_split_block(text: str) -> list[str]:
+def _force_split_block(
+    text: str, max_chars: int = _MAX_CHUNK_CHARS, overlap: int = _OVERLAP_CHARS
+) -> list[str]:
     """Force-split a text block that exceeds the max chunk size.
 
     Uses sliding windows with ``_OVERLAP_CHARS`` overlap so context spans
@@ -201,11 +208,11 @@ def _force_split_block(text: str) -> list[str]:
     text_len = len(text)
 
     while start < text_len:
-        end = min(start + _MAX_CHUNK_CHARS, text_len)
+        end = min(start + max_chars, text_len)
         chunks.append(text[start:end].strip())
         if end >= text_len:
             break
-        start = end - _OVERLAP_CHARS
+        start = end - overlap
         # Ensure forward progress on tiny texts / edge cases
         if start <= 0 or start >= text_len:
             break
@@ -222,8 +229,15 @@ def _make_chunk_doc_id(parent_id: str, chunk_index: int) -> str:
 
 
 _INDEXED_META_KEYS: tuple[str, ...] = (
-    "parent_doc_id", "domain", "title", "content_type",
-    "source", "chunk_index", "language",
+    "parent_doc_id",
+    "domain",
+    "title",
+    "content_type",
+    "source",
+    "chunk_index",
+    "language",
+    "content",
+    "embedding_text",
 )
 
 
@@ -315,6 +329,9 @@ class DocumentStore:
         )
         self._rrf = rrf_fusion or RRFFusion()
 
+        if max_chunk_tokens <= 0 or not 0 <= overlap_tokens < max_chunk_tokens:
+            raise ValueError("Require 0 <= overlap_tokens < max_chunk_tokens")
+
         # Derived chunking limits
         self._max_chunk_chars = max_chunk_tokens * _CHARS_PER_TOKEN
         self._overlap_chars = overlap_tokens * _CHARS_PER_TOKEN
@@ -383,19 +400,23 @@ class DocumentStore:
         # 2. Generate embeddings for all chunks
         texts = [c.embedding_text for c in all_chunks]
         emb_result = await self._embedding.embed(texts)
+        if len(emb_result.vectors) != len(texts) or any(
+            len(vector) != self._lancedb.dimension for vector in emb_result.vectors
+        ):
+            raise ValueError("Embedding batch count/dimension mismatch; existing index preserved")
 
         # 3. Delete existing chunks from LanceDB for these parent doc_ids
         parent_ids = {d.doc_id for d in docs}
         for pid in parent_ids:
-            with contextlib.suppress(Exception):
-                self._lancedb.delete(
-                    self.NAMESPACE,
-                    f"parent_doc_id = '{pid}' OR doc_id = '{pid}'",
-                )
+            self._bm25.delete_by_field(self.NAMESPACE, "parent_doc_id", pid)
+            self._bm25.delete(self.NAMESPACE, pid)
+            self._lancedb.delete(
+                self.NAMESPACE,
+                f"parent_doc_id = {literal(pid)} OR doc_id = {literal(pid)}",
+            )
         # Also delete by chunk-level doc_ids (re-index of same doc)
-        chunk_ids_str = ", ".join(f"'{c.doc_id}'" for c in all_chunks)
-        with contextlib.suppress(Exception):
-            self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({chunk_ids_str})")
+        chunk_ids_str = ", ".join(literal(c.doc_id) for c in all_chunks)
+        self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({chunk_ids_str})")
 
         # 4. Insert into LanceDB
         lancedb_records = [
@@ -411,11 +432,13 @@ class DocumentStore:
             # Augment with keywords for better BM25 recall
             if chunk.keywords:
                 bm25_text = bm25_text + " " + " ".join(chunk.keywords)
-            bm25_docs.append({
-                "doc_id": chunk.doc_id,
-                "text": bm25_text,
-                "metadata": _extract_index_meta(chunk),
-            })
+            bm25_docs.append(
+                {
+                    "doc_id": chunk.doc_id,
+                    "text": bm25_text,
+                    "metadata": _extract_index_meta(chunk),
+                }
+            )
         self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
 
         return len(all_chunks)
@@ -454,9 +477,9 @@ class DocumentStore:
         # Build LanceDB filter expression
         filters: list[str] = []
         if content_type:
-            filters.append(f"content_type = '{content_type}'")
+            filters.append(f"content_type = {literal(content_type)}")
         if domain:
-            filters.append(f"domain = '{domain}'")
+            filters.append(f"domain = {literal(domain)}")
         filter_expr = " AND ".join(filters) if filters else None
 
         # 1. Dense search (LanceDB)
@@ -470,10 +493,12 @@ class DocumentStore:
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
             dist = row.get("_distance", 1.0)
-            dense_results.append({
-                **row,
-                "score": 1.0 / (1.0 + dist),
-            })
+            dense_results.append(
+                {
+                    **row,
+                    "score": 1.0 / (1.0 + dist),
+                }
+            )
 
         # 2. Sparse search (BM25)
         sparse_raw = self._bm25.search(
@@ -481,6 +506,11 @@ class DocumentStore:
             query,
             top_k=max(top_k * 2, 20),
             language=language,
+            metadata_filter={
+                key: value
+                for key, value in {"domain": domain, "content_type": content_type}.items()
+                if value
+            },
         )
         sparse_results: list[dict[str, Any]] = []
         for row in sparse_raw:
@@ -523,7 +553,7 @@ class DocumentStore:
             chunk.chunk_index = 0
             return [chunk]
 
-        chunks_text = _split_markdown(content)
+        chunks_text = _split_markdown(content, self._max_chunk_chars, self._overlap_chars)
 
         if not chunks_text:
             chunk = copy(doc)
@@ -538,12 +568,7 @@ class DocumentStore:
             chunk.parent_doc_id = doc.doc_id
             chunk.content = chunk_text
             chunk.chunk_index = i
-            # Build embedding_text from title + first line of content for
-            # better dense retrieval signal
-            first_line = chunk_text.split("\n", 1)[0][:120].strip()
-            chunk.embedding_text = (
-                f"{doc.title} — {first_line}" if doc.title else first_line
-            )
+            chunk.embedding_text = f"{doc.title}\n{chunk_text}".strip()
             result.append(chunk)
 
         return result

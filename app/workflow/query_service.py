@@ -41,6 +41,18 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
     config = ConfigLoader(str(_ROOT / "config/agent.yml")).load()
     limits = ConstraintEnforcer(ConstraintLimits(**asdict(config.constraints)))
     router = llm_router or get_default_router()
+    from app.knowledge.schema_retriever import SchemaRetriever
+    from app.rag.engine import get_schema_rag
+
+    retriever = None
+    try:
+        schema_rag = get_schema_rag()
+        retriever = SchemaRetriever(schema_rag)
+        provider = getattr(getattr(schema_rag, "_embedding", None), "provider", None)
+        if type(provider).__name__ == "MockEmbeddingProvider":
+            warnings.append("MOCK embeddings: retrieval is not a semantic quality guarantee")
+    except RuntimeError:
+        warnings.append("RAG unavailable; schema linking uses keyword matching")
     if getattr(router, "mock_mode", False):
         warnings.append("MOCK LLM: output is a test placeholder, not a verified database answer")
     domain = _domain_manager.get(body.domain) if body.domain else None
@@ -89,7 +101,7 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
             registry = NodeRegistry()
             nodes = [
                 ParseNLNode(),
-                SchemaLinkingNode(),
+                SchemaLinkingNode(retriever=retriever),
                 GenerateSQLNode(router=BudgetedRouter(router)),
                 ValidateSQLNode(dialect=dialect),
                 ExecuteSQLNode(),

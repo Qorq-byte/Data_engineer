@@ -1,0 +1,100 @@
+{
+  "dataset": "synthetic-smoke-v1",
+  "python": "3.13.9",
+  "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set",
+  "k": 3,
+  "query_count": 7,
+  "document_count": 8,
+  "retrieval": {
+    "recall_at_k": 1.0,
+    "precision_at_k": 0.38095238095238093,
+    "mrr_at_k": 1.0,
+    "ndcg_at_k": 1.0,
+    "latency_ms": 0.2628857120206313
+  },
+  "details": [
+    {
+      "id": "q1",
+      "retrieved": [
+        "users"
+      ],
+      "latency_ms": 0.5750999844167382,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q2",
+      "retrieved": [
+        "products"
+      ],
+      "latency_ms": 0.15800000983290374,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q3",
+      "retrieved": [
+        "refunds",
+        "orders"
+      ],
+      "latency_ms": 0.5339999916031957,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.6666666666666666,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q4",
+      "retrieved": [
+        "orders"
+      ],
+      "latency_ms": 0.10350000229664147,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q5",
+      "retrieved": [
+        "joins",
+        "users",
+        "orders"
+      ],
+      "latency_ms": 0.22560000070370734,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q6",
+      "retrieved": [
+        "payroll"
+      ],
+      "latency_ms": 0.11629998334683478,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q7",
+      "retrieved": [
+        "audit"
+      ],
+      "latency_ms": 0.12770001194439828,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    }
+  ],
+  "embedding_or_llm_cost_usd": 0,
+  "sql_model_metrics": null,
+  "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."
+}

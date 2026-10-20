@@ -14,7 +14,7 @@ Usage::
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
@@ -34,12 +34,10 @@ from app.knowledge.retrieval.schema_rag import SchemaMetadataRAG
 # ── File paths ────────────────────────────────────────────────────────────
 
 _DEFAULT_LANCEDB_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "data", "lancedb"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "lancedb"
 )
 _DEFAULT_BM25_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "data", "bm25.db"
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "bm25.db"
 )
 
 
@@ -71,9 +69,7 @@ def get_rag_engine() -> _RAGEngine:
         RuntimeError: If :func:`initialize_rag_engine` has not been called yet.
     """
     if _engine is None:
-        raise RuntimeError(
-            "RAG engine not initialized. Call initialize_rag_engine() first."
-        )
+        raise RuntimeError("RAG engine not initialized. Call initialize_rag_engine() first.")
     return _engine
 
 
@@ -113,8 +109,8 @@ def _create_embedding_provider() -> Any:
     from app.config.settings import settings
 
     provider_name = (
-        os.getenv("RAG_EMBEDDING_PROVIDER", "") or settings.rag_embedding_provider
-    ).lower().strip()
+        (os.getenv("RAG_EMBEDDING_PROVIDER", "") or settings.rag_embedding_provider).lower().strip()
+    )
 
     if provider_name == "ollama":
         return OllamaEmbeddingProvider(
@@ -171,8 +167,14 @@ async def initialize_rag_engine() -> _RAGEngine:
     dimension = embedding_gen.dimension
 
     # ── Persistent stores ──────────────────────────────────────────────
-    lancedb_store = LanceDBStore(dimension=dimension, uri=_DEFAULT_LANCEDB_DIR)
-    bm25_index = BM25Index(_DEFAULT_BM25_PATH)
+    from app.config.settings import settings
+
+    lancedb_store = LanceDBStore(
+        dimension=dimension,
+        uri=settings.rag_lancedb_dir or _DEFAULT_LANCEDB_DIR,
+        embedding_id=f"{type(provider).__name__}:{provider.model_name}:document-fulltext-v2",
+    )
+    bm25_index = BM25Index(settings.rag_bm25_path or _DEFAULT_BM25_PATH)
 
     # ── RRF fusion with configured weights ─────────────────────────────
     alpha = float(rag_settings.get("vector_weight", 0.7))
@@ -239,11 +241,9 @@ async def _index_all_connected_schemas(engine: _RAGEngine) -> None:
     for info in ConnectionFactory.list_all():
         try:
             conn = ConnectionFactory.get(info.db_id)
-            snapshot = await SchemaExtractor.extract(
-                conn, info.db_type, info.database_name
-            )
+            snapshot = await SchemaExtractor.extract(conn, info.db_type, info.database_name)
             docs = snapshot_to_schema_docs(snapshot, info.db_id, language="zh")
-            await engine.schema_rag.index_schemas(docs)
+            await engine.schema_rag.index_schemas(docs, replace_db_id=info.db_id)
         except Exception:
             pass  # One DB failing should not prevent others from indexing
 
@@ -258,9 +258,7 @@ async def _index_all_glossary_terms(engine: _RAGEngine) -> None:
             try:
                 terms = _glossary_manager.list_all(domain=domain_name)
                 if terms:
-                    docs = [
-                        glossary_term_to_metric_doc(t, domain_name) for t in terms
-                    ]
+                    docs = [glossary_term_to_metric_doc(t, domain_name) for t in terms]
                     if docs:
                         await engine.metric_rag.index_metrics(docs)
             except Exception:

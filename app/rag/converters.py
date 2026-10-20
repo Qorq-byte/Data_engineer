@@ -5,9 +5,6 @@ Pure data transformation functions with no I/O or network dependencies.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any
-
 from app.models.domain import BusinessRule, GlossaryTerm
 from app.models.rag_metric import MetricDocument
 from app.models.rag_schema import SchemaDocument

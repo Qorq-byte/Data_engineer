@@ -12,6 +12,7 @@ Usage::
     from app.knowledge.retrieval.embedding import MockEmbeddingProvider, EmbeddingGenerator
     from app.knowledge.retrieval.lancedb_store import LanceDBStore
     from app.knowledge.retrieval.bm25_index import BM25Index
+from app.knowledge.retrieval.filters import literal
 
     rag = SchemaMetadataRAG(
         lancedb_store=LanceDBStore(dimension=256),
@@ -30,12 +31,12 @@ Usage::
 
 from __future__ import annotations
 
-import contextlib
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.embedding import EmbeddingGenerator, MockEmbeddingProvider
+from app.knowledge.retrieval.filters import literal
 from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_SCHEMA_METADATA,
     LanceDBStore,
@@ -82,8 +83,14 @@ class SchemaSearchResult:
 # Key fields to store in BM25 metadata so results are self-describing even
 # without a matching LanceDB result.
 _INDEXED_META_KEYS: tuple[str, ...] = (
-    "db_id", "schema_name", "table_name", "column_name",
-    "data_type", "comment", "is_primary_key", "is_foreign_key",
+    "db_id",
+    "schema_name",
+    "table_name",
+    "column_name",
+    "data_type",
+    "comment",
+    "is_primary_key",
+    "is_foreign_key",
     "embedding_text",
 )
 
@@ -177,6 +184,8 @@ class SchemaMetadataRAG:
         self,
         docs: list[Any],
         language: str = "auto",
+        *,
+        replace_db_id: str | None = None,
     ) -> int:
         """Index a batch of :class:`~app.models.rag_schema.SchemaDocument` objects.
 
@@ -191,20 +200,27 @@ class SchemaMetadataRAG:
         Returns:
             Number of documents indexed.
         """
+        if replace_db_id is not None and any(d.db_id != replace_db_id for d in docs):
+            raise ValueError("Replacement documents must belong to the specified database")
         if not docs:
+            if replace_db_id is not None:
+                self.remove_database(replace_db_id)
             return 0
 
         # 1. Generate embeddings for all docs
         texts = [d.embedding_text for d in docs]
         emb_result = await self._embedding.embed(texts)
+        if len(emb_result.vectors) != len(texts) or any(
+            len(vector) != self._lancedb.dimension for vector in emb_result.vectors
+        ):
+            raise ValueError("Embedding batch count/dimension mismatch; existing index preserved")
+
+        if replace_db_id is not None:
+            self.remove_database(replace_db_id)
 
         # 2. Delete existing LanceDB records with same doc_ids, then insert
-        doc_ids_str = ", ".join(
-            f"'{d.doc_id}'" for d in docs
-        )
-        # table may be empty or filter syntax may fail — non-critical
-        with contextlib.suppress(Exception):
-            self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
+        doc_ids_str = ", ".join(literal(d.doc_id) for d in docs)
+        self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
         lancedb_records = [
             schema_doc_to_record(doc, vec)
             for doc, vec in zip(docs, emb_result.vectors, strict=False)
@@ -214,11 +230,13 @@ class SchemaMetadataRAG:
         # 3. Insert into BM25 (keyword)
         bm25_docs: list[dict[str, Any]] = []
         for doc in docs:
-            bm25_docs.append({
-                "doc_id": doc.doc_id,
-                "text": doc.embedding_text,
-                "metadata": _extract_index_meta(doc),
-            })
+            bm25_docs.append(
+                {
+                    "doc_id": doc.doc_id,
+                    "text": doc.embedding_text,
+                    "metadata": _extract_index_meta(doc),
+                }
+            )
         self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
 
         return len(docs)
@@ -260,7 +278,7 @@ class SchemaMetadataRAG:
         query_vec = await self._embedding.embed_single(query)
 
         # 2. Dense search (LanceDB)
-        filter_expr = f"db_id = '{db_id}'" if db_id else None
+        filter_expr = f"db_id = {literal(db_id)}" if db_id else None
         dense_raw = self._lancedb.search(
             self.NAMESPACE,
             query_vec,
@@ -271,10 +289,12 @@ class SchemaMetadataRAG:
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
             dist = row.get("_distance", 1.0)
-            dense_results.append({
-                **row,
-                "score": 1.0 / (1.0 + dist),  # convert distance to similarity score
-            })
+            dense_results.append(
+                {
+                    **row,
+                    "score": 1.0 / (1.0 + dist),  # convert distance to similarity score
+                }
+            )
 
         # 3. Sparse search (BM25)
         sparse_raw = self._bm25.search(
@@ -282,6 +302,7 @@ class SchemaMetadataRAG:
             query,
             top_k=max(top_k * 2, 20),
             language=language,
+            metadata_filter={"db_id": db_id} if db_id else {},
         )
         # Unpack BM25 metadata → top-level fields so RRF merge works correctly
         sparse_results: list[dict[str, Any]] = []
@@ -318,12 +339,8 @@ class SchemaMetadataRAG:
         Args:
             db_id: Database identifier to remove (e.g. ``"sqlite_test"``).
         """
-        import contextlib
-
-        with contextlib.suppress(Exception):
-            self._lancedb.delete(self.NAMESPACE, f"db_id = '{db_id}'")
-        with contextlib.suppress(Exception):
-            self._bm25.delete_by_field(self.NAMESPACE, "db_id", db_id)
+        self._lancedb.delete(self.NAMESPACE, f"db_id = {literal(db_id)}")
+        self._bm25.delete_by_field(self.NAMESPACE, "db_id", db_id)
 
     def stats(self) -> dict[str, int]:
         """Return document counts for both backends."""

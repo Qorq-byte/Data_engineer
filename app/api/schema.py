@@ -237,17 +237,21 @@ async def refresh_schema(db_id: str) -> dict:
         raise HTTPException(status_code=500, detail=f"Schema extraction failed: {e}") from e
 
     # Rebuild RAG index for this database
+    rag_indexed = False
     try:
-        from app.rag.converters import snapshot_to_schema_docs
         from app.rag import get_schema_rag
+        from app.rag.converters import snapshot_to_schema_docs
 
         docs = snapshot_to_schema_docs(snapshot, db_id)
-        await get_schema_rag().index_schemas(docs)
+        await get_schema_rag().index_schemas(docs, replace_db_id=db_id)
+        rag_indexed = True
     except Exception:
         pass
 
     return {
         "status": "refreshed",
+        "rag_indexed": rag_indexed,
+        "warnings": [] if rag_indexed else ["Schema extracted but RAG index was not refreshed"],
         "db_id": db_id,
         "database_type": snapshot.database_type,
         "database_name": snapshot.database_name,
@@ -495,8 +499,8 @@ def _schedule_background_schema_indexing(db_id: str) -> None:
             with contextlib.suppress(Exception):
                 from app.db.connections import ConnectionFactory
                 from app.db.schema_extractor import SchemaExtractor
-                from app.rag.converters import snapshot_to_schema_docs
                 from app.rag import get_schema_rag
+                from app.rag.converters import snapshot_to_schema_docs
 
                 info = ConnectionFactory.get_info(db_id)
                 conn = ConnectionFactory.get(db_id)
@@ -504,7 +508,7 @@ def _schedule_background_schema_indexing(db_id: str) -> None:
                     conn, info.db_type, info.database_name
                 )
                 docs = snapshot_to_schema_docs(snapshot, db_id)
-                await get_schema_rag().index_schemas(docs)
+                await get_schema_rag().index_schemas(docs, replace_db_id=db_id)
 
         asyncio.create_task(_index_schema_background(db_id))
     except Exception:

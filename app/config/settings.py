@@ -38,6 +38,8 @@ class Settings(BaseSettings):
 
     # --- RAG Embedding ---
     rag_embedding_provider: str = "ollama"  # ollama | openai | bge | mock
+    rag_lancedb_dir: str = ""  # Empty uses data/lancedb; switch for explicit versioned rebuilds
+    rag_bm25_path: str = ""  # Empty uses data/bm25.db; migrate together with the vector index
     ollama_base_url: str = "http://127.0.0.1:11434"
     ollama_embedding_model: str = "embeddinggemma"
     ollama_embedding_dim: int = 768

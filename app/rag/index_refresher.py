@@ -96,13 +96,11 @@ class IndexRefresher:
 
             info = ConnectionFactory.get_info(db_id)
             conn = ConnectionFactory.get(db_id)
-            snapshot = await SchemaExtractor.extract(
-                conn, info.db_type, info.database_name
-            )
+            snapshot = await SchemaExtractor.extract(conn, info.db_type, info.database_name)
             self._version_cache[db_id] = self._compute_schema_hash(snapshot)
 
             docs = snapshot_to_schema_docs(snapshot, db_id)
-            await self._schema_rag.index_schemas(docs)
+            await self._schema_rag.index_schemas(docs, replace_db_id=db_id)
             return True
         except Exception:
             return False
@@ -138,9 +136,7 @@ class IndexRefresher:
 
     def get_refresh_status(self) -> dict[str, Any]:
         now = datetime.now(UTC)
-        last_times = {
-            db_id: ts.isoformat() for db_id, ts in self._last_refresh.items()
-        }
+        last_times = {db_id: ts.isoformat() for db_id, ts in self._last_refresh.items()}
         return {
             "last_refresh_time": last_times,
             "pending_count": len(self._pending),

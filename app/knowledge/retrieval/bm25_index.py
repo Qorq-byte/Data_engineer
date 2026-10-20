@@ -19,6 +19,7 @@ Usage::
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import sqlite3
@@ -52,32 +53,177 @@ _CJK_RANGES: list[tuple[int, int]] = [
 
 # Chinese stopwords — high-frequency function words with low retrieval value
 _ZH_STOPWORDS: set[str] = {
-    "的", "了", "在", "是", "我", "有", "和", "就",
-    "不", "人", "都", "一", "一个", "上", "也", "很",
-    "到", "说", "要", "去", "你", "会", "着", "没有",
-    "看", "好", "自己", "这", "他", "她", "它", "们",
-    "那", "些", "什么", "怎么", "如何", "为什么",
-    "吗", "呢", "吧", "啊", "哎", "哦", "嗎",
-    "能", "可以", "应该", "必须", "需要",
-    "所有", "每个", "还是", "或者", "然后",
-    "因为", "所以", "但是", "如果", "虽然",
-    "已经", "正在", "将", "被", "把",
-    "来", "做", "搞", "弄",
+    "的",
+    "了",
+    "在",
+    "是",
+    "我",
+    "有",
+    "和",
+    "就",
+    "不",
+    "人",
+    "都",
+    "一",
+    "一个",
+    "上",
+    "也",
+    "很",
+    "到",
+    "说",
+    "要",
+    "去",
+    "你",
+    "会",
+    "着",
+    "没有",
+    "看",
+    "好",
+    "自己",
+    "这",
+    "他",
+    "她",
+    "它",
+    "们",
+    "那",
+    "些",
+    "什么",
+    "怎么",
+    "如何",
+    "为什么",
+    "吗",
+    "呢",
+    "吧",
+    "啊",
+    "哎",
+    "哦",
+    "嗎",
+    "能",
+    "可以",
+    "应该",
+    "必须",
+    "需要",
+    "所有",
+    "每个",
+    "还是",
+    "或者",
+    "然后",
+    "因为",
+    "所以",
+    "但是",
+    "如果",
+    "虽然",
+    "已经",
+    "正在",
+    "将",
+    "被",
+    "把",
+    "来",
+    "做",
+    "搞",
+    "弄",
 }
 
 # English stopwords — high-frequency function words
 _EN_STOPWORDS: set[str] = {
-    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could",
-    "should", "may", "might", "can", "shall", "to", "of", "in", "for",
-    "on", "with", "at", "by", "from", "as", "into", "through", "during",
-    "before", "after", "above", "below", "between", "and", "or", "not",
-    "no", "but", "if", "then", "else", "when", "where", "why", "how",
-    "all", "each", "every", "both", "few", "more", "most", "other",
-    "some", "such", "only", "own", "same", "so", "than", "too", "very",
-    "just", "about", "also", "it", "its", "he", "she", "they", "them",
-    "we", "us", "you", "me", "my", "your", "our", "their", "his", "her",
-    "this", "that", "these", "those", "what", "which", "who", "whom",
+    "a",
+    "an",
+    "the",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "could",
+    "should",
+    "may",
+    "might",
+    "can",
+    "shall",
+    "to",
+    "of",
+    "in",
+    "for",
+    "on",
+    "with",
+    "at",
+    "by",
+    "from",
+    "as",
+    "into",
+    "through",
+    "during",
+    "before",
+    "after",
+    "above",
+    "below",
+    "between",
+    "and",
+    "or",
+    "not",
+    "no",
+    "but",
+    "if",
+    "then",
+    "else",
+    "when",
+    "where",
+    "why",
+    "how",
+    "all",
+    "each",
+    "every",
+    "both",
+    "few",
+    "more",
+    "most",
+    "other",
+    "some",
+    "such",
+    "only",
+    "own",
+    "same",
+    "so",
+    "than",
+    "too",
+    "very",
+    "just",
+    "about",
+    "also",
+    "it",
+    "its",
+    "he",
+    "she",
+    "they",
+    "them",
+    "we",
+    "us",
+    "you",
+    "me",
+    "my",
+    "your",
+    "our",
+    "their",
+    "his",
+    "her",
+    "this",
+    "that",
+    "these",
+    "those",
+    "what",
+    "which",
+    "who",
+    "whom",
 }
 
 # FTS5 keyword operators (case-insensitive) — must quote these if they appear as tokens
@@ -193,9 +339,7 @@ class BM25Tokenizer:
         return [
             t.strip().lower()
             for t in raw
-            if t.strip()
-            and t.strip() not in _ZH_STOPWORDS
-            and len(t.strip()) >= 2
+            if t.strip() and t.strip() not in _ZH_STOPWORDS and len(t.strip()) >= 2
         ]
 
     @staticmethod
@@ -277,10 +421,8 @@ class BM25Index:
             self._conn.execute("PRAGMA journal_mode=WAL")
         except sqlite3.OperationalError:
             # Fallback: try DELETE mode if WAL fails (e.g., locked files)
-            try:
+            with contextlib.suppress(sqlite3.OperationalError):
                 self._conn.execute("PRAGMA journal_mode=DELETE")
-            except sqlite3.OperationalError:
-                pass
         return self._conn
 
     def close(self) -> None:
@@ -383,6 +525,7 @@ class BM25Index:
         query: str,
         top_k: int = 10,
         language: str = "auto",
+        metadata_filter: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
         """BM25 search over a namespace.
 
@@ -407,11 +550,20 @@ class BM25Index:
         if not fts5_query or fts5_query == '""':
             return []
 
+        predicates = []
+        params: list[Any] = [fts5_query]
+        for key, value in (metadata_filter or {}).items():
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key):
+                raise ValueError("Invalid metadata filter key")
+            predicates.append("json_extract(metadata_json, ?) = ?")
+            params.extend([f"$.{key}", value])
+        extra = " AND " + " AND ".join(predicates) if predicates else ""
+        params.append(max(0, top_k))
         try:
             rows = conn.execute(
                 f"SELECT doc_id, text, metadata_json, rank FROM {table} "
-                f"WHERE {table} MATCH ? ORDER BY rank LIMIT ?",
-                (fts5_query, top_k),
+                f"WHERE {table} MATCH ?{extra} ORDER BY rank LIMIT ?",
+                params,
             ).fetchall()
         except sqlite3.OperationalError:
             # Malformed query → no results
@@ -464,10 +616,12 @@ class BM25Index:
         self.ensure_namespace(namespace)
         conn = self._ensure_connected()
         table = self._table_name(namespace)
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field):
+            raise ValueError("Invalid metadata field")
         try:
             cur = conn.execute(
-                f"DELETE FROM {table} WHERE json_extract(metadata_json, '$.{field}') = ?",
-                (value,),
+                f"DELETE FROM {table} WHERE json_extract(metadata_json, ?) = ?",
+                (f"$.{field}", value),
             )
             conn.commit()
             return cur.rowcount
@@ -495,7 +649,6 @@ class BM25Index:
         """Return names of all FTS5 namespaces currently in the database."""
         conn = self._ensure_connected()
         rows = conn.execute(
-            "SELECT name FROM sqlite_master "
-            "WHERE type='table' AND name LIKE 'fts5_%'"
+            "SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'fts5_%'"
         ).fetchall()
         return [row["name"].replace("fts5_", "", 1) for row in rows]

@@ -1,6 +1,7 @@
 """JSON/SSE use identical real SQLite execution and session semantics."""
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -87,3 +88,42 @@ async def test_invalid_sql_never_executes(connected_query, monkeypatch):
     assert (
         ConnectionFactory.get("contract").execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 5
     )
+
+
+async def test_schema_retriever_is_wired_and_filtered_columns_reach_prompt(
+    connected_query, monkeypatch
+):
+    from app.knowledge.retrieval.schema_rag import SchemaSearchResult
+    from app.rag import engine
+
+    conn = ConnectionFactory.get("contract")
+    conn.execute("CREATE TABLE unrelated (irrelevant_detail TEXT)")
+    calls, prompts = [], []
+
+    async def find(query_text, **kwargs):
+        calls.append(kwargs)
+        return [SchemaSearchResult("order-id", "contract", "orders", "id", rrf_score=1)]
+
+    class CaptureRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            prompts.append(str(messages))
+            return {"choices": [{"message": {"content": "SELECT id FROM orders"}}]}
+
+    monkeypatch.setattr(
+        engine, "get_schema_rag", lambda: SimpleNamespace(find_relevant_tables=find)
+    )
+    monkeypatch.setattr(
+        query, "get_default_router", lambda: CaptureRouter(RouterConfig(), mock_mode=True)
+    )
+    response = connected_query.post(
+        "/api/v1/query",
+        json={
+            "nl_text": "find all orders",
+            "database": "contract",
+            "num_candidates": 1,
+        },
+    ).json()
+    assert response["status"] == "completed", response
+    assert calls[0]["db_id"] == "contract"
+    assert "orders" in prompts[0]
+    assert "irrelevant_detail" not in prompts[0]

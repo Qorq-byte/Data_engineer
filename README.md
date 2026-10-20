@@ -1,6 +1,7 @@
 # NL2SQL Data Engineering Agent
 
 > 优化分支进度与验收见[实施计划](docs/optimization/plan.md)、[阶段记录](docs/optimization/progress.md)。
+> RAG 索引更新、版本迁移与离线评测见[检索验证说明](docs/optimization/rag-evaluation.md)；真实语义/SQL 质量尚需业务标注与模型预测。
 > 主查询固定走 request_query YAML 与 WorkflowRunner，JSON/SSE/MCP 共用执行服务；字段、失败语义和限制见[查询契约](docs/optimization/query-contract.md)。
 > 当前采用私有管理员共享工作台：必须配置至少32字符的随机JWT_SECRET，注册需REGISTRATION_TOKEN邀请，业务接口仅允许ADMIN_USER_IDS；详见[安全配置](docs/optimization/security.md)。
 

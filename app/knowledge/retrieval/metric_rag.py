@@ -13,6 +13,7 @@ Usage::
     from app.knowledge.retrieval.embedding import MockEmbeddingProvider, EmbeddingGenerator
     from app.knowledge.retrieval.lancedb_store import LanceDBStore
     from app.knowledge.retrieval.bm25_index import BM25Index
+from app.knowledge.retrieval.filters import literal
 
     rag = MetricRAG(
         lancedb_store=LanceDBStore(dimension=256),
@@ -40,6 +41,7 @@ from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.embedding import EmbeddingGenerator, MockEmbeddingProvider
+from app.knowledge.retrieval.filters import literal
 from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_METRICS,
     LanceDBStore,
@@ -96,8 +98,14 @@ class MetricSearchResult:
 # Key fields to store in BM25 metadata so results are self-describing even
 # without a matching LanceDB result.
 _INDEXED_META_KEYS: tuple[str, ...] = (
-    "domain", "name", "name_zh", "description",
-    "formula", "metric_type", "aggregation", "time_grain",
+    "domain",
+    "name",
+    "name_zh",
+    "description",
+    "formula",
+    "metric_type",
+    "aggregation",
+    "time_grain",
     "embedding_text",
 )
 
@@ -235,9 +243,13 @@ class MetricRAG:
         # 1. Generate embeddings for all docs
         texts = [d.embedding_text for d in docs]
         emb_result = await self._embedding.embed(texts)
+        if len(emb_result.vectors) != len(texts) or any(
+            len(vector) != self._lancedb.dimension for vector in emb_result.vectors
+        ):
+            raise ValueError("Embedding batch count/dimension mismatch; existing index preserved")
 
         # 2. Delete existing LanceDB records with same doc_ids, then insert
-        doc_ids_str = ", ".join(f"'{d.doc_id}'" for d in docs)
+        doc_ids_str = ", ".join(literal(d.doc_id) for d in docs)
         # table may be empty or filter syntax may fail — non-critical
         with contextlib.suppress(Exception):
             self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
@@ -251,11 +263,13 @@ class MetricRAG:
         # 3. Insert into BM25 (keyword)
         bm25_docs: list[dict[str, Any]] = []
         for doc in docs:
-            bm25_docs.append({
-                "doc_id": doc.doc_id,
-                "text": doc.embedding_text,
-                "metadata": _extract_index_meta(doc),
-            })
+            bm25_docs.append(
+                {
+                    "doc_id": doc.doc_id,
+                    "text": doc.embedding_text,
+                    "metadata": _extract_index_meta(doc),
+                }
+            )
         self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
 
         return len(docs)
@@ -297,7 +311,7 @@ class MetricRAG:
         query_vec = await self._embedding.embed_single(query)
 
         # 2. Dense search (LanceDB)
-        filter_expr = f"domain = '{domain}'" if domain else None
+        filter_expr = f"domain = {literal(domain)}" if domain else None
         dense_raw = self._lancedb.search(
             self.NAMESPACE,
             query_vec,
@@ -308,10 +322,12 @@ class MetricRAG:
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
             dist = row.get("_distance", 1.0)
-            dense_results.append({
-                **row,
-                "score": 1.0 / (1.0 + dist),
-            })
+            dense_results.append(
+                {
+                    **row,
+                    "score": 1.0 / (1.0 + dist),
+                }
+            )
 
         # 3. Sparse search (BM25)
         sparse_raw = self._bm25.search(
@@ -319,6 +335,7 @@ class MetricRAG:
             query,
             top_k=max(top_k * 2, 20),
             language=language,
+            metadata_filter={"domain": domain} if domain else {},
         )
         # Unpack BM25 metadata → top-level fields so RRF merge works correctly
         sparse_results: list[dict[str, Any]] = []
