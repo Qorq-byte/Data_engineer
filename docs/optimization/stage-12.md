@@ -35,4 +35,6 @@ RAG源schema优先可能将旧public文档ID改为main；升级后按连接db_id
 
 ## Git与远程验收
 
-本地验收完成；等待本阶段提交、普通推送、远程SHA与LinuxCI核对后补记。
+代码提交[8fd7c7f25a66653ceae4bf5c7404de23287ff44d](https://github.com/Qorq-byte/Data_engineer/commit/8fd7c7f25a66653ceae4bf5c7404de23287ff44d)已普通推送到codex/mvp-hardening，ls-remote核对SHA一致；未强推或合并main。
+
+[Actions39618922816](https://github.com/Qorq-byte/Data_engineer/actions/runs/39618922816) **success**：Linux/Python3.12干净安装、前端编译、全仓Ruff、既有strict30源文件门禁通过；全量 **3119 passed，1 warning，32.41秒**，uvloop实际执行通过。[远程证据](results/stage-12-ci.json)保存headSha与各步骤。阶段12远程验收完成；全仓197项类型债务、外部数据库/模型和生产性能仍按上述限制保留。
