@@ -36,4 +36,8 @@
 
 ## Git与远程验收
 
-本地检查通过；提交、普通推送及Linux CI按实际结果补记。远程未完成前不声明阶段远程验收通过。
+代码提交[04adbdfd99ebc963e11a0582490f33086876669b](https://github.com/Qorq-byte/Data_engineer/commit/04adbdfd99ebc963e11a0582490f33086876669b)已普通推送，ls-remote核对一致；未合并main、未强推。
+
+[Actions39554593571](https://github.com/Qorq-byte/Data_engineer/actions/runs/39554593571) **success**：Linux/Python3.12干净安装、前端编译、全仓Ruff、扩展strict门禁均通过（28源文件无错误）；全量 **2995 passed，1 warning，29.73秒**，uvloop实际执行通过，补足Windows跳过项。[远程证据](results/stage-9-ci.json)保存对应headSha和各步骤。
+
+阶段9代码远程验收完成。CI只执行明确的类型门禁，不代表全仓201项已解决；后续文档补记仅记录本次已验证代码结果。
