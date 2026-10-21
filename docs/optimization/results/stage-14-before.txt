@@ -1,0 +1,386 @@
+FFFFFFFFFFFF..                                                           [100%]
+================================== FAILURES ===================================
+_ test_cache_refreshes_main_schema_before_ttl[CREATE TABLE added (value TEXT)-False] _
+
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-56/test_cache_refreshes_main_sche0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022C28C32190>
+external = False, ddl = 'CREATE TABLE added (value TEXT)'
+
+    @pytest.mark.parametrize("external", [False, True])
+    @pytest.mark.parametrize("ddl", [
+        "CREATE TABLE added (value TEXT)", "ALTER TABLE marker ADD COLUMN added TEXT", "DROP TABLE marker",
+    ])
+    async def test_cache_refreshes_main_schema_before_ttl(tmp_path, monkeypatch, external, ddl):
+        from app.config.settings import settings
+
+        monkeypatch.setattr(settings, "schema_cache_seconds", 3600)
+        monkeypatch.setattr(SchemaExtractor, "_cache", {})
+        path = str(tmp_path / "source.sqlite")
+        with sqlite3.connect(path) as conn:
+            conn.execute("CREATE TABLE marker (id INT)")
+            before = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if external:
+                with sqlite3.connect(path) as writer:
+                    writer.execute(ddl)
+            else:
+                conn.execute(ddl)
+            after = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if ddl.startswith("CREATE"):
+>               assert "added" in after.tables
+E               AssertionError: assert 'added' in {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)}
+E                +  where {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)} = SchemaSnapshot(database_type='sqlite', database_name='sqlite', tables={'marker': TableSchema(name='marker', comment=No...[], schema_name='main', catalog_name=None)}, created_at=datetime.datetime(2026, 10, 21, 23, 18, 10, 622976), version=1).tables
+
+tests\test_db\test_sqlite_schema_revision.py:36: AssertionError
+_ test_cache_refreshes_main_schema_before_ttl[CREATE TABLE added (value TEXT)-True] _
+
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-56/test_cache_refreshes_main_sche1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022C28C97BF0>
+external = True, ddl = 'CREATE TABLE added (value TEXT)'
+
+    @pytest.mark.parametrize("external", [False, True])
+    @pytest.mark.parametrize("ddl", [
+        "CREATE TABLE added (value TEXT)", "ALTER TABLE marker ADD COLUMN added TEXT", "DROP TABLE marker",
+    ])
+    async def test_cache_refreshes_main_schema_before_ttl(tmp_path, monkeypatch, external, ddl):
+        from app.config.settings import settings
+
+        monkeypatch.setattr(settings, "schema_cache_seconds", 3600)
+        monkeypatch.setattr(SchemaExtractor, "_cache", {})
+        path = str(tmp_path / "source.sqlite")
+        with sqlite3.connect(path) as conn:
+            conn.execute("CREATE TABLE marker (id INT)")
+            before = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if external:
+                with sqlite3.connect(path) as writer:
+                    writer.execute(ddl)
+            else:
+                conn.execute(ddl)
+            after = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if ddl.startswith("CREATE"):
+>               assert "added" in after.tables
+E               AssertionError: assert 'added' in {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)}
+E                +  where {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)} = SchemaSnapshot(database_type='sqlite', database_name='sqlite', tables={'marker': TableSchema(name='marker', comment=No...[], schema_name='main', catalog_name=None)}, created_at=datetime.datetime(2026, 10, 21, 23, 18, 10, 850045), version=1).tables
+
+tests\test_db\test_sqlite_schema_revision.py:36: AssertionError
+_ test_cache_refreshes_main_schema_before_ttl[ALTER TABLE marker ADD COLUMN added TEXT-False] _
+
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-56/test_cache_refreshes_main_sche2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022C28CD56A0>
+external = False, ddl = 'ALTER TABLE marker ADD COLUMN added TEXT'
+
+    @pytest.mark.parametrize("external", [False, True])
+    @pytest.mark.parametrize("ddl", [
+        "CREATE TABLE added (value TEXT)", "ALTER TABLE marker ADD COLUMN added TEXT", "DROP TABLE marker",
+    ])
+    async def test_cache_refreshes_main_schema_before_ttl(tmp_path, monkeypatch, external, ddl):
+        from app.config.settings import settings
+
+        monkeypatch.setattr(settings, "schema_cache_seconds", 3600)
+        monkeypatch.setattr(SchemaExtractor, "_cache", {})
+        path = str(tmp_path / "source.sqlite")
+        with sqlite3.connect(path) as conn:
+            conn.execute("CREATE TABLE marker (id INT)")
+            before = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if external:
+                with sqlite3.connect(path) as writer:
+                    writer.execute(ddl)
+            else:
+                conn.execute(ddl)
+            after = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if ddl.startswith("CREATE"):
+                assert "added" in after.tables
+            elif ddl.startswith("ALTER"):
+>               assert "added" in after.tables["marker"].column_names
+E               AssertionError: assert 'added' in ['id']
+E                +  where ['id'] = TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_primary_key=Fa... is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None).column_names
+
+tests\test_db\test_sqlite_schema_revision.py:38: AssertionError
+_ test_cache_refreshes_main_schema_before_ttl[ALTER TABLE marker ADD COLUMN added TEXT-True] _
+
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-56/test_cache_refreshes_main_sche3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022C28C5EA50>
+external = True, ddl = 'ALTER TABLE marker ADD COLUMN added TEXT'
+
+    @pytest.mark.parametrize("external", [False, True])
+    @pytest.mark.parametrize("ddl", [
+        "CREATE TABLE added (value TEXT)", "ALTER TABLE marker ADD COLUMN added TEXT", "DROP TABLE marker",
+    ])
+    async def test_cache_refreshes_main_schema_before_ttl(tmp_path, monkeypatch, external, ddl):
+        from app.config.settings import settings
+
+        monkeypatch.setattr(settings, "schema_cache_seconds", 3600)
+        monkeypatch.setattr(SchemaExtractor, "_cache", {})
+        path = str(tmp_path / "source.sqlite")
+        with sqlite3.connect(path) as conn:
+            conn.execute("CREATE TABLE marker (id INT)")
+            before = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if external:
+                with sqlite3.connect(path) as writer:
+                    writer.execute(ddl)
+            else:
+                conn.execute(ddl)
+            after = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if ddl.startswith("CREATE"):
+                assert "added" in after.tables
+            elif ddl.startswith("ALTER"):
+>               assert "added" in after.tables["marker"].column_names
+E               AssertionError: assert 'added' in ['id']
+E                +  where ['id'] = TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_primary_key=Fa... is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None).column_names
+
+tests\test_db\test_sqlite_schema_revision.py:38: AssertionError
+____ test_cache_refreshes_main_schema_before_ttl[DROP TABLE marker-False] _____
+
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-56/test_cache_refreshes_main_sche4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022C28C53F20>
+external = False, ddl = 'DROP TABLE marker'
+
+    @pytest.mark.parametrize("external", [False, True])
+    @pytest.mark.parametrize("ddl", [
+        "CREATE TABLE added (value TEXT)", "ALTER TABLE marker ADD COLUMN added TEXT", "DROP TABLE marker",
+    ])
+    async def test_cache_refreshes_main_schema_before_ttl(tmp_path, monkeypatch, external, ddl):
+        from app.config.settings import settings
+
+        monkeypatch.setattr(settings, "schema_cache_seconds", 3600)
+        monkeypatch.setattr(SchemaExtractor, "_cache", {})
+        path = str(tmp_path / "source.sqlite")
+        with sqlite3.connect(path) as conn:
+            conn.execute("CREATE TABLE marker (id INT)")
+            before = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if external:
+                with sqlite3.connect(path) as writer:
+                    writer.execute(ddl)
+            else:
+                conn.execute(ddl)
+            after = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if ddl.startswith("CREATE"):
+                assert "added" in after.tables
+            elif ddl.startswith("ALTER"):
+                assert "added" in after.tables["marker"].column_names
+            else:
+>               assert "marker" not in after.tables
+E               AssertionError: assert 'marker' not in {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)}
+E                +  where {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)} = SchemaSnapshot(database_type='sqlite', database_name='sqlite', tables={'marker': TableSchema(name='marker', comment=No...[], schema_name='main', catalog_name=None)}, created_at=datetime.datetime(2026, 10, 21, 23, 18, 10, 923963), version=1).tables
+
+tests\test_db\test_sqlite_schema_revision.py:40: AssertionError
+_____ test_cache_refreshes_main_schema_before_ttl[DROP TABLE marker-True] _____
+
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-56/test_cache_refreshes_main_sche5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022C28CE04B0>
+external = True, ddl = 'DROP TABLE marker'
+
+    @pytest.mark.parametrize("external", [False, True])
+    @pytest.mark.parametrize("ddl", [
+        "CREATE TABLE added (value TEXT)", "ALTER TABLE marker ADD COLUMN added TEXT", "DROP TABLE marker",
+    ])
+    async def test_cache_refreshes_main_schema_before_ttl(tmp_path, monkeypatch, external, ddl):
+        from app.config.settings import settings
+
+        monkeypatch.setattr(settings, "schema_cache_seconds", 3600)
+        monkeypatch.setattr(SchemaExtractor, "_cache", {})
+        path = str(tmp_path / "source.sqlite")
+        with sqlite3.connect(path) as conn:
+            conn.execute("CREATE TABLE marker (id INT)")
+            before = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if external:
+                with sqlite3.connect(path) as writer:
+                    writer.execute(ddl)
+            else:
+                conn.execute(ddl)
+            after = await SchemaExtractor.cached_extract(conn, DatabaseType.SQLITE)
+            if ddl.startswith("CREATE"):
+                assert "added" in after.tables
+            elif ddl.startswith("ALTER"):
+                assert "added" in after.tables["marker"].column_names
+            else:
+>               assert "marker" not in after.tables
+E               AssertionError: assert 'marker' not in {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)}
+E                +  where {'marker': TableSchema(name='marker', comment=None, columns=[ColumnSchema(name='id', type='INT', nullable=True, is_pri...is_pii=False, pii_type='')], row_count_estimate=0, indexes=[], foreign_keys=[], schema_name='main', catalog_name=None)} = SchemaSnapshot(database_type='sqlite', database_name='sqlite', tables={'marker': TableSchema(name='marker', comment=No...[], schema_name='main', catalog_name=None)}, created_at=datetime.datetime(2026, 10, 21, 23, 18, 10, 945139), version=1).tables
+
+tests\test_db\test_sqlite_schema_revision.py:40: AssertionError
+_________ test_stale_source_fails_before_explain_or_execution[False] __________
+
+explain = False
+
+    @pytest.mark.parametrize("explain", [False, True])
+    async def test_stale_source_fails_before_explain_or_execution(explain):
+        with sqlite3.connect(":memory:") as conn:
+            conn.executescript("CREATE TABLE marker(id INT); INSERT INTO marker VALUES(1);")
+            schema = await SchemaExtractor.extract(conn, DatabaseType.SQLITE)
+            conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+            result = await ExecuteSQLNode().execute(NodeInput(
+                "SELECT id FROM marker", context={"schema": schema, "connection": conn},
+                config={"explain": explain},
+            ))
+>           assert result.metadata["status"] == "schema_changed", result
+E           AssertionError: NodeOutput(result={'columns': ['id'], 'rows': [[1]], 'row_count': 1, 'truncated': False}, metadata={'status': 'success...text={'last_execution': {'columns': ['id'], 'rows': [[1]], 'row_count': 1, 'truncated': False}, 'plan_analysis': None})
+E           assert 'success' == 'schema_changed'
+E
+E             - schema_changed
+E             + success
+
+tests\test_db\test_sqlite_schema_revision.py:54: AssertionError
+__________ test_stale_source_fails_before_explain_or_execution[True] __________
+
+explain = True
+
+    @pytest.mark.parametrize("explain", [False, True])
+    async def test_stale_source_fails_before_explain_or_execution(explain):
+        with sqlite3.connect(":memory:") as conn:
+            conn.executescript("CREATE TABLE marker(id INT); INSERT INTO marker VALUES(1);")
+            schema = await SchemaExtractor.extract(conn, DatabaseType.SQLITE)
+            conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+            result = await ExecuteSQLNode().execute(NodeInput(
+                "SELECT id FROM marker", context={"schema": schema, "connection": conn},
+                config={"explain": explain},
+            ))
+>           assert result.metadata["status"] == "schema_changed", result
+E           AssertionError: NodeOutput(result={'columns': ['id'], 'rows': [[1]], 'row_count': 1, 'truncated': False}, metadata={'status': 'success...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])})
+E           assert 'success' == 'schema_changed'
+E
+E             - schema_changed
+E             + success
+
+tests\test_db\test_sqlite_schema_revision.py:54: AssertionError
+____ test_preexisting_temp_cannot_shadow_main[SELECT id FROM marker-False] ____
+
+sql = 'SELECT id FROM marker', accepted = False
+
+    @pytest.mark.parametrize("sql,accepted", [
+        ("SELECT id FROM marker", False),
+        ("SELECT COUNT(*) FROM marker", False),
+        ("WITH x AS (SELECT id FROM marker) SELECT * FROM x", False),
+        ("SELECT id FROM marker WHERE 0", False),
+        ("SELECT id FROM main.marker", True),
+        ("SELECT COUNT(*) FROM main.marker", True),
+    ])
+    async def test_preexisting_temp_cannot_shadow_main(sql, accepted):
+        with sqlite3.connect(":memory:") as conn:
+            conn.executescript('''
+                CREATE TABLE marker (id INT);
+                INSERT INTO marker VALUES (1);
+                CREATE TEMP TABLE marker (id INT);
+                INSERT INTO temp.marker VALUES (999);
+            ''')
+            # Prime SQLite's statement cache before installing any source guard.
+            conn.execute(sql).fetchall()
+            schema = await SchemaExtractor.extract(conn, DatabaseType.SQLITE)
+            output = await ExecuteSQLNode().execute(NodeInput(
+                sql, context={"schema": schema, "connection": conn}, config={"explain": True},
+            ))
+>           assert (not output.errors) is accepted, output
+E           AssertionError: NodeOutput(result={'columns': ['id'], 'rows': [[999]], 'row_count': 1, 'truncated': False}, metadata={'status': 'succe...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])})
+E           assert not [] is False
+E            +  where [] = NodeOutput(result={'columns': ['id'], 'rows': [[999]], 'row_count': 1, 'truncated': False}, metadata={'status': 'succe...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])}).errors
+
+tests\test_db\test_sqlite_schema_revision.py:86: AssertionError
+_ test_preexisting_temp_cannot_shadow_main[SELECT COUNT(*) FROM marker-False] _
+
+sql = 'SELECT COUNT(*) FROM marker', accepted = False
+
+    @pytest.mark.parametrize("sql,accepted", [
+        ("SELECT id FROM marker", False),
+        ("SELECT COUNT(*) FROM marker", False),
+        ("WITH x AS (SELECT id FROM marker) SELECT * FROM x", False),
+        ("SELECT id FROM marker WHERE 0", False),
+        ("SELECT id FROM main.marker", True),
+        ("SELECT COUNT(*) FROM main.marker", True),
+    ])
+    async def test_preexisting_temp_cannot_shadow_main(sql, accepted):
+        with sqlite3.connect(":memory:") as conn:
+            conn.executescript('''
+                CREATE TABLE marker (id INT);
+                INSERT INTO marker VALUES (1);
+                CREATE TEMP TABLE marker (id INT);
+                INSERT INTO temp.marker VALUES (999);
+            ''')
+            # Prime SQLite's statement cache before installing any source guard.
+            conn.execute(sql).fetchall()
+            schema = await SchemaExtractor.extract(conn, DatabaseType.SQLITE)
+            output = await ExecuteSQLNode().execute(NodeInput(
+                sql, context={"schema": schema, "connection": conn}, config={"explain": True},
+            ))
+>           assert (not output.errors) is accepted, output
+E           AssertionError: NodeOutput(result={'columns': ['COUNT(*)'], 'rows': [[1]], 'row_count': 1, 'truncated': False}, metadata={'status': 's...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])})
+E           assert not [] is False
+E            +  where [] = NodeOutput(result={'columns': ['COUNT(*)'], 'rows': [[1]], 'row_count': 1, 'truncated': False}, metadata={'status': 's...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])}).errors
+
+tests\test_db\test_sqlite_schema_revision.py:86: AssertionError
+_ test_preexisting_temp_cannot_shadow_main[WITH x AS (SELECT id FROM marker) SELECT * FROM x-False] _
+
+sql = 'WITH x AS (SELECT id FROM marker) SELECT * FROM x', accepted = False
+
+    @pytest.mark.parametrize("sql,accepted", [
+        ("SELECT id FROM marker", False),
+        ("SELECT COUNT(*) FROM marker", False),
+        ("WITH x AS (SELECT id FROM marker) SELECT * FROM x", False),
+        ("SELECT id FROM marker WHERE 0", False),
+        ("SELECT id FROM main.marker", True),
+        ("SELECT COUNT(*) FROM main.marker", True),
+    ])
+    async def test_preexisting_temp_cannot_shadow_main(sql, accepted):
+        with sqlite3.connect(":memory:") as conn:
+            conn.executescript('''
+                CREATE TABLE marker (id INT);
+                INSERT INTO marker VALUES (1);
+                CREATE TEMP TABLE marker (id INT);
+                INSERT INTO temp.marker VALUES (999);
+            ''')
+            # Prime SQLite's statement cache before installing any source guard.
+            conn.execute(sql).fetchall()
+            schema = await SchemaExtractor.extract(conn, DatabaseType.SQLITE)
+            output = await ExecuteSQLNode().execute(NodeInput(
+                sql, context={"schema": schema, "connection": conn}, config={"explain": True},
+            ))
+>           assert (not output.errors) is accepted, output
+E           AssertionError: NodeOutput(result={'columns': ['id'], 'rows': [[999]], 'row_count': 1, 'truncated': False}, metadata={'status': 'succe...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])})
+E           assert not [] is False
+E            +  where [] = NodeOutput(result={'columns': ['id'], 'rows': [[999]], 'row_count': 1, 'truncated': False}, metadata={'status': 'succe...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])}).errors
+
+tests\test_db\test_sqlite_schema_revision.py:86: AssertionError
+_ test_preexisting_temp_cannot_shadow_main[SELECT id FROM marker WHERE 0-False] _
+
+sql = 'SELECT id FROM marker WHERE 0', accepted = False
+
+    @pytest.mark.parametrize("sql,accepted", [
+        ("SELECT id FROM marker", False),
+        ("SELECT COUNT(*) FROM marker", False),
+        ("WITH x AS (SELECT id FROM marker) SELECT * FROM x", False),
+        ("SELECT id FROM marker WHERE 0", False),
+        ("SELECT id FROM main.marker", True),
+        ("SELECT COUNT(*) FROM main.marker", True),
+    ])
+    async def test_preexisting_temp_cannot_shadow_main(sql, accepted):
+        with sqlite3.connect(":memory:") as conn:
+            conn.executescript('''
+                CREATE TABLE marker (id INT);
+                INSERT INTO marker VALUES (1);
+                CREATE TEMP TABLE marker (id INT);
+                INSERT INTO temp.marker VALUES (999);
+            ''')
+            # Prime SQLite's statement cache before installing any source guard.
+            conn.execute(sql).fetchall()
+            schema = await SchemaExtractor.extract(conn, DatabaseType.SQLITE)
+            output = await ExecuteSQLNode().execute(NodeInput(
+                sql, context={"schema": schema, "connection": conn}, config={"explain": True},
+            ))
+>           assert (not output.errors) is accepted, output
+E           AssertionError: NodeOutput(result={'columns': ['id'], 'rows': [], 'row_count': 0, 'truncated': False}, metadata={'status': 'success', ...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])})
+E           assert not [] is False
+E            +  where [] = NodeOutput(result={'columns': ['id'], 'rows': [], 'row_count': 0, 'truncated': False}, metadata={'status': 'success', ...0, join_types=[], has_full_scan=True, warnings=['PERF_WARNING: Full table scan detected �� consider adding an index'])}).errors
+
+tests\test_db\test_sqlite_schema_revision.py:86: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_cache_refreshes_main_schema_before_ttl[CREATE TABLE added (value TEXT)-False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_cache_refreshes_main_schema_before_ttl[CREATE TABLE added (value TEXT)-True]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_cache_refreshes_main_schema_before_ttl[ALTER TABLE marker ADD COLUMN added TEXT-False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_cache_refreshes_main_schema_before_ttl[ALTER TABLE marker ADD COLUMN added TEXT-True]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_cache_refreshes_main_schema_before_ttl[DROP TABLE marker-False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_cache_refreshes_main_schema_before_ttl[DROP TABLE marker-True]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_stale_source_fails_before_explain_or_execution[False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_stale_source_fails_before_explain_or_execution[True]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_preexisting_temp_cannot_shadow_main[SELECT id FROM marker-False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_preexisting_temp_cannot_shadow_main[SELECT COUNT(*) FROM marker-False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_preexisting_temp_cannot_shadow_main[WITH x AS (SELECT id FROM marker) SELECT * FROM x-False]
+FAILED tests/test_db/test_sqlite_schema_revision.py::test_preexisting_temp_cannot_shadow_main[SELECT id FROM marker WHERE 0-False]
+12 failed, 2 passed, 5 deselected in 1.42s

@@ -90,6 +90,8 @@ class SchemaSnapshot:
     tables: dict[str, TableSchema] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     version: int = 1
+    # SQLite main.schema_version at introspection; unknown for legacy/other sources.
+    source_schema_version: int | None = None
 
     def get_table(self, name: str) -> TableSchema | None:
         return self.tables.get(name)

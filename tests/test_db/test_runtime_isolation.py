@@ -90,12 +90,9 @@ async def test_schema_cache_copies_snapshots_and_refreshes_on_invalidation(manag
     second = await SchemaExtractor.cached_extract(managed_connection, DatabaseType.SQLITE)
     assert "numbers" in second.tables
     managed_connection.execute("CREATE TABLE added (id INTEGER)")
-    assert (
-        "added"
-        not in (
-            await SchemaExtractor.cached_extract(managed_connection, DatabaseType.SQLITE)
-        ).tables
-    )
+    refreshed = await SchemaExtractor.cached_extract(managed_connection, DatabaseType.SQLITE)
+    assert "added" in refreshed.tables
+    assert refreshed.source_schema_version != second.source_schema_version
     SchemaExtractor.invalidate(managed_connection)
     assert (
         "added"

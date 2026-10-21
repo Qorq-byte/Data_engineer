@@ -166,7 +166,7 @@ async def on_event(status: NodeEventStatus, data: NodeEvent) -> None:
         print("节点返回错误")
 ```
 
-将此async回调传给 `runner.run(..., on_node_event=on_event)`。事件只报告started/completed/failed，不决定下一节点。`mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py`是strict核心门禁，保留默认导入追踪；它不等于全仓类型检查通过。
+将此async回调传给 `runner.run(..., on_node_event=on_event)`。事件只报告started/completed/failed，不决定下一节点。`mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py`是strict核心门禁，保留默认导入追踪；它不等于全仓类型检查通过。
 
 ## 模型适配契约
 

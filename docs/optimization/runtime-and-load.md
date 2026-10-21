@@ -54,3 +54,11 @@ resolve_query_targets在首次await之前捕获连接和info字段；Schema缓�
 重连可退休尚在生成中的旧请求：该请求失败且不能迁移，下一次显式请求重新提取新句柄Schema。多db_id目标独立，不因显示名称相同而合并；其他未变更目标可以继续。注册表只在单进程内，异步应用必须用await aclose/aclose_all；遗留同步close不能当作并发租约协议。直接修改注册表/原生连接、跨进程、应用外部切换USE/search_path/temp对象不在此次身份保证内。
 
 验收使用SQLite/DuckDB真实驱动和确定性事件交错；没有复跑生产压测，不能将功能通过推断为吞吐/延迟提升。现有生产压测前置与指标方案不变。[阶段13记录](stage-13.md)。
+
+## 阶段14：SQLite Schema版本与main读守卫
+
+SQLite Schema提取前后读取main.schema_version，变化即拒绝混合快照；缓存命中前在lease内、通过既有native_call检查版本，不再等待TTL结束才发现DDL。执行和绑定EXPLAIN在worker内再次核对版本，旧请求失败而非自动迁移。旧的“DDL后必须invalidate前看不见新表”测试已改为版本变化即刷新，深拷贝和显式invalidate测试保留。
+
+共享read_scope沿用只读动作集合，增加带版本查询的实际database=main读取要求；SQLite某些COUNT/索引优化回调database=None，因此安装守卫前读取main/temp表与视图名，缺失数据库名仅允许无temp同名遮蔽的main对象。其他数据库读取及未能证明的来源拒绝；绑定EXPLAIN不再降级为无守卫执行，结果最多1000条计划行。退出/异常时清理authorizer，原生结果路径继续清理进度处理器并恢复busy_timeout；取消仍等待worker退出后释放lease。
+
+每次绑定读额外读取元数据，表数多时的开销是待测风险；本阶段没有吞吐/P50/P95/P99或生产容量结论。源版本不是数据/事务快照：检查后外部连接仍可发生DDL，不保证跨进程DDL与查询原子性；不可手工重置schema_version，仍以SQLite锁/编译/数据库权限为准。RAG索引不随缓存刷新自动重建，需要已有schema refresh入口并检查rag_indexed。其他方言、旧快照、直接SQL和对象授权限制见[阶段14报告](stage-14.md)。

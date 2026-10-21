@@ -507,6 +507,7 @@ def _build_filtered_schema(
         database_type=schema.database_type,
         database_name=schema.database_name,
         tables=filtered,
+        source_schema_version=schema.source_schema_version,
     )
 
 

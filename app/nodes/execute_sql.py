@@ -24,7 +24,9 @@ if TYPE_CHECKING:
 
 from app.config.settings import settings
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
+from app.db.sqlite_source import SchemaSourceChangedError, read_scope
 from app.models.query import PlanAnalysis
+from app.models.schema import SchemaSnapshot
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
 from app.security.sql_policy import require_read_query
@@ -152,6 +154,12 @@ class ExecuteSQLNode(AgenticNode):
 
         from app.db.runtime import native_call
 
+        schema = input.context.get("schema")
+        source_version = (
+            schema.source_schema_version
+            if isinstance(schema, SchemaSnapshot) and schema.database_type == "sqlite" else None
+        )
+
         try:
             # Harden native connections before EXPLAIN/binding can inspect external files.
             if self._is_duckdb_connection(conn):
@@ -162,10 +170,12 @@ class ExecuteSQLNode(AgenticNode):
 
             # EXPLAIN execution
             if do_explain:
-                explain_result = await native_call(conn, lambda: self._execute_explain(conn, sql))
+                explain_result = await native_call(
+                    conn, lambda: self._execute_explain(conn, sql, source_version)
+                )
                 plan = self._parse_explain_output(explain_result, plan)
 
-            result = await self._execute_bounded(conn, sql, max_rows, timeout_ms)
+            result = await self._execute_bounded(conn, sql, max_rows, timeout_ms, source_version)
 
             metadata: dict[str, Any] = {
                 "status": "success",
@@ -184,6 +194,8 @@ class ExecuteSQLNode(AgenticNode):
                 },
             )
 
+        except SchemaSourceChangedError as e:
+            return NodeOutput(errors=[str(e)], metadata={"status": "schema_changed"})
         except Exception as e:
             return NodeOutput(
                 result=None,
@@ -209,7 +221,8 @@ class ExecuteSQLNode(AgenticNode):
             return True
 
     async def _execute_bounded(
-        self, conn: Any, sql: str, max_rows: int, timeout_ms: int
+        self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
+        source_version: int | None = None,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_aiomysql_connection(conn):
@@ -223,37 +236,29 @@ class ExecuteSQLNode(AgenticNode):
         from app.db.runtime import native_call
 
         return await native_call(
-            conn, lambda: self._execute_native_bounded(conn, sql, max_rows, timeout_ms)
+            conn, lambda: self._execute_native_bounded(
+                conn, sql, max_rows, timeout_ms, source_version,
+            )
         )
 
     def _execute_native_bounded(
-        self, conn: Any, sql: str, max_rows: int, timeout_ms: int
+        self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
+        source_version: int | None = None,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_sqlite_connection(conn):
             deadline = time.monotonic() + timeout
             busy_timeout = conn.execute("PRAGMA busy_timeout").fetchone()[0]
             conn.execute(f"PRAGMA busy_timeout={min(busy_timeout, timeout_ms)}")
-            allowed = {
-                sqlite3.SQLITE_SELECT,
-                sqlite3.SQLITE_READ,
-                sqlite3.SQLITE_FUNCTION,
-                sqlite3.SQLITE_RECURSIVE,
-            }
-            conn.set_authorizer(
-                lambda action, *_args: sqlite3.SQLITE_OK
-                if action in allowed
-                else sqlite3.SQLITE_DENY
-            )
             conn.set_progress_handler(lambda: int(time.monotonic() >= deadline), 100)
             try:
-                result = self._execute_sqlite(conn, sql, max_rows)
+                with read_scope(conn, source_version):
+                    result = self._execute_sqlite(conn, sql, max_rows)
                 if time.monotonic() >= deadline:
                     raise TimeoutError("SQL statement deadline exceeded")
                 return result
             finally:
                 conn.set_progress_handler(None, 0)
-                conn.set_authorizer(None)
                 conn.execute(f"PRAGMA busy_timeout={busy_timeout}")
         if self._is_duckdb_connection(conn):
             timer = threading.Timer(timeout, conn.interrupt)
@@ -378,7 +383,9 @@ class ExecuteSQLNode(AgenticNode):
     # ── EXPLAIN support ───────────────────────────────────────────────
 
     @staticmethod
-    def _execute_explain(conn: CursorConnection, sql: str) -> ExecutionResult:
+    def _execute_explain(
+        conn: CursorConnection, sql: str, source_version: int | None = None,
+    ) -> ExecutionResult:
         """Execute EXPLAIN for a query and return the plan rows.
 
         Uses ``EXPLAIN QUERY PLAN`` for SQLite, ``EXPLAIN`` for others.
@@ -386,6 +393,11 @@ class ExecuteSQLNode(AgenticNode):
         # Determine the right EXPLAIN syntax
         is_sqlite = ExecuteSQLNode._is_sqlite_connection(conn)
         explain_sql = f"EXPLAIN QUERY PLAN {sql}" if is_sqlite else f"EXPLAIN {sql}"
+
+        if isinstance(conn, sqlite3.Connection) and source_version is not None:
+            # Bound sources must not fall back to an unguarded EXPLAIN on failure.
+            with read_scope(conn, source_version):
+                return ExecuteSQLNode._execute_sqlite(conn, explain_sql, 1000)
 
         try:
             cursor = conn.cursor()

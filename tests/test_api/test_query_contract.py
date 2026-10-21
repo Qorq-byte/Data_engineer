@@ -79,6 +79,61 @@ async def test_connection_replacement_never_executes_old_schema_on_new_database(
     assert execution["rows"] == [[999]]
 
 
+@pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+@pytest.mark.parametrize("change", ["ddl", "temp"])
+async def test_sqlite_source_changes_fail_without_execution_then_fresh_query_recovers(
+    connected_query, monkeypatch, protocol, change,
+):
+    changed = False
+
+    class ChangingRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            nonlocal changed
+            if not changed:
+                changed = True
+                connection = ConnectionFactory.get("contract")
+                if change == "ddl":
+                    connection.execute("ALTER TABLE orders ADD COLUMN source_revision_fixture TEXT")
+                else:
+                    connection.execute("CREATE TEMP TABLE orders (id INT)")
+                    connection.execute("INSERT INTO temp.orders VALUES (999)")
+            return {"choices": [{"message": {"content": "SELECT id FROM orders ORDER BY id"}}]}
+
+    monkeypatch.setattr(
+        query, "get_default_router", lambda: ChangingRouter(RouterConfig(), mock_mode=True),
+    )
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+
+    async def request():
+        if protocol == "mcp":
+            return await mcp_query(nl_text="find all orders", db_id="contract")
+        if protocol == "sse":
+            events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+            done = next(value for event, value in events if event == "done")
+            if done["status"] == "failed":
+                assert not any(event == "execution" for event, _ in events)
+            return done
+        response = connected_query.post("/api/v1/query", json=body)
+        assert response.status_code == 200
+        return response.json()
+
+    failed = await request()
+    assert failed["status"] == "failed", failed
+    if change == "ddl":
+        assert "Schema source changed" in str(failed)
+    if protocol == "mcp":
+        assert failed["rows"] == [] and failed["error_code"] == "WORKFLOW_FAILED"
+    else:
+        assert failed["execution"] is None
+    if change == "temp":
+        ConnectionFactory.get("contract").execute("DROP TABLE temp.orders")
+    recovered = await request()
+    assert recovered["status"] == "completed", recovered
+    execution = recovered if protocol == "mcp" else recovered["execution"]
+    assert execution["rows"] == [[1], [2], [3], [4], [5]]
+
+
 async def test_json_sse_result_and_session_match(connected_query):
     body = {
         "nl_text": "find all orders",

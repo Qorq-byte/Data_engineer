@@ -35,14 +35,20 @@ class SchemaExtractor:
         cls, connection: Any, db_type: DatabaseType, db_name: str = ""
     ) -> SchemaSnapshot:
         from app.config.settings import settings
-        from app.db.runtime import lease
+        from app.db.runtime import lease, native_call
+        from app.db.sqlite_source import schema_version
 
         # Cache population and execution share the connection gate.
         async with lease(connection):
+            source_version = (
+                await native_call(connection, lambda: schema_version(connection))
+                if db_type == DatabaseType.SQLITE else None
+            )
             cached = cls._cache.get(id(connection))
             if (
                 cached
                 and cached[0] is connection
+                and cached[2].source_schema_version == source_version
                 and time.monotonic() - cached[1] < settings.schema_cache_seconds
             ):
                 return copy.deepcopy(cached[2])
@@ -273,6 +279,9 @@ class SchemaExtractor:
     @staticmethod
     def _extract_sqlite(conn: Any, db_name: str) -> SchemaSnapshot:
         """Extract schema from SQLite using PRAGMA."""
+        from app.db.sqlite_source import require_schema_version, schema_version
+
+        source_version = schema_version(conn)
         tables: dict[str, TableSchema] = {}
         cursor = conn.cursor()
 
@@ -375,8 +384,10 @@ class SchemaExtractor:
                     table_name,
                 )
 
+        require_schema_version(conn, source_version)
         return SchemaSnapshot(
             database_type="sqlite",
+            source_schema_version=source_version,
             database_name=db_name or "sqlite",
             tables=tables,
             created_at=datetime.now(),
