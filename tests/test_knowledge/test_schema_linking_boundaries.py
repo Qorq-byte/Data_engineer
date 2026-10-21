@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -54,6 +55,24 @@ async def test_invalid_hits_never_reach_result_columns_or_raw_hits():
     assert [(col.table, col.name) for col in result.columns] == [("orders", "amount")]
     assert result.warnings[0].startswith("SCHEMA_RAG_HITS_REJECTED")
     assert "foreign" not in " ".join(result.warnings)
+
+
+@pytest.mark.parametrize("namespace", ["main", "other", None])
+async def test_known_namespace_rejects_same_database_wrong_schema_hit(namespace):
+    schema = build_schema(DATASET)
+    schema.tables["orders"].schema_name = "main"
+
+    class Search:
+        async def find_relevant_tables(self, *args, **kwargs):
+            return [SimpleNamespace(
+                db_id="fixture", schema_name=namespace, table_name="orders",
+                column_name="amount", rrf_score=1.0,
+            )]
+
+    result = await SchemaRetriever(Search()).retrieve("opaque", schema, db_id="fixture")
+    assert bool(result.search_results) is (namespace == "main")
+    assert bool(result.warnings) is (namespace != "main")
+    assert bool(result.columns) is (namespace == "main")
 
 
 async def test_glossary_column_owner_seeds_one_hop_expansion():

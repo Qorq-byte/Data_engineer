@@ -34,6 +34,8 @@ MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败�
 
 阶段11的SQLValidator按SQLGlot作用域检查源表、CTE、派生表、别名和列，不再到未参与查询的表中寻找同名列；歧义列阻断。优化只作用于独立校验AST，发送给数据库的primary_sql保持原文。只读策略与执行层共用，内部配置skip_syntax=True不能放行写入/副作用或不可安全解析的SQL；其含义收窄为跳过详细语法诊断。skip_schema仍供固定元数据路径使用，不关闭只读策略。类型/性能/业务规则仍按原设计为提示，不据此证明结果正确。
 
-现有SchemaSnapshot不包含通用schema/catalog身份：SQLite main和与快照database_name一致的MySQL数据库限定可验证；其他显式命名空间（例如未建模的PostgreSQL public）保守报SCHEMA_ERROR，不把另一个同名表冒充目标。这是明确的兼容限制，需补齐命名空间元数据与数据库验证后再扩展。Quoted identifiers保留大小写，已覆盖基础PostgreSQL/MySQL/SQLite解析回归，不等于三库在线验收。
+阶段12在TableSchema追加可选schema_name/catalog_name（未知为None）：实际内省覆盖PG public、SQLite main、MySQL所查数据库、DuckDB当前catalog的main。校验仅在限定名与这些元数据一致时通过；限定列必须匹配当前作用域来源，错误schema/catalog或未证明的限定仍报SCHEMA_ERROR。旧快照保留SQLite main/MySQL同库fallback；缺失元数据的PG/DuckDB限定继续拒绝。标识符按方言处理大小写，不改写primary_sql。真实SQLite/DuckDB已验证，PG/MySQL仅离线解析，未完成在线验收。
+
+表字典仍以简单表名为键，不支持跨schema同名表集合、跨catalog联查授权或完整search_path解析。内省明确固定namespace，但未限定SQL仍按数据库会话的search_path/临时表/当前catalog解析；快照校验不是数据库权限边界。应用连接须固定到所内省的环境，改连接目标后刷新Schema和RAG；不可在共享连接任意切换USE/search_path。原生只读及权限守卫继续生效，不等于对象级授权已实现。Schema管理GET接口的现有投影未扩展，这些元数据用于内部生成/验证/索引。
 
 畸形/空候选响应按调用隔离，存在有效文本候选时保留它；全部无效仍失败，取消继续传播，不自动重试。第一个有效候选作为primary，其余候选仍不自动执行。ValidateSQLNode异常会写回validation_passed=False和空报告，避免旧上下文的成功状态残留。[阶段11报告](stage-11.md)包含SQLite及三协议CTE/歧义路径验证。

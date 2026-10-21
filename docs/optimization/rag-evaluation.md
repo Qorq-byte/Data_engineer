@@ -53,3 +53,11 @@ Schema 刷新响应增加 rag_indexed 与 warnings：Schema 内省成功不能�
 gold SQL也复用相同只读、时间和行数边界；非法/执行失败/超限gold使评测以数据集错误中止，不记为模型失败，也不无界fetchall。重复case/prediction或未知预测ID拒绝。Python入口可用正的有限timeout_seconds和max_rows缩小预算，CLI默认仍2秒/1000行。预测的latency_ms/cost_usd仍是调用者提供值，不是本工具测出的模型成本；未传预测时sql_model_metrics继续null。阶段11记录的错误类别自检使用故意构造的预测，不能当作模型执行率/正确率。
 
 SQLGlot依赖固定为实际验证的30.18.0，使作用域接口与校验语义可复现；升级时重跑固定SQL案例、SQL策略和方言回归。实现与未验证范围见[阶段11报告](stage-11.md)。
+
+## 阶段12：namespace来源与索引兼容
+
+snapshot_to_schema_docs优先使用TableSchema.schema_name；只有未知时采用既有参数fallback（默认public）。生成器提示词展示已知Schema/Catalog，裁剪和未候选stub保留元数据。当前Schema有明确namespace时，retriever再拒绝schema_name缺失或不符的同库命中；未知namespace的旧Schema保留既有行为。SCHEMA_RAG_HITS_REJECTED语义扩展到namespace，前缀及三协议warnings不变。
+
+SQLite/DuckDB旧public文档ID会改为main，需要按db_id替换索引：连接应用后使用已有`POST /api/v1/schema/{db_id}/refresh`，检查`rag_indexed=true`；false时按warnings处理并排查RAG初始化，不能将Schema刷新当作索引成功。该入口调用index_schemas(replace_db_id=db_id)清除旧库文档后建新文档，不要手动仅追加新ID。RAG初始化也会对已连接库执行替换索引。失败/旧命中被过滤可触发既有关键词回退，诊断须保留。
+
+SchemaDocument/索引仍没有catalog字段，不支持同一db_id在多个catalog切换后并存检索；db_id必须稳定绑定实际连接目标，切换目标必须刷新，不能用显示名称冒充身份。此阶段测来源与过滤契约，未重跑真实embedding、标注Recall/Precision/MRR/NDCG或模型准确率，不能声称检索质量提升。详情见[阶段12报告](stage-12.md)。

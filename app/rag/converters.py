@@ -25,7 +25,7 @@ def snapshot_to_schema_docs(
     Args:
         snapshot: Extracted schema snapshot from SchemaExtractor.
         db_id: Database identifier (e.g. ``"sqlite_test"``).
-        schema_name: Schema/namespace name (default ``"public"``).
+        schema_name: Legacy fallback when table namespace is unknown (default ``"public"``).
         language: Language hint for embedding text — ``"zh"`` or ``"en"``.
 
     Returns:
@@ -35,14 +35,15 @@ def snapshot_to_schema_docs(
     use_zh = language == "zh"
 
     for table_name, table in snapshot.tables.items():
+        source_schema = table.schema_name if table.schema_name is not None else schema_name
         # ── Table-level document ──────────────────────────────────────
-        table_doc = _build_table_doc(table, db_id, schema_name, table_name, use_zh)
+        table_doc = _build_table_doc(table, db_id, source_schema, table_name, use_zh)
         docs.append(table_doc)
 
         # ── Column-level documents ────────────────────────────────────
         for col in table.columns:
             col_doc = _build_column_doc(
-                col, table_name, db_id, schema_name, table.row_count_estimate, use_zh
+                col, table_name, db_id, source_schema, table.row_count_estimate, use_zh
             )
             docs.append(col_doc)
 

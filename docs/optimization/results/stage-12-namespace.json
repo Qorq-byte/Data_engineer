@@ -1,0 +1,44 @@
+{
+  "baseline_sha": "81b01de5c7d06307f7d1f59dc97b7f91ab17e86e",
+  "kind": "synthetic functional regression, not model accuracy or throughput",
+  "llm_calls": 0,
+  "records": [
+    {
+      "dialect": "sqlite",
+      "before_columns": [
+        "secret"
+      ],
+      "after_columns": [
+        "id"
+      ],
+      "before_validation": false,
+      "after_validation": true,
+      "actual_rows": [
+        [
+          1
+        ]
+      ],
+      "source_schema": "main",
+      "source_catalog": null
+    },
+    {
+      "dialect": "duckdb",
+      "before_columns": [
+        "id",
+        "secret"
+      ],
+      "after_columns": [
+        "id"
+      ],
+      "before_validation": false,
+      "after_validation": true,
+      "actual_rows": [
+        [
+          1
+        ]
+      ],
+      "source_schema": "main",
+      "source_catalog": "memory"
+    }
+  ]
+}

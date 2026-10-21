@@ -614,3 +614,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段10将Schema Linking的FK扩展明确为源候选双向一跳，校验检索命中的库/表/列，并将无效匹配/异常回退警告传到JSON/SSE/MCP。合成边界评测与兼容取舍见[阶段10报告](docs/optimization/stage-10.md)；该评测不代表真实业务准确率。
 
 阶段11采用已验证的SQLGlot30.18.0（依赖锁定）做私有AST作用域校验，复用强制只读策略，改进候选响应隔离与SQL评测错误分类。兼容范围、skip_syntax收窄、命名空间限制和实测见[阶段11报告](docs/optimization/stage-11.md)。
+
+阶段12补齐来源命名空间元数据，修复SQLite临时表遮蔽内省、DuckDB挂载库同名表混合，限定名按已知来源校验。RAG旧public索引需按db_id刷新，在线多方言与search_path限制见[阶段12报告](docs/optimization/stage-12.md)及[查询契约](docs/optimization/query-contract.md)。

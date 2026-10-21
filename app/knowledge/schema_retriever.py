@@ -197,13 +197,18 @@ class SchemaRetriever:
                 if (
                     (db_id is not None and getattr(hit, "db_id", None) != db_id)
                     or table is None
+                    or (
+                        table.schema_name is not None
+                        and getattr(hit, "schema_name", None) != table.schema_name
+                    )
                     or (column is not None and table.get_column(column) is None)
                 ):
                     continue
                 valid_hits.append(hit)
             if len(valid_hits) != len(rag_hits):
                 warnings.append(
-                    "SCHEMA_RAG_HITS_REJECTED: ignored invalid database/table/column matches"
+                    "SCHEMA_RAG_HITS_REJECTED: ignored invalid "
+                    "database/namespace/table/column matches"
                 )
             rag_hits = valid_hits
 
@@ -494,6 +499,8 @@ def _build_filtered_schema(
                 name=t_name,
                 columns=[],  # no column detail for non-candidates
                 comment=schema.tables[t_name].comment if schema.tables[t_name].comment else "",
+                schema_name=schema.tables[t_name].schema_name,
+                catalog_name=schema.tables[t_name].catalog_name,
             )
 
     return SchemaSnapshot(

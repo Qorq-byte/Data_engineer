@@ -1,7 +1,8 @@
 """Multi-dialect schema extractor.
 
 Extracts TableSchema and SchemaSnapshot from live databases.
-Phase 1: PostgreSQL, SQLite, DuckDB full implementation. Others: NotImplementedError.
+Implemented: PostgreSQL (public), SQLite (main), DuckDB (current catalog/main), MySQL.
+Other database types raise NotImplementedError.
 """
 
 import copy
@@ -247,6 +248,7 @@ class SchemaExtractor:
 
                 tables[table_name] = TableSchema(
                     name=table_name,
+                    schema_name="public",
                     columns=columns,
                     row_count_estimate=row_count,
                     indexes=indexes,
@@ -276,18 +278,19 @@ class SchemaExtractor:
 
         # Get all user tables (exclude sqlite_*)
         cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+            "SELECT name FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         )
         table_names = [r[0] for r in cursor.fetchall()]
 
         for table_name in table_names:
             try:
+                quoted_name = '"' + table_name.replace('"', '""') + '"'
                 # Columns via PRAGMA
-                cursor.execute(f"PRAGMA table_info('{table_name}')")
+                cursor.execute(f"PRAGMA main.table_info({quoted_name})")
                 col_rows = cursor.fetchall()
 
                 # Foreign keys via PRAGMA
-                cursor.execute(f"PRAGMA foreign_key_list('{table_name}')")
+                cursor.execute(f"PRAGMA main.foreign_key_list({quoted_name})")
                 fk_rows = cursor.fetchall()
 
                 fk_map: dict[str, tuple[str, str]] = {}
@@ -296,7 +299,7 @@ class SchemaExtractor:
                         fk_map[fkr[3]] = (fkr[2], fkr[4])  # col -> (ref_table, ref_col)
 
                 # Indexes via PRAGMA
-                cursor.execute(f"PRAGMA index_list('{table_name}')")
+                cursor.execute(f"PRAGMA main.index_list({quoted_name})")
                 idx_rows = cursor.fetchall()
 
                 columns = []
@@ -323,7 +326,7 @@ class SchemaExtractor:
                 # Row estimate
                 row_count = 0
                 try:
-                    cursor.execute(f"SELECT COUNT(*) FROM '{table_name}'")
+                    cursor.execute(f"SELECT COUNT(*) FROM main.{quoted_name}")
                     row_count = cursor.fetchone()[0]
                 except Exception:
                     pass
@@ -333,7 +336,8 @@ class SchemaExtractor:
                     if len(ir) < 3:
                         continue
                     idx_name = ir[1]
-                    cursor.execute(f"PRAGMA index_info('{idx_name}')")
+                    quoted_index = '"' + idx_name.replace('"', '""') + '"'
+                    cursor.execute(f"PRAGMA main.index_info({quoted_index})")
                     idx_cols = [r[2] for r in cursor.fetchall() if len(r) > 2]
                     indexes.append(
                         IndexInfo(
@@ -358,6 +362,7 @@ class SchemaExtractor:
 
                 tables[table_name] = TableSchema(
                     name=table_name,
+                    schema_name="main",
                     columns=columns,
                     row_count_estimate=row_count,
                     indexes=indexes,
@@ -384,22 +389,23 @@ class SchemaExtractor:
         """Extract schema from DuckDB using information_schema."""
         tables: dict[str, TableSchema] = {}
 
+        catalog_name = conn.execute("SELECT current_database()").fetchone()[0]
         table_rows = conn.execute("""
             SELECT table_name
             FROM information_schema.tables
-            WHERE table_schema = 'main'
+            WHERE table_schema = 'main' AND table_catalog = ?
             ORDER BY table_name
-        """).fetchall()
+        """, [catalog_name]).fetchall()
 
         for tr in table_rows:
             table_name = tr[0]
             try:
-                col_rows = conn.execute(f"""
+                col_rows = conn.execute("""
                     SELECT column_name, data_type, is_nullable, column_default
                     FROM information_schema.columns
-                    WHERE table_schema = 'main' AND table_name = '{table_name}'
+                    WHERE table_schema = 'main' AND table_catalog = ? AND table_name = ?
                     ORDER BY ordinal_position
-                """).fetchall()
+                """, [catalog_name, table_name]).fetchall()
 
                 columns = []
                 for cr in col_rows:
@@ -417,13 +423,19 @@ class SchemaExtractor:
                 # Row estimate
                 row_count = 0
                 try:
-                    cnt = conn.execute(f'SELECT COUNT(*) FROM "{table_name}"').fetchone()
+                    qualified_name = ".".join(
+                        '"' + name.replace('"', '""') + '"'
+                        for name in (catalog_name, "main", table_name)
+                    )
+                    cnt = conn.execute(f"SELECT COUNT(*) FROM {qualified_name}").fetchone()
                     row_count = cnt[0]
                 except Exception:
                     pass
 
                 tables[table_name] = TableSchema(
                     name=table_name,
+                    schema_name="main",
+                    catalog_name=catalog_name,
                     columns=columns,
                     row_count_estimate=row_count,
                 )
@@ -601,6 +613,7 @@ class SchemaExtractor:
 
                     tables[table_name] = TableSchema(
                         name=table_name,
+                        schema_name=schema_name,
                         comment=table_comment,
                         columns=columns,
                         row_count_estimate=row_estimate,

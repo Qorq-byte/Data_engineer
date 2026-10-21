@@ -58,6 +58,9 @@ class TableSchema:
     row_count_estimate: int = 0
     indexes: list[IndexInfo] = field(default_factory=list)
     foreign_keys: list[ForeignKey] = field(default_factory=list)
+    # Optional provenance, populated only for the namespace actually introspected.
+    schema_name: str | None = None
+    catalog_name: str | None = None
 
     @property
     def column_names(self) -> list[str]:
@@ -132,6 +135,10 @@ class SchemaSnapshot:
             lines.append(f"Tables ({len(shown_names)}): {', '.join(shown_names)}")
         for table in tables:
             lines.append(f"\n-- Table: {table.name}")
+            if table.schema_name:
+                lines.append(f"   Schema: {table.schema_name}")
+            if table.catalog_name:
+                lines.append(f"   Catalog: {table.catalog_name}")
             if table.comment:
                 lines.append(f"   Comment: {table.comment}")
             if table.row_count_estimate:

@@ -402,6 +402,8 @@ async def test_schema_degradation_warning_reaches_all_protocols(
 @pytest.mark.parametrize("sql,accepted", [
     ("WITH active AS (SELECT id FROM orders) SELECT id FROM active ORDER BY id", True),
     ("SELECT id FROM orders o JOIN users u ON u.id=o.user_id", False),
+    ("SELECT main.orders.id FROM main.orders ORDER BY id", True),
+    ("SELECT private.orders.id FROM main.orders ORDER BY id", False),
 ])
 async def test_scoped_validation_drives_all_three_protocols(
     connected_query, monkeypatch, sql, accepted
