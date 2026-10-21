@@ -17,3 +17,15 @@ mock 模式响应明确 warnings；未连接数据库的生成结果不能称为
 前端进度使用 `stage` 的真实状态；事件新增 `skipped` 布尔字段，禁用节点的 completed 不代表执行过。工作台默认请求执行，返回无 execution 时标记“SQL 已生成，未执行”，0行明确为空结果。客户端超时等待上限130秒（默认服务端120秒），停止等待不代表 SQL 已执行或必已取消；手动取消、切换历史/新会话和卸载组件都使旧响应失效。通用请求层自动附加管理员 Bearer；HTTP错误支持字符串和对象 detail，SSE失败不自动转 JSON 重跑。
 
 `/workflows` 从 YAML 读取模板，并以 query_executable 标明当前入口；custom 仅更新进程内目录，不落盘、不改变查询计划。`/workflows/simulate` 是启发式展示，status=simulation 并返回 actual_query_plan；不参与真实流转。
+
+## 阶段9：共享边界与机器可读错误
+
+`app/workflow/contracts.py`提供QueryInput结构协议、QueryEventName/异步回调及纯dataclass错误分类器；Pydantic的QueryRequest/QueryResponse继续保留在API边界，不进入领域dataclass。事件负载仍是异构JSON，并未逐事件做完整Schema验证。
+
+JSON响应和SSE done均经过QueryResponse校验，status只允许completed/failed，过滤未公开字段；SSE使用`model_dump(mode="json")`，与JSON路由的Pydantic序列化保持一致。Decimal单元格保留十进制字符串（例如"12.50"），时间值为ISO字符串；这不是所有驱动类型都已验证，非法响应类型会按内部错误处理。中间execution事件仍采用通用JSON编码，客户端应以done的最终结构为准，不能假定中间事件与done逐字相同。
+
+截止为QUERY_TIMEOUT/HTTP504，容量为QUERY_CAPACITY/HTTP503，未知内部异常或响应模型校验失败为INTERNAL_ERROR/HTTP500。JSON位于detail的code/message；SSE在HTTP200流中发送error的code/message后结束，没有done。容量同时提供retry_after_seconds=1，JSON保留Retry-After: 1；这是显式再次请求的提示，不授权客户端自动重放。基础设施错误的message为固定公开文本，不回传原异常细节；服务端仍记录内部异常，日志访问和敏感信息管理仍需部署侧约束。参数/模型校验的既有HTTP422格式保留，未改写全站错误处理。
+
+MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败时的error，新增status、query_id/session_id/plan_id/workflow_ids/llm_calls。只有实际生成响应才保证查询标识存在；请求校验/截止/容量/内部失败可能没有标识。业务失败为status=failed/error_code=WORKFLOW_FAILED，保留SQL供排查，不能据此认为已执行；基础设施失败另有http_status和稳定error_code，容量带retry_after_seconds；无效请求为INVALID_REQUEST/422。error_type为兼容保留的异常类别名称，不含原异常文本。结果仍最多100行。MCP这是工具结果字典的业务状态，未将其改成MCP传输协议的isError机制。
+
+取消属于BaseException传播路径，不转换为上述普通错误；SSE关闭时取消并等待生产任务。实际Runner/权限/预算/校验与只读执行仍共用，未新增节点或重试。阶段9的SQLite端到端、故障注入及FastMCP进程内传输记录见[报告](stage-9.md)；真实外部MCP客户端和真实数据库网络故障需单独验收。

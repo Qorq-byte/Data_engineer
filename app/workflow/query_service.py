@@ -17,13 +17,16 @@ from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
 from app.llm.budget import BudgetedRouter, active_budget
 from app.llm.factory import get_default_router
+from app.llm.protocols import CompletionRouter
 from app.models.schema import SchemaSnapshot
+from app.models.workflow import WorkflowPlan
 from app.nodes.execute_sql import ExecuteSQLNode
 from app.nodes.generate_sql import GenerateSQLNode
 from app.nodes.parse_nl import ParseNLNode
 from app.nodes.registry import NodeRegistry
 from app.nodes.schema_linking import SchemaLinkingNode
 from app.nodes.validate_sql import ValidateSQLNode
+from app.workflow.contracts import QueryCapacityError, QueryEventHandler, QueryEventName, QueryInput
 
 _ROOT = Path(__file__).resolve().parents[1]
 _CONFIG_LOADER = ConfigLoader(str(_ROOT / "config/agent.yml"))
@@ -31,7 +34,7 @@ _PLAN_LOADER = PlanLoader(str(_ROOT / "workflow/plans"))
 _PLAN_MTIME = -1
 
 
-def _request_plan() -> Any:
+def _request_plan() -> WorkflowPlan:
     global _PLAN_MTIME
     stamp = (_ROOT / "workflow/plans/request_query.yml").stat().st_mtime_ns
     if stamp != _PLAN_MTIME:
@@ -41,11 +44,12 @@ def _request_plan() -> Any:
     return _PLAN_LOADER.load("request_query")
 
 
-class QueryCapacityError(RuntimeError):
-    """The bounded request execution slots are occupied."""
-
-
-async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> dict[str, Any]:
+async def run_query(
+    body: QueryInput,
+    emit: QueryEventHandler | None = None,
+    *,
+    llm_router: CompletionRouter | None = None,
+) -> dict[str, Any]:
     from app.config.settings import settings
     from app.db.runtime import gate
 
@@ -59,7 +63,12 @@ async def run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> d
             return await _run_query(body, emit, llm_router=llm_router)
 
 
-async def _run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> dict[str, Any]:
+async def _run_query(
+    body: QueryInput,
+    emit: QueryEventHandler | None = None,
+    *,
+    llm_router: CompletionRouter | None = None,
+) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
     from app.api.query import _detect_metadata_query, _get_or_create_session, _resolve_all_schemas
@@ -111,7 +120,7 @@ async def _run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> 
     statuses = []
     actual_nodes: list[str] = []
 
-    async def publish(event: str, payload: dict[str, Any]) -> None:
+    async def publish(event: QueryEventName, payload: dict[str, Any]) -> None:
         if emit:
             await emit(event, {"query_id": query_id, "session_id": session_id, **payload})
 

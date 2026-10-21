@@ -66,3 +66,7 @@
 ## 阶段8：生成与执行接口契约
 
 先行步骤和验收见[stage-8-plan.md](stage-8-plan.md)，报告[stage-8.md](stage-8.md)。在核心strict门禁基础上覆盖实际SQL生成/执行及预算适配，修复具体Router耦合与可空Schema声明；保持默认导入追踪和安全约束，避免一次扩展到整个API/RAG层。
+
+## 阶段9：跨协议查询契约
+
+先行计划见[stage-9-plan.md](stage-9-plan.md)，实施记录见[stage-9.md](stage-9.md)。统一JSON/SSE响应校验、基础设施错误分类与MCP状态投影；优先防止调用方错误识别成功/失败，保留业务失败HTTP200及既有执行不变量。完整API/RAG类型债务继续单列，不扩成一次重构。

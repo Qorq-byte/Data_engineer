@@ -28,6 +28,7 @@ from app.models.schema import SchemaSnapshot
 from app.nodes.base import NodeInput
 from app.nodes.execute_sql import ExecuteSQLNode
 from app.storage.mysql_store import get_store
+from app.workflow.contracts import QueryEventName, QueryStatus, classify_query_failure
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -362,7 +363,7 @@ class QueryResponse(BaseModel):
 
     query_id: str
     session_id: str = ""
-    status: str = "completed"
+    status: QueryStatus = "completed"
     plan_id: str = "request_query"
     workflow_ids: list[str] = []
     llm_calls: int = 0
@@ -388,24 +389,24 @@ class QueryResponse(BaseModel):
 @router.post("/query", response_model=QueryResponse)
 async def submit_query(body: QueryRequest) -> QueryResponse:
     from app.config.settings import settings
-    from app.workflow.query_service import QueryCapacityError, run_query
+    from app.workflow.query_service import run_query
 
     _validate_model(body.model)
     try:
         response = await asyncio.wait_for(
             run_query(body, llm_router=get_default_router()), settings.query_timeout_seconds
         )
-    except TimeoutError as exc:
+        return QueryResponse.model_validate(response)
+    except Exception as exc:
+        failure = classify_query_failure(exc)
+        if failure.code == "INTERNAL_ERROR":
+            logger.exception("Query request failed")
         raise HTTPException(
-            status_code=504, detail={"code": "QUERY_TIMEOUT", "message": "Query deadline exceeded"}
+            status_code=failure.http_status,
+            detail=failure.payload(),
+            headers={"Retry-After": str(failure.retry_after_seconds)}
+            if failure.retry_after_seconds is not None else None,
         ) from exc
-    except QueryCapacityError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail={"code": "QUERY_CAPACITY", "message": str(exc)},
-            headers={"Retry-After": "1"},
-        ) from exc
-    return QueryResponse(**response)
 
 
 class ExecuteRequest(BaseModel):
@@ -525,7 +526,7 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
     async def event_stream() -> AsyncGenerator[str, None]:
         queue: asyncio.Queue[tuple[str, dict[str, Any]]] = asyncio.Queue(maxsize=64)
 
-        async def emit(event: str, data: dict[str, Any]) -> None:
+        async def emit(event: QueryEventName, data: dict[str, Any]) -> None:
             await queue.put((event, data))
 
         async def execute() -> None:
@@ -536,24 +537,13 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                     run_query(body, emit, llm_router=get_default_router()),
                     settings.query_timeout_seconds,
                 )
-                await queue.put(("done", result))
-            except TimeoutError:
-                await queue.put(
-                    ("error", {"code": "QUERY_TIMEOUT", "message": "Query deadline exceeded"})
-                )
+                response = QueryResponse.model_validate(result)
+                await queue.put(("done", response.model_dump(mode="json")))
             except Exception as exc:
-                from app.workflow.query_service import QueryCapacityError
-
-                if isinstance(exc, QueryCapacityError):
-                    await queue.put(("error", {"code": "QUERY_CAPACITY", "message": str(exc)}))
-                    return
-                logger.exception("Query stream failed")
-                await queue.put(
-                    (
-                        "error",
-                        {"code": "INTERNAL_ERROR", "message": "Query failed; inspect server logs"},
-                    )
-                )
+                failure = classify_query_failure(exc)
+                if failure.code == "INTERNAL_ERROR":
+                    logger.exception("Query stream failed")
+                await queue.put(("error", dict(failure.payload())))
             finally:
                 current = asyncio.current_task()
                 if current is not None and not current.cancelling():

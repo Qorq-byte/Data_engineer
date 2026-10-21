@@ -135,6 +135,12 @@ def _register_nl_query(mcp: Any) -> None:
                 errors.append("Query did not produce an execution result")
 
             return {
+                "status": "failed" if errors else response.status,
+                "query_id": response.query_id,
+                "session_id": response.session_id,
+                "plan_id": response.plan_id,
+                "workflow_ids": response.workflow_ids,
+                "llm_calls": response.llm_calls,
                 "sql": response.primary_sql or "",
                 "columns": execution.get("columns", []),
                 "rows": execution.get("rows", [])[:100],
@@ -143,17 +149,47 @@ def _register_nl_query(mcp: Any) -> None:
                 or execution.get("row_count", 0) > 100,
                 "errors": errors,
                 "warnings": response.warnings,
-                **({"error": "; ".join(errors)} if errors else {}),
+                **({"error": "; ".join(errors), "error_code": "WORKFLOW_FAILED"} if errors else {}),
             }
 
         except Exception as exc:
+            from fastapi import HTTPException
+            from pydantic import ValidationError
+
+            from app.workflow.contracts import (
+                QueryCapacityError,
+                QueryFailure,
+                classify_query_failure,
+            )
+
+            failure = classify_query_failure(exc)
+            if isinstance(exc, ValidationError):
+                failure = QueryFailure("INVALID_REQUEST", "Invalid query request", 422)
+            elif isinstance(exc, HTTPException):
+                detail: dict[str, Any] = exc.detail if isinstance(exc.detail, dict) else {}
+                if detail.get("code") == "QUERY_TIMEOUT":
+                    failure = classify_query_failure(TimeoutError())
+                elif detail.get("code") == "QUERY_CAPACITY":
+                    failure = classify_query_failure(QueryCapacityError())
+                elif 400 <= exc.status_code < 500:
+                    failure = QueryFailure(
+                        "INVALID_REQUEST", "Invalid query request", exc.status_code
+                    )
             return {
-                "error": str(exc),
+                "status": "failed",
+                "error": failure.message,
+                "error_code": failure.code,
+                "http_status": failure.http_status,
                 "error_type": type(exc).__name__,
+                "errors": [failure.message],
+                "warnings": [],
                 "sql": "",
                 "columns": [],
                 "rows": [],
                 "row_count": 0,
+                "truncated": False,
+                **({"retry_after_seconds": failure.retry_after_seconds}
+                   if failure.retry_after_seconds is not None else {}),
             }
 
 
