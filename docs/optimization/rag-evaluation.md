@@ -43,3 +43,13 @@ Schema 刷新响应增加 rag_indexed 与 warnings：Schema 内省成功不能�
 复跑功能边界：`python -m scripts.evaluate_schema_linking --output linking.json`。`tests/fixtures/schema_linking_eval.json`含6个合成表、12个固定案例，覆盖多起点/环/缺失引用、库/表/列失效、空/异常检索和中文回退；通过真实retriever/node消费明确注入的检索fixture。输出逐项检查、表/列与详细Schema规模、规范化JSON的dataset_sha256；任一案例不通过退出1。这是功能回归，无真实检索排名、模型或embedding调用，不报告语义Recall/SQL准确率。
 
 同一标注集在阶段9原实现为2/12，修复后12/12；直接命中users的合成例详细列12→5。中文案例因orders.user_id也是直接列匹配，标签明确包含其一跳order_items；修订标签后已用原实现重放基线，前后数据哈希一致。原FTS5/BM25小集阶段10重跑指标与阶段3相同，不能据此声称提高业务检索质量或容量。逐项结果和验证限制见[阶段10报告](stage-10.md)。
+
+## 阶段11：SQL校验与执行评测的区分
+
+`python -m scripts.evaluate_sql_validation --output after.json`运行18个固定SQL功能案例，SQLite fixture内省为源Schema，SQLValidator决定与安全参考执行分别记录。参考执行先经只读策略，再用query_only、2秒进度截止和1000行上限，不执行危险SQL。追加`--baseline-stage10`从本地固定Git SHA加载旧校验器，使用同一案例和数据哈希；不修改检出文件，缺失Git历史时失败，不自动换基准或联网。旧代码重放成功退出不意味着案例通过，新实现案例不全通过退出1。它测校验决策，不是NL→SQL模型准确率；model_accuracy保持null。
+
+`evaluate_quality --predictions`的SQL执行评测继续区分execution_success和result_correct，并增加逐项error_code及error_counts：MISSING_PREDICTION、EMPTY_SQL、SQL_POLICY_REJECTED、SQL_EXECUTION_ERROR、SQL_RESULT_LIMIT、SQL_TIMEOUT、RESULT_MISMATCH；正确结果为null。错误码描述评测层原因，与在线HTTP错误码不是同一套状态。结果不符仍可execution_success=True；顺序/多重集比较规则保持，浮点容差/日期语义未新增。
+
+gold SQL也复用相同只读、时间和行数边界；非法/执行失败/超限gold使评测以数据集错误中止，不记为模型失败，也不无界fetchall。重复case/prediction或未知预测ID拒绝。Python入口可用正的有限timeout_seconds和max_rows缩小预算，CLI默认仍2秒/1000行。预测的latency_ms/cost_usd仍是调用者提供值，不是本工具测出的模型成本；未传预测时sql_model_metrics继续null。阶段11记录的错误类别自检使用故意构造的预测，不能当作模型执行率/正确率。
+
+SQLGlot依赖固定为实际验证的30.18.0，使作用域接口与校验语义可复现；升级时重跑固定SQL案例、SQL策略和方言回归。实现与未验证范围见[阶段11报告](stage-11.md)。

@@ -1,0 +1,306 @@
+{
+  "dataset": "sql-validation-boundary-v1",
+  "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run",
+  "python": "3.13.9",
+  "sqlglot": "30.18.0",
+  "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9",
+  "case_count": 18,
+  "passed": 7,
+  "details": [
+    {
+      "id": "simple",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "cte",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'active' not found in schema"
+      ],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "derived",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'q' not found (referenced by column 'q.total')"
+      ],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "output-alias",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Column 'doubled' not found in table 'orders'"
+      ],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "shadowed-alias",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Column 'amount' not found in table 'users'"
+      ],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "correlated",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "cte-column-alias",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'x' not found in schema",
+        "SCHEMA_ERROR: Column 'v' not found in table 'users'"
+      ],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "star-derived",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'x' not found (referenced by column 'x.id')"
+      ],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "main-namespace",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "out-of-scope",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "ambiguous",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "missing-table",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'ghosts' not found in schema"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "alias-masks-missing",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'ghosts' not found (referenced by column 'g.id')"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "wrong-namespace",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "derived-column-missing",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'x' not found (referenced by column 'x.missing')"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "unsafe-function",
+      "passed": false,
+      "checks": {
+        "decision": false,
+        "reference": true,
+        "policy_rejected": false
+      },
+      "validator_accepted": true,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_POLICY_REJECTED"
+    },
+    {
+      "id": "select-into",
+      "passed": false,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": false
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'copied' not found in schema"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_POLICY_REJECTED"
+    },
+    {
+      "id": "multiple",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [
+        "READ_ONLY_ERROR: Expected one SELECT query"
+      ],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_POLICY_REJECTED"
+    }
+  ],
+  "model_accuracy": null,
+  "llm_or_embedding_calls": 0
+}

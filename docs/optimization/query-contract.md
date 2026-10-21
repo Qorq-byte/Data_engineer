@@ -31,3 +31,9 @@ MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败�
 取消属于BaseException传播路径，不转换为上述普通错误；SSE关闭时取消并等待生产任务。实际Runner/权限/预算/校验与只读执行仍共用，未新增节点或重试。阶段9的SQLite端到端、故障注入及FastMCP进程内传输记录见[报告](stage-9.md)；真实外部MCP客户端和真实数据库网络故障需单独验收。
 
 阶段10增加Schema Linking降级诊断：SCHEMA_RAG_UNAVAILABLE（检索失败）、SCHEMA_RAG_HITS_REJECTED（失效库/表/列命中被丢弃）、SCHEMA_LINKING_FALLBACK（没有有效关联或检索器失败，改用现有关键词匹配）。它们是warnings，不代表整个查询失败；SSE的schema事件也包含warnings，最终JSON/SSE done/MCP均保留汇总。只读执行和原Schema SQL校验继续决定执行是否成功。警告不含原始异常文本；关联有效性仍需业务标注评测。
+
+阶段11的SQLValidator按SQLGlot作用域检查源表、CTE、派生表、别名和列，不再到未参与查询的表中寻找同名列；歧义列阻断。优化只作用于独立校验AST，发送给数据库的primary_sql保持原文。只读策略与执行层共用，内部配置skip_syntax=True不能放行写入/副作用或不可安全解析的SQL；其含义收窄为跳过详细语法诊断。skip_schema仍供固定元数据路径使用，不关闭只读策略。类型/性能/业务规则仍按原设计为提示，不据此证明结果正确。
+
+现有SchemaSnapshot不包含通用schema/catalog身份：SQLite main和与快照database_name一致的MySQL数据库限定可验证；其他显式命名空间（例如未建模的PostgreSQL public）保守报SCHEMA_ERROR，不把另一个同名表冒充目标。这是明确的兼容限制，需补齐命名空间元数据与数据库验证后再扩展。Quoted identifiers保留大小写，已覆盖基础PostgreSQL/MySQL/SQLite解析回归，不等于三库在线验收。
+
+畸形/空候选响应按调用隔离，存在有效文本候选时保留它；全部无效仍失败，取消继续传播，不自动重试。第一个有效候选作为primary，其余候选仍不自动执行。ValidateSQLNode异常会写回validation_passed=False和空报告，避免旧上下文的成功状态残留。[阶段11报告](stage-11.md)包含SQLite及三协议CTE/歧义路径验证。

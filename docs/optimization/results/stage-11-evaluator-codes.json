@@ -1,0 +1,100 @@
+{
+  "scope": "Synthetic evaluator self-check; predictions are deliberate fixtures, not model outputs",
+  "real_model_metrics": null,
+  "self_check": {
+    "case_count": 8,
+    "execution_success_rate": 0.25,
+    "result_correct_rate": 0.125,
+    "error_counts": {
+      "MISSING_PREDICTION": 1,
+      "EMPTY_SQL": 1,
+      "SQL_POLICY_REJECTED": 1,
+      "SQL_EXECUTION_ERROR": 1,
+      "RESULT_MISMATCH": 1,
+      "SQL_RESULT_LIMIT": 1,
+      "SQL_TIMEOUT": 1
+    },
+    "details": [
+      {
+        "id": "missing",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "No prediction supplied",
+        "error_code": "MISSING_PREDICTION",
+        "execution_latency_ms": 0.00100000761449337,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "empty",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Prediction must contain non-empty SQL text",
+        "error_code": "EMPTY_SQL",
+        "execution_latency_ms": 0.0016999547369778156,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "policy",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Only one read-only SELECT query is allowed",
+        "error_code": "SQL_POLICY_REJECTED",
+        "execution_latency_ms": 0.11490000179037452,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "execution",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "no such column: missing",
+        "error_code": "SQL_EXECUTION_ERROR",
+        "execution_latency_ms": 0.2832000027410686,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "wrong",
+        "execution_success": true,
+        "result_correct": false,
+        "error": "Executed result differs from gold result",
+        "error_code": "RESULT_MISMATCH",
+        "execution_latency_ms": 0.12169999536126852,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "limit",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Result exceeds evaluation row limit",
+        "error_code": "SQL_RESULT_LIMIT",
+        "execution_latency_ms": 1.305999991018325,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "timeout",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "interrupted",
+        "error_code": "SQL_TIMEOUT",
+        "execution_latency_ms": 50.49049999797717,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "correct",
+        "execution_success": true,
+        "result_correct": true,
+        "error": "",
+        "error_code": null,
+        "execution_latency_ms": 0.16820000018924475,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      }
+    ]
+  }
+}

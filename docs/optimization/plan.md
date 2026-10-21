@@ -74,3 +74,7 @@
 ## 阶段10：Schema Linking边界与可见回退
 
 先行步骤和验收见[stage-10-plan.md](stage-10-plan.md)，结果见[stage-10.md](stage-10.md)。修复一层FK被传递展开、失效检索命中消费和无效匹配回退的已确认问题，建立固定合成边界回归；保持源Schema校验、固定Runner和权限/预算，真实语义质量仍需业务标注与模型环境。
+
+## 阶段11：SQL校验作用域与可解释评测
+
+先行步骤与验收见[stage-11-plan.md](stage-11-plan.md)，结果见[stage-11.md](stage-11.md)。修复实际SQLite复现的作用域误判、统一只读策略、隔离畸形候选响应，并为离线评测增加稳定错误分类和gold资源边界。固定Harness与执行SQL不改写，不将合成校验案例通过率当作模型准确率。

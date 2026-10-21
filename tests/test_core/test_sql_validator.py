@@ -237,8 +237,9 @@ class TestFullPipeline:
         report = await validator.validate(
             "NOT VALID SQL", skip_syntax=True
         )
-        assert report.syntax_ok
-        assert report.passed
+        assert not report.syntax_ok
+        assert not report.passed
+        assert any("READ_ONLY_ERROR" in error for error in report.syntax_errors)
 
     async def test_skip_schema(self, validator, sample_schema):
         report = await validator.validate(

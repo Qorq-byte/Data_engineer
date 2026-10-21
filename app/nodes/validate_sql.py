@@ -64,7 +64,7 @@ class ValidateSQLNode(AgenticNode):
             - ``business_rules``: Optional ``list[BusinessRule]`` for Step 5.
 
         Expected ``input.config`` keys:
-            - ``skip_syntax``: bool (default False)
+            - ``skip_syntax``: bool (default False); never skips the read-only policy.
             - ``skip_schema``: bool (default False)
             - ``skip_types``: bool (default False)
             - ``skip_performance``: bool (default False)
@@ -106,6 +106,7 @@ class ValidateSQLNode(AgenticNode):
                 result={"passed": False, "score": 0.0},
                 errors=[f"Validation failed: {exc}"],
                 metadata={"status": "validation_error"},
+                context={"validation_passed": False, "validation_report": None},
             )
 
         perf_warnings = report.plan_analysis.warnings if report.plan_analysis else []

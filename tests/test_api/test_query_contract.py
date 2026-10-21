@@ -397,3 +397,37 @@ async def test_schema_degradation_warning_reaches_all_protocols(
     assert "synthetic private search exception" not in json.dumps(
         {"json": data, "events": events, "mcp": projected}
     )
+
+
+@pytest.mark.parametrize("sql,accepted", [
+    ("WITH active AS (SELECT id FROM orders) SELECT id FROM active ORDER BY id", True),
+    ("SELECT id FROM orders o JOIN users u ON u.id=o.user_id", False),
+])
+async def test_scoped_validation_drives_all_three_protocols(
+    connected_query, monkeypatch, sql, accepted
+):
+    class ScopedRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            return {"choices": [{"message": {"content": sql}}]}
+
+    monkeypatch.setattr(
+        query, "get_default_router", lambda: ScopedRouter(RouterConfig(), mock_mode=True)
+    )
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+    data = connected_query.post("/api/v1/query", json=body).json()
+    events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+    done = next(value for event, value in events if event == "done")
+    projected = await mcp_query(nl_text="find all orders", db_id="contract")
+    expected = "completed" if accepted else "failed"
+    assert data["status"] == done["status"] == projected["status"] == expected
+    assert data["primary_sql"] == projected["sql"] == sql
+    assert data["validation"]["schema_valid"] is accepted
+    assert done["validation"]["schema_valid"] is accepted
+    if accepted:
+        assert data["execution"]["rows"] == done["execution"]["rows"] == projected["rows"]
+        assert projected["rows"] == [[1], [2], [3], [4], [5]]
+    else:
+        assert data["execution"] is done["execution"] is None
+        assert projected["rows"] == []
+        assert projected["error_code"] == "WORKFLOW_FAILED"

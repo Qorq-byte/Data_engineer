@@ -1,0 +1,301 @@
+{
+  "dataset": "sql-validation-boundary-v1",
+  "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run",
+  "python": "3.13.9",
+  "sqlglot": "30.18.0",
+  "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9",
+  "case_count": 18,
+  "passed": 18,
+  "details": [
+    {
+      "id": "simple",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "cte",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "derived",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "output-alias",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "shadowed-alias",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "correlated",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "cte-column-alias",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "star-derived",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "main-namespace",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": true,
+      "expected": true,
+      "syntax_errors": [],
+      "schema_errors": [],
+      "reference_execution_success": true,
+      "reference_error_code": null
+    },
+    {
+      "id": "out-of-scope",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Column 'email' could not be resolved. Line: 1, Col: 12"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "ambiguous",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Column 'id' could not be resolved. Line: 1, Col: 9"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "missing-table",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'ghosts' not found in schema"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "alias-masks-missing",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Table 'ghosts' not found in schema"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "wrong-namespace",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Qualified table namespace is not represented in source schema"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "derived-column-missing",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [],
+      "schema_errors": [
+        "SCHEMA_ERROR: Unknown column: missing"
+      ],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_EXECUTION_ERROR"
+    },
+    {
+      "id": "unsafe-function",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [
+        "READ_ONLY_ERROR: Side-effect and external functions are forbidden"
+      ],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_POLICY_REJECTED"
+    },
+    {
+      "id": "select-into",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [
+        "READ_ONLY_ERROR: Write operations, locks and side effects are forbidden"
+      ],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_POLICY_REJECTED"
+    },
+    {
+      "id": "multiple",
+      "passed": true,
+      "checks": {
+        "decision": true,
+        "reference": true,
+        "policy_rejected": true
+      },
+      "validator_accepted": false,
+      "expected": false,
+      "syntax_errors": [
+        "READ_ONLY_ERROR: Expected one SELECT query"
+      ],
+      "schema_errors": [],
+      "reference_execution_success": false,
+      "reference_error_code": "SQL_POLICY_REJECTED"
+    }
+  ],
+  "model_accuracy": null,
+  "llm_or_embedding_calls": 0
+}

@@ -575,7 +575,7 @@ pytest --cov=app --cov-report=html
 ruff check .
 
 # 类型检查
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py  # strict核心门禁，默认导入追踪
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py  # strict核心门禁，默认导入追踪
 mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
@@ -601,14 +601,16 @@ npm ci --ignore-scripts
 npm run check:frontend
 LITELLM_LOCAL_MODEL_COST_MAP=True RAG_EMBEDDING_PROVIDER=mock pytest
 ruff check .
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py  # strict核心门禁，默认导入追踪
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py  # strict核心门禁，默认导入追踪
 mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
-PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。
+PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。
 
 阶段8进一步将生成/执行节点与预算适配器纳入上述strict门禁，保持默认导入追踪。全仓诊断230→201仍未通过，实施、验证和限制见[阶段8报告](docs/optimization/stage-8.md)。
 
 阶段9统一JSON/SSE的QueryResponse校验与JSON序列化，MCP nl_query新增状态、错误码和查询标识；截止/容量/内部错误分类共享，业务失败语义保留。全仓类型仍201项，详见[查询契约](docs/optimization/query-contract.md)和[阶段9报告](docs/optimization/stage-9.md)。
 
 阶段10将Schema Linking的FK扩展明确为源候选双向一跳，校验检索命中的库/表/列，并将无效匹配/异常回退警告传到JSON/SSE/MCP。合成边界评测与兼容取舍见[阶段10报告](docs/optimization/stage-10.md)；该评测不代表真实业务准确率。
+
+阶段11采用已验证的SQLGlot30.18.0（依赖锁定）做私有AST作用域校验，复用强制只读策略，改进候选响应隔离与SQL评测错误分类。兼容范围、skip_syntax收窄、命名空间限制和实测见[阶段11报告](docs/optimization/stage-11.md)。

@@ -16,15 +16,17 @@ Steps 3–5 contribute warnings that reduce the score without blocking.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, TypedDict
 
 import sqlglot
 from sqlglot import exp
 from sqlglot.errors import ErrorLevel, ParseError
 
+from app.core.schema_validation import check_schema_references
 from app.knowledge.rule_engine import _match_pattern
 from app.models.query import PlanAnalysis, ValidationReport
 from app.models.schema import ColumnSchema, SchemaSnapshot
+from app.security.sql_policy import require_read_query
 
 # sqlglot-recognised dialect names (lowercase keys)
 _SQLGLOT_DIALECTS: set[str] = {d.name.lower() for d in sqlglot.Dialects if d.name != "DIALECT"}
@@ -40,7 +42,11 @@ def _read_dialect(dialect: str) -> str | None:
     return None
 
 
-def _read_kwargs(dialect: str = "") -> dict:
+class _ReadKwargs(TypedDict, total=False):
+    read: str
+
+
+def _read_kwargs(dialect: str = "") -> _ReadKwargs:
     """Get ``read`` kwarg dict for sqlglot, or empty dict."""
     d = _read_dialect(dialect)
     return {"read": d} if d else {}
@@ -85,7 +91,7 @@ class SQLValidator:
             business_rules: Business rules for Step 5 (legacy positional alias).
             rules: Business rules for Step 5; takes precedence over
                 ``business_rules`` when both are given.
-            skip_syntax: Skip syntax parsing (Step 1).
+            skip_syntax: Skip detailed syntax diagnostics; read-only policy remains mandatory.
             skip_schema: Skip schema reference check (Step 2).
             skip_types: Skip type compatibility check (Step 3).
             skip_performance: Skip performance analysis (Step 4).
@@ -105,8 +111,14 @@ class SQLValidator:
         # Step 1 — Syntax
         if not skip_syntax:
             syntax_ok, syntax_errors = self._check_syntax(sql)
-            if syntax_errors:
-                warnings.extend(syntax_errors)
+        # The read-only policy is mandatory even when detailed syntax checking is skipped.
+        if syntax_ok:
+            try:
+                require_read_query(sql, _read_dialect(self.dialect) or "")
+            except ValueError as exc:
+                syntax_ok = False
+                syntax_errors.append(f"READ_ONLY_ERROR: {exc}")
+        warnings.extend(syntax_errors)
 
         # Step 2 — Schema references
         if not skip_schema and schema is not None:
@@ -205,59 +217,7 @@ class SQLValidator:
 
     def _check_schema_refs(self, sql: str, schema: SchemaSnapshot) -> tuple[bool, list[str]]:
         """Extract table and column references, validate against schema."""
-        errors: list[str] = []
-        aliases = self._extract_table_aliases(sql)
-
-        # Extract table names from SQL AST
-        tables = self._extract_table_names(sql)
-        for table in tables:
-            if table not in schema.tables and table not in aliases:
-                errors.append(f"SCHEMA_ERROR: Table '{table}' not found in schema")
-
-        # Extract column references
-        columns = self._extract_column_refs(sql)
-
-        # For single-table queries, restrict column search to the FROM table
-        from_tables = [t for t in tables if t in schema.tables]
-        single_table_mode = len(from_tables) == 1
-
-        for col_ref in columns:
-            if "." in col_ref:
-                parts = col_ref.split(".", 1)
-                prefix, col_name = parts[0], parts[1]
-                # Resolve alias to actual table name
-                actual_table = aliases.get(prefix, prefix)
-                tbl = schema.get_table(actual_table)
-                if tbl is None:
-                    errors.append(
-                        f"SCHEMA_ERROR: Table '{actual_table}' not found "
-                        f"(referenced by column '{col_ref}')"
-                    )
-                elif col_name != "*" and tbl.get_column(col_name) is None:
-                    errors.append(
-                        f"SCHEMA_ERROR: Column '{col_name}' not found in table '{actual_table}'"
-                    )
-            else:
-                # Unqualified column — search across tables
-                if single_table_mode:
-                    # Single-table query: column MUST exist in the FROM table
-                    tbl = schema.get_table(from_tables[0])
-                    if tbl is not None and col_ref != "*" and tbl.get_column(col_ref) is None:
-                        errors.append(
-                            f"SCHEMA_ERROR: Column '{col_ref}' not found in "
-                            f"table '{from_tables[0]}'"
-                        )
-                else:
-                    # Multi-table or no-table query: search across all tables
-                    found = False
-                    for t in schema.tables.values():
-                        if t.get_column(col_ref) is not None:
-                            found = True
-                            break
-                    if not found and col_ref != "*":
-                        errors.append(f"SCHEMA_ERROR: Column '{col_ref}' not found in any table")
-
-        return len(errors) == 0, errors
+        return check_schema_references(sql, schema, _read_dialect(self.dialect))
 
     def _extract_table_aliases(self, sql: str) -> dict[str, str]:
         """Build a mapping of alias → real table name from the AST.

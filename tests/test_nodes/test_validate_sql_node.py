@@ -138,8 +138,11 @@ class TestExecuteWithConfig:
                 config={"skip_syntax": True},
             )
         )
-        assert output.result["syntax_ok"] is True
-        assert output.result["passed"] is True
+        assert output.result["syntax_ok"] is False
+        assert output.result["passed"] is False
+        assert output.context["validation_passed"] is False
+        assert any("READ_ONLY_ERROR" in error
+                   for error in output.context["validation_report"].syntax_errors)
 
     async def test_custom_dialect(self, node, sample_schema):
         output = await node.execute(
