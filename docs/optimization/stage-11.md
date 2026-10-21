@@ -47,4 +47,8 @@ Windows/Python3.13.9、Node24；SQLGlot30.18.0、Ruff0.17.1、mypy2.4.0目标Pyt
 
 ## Git与远程验收
 
-本地验收完成；提交、普通推送和对应Linux CI按实际结果补记。远程未完成前不声明阶段远程验收通过。
+代码提交[73a1abca9204f12258a4143cdc349ce9dd0a2464](https://github.com/Qorq-byte/Data_engineer/commit/73a1abca9204f12258a4143cdc349ce9dd0a2464)已普通推送，ls-remote核对一致；未合并main、未强推。
+
+[Actions39615227900](https://github.com/Qorq-byte/Data_engineer/actions/runs/39615227900) **success**：Linux/Python3.12锁定依赖干净安装、前端编译、全仓Ruff、扩展strict门禁均通过（30源文件无错误）；全量 **3076 passed，1 warning，33.68秒**，uvloop实际执行通过，补足Windows跳过项。[远程证据](results/stage-11-ci.json)保存对应headSha和各步骤。
+
+阶段11代码远程验收完成。CI只执行所列类型门禁，不代表全仓197项已解决，也不包含真实模型/外部数据库质量评测；后续文档补记只记录上述已验证结果。
