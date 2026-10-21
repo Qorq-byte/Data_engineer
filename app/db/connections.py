@@ -193,6 +193,11 @@ class ConnectionFactory:
         return info
 
     @classmethod
+    def is_current(cls, db_id: str, connection: object) -> bool:
+        """Compare identity without reconnecting or handing out a replacement."""
+        return cls._connections.get(db_id) is connection
+
+    @classmethod
     def list_all(cls) -> list[ConnectionInfo]:
         """List all active connections."""
         return list(cls._infos.values())

@@ -7,6 +7,7 @@ import pytest
 
 from app.api import create_app, query
 from app.db.connections import ConnectionFactory, DatabaseType
+from app.db.schema_extractor import SchemaExtractor
 from app.llm.router import LiteLLMRouter, RouterConfig
 from tests.api_client import authenticated_client
 
@@ -26,6 +27,56 @@ async def connected_query(test_sqlite_db, monkeypatch):
     )
     yield authenticated_client(create_app())
     ConnectionFactory.close("contract")
+
+
+@pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+async def test_connection_replacement_never_executes_old_schema_on_new_database(
+    connected_query, monkeypatch, protocol,
+):
+    original_extract = SchemaExtractor.cached_extract
+    replaced = False
+
+    async def replace_after_extract(cls, connection, *args, **kwargs):
+        nonlocal replaced
+        snapshot = await original_extract(connection, *args, **kwargs)
+        if not replaced:
+            replaced = True
+            new = await ConnectionFactory.create(DatabaseType.SQLITE, {}, "contract")
+            new.execute("CREATE TABLE orders (id INTEGER)")
+            new.execute("INSERT INTO orders VALUES (999)")
+        return snapshot
+
+    monkeypatch.setattr(SchemaExtractor, "cached_extract", classmethod(replace_after_extract))
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+
+    async def request():
+        if protocol == "mcp":
+            return await mcp_query(nl_text="find all orders", db_id="contract")
+        if protocol == "sse":
+            events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+            if first:
+                assert not any(event == "execution" for event, _ in events)
+            return next(value for event, value in events if event == "done")
+        response = connected_query.post("/api/v1/query", json=body)
+        assert response.status_code == 200
+        return response.json()
+
+    first = True
+    failed = await request()
+    assert failed["status"] == "failed", failed
+    assert "Connection target changed" in str(failed)
+    if protocol == "mcp":
+        assert failed["rows"] == []
+        assert failed["error_code"] == "WORKFLOW_FAILED"
+    else:
+        assert failed["execution"] is None
+    # A new request may explicitly use the replacement; the old one cannot migrate.
+    first = False
+    current = await request()
+    assert current["status"] == "completed", current
+    execution = current if protocol == "mcp" else current["execution"]
+    assert execution["rows"] == [[999]]
 
 
 async def test_json_sse_result_and_session_match(connected_query):

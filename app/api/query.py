@@ -21,7 +21,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import AliasChoices, BaseModel, Field
 
 from app.db.connections import ConnectionFactory
-from app.db.schema_extractor import SchemaExtractor
+from app.db.query_targets import resolve_query_targets
 from app.llm.factory import get_default_router
 from app.models.query import SQLCandidate
 from app.models.schema import SchemaSnapshot
@@ -61,107 +61,20 @@ def _validate_model(model: str | None) -> None:
 
 
 async def _resolve_schema(database: str, warnings: list[str]) -> SchemaSnapshot | None:
-    """Resolve a SchemaSnapshot from a connected database.
-
-    Strategy:
-    1. If *database* is specified and non-empty, look up that exact db_id.
-    2. Otherwise, pick the first available connection from the registry.
-    3. Extract schema via ``SchemaExtractor.extract()``.
-
-    Returns ``None`` when no connection is available and adds a warning.
-    """
-    conn = None
-    info = None
-    db_id = database.strip() if database else ""
-
-    # ── Resolve connection ────────────────────────────────────────
-    if db_id:
-        try:
-            conn = ConnectionFactory.get(db_id)
-            info = ConnectionFactory.get_info(db_id)
-        except KeyError:
-            available = [c.db_id for c in ConnectionFactory.list_all()]
-            warnings.append(
-                f"Database '{db_id}' not found. "
-                f"Available: {available or 'none (connect via POST /api/v1/databases/connect)'}"
-            )
-            return None
-    else:
-        # Auto-select first available connection
-        all_conns = ConnectionFactory.list_all()
-        if not all_conns:
-            warnings.append(
-                "No database connected. "
-                "Connect first via POST /api/v1/databases/connect, "
-                "then pass 'database' in the query request."
-            )
-            return None
-        db_id = all_conns[0].db_id
-        try:
-            conn = ConnectionFactory.get(db_id)
-            info = ConnectionFactory.get_info(db_id)
-        except KeyError:
-            warnings.append(f"Auto-selected database '{db_id}' disappeared.")
-            return None
-
-    # ── Extract schema ────────────────────────────────────────────
-    try:
-        snapshot = await SchemaExtractor.cached_extract(conn, info.db_type, info.database_name)
-        return snapshot
-    except NotImplementedError:
-        warnings.append(
-            f"Schema extraction for '{info.db_type.value}' is not yet implemented. "
-            "Supported: sqlite, duckdb, postgresql."
-        )
-        return None
-    except Exception as e:
-        warnings.append(f"Schema extraction failed for '{db_id}': {e}")
-        return None
+    """Legacy schema-only projection; empty database selects the first target."""
+    targets = await resolve_query_targets(database, warnings, first_only=True)
+    return next((target.schema for target in targets.values()), None)
 
 
 async def _resolve_all_schemas(
     database: str, warnings: list[str]
 ) -> dict[str, tuple[SchemaSnapshot, str, str]]:
-    """Resolve SchemaSnapshots from ALL connected databases.
-
-    Returns a dict mapping db_id → (schema_snapshot, database_name, db_type).
-    When *database* is specified, only that database is resolved.
-    When *database* is empty, ALL connected databases are resolved.
-    """
-    result: dict[str, tuple[SchemaSnapshot, str, str]] = {}
-
-    db_id = database.strip() if database else ""
-    if db_id:
-        # Single database mode
-        snapshot = await _resolve_schema(database, warnings)
-        if snapshot is not None:
-            try:
-                info = ConnectionFactory.get_info(db_id)
-                result[db_id] = (snapshot, info.database_name, info.db_type.value)
-            except KeyError:
-                pass
-        return result
-
-    # Multi-database mode: resolve all (deduplicated by database_name)
-    all_conns = ConnectionFactory.list_all()
-    if not all_conns:
-        warnings.append("No database connected. Connect first via POST /api/v1/databases/connect.")
-        return result
-
-    for info in all_conns:
-        try:
-            conn = ConnectionFactory.get(info.db_id)
-            snapshot = await SchemaExtractor.cached_extract(conn, info.db_type, info.database_name)
-            result[info.db_id] = (snapshot, info.database_name, info.db_type.value)
-        except NotImplementedError:
-            warnings.append(
-                f"Schema extraction for '{info.db_type.value}' is not yet implemented "
-                f"(db: {info.db_id}). Skipping."
-            )
-        except Exception as e:
-            warnings.append(f"Schema extraction failed for '{info.db_id}': {e}")
-
-    return result
+    """Legacy projection keyed by db_id; query execution uses full pinned targets."""
+    targets = await resolve_query_targets(database, warnings)
+    return {
+        db_id: (target.schema, target.database_name, target.dialect)
+        for db_id, target in targets.items()
+    }
 
 
 # ── Metadata query detection ──────────────────────────────────────────
@@ -464,7 +377,7 @@ async def execute_sql_direct(body: ExecuteRequest) -> dict:
         exec_output = await exec_node.execute(
             NodeInput(
                 query_text=body.sql,
-                context={"sql": body.sql, "connection": conn},
+                context={"sql": body.sql, "connection": conn, "db_id": db_id},
                 config={"max_rows": body.max_rows},
             )
         )

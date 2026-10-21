@@ -39,3 +39,7 @@ MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败�
 表字典仍以简单表名为键，不支持跨schema同名表集合、跨catalog联查授权或完整search_path解析。内省明确固定namespace，但未限定SQL仍按数据库会话的search_path/临时表/当前catalog解析；快照校验不是数据库权限边界。应用连接须固定到所内省的环境，改连接目标后刷新Schema和RAG；不可在共享连接任意切换USE/search_path。原生只读及权限守卫继续生效，不等于对象级授权已实现。Schema管理GET接口的现有投影未扩展，这些元数据用于内部生成/验证/索引。
 
 畸形/空候选响应按调用隔离，存在有效文本候选时保留它；全部无效仍失败，取消继续传播，不自动重试。第一个有效候选作为primary，其余候选仍不自动执行。ValidateSQLNode异常会写回validation_passed=False和空报告，避免旧上下文的成功状态残留。[阶段11报告](stage-11.md)包含SQLite及三协议CTE/歧义路径验证。
+
+阶段13将Schema、database_name、dialect和原生句柄一起解析为ResolvedQueryTarget；JSON/SSE/MCP共享服务不再在Runner开始前按db_id重新获取连接。执行节点持有现有连接lease后确认注册表中的同db_id仍指向原句柄；若已重连或断开，输出connection_changed和固定提示“Connection target changed”，没有execution结果，不自动切到新库。JSON仍HTTP200/status=failed，SSE产生WORKFLOW_FAILED/error并以failed done结束且没有execution事件，MCP保留WORKFLOW_FAILED和空rows；不是新增HTTP基础设施错误码。用户可明确发起新查询使用新目标，旧请求不自动重试。
+
+直接SQL API也将db_id传给执行守卫；调用者自管、未提供db_id的原生连接保留既有行为。_resolve_schema/_resolve_all_schemas内部兼容投影保留旧返回结构和首库/全部库选择规则，但不应用于有执行能力的来源绑定。未知连接/内省失败warning改为固定类别文本，避免公开原始驱动异常；未新增公开异常详情字段。单句柄上的USE/search_path/temp DDL及外部DDL导致的Schema漂移仍属已知限制，详见[阶段13报告](stage-13.md)。

@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from app.db.connections import ConnectionFactory
+from app.db.query_targets import resolve_query_targets
 from app.harness.config_loader import ConfigLoader
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
 from app.harness.events import NodeEvent, NodeEventStatus
@@ -71,7 +71,7 @@ async def _run_query(
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
-    from app.api.query import _detect_metadata_query, _get_or_create_session, _resolve_all_schemas
+    from app.api.query import _detect_metadata_query, _get_or_create_session
     from app.api.workflows import record_trace
     from app.storage.mysql_store import get_store
 
@@ -101,7 +101,13 @@ async def _run_query(
     domain = _domain_manager.get(body.domain) if body.domain else None
     if body.domain not in {"", "default"} and domain is None:
         warnings.append(f"Domain '{body.domain}' not found")
-    schemas = await _resolve_all_schemas(body.database, warnings) if body.link_schema else {}
+    resolved_targets = (
+        await resolve_query_targets(body.database, warnings) if body.link_schema else {}
+    )
+    schemas = {
+        db_id: (target.schema, target.database_name, target.dialect)
+        for db_id, target in resolved_targets.items()
+    }
     if not schemas:
         warnings.append("No connected schema; generated SQL is not an executed database answer")
     source = "database" if schemas else ("domain" if domain else "llm_auto")
@@ -253,7 +259,7 @@ async def _run_query(
                 schema=schema,
                 domain=domain,
                 history=history,
-                connection=ConnectionFactory.get(db_id) if db_id else None,
+                connection=resolved_targets[db_id].connection if db_id else None,
                 db_id=db_id,
                 require_validation=body.execute,
                 business_rules=domain.rules if domain else [],

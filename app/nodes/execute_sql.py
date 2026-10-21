@@ -80,6 +80,16 @@ class ExecuteSQLNode(AgenticNode):
         if conn is None:
             return await self._execute_locked(input)
         async with lease(conn):
+            from app.db.connections import ConnectionFactory
+
+            db_id = input.context.get("db_id")
+            if db_id and not ConnectionFactory.is_current(db_id, conn):
+                return NodeOutput(
+                    errors=[
+                        "Connection target changed; submit a new query against the current target"
+                    ],
+                    metadata={"status": "connection_changed"},
+                )
             return await self._execute_locked(input)
 
     async def _execute_locked(self, input: NodeInput) -> NodeOutput:
