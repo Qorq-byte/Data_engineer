@@ -363,3 +363,37 @@ async def test_json_and_sse_share_serialization_for_native_cell_values(
     assert "internal_only" not in data
     projected = await mcp_query(nl_text="serialization fixture")
     assert projected["rows"] == data["execution"]["rows"]
+
+
+@pytest.mark.parametrize("backend_failure", [False, True])
+async def test_schema_degradation_warning_reaches_all_protocols(
+    connected_query, monkeypatch, backend_failure
+):
+    from app.rag import engine
+
+    async def search(*args, **kwargs):
+        if backend_failure:
+            raise RuntimeError("synthetic private search exception")
+        return []
+
+    monkeypatch.setattr(
+        engine, "get_schema_rag", lambda: SimpleNamespace(find_relevant_tables=search)
+    )
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+    data = connected_query.post("/api/v1/query", json=body).json()
+    expected = "SCHEMA_RAG_UNAVAILABLE" if backend_failure else "SCHEMA_LINKING_FALLBACK"
+    assert data["status"] == "completed"
+    assert data["execution"]["row_count"] == 5
+    assert any(warning.startswith(expected) for warning in data["warnings"])
+    events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+    schema_event = next(value for event, value in events if event == "schema")
+    done = next(value for event, value in events if event == "done")
+    assert any(warning.startswith(expected) for warning in schema_event["warnings"])
+    assert any(warning.startswith(expected) for warning in done["warnings"])
+    projected = await mcp_query(nl_text="find all orders", db_id="contract")
+    assert projected["status"] == "completed"
+    assert any(warning.startswith(expected) for warning in projected["warnings"])
+    assert "synthetic private search exception" not in json.dumps(
+        {"json": data, "events": events, "mcp": projected}
+    )

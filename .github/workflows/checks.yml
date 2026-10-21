@@ -21,5 +21,5 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check:frontend
       - run: ruff check .
-      - run: mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py
+      - run: mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py
       - run: pytest

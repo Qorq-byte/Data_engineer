@@ -1,0 +1,32 @@
+{
+  "baseline": "stage-9-after.jsonl at 055c265",
+  "before": {
+    "errors": 201,
+    "files": 43
+  },
+  "after": {
+    "errors": 198,
+    "files": 42,
+    "by_code": {
+      "no-any-return": 11,
+      "type-arg": 114,
+      "import-untyped": 3,
+      "unused-ignore": 2,
+      "assignment": 7,
+      "arg-type": 10,
+      "no-untyped-def": 10,
+      "misc": 4,
+      "import-not-found": 1,
+      "union-attr": 6,
+      "call-arg": 6,
+      "attr-defined": 9,
+      "no-untyped-call": 4,
+      "no-redef": 1,
+      "untyped-decorator": 9,
+      "operator": 1
+    }
+  },
+  "strict_gate_errors": 0,
+  "new_diagnostic_fingerprints": [],
+  "full_repository_passed": false
+}

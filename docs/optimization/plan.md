@@ -70,3 +70,7 @@
 ## 阶段9：跨协议查询契约
 
 先行计划见[stage-9-plan.md](stage-9-plan.md)，实施记录见[stage-9.md](stage-9.md)。统一JSON/SSE响应校验、基础设施错误分类与MCP状态投影；优先防止调用方错误识别成功/失败，保留业务失败HTTP200及既有执行不变量。完整API/RAG类型债务继续单列，不扩成一次重构。
+
+## 阶段10：Schema Linking边界与可见回退
+
+先行步骤和验收见[stage-10-plan.md](stage-10-plan.md)，结果见[stage-10.md](stage-10.md)。修复一层FK被传递展开、失效检索命中消费和无效匹配回退的已确认问题，建立固定合成边界回归；保持源Schema校验、固定Runner和权限/预算，真实语义质量仍需业务标注与模型环境。

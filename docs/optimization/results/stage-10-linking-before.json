@@ -1,0 +1,338 @@
+{
+  "dataset": "schema-linking-boundary-v1",
+  "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality",
+  "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c",
+  "case_count": 12,
+  "passed": 2,
+  "details": [
+    {
+      "id": "direct-users",
+      "tables": [
+        "users",
+        "missing_table",
+        "order_items",
+        "orders",
+        "products",
+        "suppliers"
+      ],
+      "expected": [
+        "users",
+        "orders"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "table": "users",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": false,
+        "warning_visible": true
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "direct-orders",
+      "tables": [
+        "orders",
+        "missing_table",
+        "order_items",
+        "products",
+        "suppliers",
+        "users"
+      ],
+      "expected": [
+        "orders",
+        "users",
+        "order_items"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "table": "orders",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": false,
+        "warning_visible": true
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "two-seeds",
+      "tables": [
+        "users",
+        "products",
+        "missing_table",
+        "order_items",
+        "orders",
+        "suppliers"
+      ],
+      "expected": [
+        "users",
+        "products",
+        "orders",
+        "order_items",
+        "suppliers"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "table": "users",
+          "confidence": 0.8,
+          "candidates": null
+        },
+        {
+          "name": "id",
+          "table": "products",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": false,
+        "warning_visible": true
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "cycle",
+      "tables": [
+        "products",
+        "missing_table",
+        "order_items",
+        "orders",
+        "suppliers",
+        "users"
+      ],
+      "expected": [
+        "products",
+        "order_items",
+        "suppliers"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "table": "products",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": false,
+        "warning_visible": true
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "disabled-fk",
+      "tables": [
+        "orders"
+      ],
+      "expected": [
+        "orders"
+      ],
+      "columns": [
+        {
+          "name": "id",
+          "table": "orders",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": true,
+        "columns_valid": true,
+        "only_source_tables": true,
+        "warning_visible": true
+      },
+      "passed": true,
+      "detailed_schema_columns": 3
+    },
+    {
+      "id": "wrong-db",
+      "tables": [
+        "users",
+        "missing_table",
+        "order_items",
+        "orders",
+        "products",
+        "suppliers"
+      ],
+      "expected": [],
+      "columns": [
+        {
+          "name": "id",
+          "table": "users",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": false,
+        "warning_visible": false
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "unknown-table",
+      "tables": [],
+      "expected": [],
+      "columns": [
+        {
+          "name": "id",
+          "table": "deleted_table",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": true,
+        "columns_valid": false,
+        "only_source_tables": true,
+        "warning_visible": false
+      },
+      "passed": false,
+      "detailed_schema_columns": 0
+    },
+    {
+      "id": "stale-column",
+      "tables": [
+        "orders",
+        "missing_table",
+        "order_items",
+        "products",
+        "suppliers",
+        "users"
+      ],
+      "expected": [],
+      "columns": [
+        {
+          "name": "removed_column",
+          "table": "orders",
+          "confidence": 0.8,
+          "candidates": null
+        }
+      ],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": false,
+        "only_source_tables": false,
+        "warning_visible": false
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "empty-chinese-fallback",
+      "tables": [],
+      "expected": [
+        "users",
+        "orders",
+        "order_items"
+      ],
+      "columns": [],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": true,
+        "warning_visible": false
+      },
+      "passed": false,
+      "detailed_schema_columns": 0
+    },
+    {
+      "id": "error-chinese-fallback",
+      "tables": [],
+      "expected": [
+        "users",
+        "orders",
+        "order_items"
+      ],
+      "columns": [],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": true,
+        "warning_visible": false
+      },
+      "passed": false,
+      "detailed_schema_columns": 0
+    },
+    {
+      "id": "keyword-no-rag",
+      "tables": [
+        "order_items",
+        "suppliers",
+        "products",
+        "missing_table",
+        "orders",
+        "users"
+      ],
+      "expected": [
+        "users",
+        "orders"
+      ],
+      "columns": [],
+      "warnings": [],
+      "checks": {
+        "table_set": false,
+        "columns_valid": true,
+        "only_source_tables": false,
+        "warning_visible": true
+      },
+      "passed": false,
+      "detailed_schema_columns": 12
+    },
+    {
+      "id": "table-level",
+      "tables": [
+        "audit"
+      ],
+      "expected": [
+        "audit"
+      ],
+      "columns": [],
+      "warnings": [],
+      "checks": {
+        "table_set": true,
+        "columns_valid": true,
+        "only_source_tables": true,
+        "warning_visible": true
+      },
+      "passed": true,
+      "detailed_schema_columns": 2
+    }
+  ],
+  "llm_or_embedding_calls": 0,
+  "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."
+}

@@ -31,3 +31,15 @@ Schema 刷新响应增加 rag_indexed 与 warnings：Schema 内省成功不能�
 ## 真实质量评测前置条件
 
 先收集至少 100–200 个脱敏真实业务问题，由业务人员标注相关 Schema/术语/文档、可接受 SQL 与结果。按库/领域隔离训练和评测，覆盖同义词、歧义、长正文、跨表 JOIN、聚合、空结果、权限边界、不同方言与 Schema 变更；固定数据快照和模型/索引版本。先测 BM25、dense、RRF，再决定是否增加重排；在同一数据上比较 Recall/Precision@5/10、MRR/NDCG、端到端执行与结果正确率、P50/P95 延迟、token/费用。错误按召回缺失、Schema Linking、生成、校验误判、执行环境分类，避免只优化执行成功率。
+
+## 阶段10：源Schema边界与功能回归
+
+两条Schema Linking路径共用`knowledge/schema_graph.py:expand_foreign_keys`：保留有效直接候选的顺序、去重，再按名称追加原始候选的双向一跳邻居；新邻居不会继续扩展，缺失FK目标不制造表。列匹配所属表也作为直接候选。过去代码遍历整个连通分量，现按明确的一跳契约收窄；多跳JOIN未直接命中的远端表可能缺少列详情，需要真实问题评测，不能宣称统一改善所有JOIN查询。
+
+`SchemaRetriever`在消费边界再次核对命中db_id（调用者指定时）、当前Schema中的表和列，过滤过期/跨库结果，不将它们保留在search_results或linked_columns；这不能替代授权或索引前置过滤。db_id未指定的独立调用没有新增数据库授权边界。源Schema不完整时可能牺牲召回，应先刷新Schema。未候选表在retriever路径仍保留已有名称/注释stub，不宣称完全去除所有无关上下文。
+
+检索异常产生SCHEMA_RAG_UNAVAILABLE，失效命中产生SCHEMA_RAG_HITS_REJECTED。合并RAG/术语/关键词后仍无关联，或检索器自身异常时，节点使用原有中文/关键词匹配，产生SCHEMA_LINKING_FALLBACK。诊断在节点result/metadata/context可见，统一服务汇总至最终warnings；不暴露原异常或跨库命中内容。取消继续传播，不回退成成功。现有confidence仍为启发式分数，非校准概率。
+
+复跑功能边界：`python -m scripts.evaluate_schema_linking --output linking.json`。`tests/fixtures/schema_linking_eval.json`含6个合成表、12个固定案例，覆盖多起点/环/缺失引用、库/表/列失效、空/异常检索和中文回退；通过真实retriever/node消费明确注入的检索fixture。输出逐项检查、表/列与详细Schema规模、规范化JSON的dataset_sha256；任一案例不通过退出1。这是功能回归，无真实检索排名、模型或embedding调用，不报告语义Recall/SQL准确率。
+
+同一标注集在阶段9原实现为2/12，修复后12/12；直接命中users的合成例详细列12→5。中文案例因orders.user_id也是直接列匹配，标签明确包含其一跳order_items；修订标签后已用原实现重放基线，前后数据哈希一致。原FTS5/BM25小集阶段10重跑指标与阶段3相同，不能据此声称提高业务检索质量或容量。逐项结果和验证限制见[阶段10报告](stage-10.md)。

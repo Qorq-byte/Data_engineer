@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.knowledge.schema_graph import expand_foreign_keys as _expand_foreign_keys
 from app.models.query import SQR
 from app.models.schema import SchemaSnapshot
 from app.nodes.agentic import AgenticNode
@@ -287,6 +288,8 @@ class SchemaLinkingNode(AgenticNode):
                 context={"linked_tables": [], "linked_columns": [], "linked_schema": None},
             )
 
+        linking_warnings: list[str] = []
+
         # ── Phase 3: RAG-powered 5-step retrieval ──────────────────
         if self._retriever is not None:
             try:
@@ -300,37 +303,46 @@ class SchemaLinkingNode(AgenticNode):
                     match_threshold=match_threshold,
                     language=language,
                 )
-                linked_schema = result.filtered_schema
-                resolved_columns: list[dict[str, Any]] = [
-                    {
-                        "name": c.name,
-                        "table": c.table,
-                        "confidence": c.confidence,
-                        "candidates": c.candidates,
-                    }
-                    for c in result.columns
-                ]
-                return NodeOutput(
-                    result={
-                        "tables": result.tables,
-                        "columns": resolved_columns,
-                        "confidence": result.confidence,
-                    },
-                    metadata={
-                        "status": "success",
-                        "tables_linked": len(result.tables),
-                        "columns_linked": len(resolved_columns),
-                        "method": result.method,
-                    },
-                    context={
-                        "linked_tables": result.tables,
-                        "linked_columns": resolved_columns,
-                        "linked_schema": linked_schema,
-                    },
+                linking_warnings.extend(result.warnings)
+                if result.tables or result.columns:
+                    linked_schema = result.filtered_schema
+                    resolved_columns: list[dict[str, Any]] = [
+                        {
+                            "name": c.name,
+                            "table": c.table,
+                            "confidence": c.confidence,
+                            "candidates": c.candidates,
+                        }
+                        for c in result.columns
+                    ]
+                    return NodeOutput(
+                        result={
+                            "tables": result.tables,
+                            "columns": resolved_columns,
+                            "confidence": result.confidence,
+                            "warnings": linking_warnings,
+                        },
+                        metadata={
+                            "status": "success",
+                            "tables_linked": len(result.tables),
+                            "columns_linked": len(resolved_columns),
+                            "method": result.method,
+                            "warnings": linking_warnings,
+                        },
+                        context={
+                            "schema_linking_warnings": linking_warnings,
+                            "linked_tables": result.tables,
+                            "linked_columns": resolved_columns,
+                            "linked_schema": linked_schema,
+                        },
+                    )
+                linking_warnings.append(
+                    "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
                 )
             except Exception:
-                # Fall through to keyword matching on error
-                pass
+                linking_warnings.append(
+                    "SCHEMA_LINKING_FALLBACK: retrieval failed; using keyword matching"
+                )
 
         # ── Phase 2: keyword matching + FK expansion ───────────────
         candidates = _gather_candidates(sqr)
@@ -369,9 +381,6 @@ class SchemaLinkingNode(AgenticNode):
                     matched_tables.append(t)
                     existing_tbls_2.add(t)
 
-        if fk_expand:
-            matched_tables = _expand_foreign_keys(matched_tables, schema)
-
         # ── Add tables from matched columns to matched_tables ──────
         # When the user asks about a COLUMN (e.g. "查询创建时间"),
         # table-name matching finds 0 tables but column matching finds
@@ -387,6 +396,9 @@ class SchemaLinkingNode(AgenticNode):
                     if t and t not in existing_tbls:
                         matched_tables.append(t)
                         existing_tbls.add(t)
+
+        if fk_expand:
+            matched_tables = _expand_foreign_keys(matched_tables, schema)
 
         resolved_columns = _disambiguate_columns(matched_columns, matched_tables, schema)
         linked_schema = _filter_schema(schema, matched_tables)
@@ -404,15 +416,18 @@ class SchemaLinkingNode(AgenticNode):
                 "tables": matched_tables,
                 "columns": resolved_columns,
                 "confidence": confidence,
+                "warnings": linking_warnings,
             },
             metadata={
                 "status": "success",
                 "tables_linked": len(matched_tables),
                 "columns_linked": len(resolved_columns),
                 "method": "keyword_match",
+                "warnings": linking_warnings,
                 "multi_table_hint": multi_table_hint,
             },
             context={
+                "schema_linking_warnings": linking_warnings,
                 "linked_tables": matched_tables,
                 "linked_columns": resolved_columns,
                 "linked_schema": linked_schema,
@@ -883,38 +898,6 @@ def _direct_keyword_scan(query_text: str, schema: SchemaSnapshot) -> dict[str, l
                         result[col.name].append(t_name)
 
     return result
-
-
-def _expand_foreign_keys(tables: list[str], schema: SchemaSnapshot) -> list[str]:
-    """Expand the table list by 1 level of foreign key references.
-
-    For each table in *tables*, add any tables it references via FK
-    and any tables that reference it.  Iterates until the set stabilises
-    (handles chains like orders → order_items → products).
-    """
-    expanded = set(tables)
-
-    while True:
-        size_before = len(expanded)
-
-        # Forward: tables referenced by FK in current set
-        for t_name in list(expanded):
-            t = schema.get_table(t_name)
-            if t is None:
-                continue
-            for fk in t.foreign_keys:
-                expanded.add(fk.ref_table)
-
-        # Reverse: tables that reference any table in current set
-        for other_name, other_t in schema.tables.items():
-            for fk in other_t.foreign_keys:
-                if fk.ref_table in expanded:
-                    expanded.add(other_name)
-
-        if len(expanded) == size_before:
-            break  # converged
-
-    return list(expanded)
 
 
 # ── Column disambiguation ──────────────────────────────────────────────

@@ -245,12 +245,12 @@ class TestFKExpansion:
         assert "users" in result
         assert "orders" in result
 
-    def test_chain_expansion(self, ecommerce_schema):
-        """orders → users + order_items; order_items → products."""
+    def test_expansion_stops_at_one_hop(self, ecommerce_schema):
+        """orders → users + order_items; products is a second-hop table."""
         result = _expand_foreign_keys(["orders"], ecommerce_schema)
         assert "users" in result
         assert "order_items" in result
-        assert "products" in result  # via order_items → products
+        assert "products" not in result
 
 
 # ═══════════════════════════════════════════════════════════════════════════

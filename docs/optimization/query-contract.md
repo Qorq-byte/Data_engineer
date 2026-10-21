@@ -29,3 +29,5 @@ JSON响应和SSE done均经过QueryResponse校验，status只允许completed/fai
 MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败时的error，新增status、query_id/session_id/plan_id/workflow_ids/llm_calls。只有实际生成响应才保证查询标识存在；请求校验/截止/容量/内部失败可能没有标识。业务失败为status=failed/error_code=WORKFLOW_FAILED，保留SQL供排查，不能据此认为已执行；基础设施失败另有http_status和稳定error_code，容量带retry_after_seconds；无效请求为INVALID_REQUEST/422。error_type为兼容保留的异常类别名称，不含原异常文本。结果仍最多100行。MCP这是工具结果字典的业务状态，未将其改成MCP传输协议的isError机制。
 
 取消属于BaseException传播路径，不转换为上述普通错误；SSE关闭时取消并等待生产任务。实际Runner/权限/预算/校验与只读执行仍共用，未新增节点或重试。阶段9的SQLite端到端、故障注入及FastMCP进程内传输记录见[报告](stage-9.md)；真实外部MCP客户端和真实数据库网络故障需单独验收。
+
+阶段10增加Schema Linking降级诊断：SCHEMA_RAG_UNAVAILABLE（检索失败）、SCHEMA_RAG_HITS_REJECTED（失效库/表/列命中被丢弃）、SCHEMA_LINKING_FALLBACK（没有有效关联或检索器失败，改用现有关键词匹配）。它们是warnings，不代表整个查询失败；SSE的schema事件也包含warnings，最终JSON/SSE done/MCP均保留汇总。只读执行和原Schema SQL校验继续决定执行是否成功。警告不含原始异常文本；关联有效性仍需业务标注评测。

@@ -269,6 +269,9 @@ async def _run_query(
                 errors.append(f"{db_id or source}: {result.error}")
             linked_tables.extend(context.get("linked_tables", []))
             linked_columns.extend(context.get("linked_columns", []))
+            for warning in context.get("schema_linking_warnings", []):
+                if warning not in warnings:
+                    warnings.append(warning)
             candidates = context.get("candidates", [])
             report = context.get("validation_report")
             for candidate in candidates:

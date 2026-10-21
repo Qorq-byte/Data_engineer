@@ -18,7 +18,7 @@ pytest -k "test_execute"              # 按关键字筛选测试
 
 # Lint 与类型检查
 ruff check .                          # lint（行宽 100，py312，规则 E/F/I/N/W/UP/B/C4/SIM）
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py            # strict 核心CI门禁（默认追踪导入）
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py            # strict 核心CI门禁（默认追踪导入）
 mypy app/                             # 全仓严格诊断，仍有已知债务
 ```
 
