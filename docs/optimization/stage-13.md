@@ -33,4 +33,6 @@
 
 ## Git与远程验收
 
-本地验收完成，等待提交、普通推送、远程SHA及LinuxCI核对后补记。
+代码提交[71d49e1030ad046ff0f2e9565cde68eb6d040e18](https://github.com/Qorq-byte/Data_engineer/commit/71d49e1030ad046ff0f2e9565cde68eb6d040e18)已普通推送到codex/mvp-hardening，ls-remote核对SHA一致；未强推或合并main。
+
+[Actions39622481064](https://github.com/Qorq-byte/Data_engineer/actions/runs/39622481064) **success**：Linux/Python3.12干净安装、前端编译、全仓Ruff、扩展strict31源文件门禁通过；全量 **3132 passed，1 warning，35.43秒**，uvloop实际执行通过。[远程证据](results/stage-13-ci.json)保存对应headSha及各步骤。阶段13代码远程验收完成；全仓类型债务和同句柄漂移等限制仍按上述记录保留。
