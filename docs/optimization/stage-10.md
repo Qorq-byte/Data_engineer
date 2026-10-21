@@ -44,4 +44,8 @@ Windows/Python3.13.9、Node24，Ruff0.17.1、mypy2.4.0目标Python3.12；沿用�
 
 ## Git与远程验收
 
-本地验收完成；提交、普通推送及对应Linux CI按实际结果补记。远程未完成前不宣称阶段远程验收通过。
+代码提交[ecaa58f8b7926e47230c46b913947959b2a50da7](https://github.com/Qorq-byte/Data_engineer/commit/ecaa58f8b7926e47230c46b913947959b2a50da7)已普通推送，ls-remote核对一致；未合并main、未强推。
+
+[Actions39562321554](https://github.com/Qorq-byte/Data_engineer/actions/runs/39562321554) **success**：Linux/Python3.12干净安装、前端编译、全仓Ruff、扩展strict门禁均通过（29源文件无错误）；全量 **3020 passed，1 warning，22.77秒**，uvloop实际执行通过，补足Windows跳过项。[远程证据](results/stage-10-ci.json)保存对应headSha与各步骤。
+
+阶段10代码远程验收完成。CI执行所列类型门禁，不代表全仓mypy通过，也不包含真实语义质量评测；后续文档补记只记录上述已验证结果。
