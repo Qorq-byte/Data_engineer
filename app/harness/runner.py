@@ -20,14 +20,17 @@ from typing import Any
 import sqlglot
 
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
+from app.harness.events import NodeEventHandler
 from app.models.workflow import (
     Evaluation,
     MetricResult,
+    NodeDef,
     NodeTrace,
     WorkflowPlan,
     WorkflowResult,
     WorkflowTrace,
 )
+from app.nodes.base import NodeOutput
 from app.nodes.registry import NodeRegistry
 
 
@@ -59,7 +62,7 @@ class WorkflowRunner:
         session_id: str = "",
         *,
         node_configs: dict[str, dict[str, Any]] | None = None,
-        on_node_event: Any = None,
+        on_node_event: NodeEventHandler | None = None,
         reset_constraints: bool = True,
         **kwargs: Any,
     ) -> WorkflowResult:
@@ -84,13 +87,11 @@ class WorkflowRunner:
         session_id: str = "",
         *,
         node_configs: dict[str, dict[str, Any]] | None = None,
-        on_node_event: Any = None,
+        on_node_event: NodeEventHandler | None = None,
         reset_constraints: bool = True,
         **kwargs: Any,
     ) -> WorkflowResult:
         """Execute a fixed plan. Protocol adapters cannot choose the next node."""
-        from app.nodes.base import NodeOutput
-
         if reset_constraints:
             self.constraints.reset()
         self.trace = WorkflowTrace(
@@ -223,7 +224,10 @@ class WorkflowRunner:
                         index += 1
                         continue
                     return await finish(
-                        "failed", trace.error or evaluation.notes or "Node evaluation failed"
+                        "failed",
+                        trace.error
+                        or (evaluation.notes if evaluation is not None else "")
+                        or "Node evaluation failed",
                     )
                 if definition.on_pass == "output" and not evaluation.needs_revision:
                     return await finish("completed")
@@ -250,7 +254,7 @@ class WorkflowRunner:
             await finish("aborted", "Request cancelled")
             raise
 
-    async def evaluate_result(self, node_def: Any, output: Any) -> Evaluation:
+    async def evaluate_result(self, node_def: NodeDef, output: NodeOutput | None) -> Evaluation:
         """Evaluate a node's output against configured quality metrics.
 
         Each metric name in the plan's evaluation config is dispatched to a
@@ -299,7 +303,7 @@ class WorkflowRunner:
     #: Keys under which nodes commonly expose their generated SQL.
     _SQL_KEYS = ("sql", "primary_sql", "sql_text")
 
-    def _check_metric(self, metric_name: str, output: Any) -> MetricResult:
+    def _check_metric(self, metric_name: str, output: NodeOutput) -> MetricResult:
         """Dispatch a single metric name to its checker."""
         match metric_name:
             case "syntax_valid":
@@ -312,7 +316,7 @@ class WorkflowRunner:
                 return MetricResult(name=metric_name, passed=False, details="no checker registered")
 
     @classmethod
-    def _extract_sql(cls, output: Any) -> str | None:
+    def _extract_sql(cls, output: NodeOutput) -> str | None:
         """Find a SQL string in the node output (result dict, context, or metadata)."""
         for source in (output.result, output.context, output.metadata):
             if not isinstance(source, dict):
@@ -324,7 +328,7 @@ class WorkflowRunner:
         return None
 
     @classmethod
-    def _check_syntax_valid(cls, output: Any) -> MetricResult:
+    def _check_syntax_valid(cls, output: NodeOutput) -> MetricResult:
         """Check that the SQL found in the output parses via sqlglot."""
         sql = cls._extract_sql(output)
         if sql is None:
@@ -344,7 +348,7 @@ class WorkflowRunner:
         return MetricResult(name="syntax_valid", passed=True, details="SQL parsed successfully")
 
     @staticmethod
-    def _check_schema_compliant(output: Any) -> MetricResult:
+    def _check_schema_compliant(output: NodeOutput) -> MetricResult:
         """Follow ValidateSQLNode's validation report/flag when present."""
         report: Any = None
         passed_flag: Any = None
@@ -381,7 +385,7 @@ class WorkflowRunner:
         )
 
     @staticmethod
-    def _check_execution_success(output: Any) -> MetricResult:
+    def _check_execution_success(output: NodeOutput) -> MetricResult:
         """Fail when the node reported errors or an explicit error status."""
         if output.errors:
             return MetricResult(

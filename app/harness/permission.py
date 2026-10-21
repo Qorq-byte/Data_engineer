@@ -73,11 +73,11 @@ class PermissionManager:
 
         return level.value
 
-    def is_allowed(self, tool_name: str, context: dict | None = None) -> bool:
+    def is_allowed(self, tool_name: str, context: dict[str, Any] | None = None) -> bool:
         """Convenience: returns True only if permission is 'allow'."""
         return self.check(tool_name, context) == "allow"
 
-    def is_denied(self, tool_name: str, context: dict | None = None) -> bool:
+    def is_denied(self, tool_name: str, context: dict[str, Any] | None = None) -> bool:
         """Convenience: returns True if permission is 'deny'."""
         return self.check(tool_name, context) == "deny"
 

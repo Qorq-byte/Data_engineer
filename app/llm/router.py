@@ -28,7 +28,7 @@ from typing import Any
 
 # ── LiteLLM integration (optional — graceful degradation) ────────────
 try:
-    import litellm  # type: ignore[import-untyped]
+    import litellm
 
     _LITELLM_AVAILABLE = True
 except ImportError:
@@ -348,9 +348,12 @@ class LiteLLMRouter:
             ``"provider"``.
         """
         model = model or self.config.default_model
-        return await self._route_with_fallback(
+        response = await self._route_with_fallback(
             messages, model, temperature, n, stream=False, **kwargs
         )
+        if not isinstance(response, dict):
+            raise TypeError("Non-streaming model response must be an object")
+        return response
 
     async def complete_stream(
         self,
@@ -702,7 +705,7 @@ class LiteLLMRouter:
 
         if stream:
 
-            async def _mock_stream():
+            async def _mock_stream() -> AsyncIterator[str]:
                 for word in user_text.split():
                     yield word + " "
 

@@ -7,8 +7,9 @@ Usage::
     # 1. Copy this file to a new name (e.g., app/nodes/my_custom_node.py).
     # 2. Search for ``TODO`` and fill in your implementation.
     # 3. Register in ``app/config/agent.yml`` under ``agent.nodes``.
-    # 4. Register in ``app/nodes/registry.py`` (node_registry).
-    # 5. (Optional) Register in ``main.py`` for startup.
+    # 4. Register an instance in the NodeRegistry used by your WorkflowRunner.
+    # 5. HTTP queries have a request-owned registry in workflow/query_service.py;
+    #    startup catalog registration alone does not change that fixed pipeline.
 
 """
 

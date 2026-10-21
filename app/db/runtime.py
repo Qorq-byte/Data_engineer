@@ -4,17 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from collections.abc import AsyncIterator, Callable
+from collections.abc import AsyncIterator, Callable, Hashable
 from typing import Any
 
+type GateTable = dict[tuple[Hashable, int], asyncio.Semaphore]
+_GATES_ATTRIBUTE = "_data_engineer_gates"
 
-def gate(key: Any, capacity: int = 1) -> asyncio.Semaphore:
+
+def gate(key: Hashable, capacity: int = 1) -> asyncio.Semaphore:
     """Gates belong to the serving loop; no locks survive a closed test/server loop."""
-    loop: Any = asyncio.get_running_loop()
-    gates = getattr(loop, "_data_engineer_gates", None)
+    loop = asyncio.get_running_loop()
+    gates: GateTable | None = getattr(loop, _GATES_ATTRIBUTE, None)
     if gates is None:
         gates = {}
-        loop._data_engineer_gates = gates
+        setattr(loop, _GATES_ATTRIBUTE, gates)
     return gates.setdefault((key, capacity), asyncio.Semaphore(capacity))
 
 
@@ -49,11 +52,11 @@ async def native_call[T](connection: Any, function: Callable[[], T]) -> T:
         raise
 
 
-def discard_gate(key: Any, capacity: int = 1) -> None:
+def discard_gate(key: Hashable, capacity: int = 1) -> None:
     try:
-        gates = getattr(asyncio.get_running_loop(), "_data_engineer_gates", {})
+        gates: GateTable = getattr(asyncio.get_running_loop(), _GATES_ATTRIBUTE, {})
     except RuntimeError:
         return
     existing = gates.get((key, capacity))
-    if existing is not None and not existing.locked() and not existing._waiters:
+    if existing is not None and not existing.locked() and not getattr(existing, "_waiters", None):
         gates.pop((key, capacity), None)

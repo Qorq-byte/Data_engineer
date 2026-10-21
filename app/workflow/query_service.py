@@ -12,6 +12,7 @@ from typing import Any
 from app.db.connections import ConnectionFactory
 from app.harness.config_loader import ConfigLoader
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
+from app.harness.events import NodeEvent, NodeEventStatus
 from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
 from app.llm.budget import BudgetedRouter, active_budget
@@ -177,7 +178,7 @@ async def _run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> 
             )
 
             async def on_node_event(
-                status: str, data: dict[str, Any], target_db_id: str = db_id
+                status: NodeEventStatus, data: NodeEvent, target_db_id: str = db_id
             ) -> None:
                 node_id = data["node_id"]
                 stage = {

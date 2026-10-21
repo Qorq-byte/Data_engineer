@@ -581,7 +581,7 @@ class SchemaExtractor:
                             (schema_name, table_name),
                         )
                         idx_rows = await cursor.fetchall()
-                        idx_map: dict[str, dict] = {}
+                        idx_map: dict[str, dict[str, Any]] = {}
                         for ir in idx_rows:
                             if len(ir) < 3:
                                 continue

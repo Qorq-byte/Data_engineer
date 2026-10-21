@@ -575,7 +575,8 @@ pytest --cov=app --cov-report=html
 ruff check .
 
 # 类型检查
-mypy app/
+mypy app/harness app/models  # strict核心门禁，默认导入追踪
+mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
 ### 添加新的工作流节点
@@ -600,7 +601,8 @@ npm ci --ignore-scripts
 npm run check:frontend
 LITELLM_LOCAL_MODEL_COST_MAP=True RAG_EMBEDDING_PROVIDER=mock pytest
 ruff check .
-mypy app/
+mypy app/harness app/models  # strict核心门禁，默认导入追踪
+mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
-PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest 和全仓 `ruff check .`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；严格mypy上一阶段仍279项错误，本阶段未复测全量类型，不能宣称当前数量不变或已通过。详见[阶段6报告](docs/optimization/stage-6.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。
+PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。

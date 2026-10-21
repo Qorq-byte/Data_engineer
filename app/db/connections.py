@@ -53,14 +53,14 @@ class ConnectionFactory:
     _mysql_pools: dict[int, Any] = {}  # Track MySQL connection pools for proper cleanup
 
     @classmethod
-    async def create(cls, db_type: DatabaseType, config: dict, db_id: str = "") -> Any:
+    async def create(cls, db_type: DatabaseType, config: dict[str, Any], db_id: str = "") -> Any:
         from app.db.runtime import gate
 
         async with gate(("connect", db_id)):
             return await cls._create(db_type, config, db_id)
 
     @classmethod
-    async def _create(cls, db_type: DatabaseType, config: dict, db_id: str = "") -> Any:
+    async def _create(cls, db_type: DatabaseType, config: dict[str, Any], db_id: str = "") -> Any:
         """Create a new database connection.
 
         Args:
@@ -94,7 +94,7 @@ class ConnectionFactory:
         return conn
 
     @classmethod
-    async def _connect(cls, db_type: DatabaseType, config: dict) -> Any:
+    async def _connect(cls, db_type: DatabaseType, config: dict[str, Any]) -> Any:
         """Internal dispatch to the appropriate connection method."""
         match db_type:
             case DatabaseType.SQLITE:
@@ -121,7 +121,7 @@ class ConnectionFactory:
                 raise ValueError(f"Unsupported database type: {db_type}")
 
     @classmethod
-    def _connect_sqlite(cls, config: dict) -> Any:
+    def _connect_sqlite(cls, config: dict[str, Any]) -> Any:
         import sqlite3
 
         path = config.get("path", ":memory:")
@@ -131,14 +131,14 @@ class ConnectionFactory:
         return conn
 
     @classmethod
-    def _connect_duckdb(cls, config: dict) -> Any:
+    def _connect_duckdb(cls, config: dict[str, Any]) -> Any:
         import duckdb
 
         path = config.get("path", ":memory:")
         return duckdb.connect(path, config={"enable_external_access": False})
 
     @classmethod
-    async def _connect_postgresql(cls, config: dict) -> Any:
+    async def _connect_postgresql(cls, config: dict[str, Any]) -> Any:
         try:
             import asyncpg
 
@@ -155,7 +155,7 @@ class ConnectionFactory:
             ) from e
 
     @classmethod
-    async def _connect_mysql(cls, config: dict) -> Any:
+    async def _connect_mysql(cls, config: dict[str, Any]) -> Any:
         try:
             import aiomysql
 
@@ -219,6 +219,7 @@ class ConnectionFactory:
                 pool.close()
                 await pool.wait_closed()
             else:
+                assert conn is not None  # Identity comparison above may widen static Any.
                 result = conn.close()
                 if inspect.isawaitable(result):
                     await result

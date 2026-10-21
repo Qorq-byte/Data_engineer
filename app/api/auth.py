@@ -13,6 +13,7 @@ from __future__ import annotations
 import os
 import secrets
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated
 
@@ -37,6 +38,25 @@ from app.auth.security import (
 
 router = APIRouter()
 _security = HTTPBearer(auto_error=False)
+
+
+def _auth_column_names(description: Sequence[Sequence[object]] | None) -> list[str]:
+    """A fetched auth row requires valid DB-API column metadata."""
+    if not description:
+        raise HTTPException(status_code=503, detail="Authentication database metadata unavailable")
+    names = []
+    for column in description:
+        if not column:
+            raise HTTPException(
+                status_code=503, detail="Authentication database metadata unavailable"
+            )
+        name = column[0]
+        if not isinstance(name, str):
+            raise HTTPException(
+                status_code=503, detail="Authentication database metadata unavailable"
+            )
+        names.append(name)
+    return names
 
 # Avatar upload directory
 _AVATAR_DIR = Path(__file__).parent.parent.parent / "data" / "avatars"
@@ -143,7 +163,7 @@ async def register(
                 raise HTTPException(status_code=500, detail="注册失败，请稍后重试")
 
             # Build response (dict keyed by column name)
-            cols = [desc[0] for desc in cur.description]
+            cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
 
     except HTTPException:
@@ -164,7 +184,7 @@ async def login(body: LoginRequest) -> TokenResponse:
             if row is None:
                 raise HTTPException(status_code=401, detail="邮箱或密码错误")
 
-            cols = [desc[0] for desc in cur.description]
+            cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
 
             if not verify_password(body.password, user_row["password_hash"]):
@@ -188,7 +208,7 @@ async def me(current_user: Annotated[dict, Depends(get_current_user)]) -> UserRe
             if row is None:
                 raise HTTPException(status_code=404, detail="用户不存在")
 
-            cols = [desc[0] for desc in cur.description]
+            cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
 
     except HTTPException:
@@ -213,7 +233,7 @@ async def change_password(
             if row is None:
                 raise HTTPException(status_code=404, detail="用户不存在")
 
-            cols = [desc[0] for desc in cur.description]
+            cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
 
             # Verify old password
@@ -294,7 +314,7 @@ async def delete_account(
             if row is None:
                 raise HTTPException(status_code=404, detail="用户不存在")
 
-            cols = [desc[0] for desc in cur.description]
+            cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
 
             # Verify password

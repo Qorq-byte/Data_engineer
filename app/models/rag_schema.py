@@ -21,7 +21,7 @@ class SchemaDocument:
     comment: str | None = None
     is_primary_key: bool = False
     is_foreign_key: bool = False
-    fk_references: tuple | None = None  # (table, column)
+    fk_references: tuple[str, str] | None = None  # (table, column)
     enum_values: list[str] | None = None
     sample_values: list[Any] = field(default_factory=list)
     table_row_count: int = 0

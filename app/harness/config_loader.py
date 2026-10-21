@@ -6,6 +6,7 @@ See SPEC §3.4.5 for the full agent.yml schema.
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
@@ -131,7 +132,11 @@ class ConfigLoader:
         with open(self.path, encoding="utf-8") as f:
             raw = yaml.safe_load(f)
 
+        if not isinstance(raw, dict):
+            raise ValueError("Agent config root must be a mapping")
         agent_raw = raw.get("agent", raw)
+        if not isinstance(agent_raw, dict):
+            raise ValueError("Agent config section must be a mapping")
         self._config = self._parse(agent_raw)
         self._last_mtime = current_mtime
         self._last_loaded = time.time()
@@ -151,7 +156,7 @@ class ConfigLoader:
     # ── Private parser ──────────────────────────────────────────
 
     @staticmethod
-    def _parse(raw: dict) -> AgentConfig:
+    def _parse(raw: dict[str, Any]) -> AgentConfig:
         return AgentConfig(
             name=raw.get("name", ""),
             version=raw.get("version", ""),
@@ -165,7 +170,7 @@ class ConfigLoader:
         )
 
     @staticmethod
-    def _parse_provider(raw: dict) -> ProviderConfig:
+    def _parse_provider(raw: dict[str, Any]) -> ProviderConfig:
         return ProviderConfig(
             default=raw.get("default", ""),
             fallback=raw.get("fallback", []),
@@ -173,7 +178,7 @@ class ConfigLoader:
         )
 
     @staticmethod
-    def _parse_nodes(raw: dict) -> dict[str, NodeAgentConfig]:
+    def _parse_nodes(raw: dict[str, Any]) -> dict[str, NodeAgentConfig]:
         return {
             name: NodeAgentConfig(
                 model=cfg.get("model", "none"),
@@ -186,7 +191,7 @@ class ConfigLoader:
         }
 
     @staticmethod
-    def _parse_skills(raw: dict) -> SkillsConfig:
+    def _parse_skills(raw: dict[str, Any]) -> SkillsConfig:
         return SkillsConfig(
             mode=raw.get("mode", "auto"),
             directory=raw.get("directory", "./skills"),
@@ -194,14 +199,14 @@ class ConfigLoader:
         )
 
     @staticmethod
-    def _parse_workflow(raw: dict) -> WorkflowBindingConfig:
+    def _parse_workflow(raw: dict[str, Any]) -> WorkflowBindingConfig:
         return WorkflowBindingConfig(
             default=raw.get("default", "gensql_agentic"),
             auto_select=raw.get("auto_select", False),
         )
 
     @staticmethod
-    def _parse_memory(raw: dict) -> MemoryConfig:
+    def _parse_memory(raw: dict[str, Any]) -> MemoryConfig:
         builtin = raw.get("builtin_subagents", {})
         user = raw.get("user_subagents", {})
         storage = raw.get("storage", {})
@@ -225,7 +230,7 @@ class ConfigLoader:
         )
 
     @staticmethod
-    def _parse_global_context(raw: dict) -> GlobalContextConfig:
+    def _parse_global_context(raw: dict[str, Any]) -> GlobalContextConfig:
         return GlobalContextConfig(
             source=raw.get("source", "AGENTS.md"),
             inject_lines=raw.get("inject_lines", 200),
@@ -233,7 +238,7 @@ class ConfigLoader:
         )
 
     @staticmethod
-    def _parse_constraints(raw: dict) -> ConstraintsConfig:
+    def _parse_constraints(raw: dict[str, Any]) -> ConstraintsConfig:
         return ConstraintsConfig(
             max_llm_calls_per_query=raw.get("max_llm_calls_per_query", 10),
             max_node_retries=raw.get("max_node_retries", 3),

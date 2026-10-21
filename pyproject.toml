@@ -68,7 +68,9 @@ dev = [
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "ruff==0.17.1",
-    "mypy>=1.14.0",
+    "mypy==2.4.0",
+    "types-PyYAML==6.0.12.20260906",
+    "asyncpg-stubs==0.32.0",
 ]
 
 [tool.ruff]
@@ -81,6 +83,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
+mypy_path = "$MYPY_CONFIG_FILE_DIR/typings"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

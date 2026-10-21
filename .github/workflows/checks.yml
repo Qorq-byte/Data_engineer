@@ -21,4 +21,5 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check:frontend
       - run: ruff check .
+      - run: mypy app/harness app/models
       - run: pytest
