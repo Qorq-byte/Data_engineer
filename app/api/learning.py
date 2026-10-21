@@ -6,7 +6,7 @@ See SPEC 6.6 (Learning & Feedback API) for the full specification.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter
@@ -34,14 +34,19 @@ def record_query(nl_text: str = "", sql_text: str = "", domain: str = "") -> Non
     _learning_store["total_queries"] += 1
     # Record as a query pair for learning
     if nl_text and sql_text:
-        _learning_store["query_pairs"].append({
-            "id": f"qp_{datetime.now().strftime('%Y%m%d%H%M%S')}_{_learning_store['total_queries']}",
-            "nl_text": nl_text,
-            "sql_text": sql_text,
-            "domain": domain,
-            "rating": 0,
-            "created_at": datetime.now().isoformat(),
-        })
+        _learning_store["query_pairs"].append(
+            {
+                "id": (
+                    f"qp_{datetime.now().strftime('%Y%m%d%H%M%S')}_"
+                    f"{_learning_store['total_queries']}"
+                ),
+                "nl_text": nl_text,
+                "sql_text": sql_text,
+                "domain": domain,
+                "rating": 0,
+                "created_at": datetime.now().isoformat(),
+            }
+        )
         # Keep only last 200 pairs
         if len(_learning_store["query_pairs"]) > 200:
             _learning_store["query_pairs"] = _learning_store["query_pairs"][-200:]
@@ -49,6 +54,7 @@ def record_query(nl_text: str = "", sql_text: str = "", domain: str = "") -> Non
         # Also record to feedback_collector for PatternAnalyzer to mine rules
         try:
             from app.learning.feedback_collector import feedback_collector
+
             feedback_collector.collect(
                 session_id="auto",
                 query_id=f"q_{_learning_store['total_queries']}",
@@ -67,13 +73,15 @@ def record_query(nl_text: str = "", sql_text: str = "", domain: str = "") -> Non
     if existing:
         existing["query_count"] += 1
     else:
-        _learning_store["quality_trends"].append({
-            "date": today_str,
-            "accuracy": 0.0,
-            "query_count": 1,
-            "avg_response_ms": 0,
-            "feedback_count": 0,
-        })
+        _learning_store["quality_trends"].append(
+            {
+                "date": today_str,
+                "accuracy": 0.0,
+                "query_count": 1,
+                "avg_response_ms": 0,
+                "feedback_count": 0,
+            }
+        )
         # Keep last 90 days
         if len(_learning_store["quality_trends"]) > 90:
             _learning_store["quality_trends"] = _learning_store["quality_trends"][-90:]
@@ -83,18 +91,19 @@ def _sync_with_feedback_store():
     """Sync learning stats from the feedback API store."""
     try:
         from app.api.feedback import _feedback_store
+
         total = len(_feedback_store)
         ratings = [r["rating"] for r in _feedback_store if r.get("rating", 0) > 0]
         _learning_store["total_feedback"] = total
-        _learning_store["avg_rating"] = (
-            round(sum(ratings) / len(ratings), 2) if ratings else 0.0
-        )
+        _learning_store["avg_rating"] = round(sum(ratings) / len(ratings), 2) if ratings else 0.0
         # Update accuracy in quality trends based on feedback ratings
         if ratings and _learning_store["quality_trends"]:
             today = _learning_store["quality_trends"][-1]
             if today:
                 today["feedback_count"] = total
-                today["accuracy"] = round(sum(1 for r in ratings if r >= 4) / len(ratings), 3) if ratings else 0.0
+                today["accuracy"] = (
+                    round(sum(1 for r in ratings if r >= 4) / len(ratings), 3) if ratings else 0.0
+                )
     except Exception:
         pass
 
@@ -114,8 +123,8 @@ def _get_fresh_candidates() -> list[dict[str, Any]]:
       - Only genuinely new patterns (unseen rule_ids) appear as
         ``pending_review``.
     """
-    from app.learning.pattern_analyzer import PatternAnalyzer
     from app.learning.feedback_collector import feedback_collector
+    from app.learning.pattern_analyzer import PatternAnalyzer
 
     analyzer = PatternAnalyzer(feedback_collector)
     candidates_raw = analyzer.analyze(domain="", window_days=90, min_occurrence=1)
@@ -183,12 +192,8 @@ async def learning_stats() -> dict:
     try:
         fresh = _get_fresh_candidates()
         rule_candidates_count = len(fresh)
-        pending_review_count = len(
-            [c for c in fresh if c.get("status") == "pending_review"]
-        )
-        approved_rules_count = len(
-            [c for c in fresh if c.get("status") == "approved"]
-        )
+        pending_review_count = len([c for c in fresh if c.get("status") == "pending_review"])
+        approved_rules_count = len([c for c in fresh if c.get("status") == "approved"])
     except Exception as e:
         logger.warning("PatternAnalyzer failed in stats, using store: %s", e)
         rule_candidates_count = len(_learning_store["rule_candidates"])
@@ -213,6 +218,7 @@ async def learning_stats() -> dict:
     if _learning_store["total_queries"] == 0:
         try:
             from app.storage.mysql_store import get_store
+
             store = get_store()
             mysql_stats = await store.get_learning_stats()
             if mysql_stats and mysql_stats.get("total_queries", 0) > 0:
@@ -252,6 +258,7 @@ async def query_pairs(limit: int = 20, domain: str = "") -> dict:
     # Fallback: try MySQL
     try:
         from app.storage.mysql_store import get_store
+
         store = get_store()
         if store is not None:
             pairs = await store.get_query_pairs(limit=limit, domain=domain)
@@ -285,15 +292,14 @@ async def rule_candidates(status: str = "pending_review") -> dict:
         # no longer finds, so their review status persists.
         fresh_ids = {d.get("id", "") for d in candidate_dicts}
         kept_reviewed = [
-            r for r in _learning_store["rule_candidates"]
-            if r.get("id", "") not in fresh_ids
-            and r.get("status") in ("approved", "rejected")
+            r
+            for r in _learning_store["rule_candidates"]
+            if r.get("id", "") not in fresh_ids and r.get("status") in ("approved", "rejected")
         ]
         # Preserve rejected_source_count from old entries so the
         # "new evidence" check survives store refreshes.
         old_by_id = {
-            (r.get("id") or r.get("rule_id", "")): r
-            for r in _learning_store["rule_candidates"]
+            (r.get("id") or r.get("rule_id", "")): r for r in _learning_store["rule_candidates"]
         }
         fresh_entries = []
         for d in candidate_dicts:
@@ -343,9 +349,7 @@ async def rule_candidates(status: str = "pending_review") -> dict:
         pass
 
     # Fallback: in-memory store (only when PatternAnalyzer crashed)
-    candidates = [
-        r for r in _learning_store["rule_candidates"] if r["status"] == status
-    ]
+    candidates = [r for r in _learning_store["rule_candidates"] if r["status"] == status]
     return {
         "status": "ok",
         "candidates": candidates,
@@ -367,16 +371,18 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict:
             store = get_store()
             if store is not None:
                 # Save first (creates row if missing), then update status
-                await store.save_rule_candidate({
-                    "id": rid,
-                    "description": info.get("description", ""),
-                    "pattern": info.get("pattern", ""),
-                    "sql_template": info.get("sql_template", ""),
-                    "confidence": info.get("confidence", 0.0),
-                    "source_count": info.get("source_count", 0),
-                    "status": st,
-                    "domain": info.get("domain", info.get("domain_id", "")),
-                })
+                await store.save_rule_candidate(
+                    {
+                        "id": rid,
+                        "description": info.get("description", ""),
+                        "pattern": info.get("pattern", ""),
+                        "sql_template": info.get("sql_template", ""),
+                        "confidence": info.get("confidence", 0.0),
+                        "source_count": info.get("source_count", 0),
+                        "status": st,
+                        "domain": info.get("domain", info.get("domain_id", "")),
+                    }
+                )
                 updated = await store.update_rule_candidate_status(rid, st)
                 if not updated:
                     logger.warning("MySQL update_rule_candidate_status returned False for %s", rid)
@@ -402,8 +408,8 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict:
 
     # Tier 2: Try pattern analyzer (ephemeral objects — persist to MySQL)
     try:
-        from app.learning.pattern_analyzer import PatternAnalyzer
         from app.learning.feedback_collector import feedback_collector
+        from app.learning.pattern_analyzer import PatternAnalyzer
 
         analyzer = PatternAnalyzer(feedback_collector)
         candidates = analyzer.get_review_queue()
@@ -459,14 +465,16 @@ async def quality_trends(days: int = 30) -> dict:
     """
     # Try to enrich trends with accuracy data from feedback collector
     try:
-        from app.learning.feedback_collector import feedback_collector
         from datetime import UTC, datetime, timedelta
+
+        from app.learning.feedback_collector import feedback_collector
 
         # Get feedback stats from the collector
         recent_records = feedback_collector.get_recent(limit=500)
         if recent_records:
             # Group ratings by date
             from collections import defaultdict
+
             daily_ratings: dict[str, list[int]] = defaultdict(list)
             daily_feedback_count: dict[str, int] = defaultdict(int)
             cutoff = datetime.now(UTC) - timedelta(days=days)
@@ -511,6 +519,7 @@ async def quality_trends(days: int = 30) -> dict:
     # Fallback: try MySQL for historical data
     try:
         from app.storage.mysql_store import get_store
+
         store = get_store()
         if store is not None:
             trends = await store.get_quality_trends(days=days)
@@ -579,7 +588,7 @@ async def refresh_rag_index(db_id: str | None = None) -> dict:
 async def rag_stats() -> dict:
     """Get RAG index statistics across all namespaces."""
     try:
-        from app.rag import get_schema_rag, get_metric_rag, get_document_store
+        from app.rag import get_document_store, get_metric_rag, get_schema_rag
 
         schema_stats = get_schema_rag().stats()
         metric_stats = get_metric_rag().stats()
@@ -627,7 +636,7 @@ async def clear_rag_index(body: dict | None = None) -> dict:
 
     cleared: dict[str, dict[str, int]] = {}
     try:
-        from app.rag import get_schema_rag, get_metric_rag, get_document_store
+        from app.rag import get_document_store, get_metric_rag, get_schema_rag
 
         if scope in ("all", "schema"):
             before = get_schema_rag().stats()
@@ -666,6 +675,7 @@ async def clear_rag_index(body: dict | None = None) -> dict:
         # re-extract schema instead of skipping due to stale hash match.
         try:
             from app.rag import get_index_refresher
+
             refresher = get_index_refresher()
             refresher._version_cache.clear()
             refresher._last_refresh.clear()

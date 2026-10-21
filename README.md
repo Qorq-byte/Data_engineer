@@ -603,4 +603,4 @@ ruff check .
 mypy app/
 ```
 
-PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest 和指定交付文件 lint；本轮本机为 Python 3.13.9/Node 24。全仓 Ruff 100项、严格 mypy 279项存量错误仍未清零，CI 不宣称这两项全仓通过，也未修改其规则。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。
+PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest 和全仓 `ruff check .`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；严格mypy上一阶段仍279项错误，本阶段未复测全量类型，不能宣称当前数量不变或已通过。详见[阶段6报告](docs/optimization/stage-6.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。

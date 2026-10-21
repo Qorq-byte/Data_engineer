@@ -7,6 +7,7 @@ Phase 3: Full CRUD — 8 endpoints for domain, glossary, and rule management.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -288,7 +289,7 @@ async def create_domain(req: DomainCreateRequest) -> dict[str, Any]:
     # Persist to MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.save_domain(
                 {
                     "name": name,
@@ -302,8 +303,6 @@ async def create_domain(req: DomainCreateRequest) -> dict[str, Any]:
                     "is_active": False,
                 }
             )
-        except Exception:
-            pass
 
     return {"status": "created", "name": name, "path": str(yaml_path)}
 
@@ -365,7 +364,7 @@ async def update_domain(domain_id: str, req: DomainUpdateRequest) -> dict[str, A
     # Persist to MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.save_domain(
                 {
                     "name": domain_id,
@@ -379,8 +378,6 @@ async def update_domain(domain_id: str, req: DomainUpdateRequest) -> dict[str, A
                     "is_active": _domain_manager.active_name == domain_id,
                 }
             )
-        except Exception:
-            pass
 
     updated = _domain_manager.get(domain_id)
     return {
@@ -498,7 +495,7 @@ async def add_glossary_term(domain_id: str, req: TermAddRequest) -> dict[str, An
     # Persist to MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.save_glossary_term(
                 domain_id,
                 {
@@ -510,8 +507,6 @@ async def add_glossary_term(domain_id: str, req: TermAddRequest) -> dict[str, An
                     "tags": req.tags,
                 },
             )
-        except Exception:
-            pass
 
     # Sync to MetricRAG
     _sync_glossary_term_to_rag(term, domain_id)
@@ -637,10 +632,8 @@ async def delete_domain(domain_id: str) -> dict[str, Any]:
     # Delete from MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.delete_domain(domain_id)
-        except Exception:
-            pass
 
     # Clean up MetricRAG for this domain
     try:
@@ -684,10 +677,8 @@ async def delete_glossary_term(domain_id: str, term: str) -> dict[str, Any]:
     # Delete from MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.delete_glossary_term(domain_id, term)
-        except Exception:
-            pass
 
     # Remove from MetricRAG
     _remove_metric_from_rag(f"glossary.{domain_id}.{term}", domain_id)
@@ -780,7 +771,7 @@ async def add_rule(domain_id: str, req: RuleAddRequest) -> dict[str, Any]:
     # Persist to MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.save_rule(
                 domain_id,
                 {
@@ -791,8 +782,6 @@ async def add_rule(domain_id: str, req: RuleAddRequest) -> dict[str, Any]:
                     "sql_template": req.sql_template,
                 },
             )
-        except Exception:
-            pass
 
     # Sync to MetricRAG
     _sync_rule_to_rag(rule, domain_id)
@@ -906,10 +895,8 @@ async def delete_rule(domain_id: str, rule_id: str) -> dict[str, Any]:
     # Delete from MySQL
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.delete_rule(domain_id, rule_id)
-        except Exception:
-            pass
 
     # Remove from MetricRAG
     _remove_metric_from_rag(f"rule.{domain_id}.{rule_id}", domain_id)

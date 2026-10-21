@@ -8,7 +8,9 @@ from app.api import learning
 
 
 @pytest.mark.asyncio
-async def test_learning_stats_normalizes_string_average_rating(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_learning_stats_normalizes_string_average_rating(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The workspace must always receive a number it can format with toFixed."""
     monkeypatch.setattr(learning, "_sync_with_feedback_store", lambda: None)
     monkeypatch.setattr(learning, "_get_fresh_candidates", lambda: [])

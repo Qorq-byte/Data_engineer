@@ -74,22 +74,20 @@ def _strip_sql_comments(sql: str) -> str:
     - Empty lines
     """
     # Remove block comments /* ... */
-    sql = re.sub(r'/\*.*?\*/', '', sql, flags=re.DOTALL)
+    sql = re.sub(r"/\*.*?\*/", "", sql, flags=re.DOTALL)
     # Remove line comments -- ... (but not within strings)
     lines = []
     for line in sql.splitlines():
         # Simple heuristic: strip everything after -- that's not in a string
         # This handles the common case; edge cases with -- in strings are rare
         # in generated SQL
-        stripped = re.sub(r'--.*$', '', line).strip()
+        stripped = re.sub(r"--.*$", "", line).strip()
         if stripped:
             lines.append(stripped)
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
-def _parse_diff_operations(
-    sql_before: str, sql_after: str
-) -> list[dict[str, Any]]:
+def _parse_diff_operations(sql_before: str, sql_after: str) -> list[dict[str, Any]]:
     """Extract structured operations from a before/after SQL diff.
 
     Strips SQL comments first to focus on actual SQL statement changes,
@@ -126,7 +124,9 @@ def _parse_diff_operations(
     if is_multiline:
         diff = list(
             difflib.unified_diff(
-                before_lines, after_lines, lineterm="",
+                before_lines,
+                after_lines,
+                lineterm="",
             )
         )
         for line in diff:
@@ -187,18 +187,13 @@ def _classify_text(text: str, op_type: str) -> dict[str, Any] | None:
             op["keyword"] = "ORDER_BY"
         elif "HAVING" in content_upper:
             op["keyword"] = "HAVING"
-        elif any(
-            agg in content_upper
-            for agg in ("SUM(", "COUNT(", "AVG(", "MAX(", "MIN(")
-        ):
+        elif any(agg in content_upper for agg in ("SUM(", "COUNT(", "AVG(", "MAX(", "MIN(")):
             op["keyword"] = "AGGREGATE"
         else:
             op["keyword"] = "OTHER"
 
     # Try to extract table.column or column reference
-    col_match = re.search(
-        r"(?:(\w+)\.)?(\w+)\s*(?:!=|>=|<=|<>|[=><])", content
-    )
+    col_match = re.search(r"(?:(\w+)\.)?(\w+)\s*(?:!=|>=|<=|<>|[=><])", content)
     if col_match:
         if col_match.group(1):
             op["table"] = col_match.group(1).lower()
@@ -229,9 +224,9 @@ def _classify_diff_line(line: str) -> dict[str, Any] | None:
 #   - Trailing digits/letters glued to a semicolon (``;123``, ``;abc``)
 #   - Misspelled keywords (``wher``, ``selec``, ``form``)
 _INVALID_SQL_PATTERNS = re.compile(
-    r"==|"                               # SQL uses single = for comparison
-    r";\s*[A-Za-z0-9]+\s*;|"            # "; garbage;" tail
-    r";\s*\d+\s*$|"                      # "; 123" trailing digits
+    r"==|"  # SQL uses single = for comparison
+    r";\s*[A-Za-z0-9]+\s*;|"  # "; garbage;" tail
+    r";\s*\d+\s*$|"  # "; 123" trailing digits
     r"\b(wher|selec|form|formm|updte|delte)\b",  # misspelled keywords
     re.IGNORECASE,
 )
@@ -257,10 +252,7 @@ def _is_valid_sql(sql: str) -> bool:
         # The SQL is *all* comments — definitely not a real edited query.
         return False
 
-    if _INVALID_SQL_PATTERNS.search(cleaned):
-        return False
-
-    return True
+    return not _INVALID_SQL_PATTERNS.search(cleaned)
 
 
 def _is_meaningful_edit(sql_before: str, sql_after: str) -> bool:
@@ -286,16 +278,25 @@ def _is_meaningful_edit(sql_before: str, sql_after: str) -> bool:
     # meaningful edit.  This filters garbage like "tehstjsejr" or
     # "111" while allowing short real edits like "LIMIT 5".
     if after.startswith(before):
-        tail = after[len(before):].strip()
+        tail = after[len(before) :].strip()
         if not tail:
             return False
         sql_keywords = (
-            "select", "where", "and", "or", "order", "group", "having",
-            "limit", "join", "union", "insert", "update", "delete",
+            "select",
+            "where",
+            "and",
+            "or",
+            "order",
+            "group",
+            "having",
+            "limit",
+            "join",
+            "union",
+            "insert",
+            "update",
+            "delete",
         )
-        if not any(kw in tail.lower() for kw in sql_keywords):
-            return False
-        return True
+        return any(kw in tail.lower() for kw in sql_keywords)
 
     # If sql_before starts with sql_after (head-trimmed pattern), the
     # removal is always meaningful (user deleted a clause).
@@ -363,11 +364,7 @@ class PatternAnalyzer:
         """
         clusters = self.cluster_edits(domain=domain, window_days=window_days)
         ranked = self.rank_candidates(clusters)
-        return [
-            c
-            for c in ranked
-            if c.occurrence_count >= min_occurrence
-        ]
+        return [c for c in ranked if c.occurrence_count >= min_occurrence]
 
     # ── cluster ───────────────────────────────────────────────────────
 
@@ -441,23 +438,23 @@ class PatternAnalyzer:
             ops = _parse_diff_operations(sql_gen, sql_final)
             for op in ops:
                 key = _normalize_operation(op)
-                clusters.setdefault(key, []).append({
-                    "feedback_id": rec.get("id", ""),
-                    "query_id": rec.get("query_id", ""),
-                    "op": op,
-                    "nl_input": nl_input,
-                    "sql_generated": sql_gen,
-                    "sql_final": sql_final,
-                    "domain_id": rec.get("domain_id", ""),
-                })
+                clusters.setdefault(key, []).append(
+                    {
+                        "feedback_id": rec.get("id", ""),
+                        "query_id": rec.get("query_id", ""),
+                        "op": op,
+                        "nl_input": nl_input,
+                        "sql_generated": sql_gen,
+                        "sql_final": sql_final,
+                        "domain_id": rec.get("domain_id", ""),
+                    }
+                )
 
         return clusters
 
     # ── rank & extract ────────────────────────────────────────────────
 
-    def rank_candidates(
-        self, clusters: dict[str, list[dict[str, Any]]]
-    ) -> list[CandidateRule]:
+    def rank_candidates(self, clusters: dict[str, list[dict[str, Any]]]) -> list[CandidateRule]:
         """Convert clusters into ranked :class:`CandidateRule` instances.
 
         Ranking score = log(occurrence_count) × consistency_bonus, where
@@ -512,9 +509,7 @@ class PatternAnalyzer:
 
             # Score
             count = len(items)
-            confidence = round(
-                min(math.log(count + 1) / math.log(10) * consistency, 1.0), 2
-            )
+            confidence = round(min(math.log(count + 1) / math.log(10) * consistency, 1.0), 2)
 
             # Build enforcement suggestion
             enforcement: dict[str, str] = {}
@@ -535,9 +530,7 @@ class PatternAnalyzer:
                 sql_template=sql_template,
                 suggested_enforcement=enforcement,
                 occurrence_count=count,
-                supporting_query_ids=[
-                    it["feedback_id"] for it in items if it.get("feedback_id")
-                ],
+                supporting_query_ids=[it["feedback_id"] for it in items if it.get("feedback_id")],
                 confidence=confidence,
                 created_at=datetime.now(UTC).isoformat(),
             )

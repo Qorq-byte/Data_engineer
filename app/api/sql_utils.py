@@ -63,18 +63,14 @@ async def explain_sql(body: SQLRequest) -> dict:
             if isinstance(node, exp.Table):
                 tables.append(node.name)
             elif isinstance(node, exp.Join):
-                table_name = (
-                    node.this.name
-                    if isinstance(node.this, exp.Table)
-                    else str(node.this)
-                )
+                table_name = node.this.name if isinstance(node.this, exp.Table) else str(node.this)
                 joins.append({"kind": node.kind or "JOIN", "table": table_name})
             elif isinstance(node, exp.Where):
                 where_conditions.append(str(node.this)[:120])
             elif isinstance(node, exp.Order):
                 for col in node.expressions:
                     order_by_columns.append(str(col)[:60])
-            elif isinstance(node, (exp.Avg, exp.Sum, exp.Count, exp.Max, exp.Min)):
+            elif isinstance(node, exp.Avg | exp.Sum | exp.Count | exp.Max | exp.Min):
                 has_aggregation = True
             elif isinstance(node, exp.Subquery):
                 has_subquery = True
@@ -150,9 +146,7 @@ async def format_sql(body: SQLRequest) -> dict:
     try:
         import sqlparse
 
-        formatted = sqlparse.format(
-            body.sql, reindent=True, keyword_case="upper", indent_width=2
-        )
+        formatted = sqlparse.format(body.sql, reindent=True, keyword_case="upper", indent_width=2)
         return {
             "status": "formatted",
             "dialect": body.dialect or "ansi",
@@ -161,22 +155,64 @@ async def format_sql(body: SQLRequest) -> dict:
         }
     except ImportError:
         keywords = [
-            "SELECT", "FROM", "WHERE", "AND", "OR", "ORDER BY", "GROUP BY",
-            "HAVING", "LIMIT", "JOIN", "LEFT JOIN", "RIGHT JOIN",
-            "INNER JOIN", "ON", "AS", "INSERT", "UPDATE", "DELETE",
-            "CREATE", "ALTER", "DROP", "SET", "INTO", "VALUES",
-            "UNION", "ALL", "DISTINCT", "CASE", "WHEN", "THEN", "ELSE",
-            "END", "COUNT", "SUM", "AVG", "MAX", "MIN", "COALESCE",
-            "NULL", "NOT", "IN", "LIKE", "BETWEEN", "IS", "WITH",
-            "RECURSIVE", "OVER", "PARTITION BY", "ROW_NUMBER", "RANK",
-            "DENSE_RANK", "LAG", "LEAD",
+            "SELECT",
+            "FROM",
+            "WHERE",
+            "AND",
+            "OR",
+            "ORDER BY",
+            "GROUP BY",
+            "HAVING",
+            "LIMIT",
+            "JOIN",
+            "LEFT JOIN",
+            "RIGHT JOIN",
+            "INNER JOIN",
+            "ON",
+            "AS",
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "CREATE",
+            "ALTER",
+            "DROP",
+            "SET",
+            "INTO",
+            "VALUES",
+            "UNION",
+            "ALL",
+            "DISTINCT",
+            "CASE",
+            "WHEN",
+            "THEN",
+            "ELSE",
+            "END",
+            "COUNT",
+            "SUM",
+            "AVG",
+            "MAX",
+            "MIN",
+            "COALESCE",
+            "NULL",
+            "NOT",
+            "IN",
+            "LIKE",
+            "BETWEEN",
+            "IS",
+            "WITH",
+            "RECURSIVE",
+            "OVER",
+            "PARTITION BY",
+            "ROW_NUMBER",
+            "RANK",
+            "DENSE_RANK",
+            "LAG",
+            "LEAD",
         ]
         formatted = body.sql
         for kw in sorted(keywords, key=len, reverse=True):
             pattern = re.compile(r"\b" + re.escape(kw) + r"\b", re.IGNORECASE)
-            formatted = pattern.sub(
-                lambda m: "\n" + m.group(0).upper(), formatted
-            )
+            formatted = pattern.sub(lambda m: "\n" + m.group(0).upper(), formatted)
         formatted = re.sub(r"\n\s*\n", "\n", formatted).strip()
         return {
             "status": "formatted",

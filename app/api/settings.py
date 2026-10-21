@@ -6,6 +6,7 @@ See SPEC §4.8 (Frontend & API) for the full specification.
 from __future__ import annotations
 
 import logging
+from contextlib import suppress
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -51,10 +52,8 @@ async def _persist_section(section: str) -> None:
     """Persist a settings section to MySQL."""
     store = _get_store()
     if store is not None:
-        try:
+        with suppress(Exception):
             await store.save_setting(section, _settings_store.get(section, {}))
-        except Exception:
-            pass
 
 
 async def _load_setting_section(section: str) -> None:
@@ -283,11 +282,10 @@ async def update_llm_settings(body: LLMSettingsUpdate) -> dict:
                 cfg = llm["providers"][name]
                 if update.enabled is not None:
                     cfg["enabled"] = update.enabled
-                if update.api_key is not None:
+                if update.api_key is not None and update.api_key.strip():
                     # Non-empty key → encrypt and persist; empty → keep old key
-                    if update.api_key.strip():
-                        cfg["api_key_enc"] = encrypt_secret(update.api_key.strip())
-                        cfg["api_key_configured"] = True
+                    cfg["api_key_enc"] = encrypt_secret(update.api_key.strip())
+                    cfg["api_key_configured"] = True
                 if update.base_url is not None:
                     cfg["base_url"] = update.base_url.strip() or None
                 if update.models is not None:

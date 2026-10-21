@@ -20,5 +20,5 @@ jobs:
       - run: python -m pip install -e '.[dev]'
       - run: npm ci --ignore-scripts
       - run: npm run check:frontend
-      - run: ruff check app/workflow/query_service.py tests/test_api/test_query_contract.py scripts/browser_qa_server.py
+      - run: ruff check .
       - run: pytest

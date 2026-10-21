@@ -1,0 +1,127 @@
+{
+  "files": [
+    {
+      "file": "app/api/domains.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/api/feedback.py",
+      "module_ast_identical": true,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/api/learning.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/api/mcp_api.py",
+      "module_ast_identical": true,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/api/settings.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/api/sql_utils.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/api/subagents.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/auth/database.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/core/intent_classifier.py",
+      "module_ast_identical": true,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/core/prompt_builder.py",
+      "module_ast_identical": true,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/db/pii_detector.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/learning/pattern_analyzer.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/nodes/respond.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/nodes/schema_linking.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/storage/__init__.py",
+      "module_ast_identical": true,
+      "string_constants_identical": true
+    },
+    {
+      "file": "app/storage/mysql_store.py",
+      "module_ast_identical": false,
+      "string_constants_identical": false
+    },
+    {
+      "file": "scripts/gen_api.py",
+      "module_ast_identical": false,
+      "string_constants_identical": false
+    },
+    {
+      "file": "scripts/init_db.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    },
+    {
+      "file": "tests/test_api/test_learning_api.py",
+      "module_ast_identical": true,
+      "string_constants_identical": true
+    },
+    {
+      "file": "tests/test_rag/test_bm25_index.py",
+      "module_ast_identical": false,
+      "string_constants_identical": true
+    }
+  ],
+  "legacy_templates": [
+    {
+      "template": "workflows.py",
+      "ast_identical": true,
+      "ast_sha256": "28a9dd3ac69559ffe89dc4b870e9092e6d1c3d1fb06356ccc1e5d6c7928ce228"
+    },
+    {
+      "template": "mcp_api.py",
+      "ast_identical": true,
+      "ast_sha256": "5706b2b3a74cc154a5645ad55a564f3b6c0ac1025557bb392ea067ac3d4ce8b1"
+    },
+    {
+      "template": "feedback.py",
+      "ast_identical": true,
+      "ast_sha256": "e5a6a247052be1d587a5701d96ab25668378b4c870d4161adef45e1532faeae8"
+    },
+    {
+      "template": "sql_utils.py",
+      "ast_identical": true,
+      "ast_sha256": "e7c0d5af2a78b20b41073fbb6eace80aefd8e3ad5f732b3b55ac38c3589ba87b"
+    }
+  ],
+  "method": "ast.parse only; legacy generator NEVER executed; prompt/DDL literals preserved"
+}

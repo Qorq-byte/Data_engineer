@@ -5,8 +5,6 @@ See SPEC §4.10.5 (delivery channels) for the full specification.
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -15,6 +13,7 @@ router = APIRouter()
 
 class SubagentQueryRequest(BaseModel):
     """Request body for POST /api/v1/subagents/{name}/query."""
+
     nl_text: str = Field(..., description="Natural language query text", min_length=1)
     domain: str = Field(default="", description="Domain override")
     database: str = Field(default="", description="Database identifier")
@@ -86,8 +85,7 @@ async def get_subagent(name: str) -> dict:
             "status": inst.status.value,
             "capabilities": inst.config.capabilities,
             "delivery": [
-                {"type": d.type, "path": d.path or d.endpoint}
-                for d in inst.config.delivery
+                {"type": d.type, "path": d.path or d.endpoint} for d in inst.config.delivery
             ],
         },
     }

@@ -21,8 +21,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
-from datetime import datetime
 from typing import Any
 
 import aiomysql
@@ -57,7 +55,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='用户配置 — LLM 提供商、系统设置、API 密钥';
     """,
-
     # 2. API keys (encrypted)
     """
     CREATE TABLE IF NOT EXISTS api_keys (
@@ -70,7 +67,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='API 密钥存储';
     """,
-
     # 3. Database connection profiles
     """
     CREATE TABLE IF NOT EXISTS datasource_connections (
@@ -91,7 +87,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='数据源连接配置';
     """,
-
     # 4. Domains
     """
     CREATE TABLE IF NOT EXISTS domains (
@@ -111,7 +106,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='领域定义';
     """,
-
     # 5. Glossary terms
     """
     CREATE TABLE IF NOT EXISTS glossary_terms (
@@ -130,7 +124,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='业务术语表';
     """,
-
     # 6. Domain rules
     """
     CREATE TABLE IF NOT EXISTS domain_rules (
@@ -148,7 +141,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='领域规则';
     """,
-
     # 7. Query history
     """
     CREATE TABLE IF NOT EXISTS query_history (
@@ -168,7 +160,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='查询历史';
     """,
-
     # 8. Feedback
     """
     CREATE TABLE IF NOT EXISTS feedback (
@@ -188,27 +179,29 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='用户反馈';
     """,
-
     # 9. Learning rule candidates
-    """
-    CREATE TABLE IF NOT EXISTS learning_rule_candidates (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        rule_id VARCHAR(100) NOT NULL COMMENT '规则候选 ID',
-        description TEXT COMMENT '规则描述',
-        pattern VARCHAR(500) DEFAULT '' COMMENT '匹配模式',
-        sql_template TEXT COMMENT 'SQL 模板',
-        confidence FLOAT DEFAULT 0.0 COMMENT '置信度',
-        source_count INT DEFAULT 0 COMMENT '来源数量',
-        status VARCHAR(50) DEFAULT 'pending_review' COMMENT '状态: pending_review, approved, rejected',
-        domain VARCHAR(100) DEFAULT '' COMMENT '领域',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uk_rule_id (rule_id),
-        INDEX idx_status (status)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    COMMENT='学习规则候选';
-    """,
-
+    (
+        "\n"
+        "    CREATE TABLE IF NOT EXISTS learning_rule_candidates (\n"
+        "        id INT AUTO_INCREMENT PRIMARY KEY,\n"
+        "        rule_id VARCHAR(100) NOT NULL COMMENT '规则候选 ID',\n"
+        "        description TEXT COMMENT '规则描述',\n"
+        "        pattern VARCHAR(500) DEFAULT '' COMMENT '匹配模式',\n"
+        "        sql_template TEXT COMMENT 'SQL 模板',\n"
+        "        confidence FLOAT DEFAULT 0.0 COMMENT '置信度',\n"
+        "        source_count INT DEFAULT 0 COMMENT '来源数量',\n"
+        "        status VARCHAR(50) DEFAULT 'pending_review' COMMENT '状态: pending_r"
+        "eview, approved, rejected',\n"
+        "        domain VARCHAR(100) DEFAULT '' COMMENT '领域',\n"
+        "        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n"
+        "        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_T"
+        "IMESTAMP,\n"
+        "        UNIQUE KEY uk_rule_id (rule_id),\n"
+        "        INDEX idx_status (status)\n"
+        "    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci\n"
+        "    COMMENT='学习规则候选';\n"
+        "    "
+    ),
     # 10. Learning quality trends
     """
     CREATE TABLE IF NOT EXISTS learning_quality_trends (
@@ -223,7 +216,6 @@ _CREATE_TABLES_SQL = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     COMMENT='学习质量趋势';
     """,
-
     # 11. Learning query pairs
     """
     CREATE TABLE IF NOT EXISTS learning_query_pairs (
@@ -252,11 +244,31 @@ _DEFAULT_SETTINGS = {
         "temperature": 0.3,
         "max_tokens": 4096,
         "providers": {
-            "openai": {"enabled": True, "models": ["gpt-4.1", "gpt-4.1-mini", "gpt-4o"], "api_key_configured": False},
-            "anthropic": {"enabled": True, "models": ["claude-sonnet-4", "claude-haiku-4.5"], "api_key_configured": False},
-            "deepseek": {"enabled": True, "models": ["deepseek-v4-flash", "deepseek-v4-pro"], "api_key_configured": False},
-            "google": {"enabled": True, "models": ["gemini-2.0-flash", "gemini-2.5-pro"], "api_key_configured": False},
-            "qwen": {"enabled": False, "models": ["qwen-max", "qwen-plus"], "api_key_configured": False},
+            "openai": {
+                "enabled": True,
+                "models": ["gpt-4.1", "gpt-4.1-mini", "gpt-4o"],
+                "api_key_configured": False,
+            },
+            "anthropic": {
+                "enabled": True,
+                "models": ["claude-sonnet-4", "claude-haiku-4.5"],
+                "api_key_configured": False,
+            },
+            "deepseek": {
+                "enabled": True,
+                "models": ["deepseek-v4-flash", "deepseek-v4-pro"],
+                "api_key_configured": False,
+            },
+            "google": {
+                "enabled": True,
+                "models": ["gemini-2.0-flash", "gemini-2.5-pro"],
+                "api_key_configured": False,
+            },
+            "qwen": {
+                "enabled": False,
+                "models": ["qwen-max", "qwen-plus"],
+                "api_key_configured": False,
+            },
             "groq": {"enabled": False, "models": ["llama-4-maverick"], "api_key_configured": False},
         },
     },
@@ -320,13 +332,13 @@ class MySQLStore:
         settings = await store.get_settings()
     """
 
-    _instance: "MySQLStore | None" = None
+    _instance: MySQLStore | None = None
 
     def __init__(self, pool: aiomysql.Pool) -> None:
         self._pool = pool
 
     @classmethod
-    async def create(cls, config: dict[str, Any] | None = None) -> "MySQLStore":
+    async def create(cls, config: dict[str, Any] | None = None) -> MySQLStore:
         """Create a MySQLStore instance with a connection pool.
 
         Args:
@@ -360,24 +372,21 @@ class MySQLStore:
 
     async def _execute(self, sql: str, params: tuple | None = None) -> int:
         """Execute a write SQL statement, returning affected row count."""
-        async with self._pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute(sql, params)
-                return cur.rowcount
+        async with self._pool.acquire() as conn, conn.cursor() as cur:
+            await cur.execute(sql, params)
+            return cur.rowcount
 
     async def _fetchone(self, sql: str, params: tuple | None = None) -> dict | None:
         """Fetch a single row as dict."""
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(sql, params)
-                return await cur.fetchone()
+        async with self._pool.acquire() as conn, conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(sql, params)
+            return await cur.fetchone()
 
     async def _fetchall(self, sql: str, params: tuple | None = None) -> list[dict]:
         """Fetch all rows as list of dicts."""
-        async with self._pool.acquire() as conn:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(sql, params)
-                return await cur.fetchall()
+        async with self._pool.acquire() as conn, conn.cursor(aiomysql.DictCursor) as cur:
+            await cur.execute(sql, params)
+            return await cur.fetchall()
 
     # ── Database initialization ────────────────────────────────────────
 
@@ -444,9 +453,7 @@ class MySQLStore:
 
     async def get_api_key(self, provider: str) -> str | None:
         """Get an API key for a provider."""
-        row = await self._fetchone(
-            "SELECT api_key FROM api_keys WHERE provider = %s", (provider,)
-        )
+        row = await self._fetchone("SELECT api_key FROM api_keys WHERE provider = %s", (provider,))
         return row["api_key"] if row else None
 
     async def save_api_key(self, provider: str, api_key: str) -> None:
@@ -736,9 +743,7 @@ class MySQLStore:
         total_q = await self._fetchone("SELECT COUNT(*) as cnt FROM query_history")
         total_f = await self._fetchone("SELECT COUNT(*) as cnt FROM feedback")
         avg_r = await self._fetchone("SELECT AVG(rating) as avg FROM feedback WHERE rating > 0")
-        rule_c = await self._fetchone(
-            "SELECT COUNT(*) as cnt FROM learning_rule_candidates"
-        )
+        rule_c = await self._fetchone("SELECT COUNT(*) as cnt FROM learning_rule_candidates")
         pending = await self._fetchone(
             "SELECT COUNT(*) as cnt FROM learning_rule_candidates WHERE status = 'pending_review'"
         )
@@ -765,7 +770,8 @@ class MySQLStore:
         """Save or update a rule candidate."""
         await self._execute(
             "INSERT INTO learning_rule_candidates "
-            "(rule_id, description, pattern, sql_template, confidence, source_count, status, domain) "
+            "(rule_id, description, pattern, sql_template, confidence, "
+            "source_count, status, domain) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
             "ON DUPLICATE KEY UPDATE "
             "description = VALUES(description), pattern = VALUES(pattern), "
@@ -835,9 +841,7 @@ class MySQLStore:
             ),
         )
 
-    async def get_query_pairs(
-        self, limit: int = 20, domain: str = ""
-    ) -> list[dict[str, Any]]:
+    async def get_query_pairs(self, limit: int = 20, domain: str = "") -> list[dict[str, Any]]:
         """Get recent NL-SQL query pairs."""
         if domain:
             return await self._fetchall(
@@ -868,6 +872,7 @@ async def init_db(config: dict[str, Any] | None = None) -> MySQLStore:
     # Create the database if it doesn't exist
     try:
         import aiomysql
+
         temp_conn = await aiomysql.connect(
             host=cfg["host"],
             port=cfg["port"],

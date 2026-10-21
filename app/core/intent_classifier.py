@@ -89,7 +89,11 @@ _PATTERNS: dict[IntentType, list[tuple[str, int, str]]] = {
         (r"多表", 2, "zh"),
         # Chinese — implicit multi-table patterns
         # "每X的Y" with aggregation (strong signal for JOIN + GROUP BY)
-        (r"每(?:个|位|名|人|条|项).{1,8}的.{1,8}(?:总|平均|汇总|统计|金额|价格|排名|列表|详情|记录)", 2, "zh"),
+        (
+            r"每(?:个|位|名|人|条|项).{1,8}的.{1,8}(?:总|平均|汇总|统计|金额|价格|排名|列表|详情|记录)",
+            2,
+            "zh",
+        ),
         # "每X的Y" (simple entity-relationship, lower weight — could be single-table GROUP BY)
         (r"每(?:个|种|类|位|条|项|名).{1,6}的.{1,6}", 1, "zh"),
         # "谁" queries (who bought/ordered/... — clear person→action→object JOIN)
@@ -101,7 +105,11 @@ _PATTERNS: dict[IntentType, list[tuple[str, int, str]]] = {
         # "分别" with aggregation — per-group breakdown often needs JOIN
         (r"分别.{0,4}(?:统计|查询|列出|显示|汇总|计算|查看)", 2, "zh"),
         # English — implicit relationship queries
-        (r"\b(?:each|every|per)\s+\w+\s+(?:has|have|with|in)\s+\w+\s+(?:total|sum|count|avg)", 2, "en"),
+        (
+            r"\b(?:each|every|per)\s+\w+\s+(?:has|have|with|in)\s+\w+\s+(?:total|sum|count|avg)",
+            2,
+            "en",
+        ),
         (r"\bwho\s+(?:has|have|made|placed|ordered|bought|purchased)", 2, "en"),
         (r"\bwhich\s+\w+\s+(?:has|have|contains?|belongs?\s+to)", 2, "en"),
         # English
