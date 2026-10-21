@@ -8,14 +8,22 @@ are enforced here.
 See SPEC §4.12.4 (built-in nodes) and §4.12.6 (node registry).
 """
 
+from __future__ import annotations
+
 import asyncio
 import re as _re
 import sqlite3
 import threading
 import time
-from typing import Any
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import aiomysql
+    import asyncpg
 
 from app.config.settings import settings
+from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
 from app.models.query import PlanAnalysis
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
@@ -130,7 +138,7 @@ class ExecuteSQLNode(AgenticNode):
         analyze_plan = input.config.get("analyze_plan", False)
 
         plan: PlanAnalysis | None = None
-        result: dict | None = None
+        result: ExecutionResult | None = None
 
         from app.db.runtime import native_call
 
@@ -149,7 +157,7 @@ class ExecuteSQLNode(AgenticNode):
 
             result = await self._execute_bounded(conn, sql, max_rows, timeout_ms)
 
-            metadata: dict = {
+            metadata: dict[str, Any] = {
                 "status": "success",
                 "row_count": result.get("row_count", 0),
                 "truncated": result.get("truncated", False),
@@ -179,9 +187,8 @@ class ExecuteSQLNode(AgenticNode):
     def _is_write_statement(sql: str) -> bool:
         """Check if a SQL statement is a write operation.
 
-        Normalizes the SQL and checks the first keyword against the
-        WRITE_KEYWORDS set. Also checks for common write patterns
-        like multiple statements separated by semicolons.
+        Uses the shared AST read-query guard; unparseable SQL and multiple
+        statements fail closed. Node configuration cannot grant writes.
         """
         if not sql.strip():
             return False
@@ -193,7 +200,7 @@ class ExecuteSQLNode(AgenticNode):
 
     async def _execute_bounded(
         self, conn: Any, sql: str, max_rows: int, timeout_ms: int
-    ) -> dict[str, Any]:
+    ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_aiomysql_connection(conn):
             try:
@@ -211,7 +218,7 @@ class ExecuteSQLNode(AgenticNode):
 
     def _execute_native_bounded(
         self, conn: Any, sql: str, max_rows: int, timeout_ms: int
-    ) -> dict[str, Any]:
+    ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_sqlite_connection(conn):
             deadline = time.monotonic() + timeout
@@ -270,7 +277,7 @@ class ExecuteSQLNode(AgenticNode):
     # ── Per-driver execution ───────────────────────────────────────
 
     @staticmethod
-    def _execute_sqlite(conn: object, sql: str, max_rows: int) -> dict:
+    def _execute_sqlite(conn: sqlite3.Connection, sql: str, max_rows: int) -> ExecutionResult:
         """Execute SQL on a sqlite3 connection."""
         cursor = conn.cursor()
         cursor.execute(sql)
@@ -287,7 +294,7 @@ class ExecuteSQLNode(AgenticNode):
         }
 
     @staticmethod
-    def _execute_duckdb(conn: object, sql: str, max_rows: int) -> dict:
+    def _execute_duckdb(conn: DuckReadConnection, sql: str, max_rows: int) -> ExecutionResult:
         """Execute SQL on a DuckDB connection."""
         result = conn.execute(sql)
         rows = result.fetchmany(max_rows + 1)
@@ -303,7 +310,9 @@ class ExecuteSQLNode(AgenticNode):
         }
 
     @staticmethod
-    async def _execute_asyncpg(conn: object, sql: str, max_rows: int) -> dict:
+    async def _execute_asyncpg(
+        conn: asyncpg.Connection, sql: str, max_rows: int
+    ) -> ExecutionResult:
         """Execute SQL on an asyncpg connection."""
         bounded_sql = f"SELECT * FROM ({sql.strip().rstrip(';')}) AS _result LIMIT {max_rows + 1}"
         records = await conn.fetch(bounded_sql)
@@ -318,7 +327,9 @@ class ExecuteSQLNode(AgenticNode):
         }
 
     @staticmethod
-    async def _execute_aiomysql(conn: object, sql: str, max_rows: int) -> dict:
+    async def _execute_aiomysql(
+        conn: aiomysql.Connection, sql: str, max_rows: int
+    ) -> ExecutionResult:
         """Execute SQL on an aiomysql (MySQL) connection."""
         cursor = await conn.cursor()
         try:
@@ -338,7 +349,7 @@ class ExecuteSQLNode(AgenticNode):
             await cursor.close()
 
     @staticmethod
-    def _execute_generic(conn: object, sql: str, max_rows: int) -> dict:
+    def _execute_generic(conn: CursorConnection, sql: str, max_rows: int) -> ExecutionResult:
         """Fallback: execute using generic DB-API 2.0 interface."""
         cursor = conn.cursor()
         cursor.execute(sql)
@@ -357,7 +368,7 @@ class ExecuteSQLNode(AgenticNode):
     # ── EXPLAIN support ───────────────────────────────────────────────
 
     @staticmethod
-    def _execute_explain(conn: object, sql: str) -> dict:
+    def _execute_explain(conn: CursorConnection, sql: str) -> ExecutionResult:
         """Execute EXPLAIN for a query and return the plan rows.
 
         Uses ``EXPLAIN QUERY PLAN`` for SQLite, ``EXPLAIN`` for others.
@@ -400,7 +411,7 @@ class ExecuteSQLNode(AgenticNode):
 
     @staticmethod
     def _parse_explain_output(
-        explain_result: dict, existing: PlanAnalysis | None = None
+        explain_result: Mapping[str, Any], existing: PlanAnalysis | None = None
     ) -> PlanAnalysis:
         """Parse EXPLAIN output into a ``PlanAnalysis``.
 

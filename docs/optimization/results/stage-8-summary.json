@@ -1,0 +1,53 @@
+{
+  "before": {
+    "errors": 230,
+    "files": 49,
+    "by_code": {
+      "no-any-return": 16,
+      "type-arg": 128,
+      "import-untyped": 3,
+      "unused-ignore": 2,
+      "assignment": 8,
+      "comparison-overlap": 1,
+      "arg-type": 13,
+      "misc": 4,
+      "no-untyped-def": 10,
+      "import-not-found": 1,
+      "union-attr": 6,
+      "call-arg": 6,
+      "attr-defined": 16,
+      "no-untyped-call": 4,
+      "no-redef": 1,
+      "list-item": 1,
+      "untyped-decorator": 9,
+      "operator": 1
+    }
+  },
+  "after": {
+    "errors": 201,
+    "files": 43,
+    "by_code": {
+      "no-any-return": 11,
+      "type-arg": 114,
+      "import-untyped": 3,
+      "unused-ignore": 2,
+      "assignment": 8,
+      "comparison-overlap": 1,
+      "arg-type": 11,
+      "misc": 4,
+      "no-untyped-def": 10,
+      "import-not-found": 1,
+      "union-attr": 6,
+      "call-arg": 6,
+      "attr-defined": 9,
+      "no-untyped-call": 4,
+      "no-redef": 1,
+      "operator": 1,
+      "untyped-decorator": 9
+    }
+  },
+  "target_before": 24,
+  "target_after": 0,
+  "new_diagnostic_fingerprints": [],
+  "full_repository_passed": false
+}

@@ -34,7 +34,6 @@ setup_input(raw_input) → execute(node_input) → update_context(output, contex
 
 ```python
 from app.nodes.base import BaseNode, NodeInput, NodeOutput
-from app.models.query import QueryResult
 
 class DataQualityNode(BaseNode):
     name = "data_quality"
@@ -42,7 +41,7 @@ class DataQualityNode(BaseNode):
 
     async def execute(self, node_input: NodeInput) -> NodeOutput:
         result = node_input.context.get("last_execution")
-        rows = result.rows if isinstance(result, QueryResult) else []
+        rows = result.get("rows", []) if isinstance(result, dict) else []
 
         issues = []
         if not rows:
@@ -92,7 +91,7 @@ plan:
     metrics: [execution_success]
 ```
 
-用 `PlanLoader().load("quality_check")` 和 `WorkflowRunner(plan, registry)` 驱动此独立示例；`run(..., last_execution=QueryResult(...))` 可传入已取得的数据。仅编辑YAML或在启动目录注册不会自动把新节点接入HTTP主查询：`query_service.py`有请求独立registry，HTTP/MCP仍固定 `request_query.yml`，变更须显式实现、审查及回归。
+用 `PlanLoader().load("quality_check")` 和 `WorkflowRunner(plan, registry)` 驱动此独立示例；`run(..., last_execution=execution_result)` 可传入已取得的数据。`execution_result`使用`app.db.execution_types.ExecutionResult`字典：`columns`、`rows`、`row_count`、`truncated`；ExecuteSQLNode也按此结构设置`last_execution`，不是QueryResult实例。仅编辑YAML或在启动目录注册不会自动把新节点接入HTTP主查询：`query_service.py`有请求独立registry，HTTP/MCP仍固定 `request_query.yml`，变更须显式实现、审查及回归。
 
 ## 测试
 
@@ -101,14 +100,13 @@ plan:
 ```python
 import pytest
 from app.nodes.data_quality import DataQualityNode
-from app.models.query import QueryResult
 
 class TestDataQualityNode:
     @pytest.mark.asyncio
     async def test_detects_empty_result(self):
         node = DataQualityNode()
         node_input = await node.setup_input({
-            "context": {"last_execution": QueryResult(sql="", rows=[], columns=["a"])},
+            "context": {"last_execution": {"columns": ["a"], "rows": [], "row_count": 0, "truncated": False}},
         })
         output = await node.execute(node_input)
         assert not output.errors
@@ -118,7 +116,7 @@ class TestDataQualityNode:
     async def test_clean_result(self):
         node = DataQualityNode()
         node_input = await node.setup_input({
-            "context": {"last_execution": QueryResult(sql="", rows=[[1], [2]], columns=["a"])},
+            "context": {"last_execution": {"columns": ["a"], "rows": [[1], [2]], "row_count": 2, "truncated": False}},
         })
         output = await node.execute(node_input)
         assert output.result["issues"] == []
@@ -168,4 +166,8 @@ async def on_event(status: NodeEventStatus, data: NodeEvent) -> None:
         print("节点返回错误")
 ```
 
-将此async回调传给 `runner.run(..., on_node_event=on_event)`。事件只报告started/completed/failed，不决定下一节点。`mypy app/harness app/models`是strict核心门禁，保留默认导入追踪；它不等于全仓类型检查通过。
+将此async回调传给 `runner.run(..., on_node_event=on_event)`。事件只报告started/completed/failed，不决定下一节点。`mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py`是strict核心门禁，保留默认导入追踪；它不等于全仓类型检查通过。
+
+## 模型适配契约
+
+`GenerateSQLNode`和`SQLGenerator`接受`app.llm.protocols.CompletionRouter`：只读`config`、非流式`complete`返回字典、`complete_stream`返回字符串异步迭代器。无需继承具体LiteLLMRouter。调用选项使用与原生Router一致的messages/model/temperature/n及provider关键字。HTTP固定工作流注入BudgetedRouter；包装器只公开这些接口，物理预算仍由原生Router逐次计数，注入适配器由包装器计数。错误响应和非字符串流片段明确拒绝，异常与取消继续传播。此声明不保证任意第三方适配器自动合规，新增适配器须实际回归。

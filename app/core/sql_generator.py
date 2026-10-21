@@ -18,7 +18,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from app.core.prompt_builder import PromptBuilder
-from app.llm.router import LiteLLMRouter
+from app.llm.protocols import CompletionRouter
 from app.models.domain import DomainConfig
 from app.models.query import SQR, QueryPair, SQLCandidate
 from app.models.schema import SchemaSnapshot
@@ -46,7 +46,7 @@ class SQLGenerator:
 
     def __init__(
         self,
-        router: LiteLLMRouter,
+        router: CompletionRouter,
         prompt_builder: PromptBuilder | None = None,
     ) -> None:
         self.router = router
@@ -390,9 +390,9 @@ def _extract_sql(text: str) -> str:
         r"```(?:sql|SQL|mysql|postgresql|postgres|sqlite)?\s*\n(.*?)```",
         re.DOTALL | re.IGNORECASE,
     )
-    matches = fence_pattern.findall(text)
-    if matches:
-        return matches[0].strip()
+    match = fence_pattern.search(text)
+    if match:
+        return match.group(1).strip()
 
     # No fence — use the whole text after stripping common prefixes
     cleaned = text.strip()

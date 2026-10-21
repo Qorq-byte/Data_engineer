@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from app.core.prompt_builder import PromptBuilder
 from app.core.sql_generator import SQLGenerator, _split_alternatives
+from app.llm.protocols import CompletionRouter
 from app.llm.router import LiteLLMRouter, RouterConfig
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
@@ -37,7 +38,7 @@ class GenerateSQLNode(AgenticNode):
 
     def __init__(
         self,
-        router: LiteLLMRouter | None = None,
+        router: CompletionRouter | None = None,
         prompt_builder: PromptBuilder | None = None,
         generator: SQLGenerator | None = None,
     ) -> None:
@@ -51,7 +52,7 @@ class GenerateSQLNode(AgenticNode):
     # ------------------------------------------------------------------
 
     @property
-    def router(self) -> LiteLLMRouter:
+    def router(self) -> CompletionRouter:
         if self._router is None:
             self._router = LiteLLMRouter(RouterConfig(providers={}), mock_mode=True)
         return self._router
@@ -242,9 +243,9 @@ def _extract_sql(text: str) -> str:
         r"```(?:sql|SQL|mysql|postgresql|postgres|sqlite)?\s*\n(.*?)```",
         re.DOTALL | re.IGNORECASE,
     )
-    matches = fence.findall(text)
-    if matches:
-        return matches[0].strip()
+    match = fence.search(text)
+    if match:
+        return match.group(1).strip()
     cleaned = text.strip()
     for prefix in [
         "Here is the SQL query:",

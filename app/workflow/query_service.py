@@ -17,6 +17,7 @@ from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
 from app.llm.budget import BudgetedRouter, active_budget
 from app.llm.factory import get_default_router
+from app.models.schema import SchemaSnapshot
 from app.nodes.execute_sql import ExecuteSQLNode
 from app.nodes.generate_sql import GenerateSQLNode
 from app.nodes.parse_nl import ParseNLNode
@@ -124,7 +125,10 @@ async def _run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> 
     )
     budget_token = active_budget.set(limits)
     try:
-        targets = list(schemas.items()) or [("", (None, "", body.dialect))]
+        targets: list[tuple[str, tuple[SchemaSnapshot | None, str, str]]] = [
+            (db_id, (schema, db_name, dialect))
+            for db_id, (schema, db_name, dialect) in schemas.items()
+        ] or [("", (None, "", body.dialect))]
         for db_id, (schema, db_name, dialect) in targets:
             metadata = (
                 _detect_metadata_query(body.nl_text, {db_id: (schema, db_name, dialect)})
