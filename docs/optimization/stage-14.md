@@ -37,4 +37,6 @@ Windows/Python3.13.9、Node24、SQLite3.51.0、SQLGlot30.18.0、Ruff0.17.1、myp
 
 ## Git与远程验收
 
-本地验收完成，待提交、普通推送、远程SHA/Linux CI核对后补记。
+代码提交[8a83398addb7245d6978e6155cafc56aa04d4766](https://github.com/Qorq-byte/Data_engineer/commit/8a83398addb7245d6978e6155cafc56aa04d4766)已普通推送到codex/mvp-hardening，ls-remote核对SHA一致；未强推或合并main。
+
+[Actions39626188636](https://github.com/Qorq-byte/Data_engineer/actions/runs/39626188636) **success**：Linux/Python3.12干净安装、前端编译、全仓Ruff、扩展strict32源文件门禁通过；全量 **3164 passed，1 warning，36.06秒**，uvloop实际执行通过。[远程证据](results/stage-14-ci.json)保存对应headSha及各步骤。阶段14代码远程验收完成；全仓类型债务及其他方言/DDL事务边界仍按上述限制保留。
