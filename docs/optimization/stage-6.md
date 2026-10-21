@@ -30,3 +30,7 @@ Windows/Python3.13.9；既有site-packages，mock LLM/embedding，真实本地SQ
 本阶段只清理静态lint并建立全仓门禁，不宣称模型质量或运行性能提升。严格mypy上一阶段仍279项（66文件），本阶段未重新测量全部类型错误，**不宣称当前数量不变或已通过**。按模块先补Harness/查询契约与连接资源的类型边界，再处理第三方类型stub和API返回结构，适合后续独立阶段。
 
 真实LLM/embedding/PG/MySQL、人工标注业务评测、生产容量、多租户/跨进程状态等仍按[上一阶段限制](stage-5.md)保留。当前工作为单独阶段提交并普通推送，不合并main；GitHub Actions最终结果以分支实际运行记录为准。
+
+## 远程交付验收
+
+代码提交 [ff038f4db75d9745263877eddef2d1e3c6b95a94](https://github.com/Qorq-byte/Data_engineer/commit/ff038f4db75d9745263877eddef2d1e3c6b95a94) 已普通推送至codex/mvp-hardening，ls-remote核对一致。[Actions39526535897](https://github.com/Qorq-byte/Data_engineer/actions/runs/39526535897) **success**，实际完成干净安装、前端编译、全仓ruff check .与全量pytest；[远程状态证据](results/stage-6-ci.json)记录对应headSha与各步骤。后续本次文档补记不改变已验证代码。
