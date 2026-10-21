@@ -38,3 +38,9 @@
 全仓230项仍含128个容器参数问题，以及节点/HTTP接口、MCP、LLM适配和第三方类型边界。下一阶段优先收敛执行节点与查询适配契约，尤其是GenerateSQLNode与BudgetedRouter协议、可空Schema目标、API请求/响应和session形状；先确认新的依赖闭包与基线再改，不直接扩展本阶段范围。真实模型/RAG标注评测和外部数据库稳态仍需凭据、业务样本与运行环境；本阶段无性能或准确率结论。
 
 交付继续在codex/mvp-hardening独立提交、普通推送与远程核对，不合并main；远程Actions结果按对应提交核验后补记。
+
+## 远程交付验收
+
+代码提交 [ac87480ec97defebf545cc88097bcfec0ddc26cc](https://github.com/Qorq-byte/Data_engineer/commit/ac87480ec97defebf545cc88097bcfec0ddc26cc) 已推送，ls-remote核对一致。[Actions39531961041](https://github.com/Qorq-byte/Data_engineer/actions/runs/39531961041) **success**：干净安装、前端编译、全仓Ruff、标准核心mypy均通过；核心检查24源文件无问题，Linux全量 **2965 passed，1 warning，31.35秒**，uvloop用例实际执行通过。Windows本地1项平台跳过没有被当成远程已验证；现已由Linux补足。
+
+[远程状态证据](results/stage-7-ci.json)记录对应headSha与各步骤。全仓mypy230项是前述本机测量，远程此次执行的是核心门禁，不能将此Actions成功解释为全仓类型通过。后续本次文档补记不改变已验证代码。
