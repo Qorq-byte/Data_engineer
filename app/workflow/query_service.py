@@ -193,6 +193,7 @@ async def _run_query(body: Any, emit: Any = None, *, llm_router: Any = None) -> 
                     {
                         "stage": stage,
                         "status": status,
+                        "skipped": bool(output and output.metadata.get("status") == "skipped"),
                         "db_id": target_db_id,
                         "duration_ms": data.get("latency_ms", 0),
                         "attempt": data["attempt"],

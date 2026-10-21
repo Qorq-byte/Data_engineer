@@ -14,4 +14,6 @@ permissions 来自 agent.yml，deny/ask 阻断节点声明的工具；生成与�
 
 mock 模式响应明确 warnings；未连接数据库的生成结果不能称为数据库答案。固定计划当前不执行旧 API 中散落的自动 self-heal、歧义追问、自动领域匹配、查询对学习或文档 RAG 扩展；不能把这些模块存在视为主链路已接通。后续增强必须以显式计划/节点接入并独立验证。Schema 检索及领域规则已接线并在第三阶段验证，真实模型正确率需要标注业务数据与凭据。
 
+前端进度使用 `stage` 的真实状态；事件新增 `skipped` 布尔字段，禁用节点的 completed 不代表执行过。工作台默认请求执行，返回无 execution 时标记“SQL 已生成，未执行”，0行明确为空结果。客户端超时等待上限130秒（默认服务端120秒），停止等待不代表 SQL 已执行或必已取消；手动取消、切换历史/新会话和卸载组件都使旧响应失效。通用请求层自动附加管理员 Bearer；HTTP错误支持字符串和对象 detail，SSE失败不自动转 JSON 重跑。
+
 `/workflows` 从 YAML 读取模板，并以 query_executable 标明当前入口；custom 仅更新进程内目录，不落盘、不改变查询计划。`/workflows/simulate` 是启发式展示，status=simulation 并返回 actual_query_plan；不参与真实流转。

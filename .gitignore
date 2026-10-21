@@ -43,3 +43,7 @@ lancedb/
 # IDE
 .idea/
 .vscode/
+
+# Frontend dependencies (install with npm ci)
+node_modules/
+.gstack/

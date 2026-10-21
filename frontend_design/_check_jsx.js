@@ -1,29 +1,25 @@
-// Extract <script type="text/babel"> blocks from an HTML file and syntax-check them with Babel.
-const fs = require('fs');
-const Babel = require(process.env.TEMP + '\\babelcheck\\node_modules\\@babel\\standalone\\babel.js');
-
-const file = process.argv[2];
-const html = fs.readFileSync(file, 'utf8');
-
-const re = /<script type="text\/babel">([\s\S]*?)<\/script>/g;
-let match;
-let idx = 0;
+// Compile the JSX version used by the browser, with no machine-local paths.
+const fs = require('node:fs');
+const Babel = require('@babel/standalone');
+const files = process.argv.slice(2);
+if (!files.length) throw new Error('Pass at least one HTML file');
 let failed = false;
-
-while ((match = re.exec(html)) !== null) {
-  idx++;
-  const code = match[1];
-  try {
-    Babel.transform(code, { presets: ['react'] });
-    console.log(`[PASS] ${file} - babel block #${idx} (${code.length} chars)`);
-  } catch (e) {
-    failed = true;
-    console.log(`[FAIL] ${file} - babel block #${idx}`);
-    console.log(e.message.split('\n').slice(0, 12).join('\n'));
+for (const file of files) {
+  const html = fs.readFileSync(file, 'utf8');
+  let count = 0;
+  for (const [, attrs, code] of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)) {
+    if (/\bsrc\s*=/.test(attrs)) continue;
+    const isBabel = /type=["']text\/babel["']/.test(attrs);
+    if (/\btype=/.test(attrs) && !isBabel && !/type=["'](?:module|text\/javascript)["']/.test(attrs)) continue;
+    count++;
+    try {
+      Babel.transform(code, { presets: isBabel ? ['react'] : [], sourceType: 'unambiguous' });
+      console.log(`[PASS] ${file} script #${count}`);
+    } catch (error) {
+      failed = true;
+      console.error(`[FAIL] ${file} script #${count}\n${error.message}`);
+    }
   }
+  if (!count) { failed = true; console.error(`[FAIL] ${file}: no inline scripts checked`); }
 }
-
-if (idx === 0) {
-  console.log(`[WARN] no text/babel block found in ${file}`);
-}
-process.exit(failed ? 1 : 0);
+process.exitCode = failed ? 1 : 0;

@@ -90,6 +90,23 @@ async def test_invalid_sql_never_executes(connected_query, monkeypatch):
     )
 
 
+async def test_sse_marks_disabled_execution_as_skipped(connected_query):
+    response = connected_query.post(
+        "/api/v1/query/stream",
+        json={"nl_text": "find all orders", "database": "contract", "execute": False},
+    )
+    event = ""
+    stages = []
+    for line in response.text.splitlines():
+        if line.startswith("event:"):
+            event = line[6:].strip()
+        elif line.startswith("data:") and event == "stage":
+            stages.append(json.loads(line[5:]))
+    terminal = [s for s in stages if s["stage"] == "execute" and s["status"] == "completed"]
+    assert terminal and terminal[0]["skipped"] is True
+    assert not any(s["skipped"] for s in stages if s["stage"] == "generate")
+
+
 async def test_schema_retriever_is_wired_and_filtered_columns_reach_prompt(
     connected_query, monkeypatch
 ):

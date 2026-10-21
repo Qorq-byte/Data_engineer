@@ -1,6 +1,6 @@
 # NL2SQL 数据工程智能体 — 用户使用手册
 
-> 版本: v0.1 · 更新: 2026-07-19
+> 版本: v0.1 · 更新: 2026-10-20
 
 ---
 
@@ -21,6 +21,12 @@
 13. [通过 API 调用](#13-通过-api-调用)
 
 ---
+
+## 当前运行前提与边界
+
+配置强随机 `JWT_SECRET`、认证 `AUTH_MYSQL_*`、真实模型和查询数据库。工作台只允许 `ADMIN_USER_IDS` 中的账号访问业务 API；注册需 `REGISTRATION_TOKEN` 邀请，不自动取得管理员权限。未连通认证 MySQL 时不能完成网页登录，业务存储降级不等于认证可用。
+
+`/health` 仅存活；`/health/ready` 未就绪时工作台显示提示。MOCK 模型/向量只用于开发，黄色标记不代表已取得正确业务答案。真实模型质量与生产容量尚无基线；本次确定性验证、限制见[阶段5报告](optimization/stage-5.md)。
 
 ## 1. 概述
 
@@ -81,9 +87,10 @@ NL2SQL 是一个**将自然语言自动转换为 SQL 并执行**的数据工程�
 | 模式 | 操作 |
 |------|------|
 | **正面 — Log in** | 输入 Email + Password → 点击 "Let's go!" |
-| **反面 — Sign up** | 点击中间开关翻面 → 输入 Username + Email + Password + 确认密码 → 注册 |
+| **反面 — Sign up** | 点击中间开关翻面 → 输入邀请码 + Username + Email + Password + 确认密码 → 注册 |
 
 **注册要求：**
+- 管理员发放的邀请码（请求头 `X-Registration-Token`）；未配置邀请时注册关闭
 - 用户名 ≥ 2 个字符
 - 邮箱格式有效
 - 密码 ≥ 6 个字符
@@ -118,11 +125,13 @@ NL2SQL 是一个**将自然语言自动转换为 SQL 并执行**的数据工程�
 1. 在底部输入框输入自然语言查询（中文或英文）
 2. 按 `Enter` 或点击发送按钮
 3. 系统逐步执行 Pipeline，实时显示进度：
-   - `schema_linking` → 定位相关表和列
-   - `generate_sql` → 大模型生成 SQL
-   - `validate_sql` → 语法和 Schema 验证
-   - `execute_sql` → 执行 SQL 预览结果
-4. 结果区域展示：SQL 代码、执行结果表格、验证报告
+   - `parse` → 理解输入
+   - `retrieve`（schema_linking）→ 定位相关表和列
+   - `generate`（generate_sql）→ 大模型生成 SQL
+   - `validate`（validate_sql）→ 语法和 Schema 验证
+   - `execute`（execute_sql）→ 执行 SQL 预览结果
+4. 结果区域展示：SQL、执行/未执行状态、结果（含0行）、验证报告和警告。进度只来自服务事件，禁用节点显示跳过。
+5. 可点“取消查询”停止等待；新对话、加载历史或离开查询面板会中止当前流，旧响应不写入新会话。取消不自动重发；历史在本浏览器保存最多50条，会话服务端单进程有TTL与数量上限。
 
 ### 查询示例
 
@@ -160,8 +169,8 @@ NL2SQL 是一个**将自然语言自动转换为 SQL 并执行**的数据工程�
 ### API 在线状态
 
 ChatPanel 标题栏右侧有在线状态指示灯：
-- 🟢 **"API 在线"** — 后端正常运行
-- 🔴 **"离线模式"** — 后端不可达，使用本地 Mock 数据演示
+- 🟢 **"API 在线"** — 进程存活；是否能做生产查询还需查看就绪提示。
+- **"API 不可达"** — 后端不可达；不会自动生成假 SQL、假连接或假 Schema。401需重新登录，403需管理员授权。
 
 ---
 
@@ -179,7 +188,7 @@ ChatPanel 标题栏右侧有在线状态指示灯：
 
 ### 数据来源
 
-Schema 数据从后端 `GET /api/v1/databases` 和 `GET /api/v1/schema/{db_id}` 实时获取。
+Schema 来自受保护接口的结构快照；查询路径缓存默认30秒，刷新/断开/重连失效，行数不是实时计数。加载失败明确提示，不回退演示数据。
 
 ---
 
@@ -308,6 +317,7 @@ ORDER BY month;
 ```bash
 # NL → SQL 完整管线
 curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "nl_text": "上个月销售额最高的10个产品",
@@ -343,16 +353,18 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 ```bash
 curl -X POST http://localhost:8001/api/v1/query/stream \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"nl_text": "统计每天的订单数"}'
 ```
 
-事件流：`parse` → `schema` → `token`（逐词输出 SQL） → `validation` → `done`
+事件流由 `workflow_start`、真实 `stage`、`parse`、`schema`、`sql`、`validation`、`execution` 与 `done` 等组成，失败可发 `error`。当前不会伪造逐词 token；详情见[接口契约](optimization/query-contract.md)。
 
 ### 仅生成 SQL（轻量）
 
 ```bash
 curl -X POST http://localhost:8001/api/v1/query/generate \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"nl_text": "SELECT all users", "dialect": "mysql"}'
 ```
@@ -361,22 +373,23 @@ curl -X POST http://localhost:8001/api/v1/query/generate \
 
 ```bash
 # 列出已连接数据库
-curl http://localhost:8001/api/v1/databases
+curl http://localhost:8001/api/v1/databases -H "Authorization: Bearer $TOKEN"
 
 # 获取 Schema 快照
-curl http://localhost:8001/api/v1/schema/{db_id}
+curl http://localhost:8001/api/v1/schema/{db_id} -H "Authorization: Bearer $TOKEN"
 
 # 搜索表和列
-curl "http://localhost:8001/api/v1/schema/{db_id}/search?q=order"
+curl "http://localhost:8001/api/v1/schema/{db_id}/search?q=order" -H "Authorization: Bearer $TOKEN"
 
 # 刷新 Schema 缓存
-curl -X POST http://localhost:8001/api/v1/schema/{db_id}/refresh
+curl -X POST http://localhost:8001/api/v1/schema/{db_id}/refresh -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 添加数据库连接
 
 ```bash
 curl -X POST http://localhost:8001/api/v1/databases/connect \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "db_type": "sqlite",
@@ -389,16 +402,17 @@ curl -X POST http://localhost:8001/api/v1/databases/connect \
 
 ```bash
 # 列出所有领域
-curl http://localhost:8001/api/v1/domains
+curl http://localhost:8001/api/v1/domains -H "Authorization: Bearer $TOKEN"
 
 # 查看某领域的术语表
-curl http://localhost:8001/api/v1/domains/ecommerce/glossary
+curl http://localhost:8001/api/v1/domains/ecommerce/glossary -H "Authorization: Bearer $TOKEN"
 
 # 查看某领域的业务规则
-curl http://localhost:8001/api/v1/domains/ecommerce/rules
+curl http://localhost:8001/api/v1/domains/ecommerce/rules -H "Authorization: Bearer $TOKEN"
 
 # 自动检测 NL 所属领域
 curl -X POST http://localhost:8001/api/v1/domains/detect \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"query_text": "最近一周的订单数据"}'
 ```
@@ -406,8 +420,9 @@ curl -X POST http://localhost:8001/api/v1/domains/detect \
 ### 认证
 
 ```bash
-# 注册
+# 邀请注册（先由管理员配置 REGISTRATION_TOKEN）
 curl -X POST http://localhost:8001/api/v1/auth/register \
+  -H "X-Registration-Token: $INVITATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"username": "demo", "email": "demo@example.com", "password": "demo123456"}'
 
@@ -422,4 +437,4 @@ curl http://localhost:8001/api/v1/auth/me \
 ```
 # 优化分支使用变更
 
-业务接口现在要求管理员Bearer令牌；默认禁止注册，开户需配置邀请令牌并通过X-Registration-Token提供。启动前必须配置至少32字符的随机JWT_SECRET。完整配置和已知边界见[安全说明](optimization/security.md)，阶段验证见[优化进度](optimization/progress.md)。本指南下方的既有功能说明应结合各阶段完成状态使用。
+业务接口现在要求管理员Bearer令牌；默认禁止注册，开户需配置邀请令牌并通过X-Registration-Token提供。启动前必须配置至少32字符的随机JWT_SECRET。完整配置和已知边界见[安全说明](optimization/security.md)，阶段验证见[优化进度](optimization/progress.md)。实际完成状态、已知限制和验证结果以[阶段报告](optimization/stage-5.md)及[接口契约](optimization/query-contract.md)为准。

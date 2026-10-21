@@ -194,12 +194,12 @@ function Toast({ message, onClose }) {
   }, [onClose]);
 
   return (
-    <div className="brutal-toast fixed top-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3">
+    <div role="status" className="brutal-toast fixed top-6 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 px-5 py-3">
       <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="#2f7a4d" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"/>
       </svg>
       <span>{message}</span>
-      <button onClick={onClose} className="ml-1 text-[#8a8a8a] hover:text-[#2a2a2a] transition-colors bg-transparent border-none cursor-pointer p-0">
+      <button aria-label="关闭提示" onClick={onClose} className="ml-1 text-[#8a8a8a] hover:text-[#2a2a2a] transition-colors bg-transparent border-none cursor-pointer p-0">
         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
@@ -233,7 +233,7 @@ function LoginForm({ onSuccess }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || '登入失败');
+        setError(data.detail?.message || (typeof data.detail === 'string' ? data.detail : '') || '登入失败');
         setLoading(false);
         return;
       }
@@ -250,13 +250,13 @@ function LoginForm({ onSuccess }) {
     <form onSubmit={handleSubmit} className="flex flex-col">
       <h2 className="text-center font-extrabold text-[#2a2a2a] text-3xl tracking-tight mb-8">Log in</h2>
 
-      {error && <div className="brutal-error mb-5">{error}</div>}
+      {error && <div role="alert" className="brutal-error mb-5">{error}</div>}
 
       <div className="flex flex-col gap-5 mb-9">
         <input
           type="email"
           className="brutal-input"
-          placeholder="Email"
+          aria-label="Email" placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email"
@@ -264,7 +264,7 @@ function LoginForm({ onSuccess }) {
         <input
           type="password"
           className="brutal-input"
-          placeholder="Password"
+          aria-label="Password" placeholder="Password"
           value={password}
           onChange={e => setPassword(e.target.value)}
           autoComplete="current-password"
@@ -287,6 +287,7 @@ function RegisterForm({ onSuccess }) {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [invitation, setInvitation] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -307,12 +308,12 @@ function RegisterForm({ onSuccess }) {
     try {
       const res = await fetch(`${API}/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Registration-Token': invitation },
         body: JSON.stringify({ username: username.trim(), email: email.trim(), password }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.detail || '注册失败');
+        setError(data.detail?.message || (typeof data.detail === 'string' ? data.detail : '') || '注册失败');
         setLoading(false);
         return;
       }
@@ -329,13 +330,15 @@ function RegisterForm({ onSuccess }) {
     <form onSubmit={handleSubmit} className="flex flex-col">
       <h2 className="text-center font-extrabold text-[#2a2a2a] text-3xl tracking-tight mb-7">Sign up</h2>
 
-      {error && <div className="brutal-error mb-5">{error}</div>}
+      {error && <div role="alert" className="brutal-error mb-5">{error}</div>}
 
+      <p className="text-sm mb-3">仅限管理员邀请注册；业务访问还需管理员授权账号。</p>
       <div className="flex flex-col gap-4 mb-7">
+        <input type="password" className="brutal-input" aria-label="注册邀请码" placeholder="注册邀请码" value={invitation} onChange={e => setInvitation(e.target.value)} required autoComplete="off" />
         <input
           type="text"
           className="brutal-input"
-          placeholder="Username"
+          aria-label="Username" placeholder="Username"
           value={username}
           onChange={e => setUsername(e.target.value)}
           autoComplete="username"
@@ -343,7 +346,7 @@ function RegisterForm({ onSuccess }) {
         <input
           type="email"
           className="brutal-input"
-          placeholder="Email"
+          aria-label="Email" placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email"
@@ -351,7 +354,7 @@ function RegisterForm({ onSuccess }) {
         <input
           type="password"
           className="brutal-input"
-          placeholder="Password"
+          aria-label="Password" placeholder="Password"
           value={password}
           onChange={e => setPassword(e.target.value)}
           autoComplete="new-password"
@@ -359,7 +362,7 @@ function RegisterForm({ onSuccess }) {
         <input
           type="password"
           className="brutal-input"
-          placeholder="Confirm password"
+          aria-label="Confirm password" placeholder="Confirm password"
           value={confirm}
           onChange={e => setConfirm(e.target.value)}
           autoComplete="new-password"
@@ -384,11 +387,11 @@ function FlipCard({ mode, onSuccess }) {
     <div className="flip-container">
       <div className={`flip-inner${flipped ? ' flipped' : ''}`}>
         {/* Front — Log in */}
-        <div className="flip-face brutal-card px-8 py-10 sm:px-10">
+        <div className="flip-face brutal-card px-8 py-10 sm:px-10" inert={flipped ? "" : undefined} aria-hidden={flipped}>
           <LoginForm onSuccess={onSuccess} />
         </div>
         {/* Back — Sign up */}
-        <div className="flip-face flip-back brutal-card px-8 py-10 sm:px-10">
+        <div className="flip-face flip-back brutal-card px-8 py-10 sm:px-10" inert={!flipped ? "" : undefined} aria-hidden={!flipped}>
           <RegisterForm onSuccess={onSuccess} />
         </div>
       </div>

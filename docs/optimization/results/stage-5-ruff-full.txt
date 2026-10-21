@@ -1,0 +1,102 @@
+app\api\domains.py:291:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\domains.py:368:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\domains.py:501:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\domains.py:640:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\domains.py:687:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\domains.py:783:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\domains.py:909:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\feedback.py:30:101: E501 Line too long (369 > 100)
+app\api\feedback.py:74:89: E501 Line too long (111 > 100)
+app\api\feedback.py:89:101: E501 Line too long (221 > 100)
+app\api\learning.py:9:32: F401 [*] `datetime.timedelta` imported but unused
+app\api\learning.py:38:101: E501 Line too long (101 > 100)
+app\api\learning.py:97:101: E501 Line too long (114 > 100)
+app\api\learning.py:117:5: I001 [*] Import block is un-sorted or un-formatted
+app\api\learning.py:405:9: I001 [*] Import block is un-sorted or un-formatted
+app\api\learning.py:462:9: I001 [*] Import block is un-sorted or un-formatted
+app\api\learning.py:582:9: I001 [*] Import block is un-sorted or un-formatted
+app\api\learning.py:630:9: I001 [*] Import block is un-sorted or un-formatted
+app\api\mcp_api.py:52:101: E501 Line too long (165 > 100)
+app\api\mcp_api.py:53:101: E501 Line too long (167 > 100)
+app\api\mcp_api.py:54:101: E501 Line too long (161 > 100)
+app\api\mcp_api.py:55:101: E501 Line too long (163 > 100)
+app\api\mcp_api.py:62:101: E501 Line too long (120 > 100)
+app\api\mcp_api.py:86:101: E501 Line too long (478 > 100)
+app\api\mcp_api.py:95:101: E501 Line too long (380 > 100)
+app\api\mcp_api.py:214:101: E501 Line too long (107 > 100)
+app\api\mcp_api.py:231:101: E501 Line too long (116 > 100)
+app\api\settings.py:54:9: SIM105 Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`
+app\api\settings.py:286:17: SIM102 Use a single `if` statement instead of nested `if` statements
+app\api\sql_utils.py:77:18: UP038 Use `X | Y` in `isinstance` call instead of `(X, Y)`
+app\api\subagents.py:8:22: F401 [*] `datetime.datetime` imported but unused
+app\api\subagents.py:93:6: W292 [*] No newline at end of file
+app\auth\database.py:16:8: F821 Undefined name `aiomysql`
+app\auth\database.py:54:30: F821 Undefined name `aiomysql`
+app\auth\database.py:125:46: F821 Undefined name `aiomysql`
+app\core\intent_classifier.py:92:74: E501 Line too long (111 > 100)
+app\core\intent_classifier.py:104:101: E501 Line too long (104 > 100)
+app\core\prompt_builder.py:442:101: E501 Line too long (102 > 100)
+app\core\prompt_builder.py:901:101: E501 Line too long (111 > 100)
+app\core\prompt_builder.py:903:101: E501 Line too long (103 > 100)
+app\core\prompt_builder.py:920:101: E501 Line too long (127 > 100)
+app\core\prompt_builder.py:959:101: E501 Line too long (193 > 100)
+app\db\pii_detector.py:223:9: F841 Local variable `col_type_l` is assigned to but never used
+app\learning\pattern_analyzer.py:260:5: SIM103 Return the condition `not _INVALID_SQL_PATTERNS.search(cleaned)` directly
+app\learning\pattern_analyzer.py:296:9: SIM103 Return the condition `any(kw in tail.lower() for kw in sql_keywords)` directly
+app\nodes\respond.py:276:28: UP038 Use `X | Y` in `isinstance` call instead of `(X, Y)`
+app\nodes\schema_linking.py:74:99: E501 Line too long (165 > 100)
+app\nodes\schema_linking.py:75:99: E501 Line too long (103 > 100)
+app\nodes\schema_linking.py:164:99: E501 Line too long (121 > 100)
+app\nodes\schema_linking.py:529:13: SIM102 Use a single `if` statement instead of nested `if` statements
+app\nodes\schema_linking.py:536:101: E501 Line too long (103 > 100)
+app\nodes\schema_linking.py:771:5: SIM102 Use a single `if` statement instead of nested `if` statements
+app\storage\__init__.py:17:49: W292 [*] No newline at end of file
+app\storage\mysql_store.py:24:8: F401 [*] `os` imported but unused
+app\storage\mysql_store.py:25:22: F401 [*] `datetime.datetime` imported but unused
+app\storage\mysql_store.py:202:99: E501 Line too long (103 > 100)
+app\storage\mysql_store.py:255:101: E501 Line too long (118 > 100)
+app\storage\mysql_store.py:256:101: E501 Line too long (123 > 100)
+app\storage\mysql_store.py:257:101: E501 Line too long (123 > 100)
+app\storage\mysql_store.py:258:101: E501 Line too long (119 > 100)
+app\storage\mysql_store.py:259:101: E501 Line too long (105 > 100)
+app\storage\mysql_store.py:323:16: UP037 [*] Remove quotes from type annotation
+app\storage\mysql_store.py:329:68: UP037 [*] Remove quotes from type annotation
+app\storage\mysql_store.py:363:9: SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements
+app\storage\mysql_store.py:370:9: SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements
+app\storage\mysql_store.py:377:9: SIM117 Use a single `with` statement with multiple contexts instead of nested `with` statements
+app\storage\mysql_store.py:768:101: E501 Line too long (102 > 100)
+app\storage\mysql_store.py:895:32: W292 [*] No newline at end of file
+scripts\gen_api.py:16:91: E501 Line too long (420 > 100)
+scripts\gen_api.py:17:86: E501 Line too long (321 > 100)
+scripts\gen_api.py:18:88: E501 Line too long (439 > 100)
+scripts\gen_api.py:19:87: E501 Line too long (430 > 100)
+scripts\gen_api.py:20:92: E501 Line too long (311 > 100)
+scripts\gen_api.py:21:90: E501 Line too long (397 > 100)
+scripts\gen_api.py:26:101: E501 Line too long (132 > 100)
+scripts\gen_api.py:45:101: E501 Line too long (165 > 100)
+scripts\gen_api.py:46:101: E501 Line too long (167 > 100)
+scripts\gen_api.py:47:101: E501 Line too long (161 > 100)
+scripts\gen_api.py:48:101: E501 Line too long (163 > 100)
+scripts\gen_api.py:56:101: E501 Line too long (431 > 100)
+scripts\gen_api.py:64:101: E501 Line too long (380 > 100)
+scripts\gen_api.py:100:101: E501 Line too long (369 > 100)
+scripts\gen_api.py:104:101: E501 Line too long (297 > 100)
+scripts\gen_api.py:107:89: E501 Line too long (111 > 100)
+scripts\gen_api.py:117:101: E501 Line too long (221 > 100)
+scripts\gen_api.py:151:101: E501 Line too long (169 > 100)
+scripts\gen_api.py:155:101: E501 Line too long (106 > 100)
+scripts\gen_api.py:167:101: E501 Line too long (406 > 100)
+scripts\gen_api.py:179:101: E501 Line too long (102 > 100)
+scripts\gen_api.py:180:101: E501 Line too long (104 > 100)
+scripts\gen_api.py:181:101: E501 Line too long (177 > 100)
+scripts\gen_api.py:192:101: E501 Line too long (125 > 100)
+scripts\gen_api.py:194:101: E501 Line too long (451 > 100)
+scripts\gen_api.py:200:101: E501 Line too long (168 > 100)
+scripts\gen_api.py:212:97: E501 Line too long (110 > 100)
+scripts\gen_api.py:216:101: E501 Line too long (165 > 100)
+scripts\init_db.py:58:11: F541 [*] f-string without any placeholders
+scripts\init_db.py:94:11: W292 [*] No newline at end of file
+tests\test_api\test_learning_api.py:11:101: E501 Line too long (104 > 100)
+tests\test_rag\test_bm25_index.py:335:20: UP038 Use `X | Y` in `isinstance` call instead of `(X, Y)`
+Found 100 errors.
+[*] 16 fixable with the `--fix` option (17 hidden fixes can be enabled with the `--unsafe-fixes` option).

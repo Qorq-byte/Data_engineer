@@ -1,6 +1,10 @@
 {
+  "name": "nl2sql-workspace-checks",
+  "private": true,
+  "scripts": {
+    "check:frontend": "node frontend_design/_check_jsx.js frontend_design/workspace.html frontend_design/form.html frontend_design/landing_page.html"
+  },
   "devDependencies": {
-    "@babel/core": "^8.0.1",
-    "@babel/preset-react": "^8.0.1"
+    "@babel/standalone": "7.29.0"
   }
 }
