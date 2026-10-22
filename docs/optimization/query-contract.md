@@ -71,3 +71,7 @@ None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/t
 阶段19新增管理员 `POST /api/v1/learning/rag/schema/{db_id}/clear`，无需原连接仍存在；仅清目标Schema索引，与完整刷新串行，成功只失效目标刷新缓存。200响应 `{status: cleared, scope: schema, db_id, removed: {lancedb_count, bm25_count}, cleared_at}`，计数为完成时的真实删除量，重复/未知ID幂等0/0。无引擎503/detail.code=RAG_UNAVAILABLE；准备/写失败503/SCHEMA_INDEX_CLEAR_FAILED，固定message及restored=true/false/null；不泄漏原异常、不自动重试。清理后新的完整刷新可重新建索引。
 
 旧全量clear仅接受JSON body的scope=all/schema/metrics/documents，拒绝query、db_id等未知body字段及非法scope，422/detail.code=INVALID_RAG_CLEAR_REQUEST，拒绝发生在任何删除前；缺body仍兼容all。全量入口是维护窗口操作，不用于按库恢复。断开数据库响应新增rag_index_cleared/warnings，关闭前先标记索引待刷新，索引清理失败不改变已断开事实，可用新按库入口重试。权限仍401/403，具体并发/补偿和使用步骤见[阶段19报告](stage-19.md)。
+
+阶段20工作台系统设置→RAG检索接入status/stats/databases，按当前列表显示连接库和遗留库；未隔离不代表索引非空或实时健康。读取失败显示未知并禁用维护，重新读取只发GET；丢弃过期读取结果。按库清理严格确认status=cleared/scope=schema/db_id及removed结构，重建仅认rag_indexed=true，取消不发POST，失败不自动写重试，503按restored三态反馈。所有库ID进入路径时编码。
+
+工作台维护操作互斥，结束重新读取；旧全量入口保留于折叠维护区。断开响应部分成功会提示后续按库处理，而不隐藏索引失败。后端契约未变，浏览器及实际函数验证见[阶段20报告](stage-20.md)。

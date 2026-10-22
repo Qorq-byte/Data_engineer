@@ -34,6 +34,8 @@ const html = fs.readFileSync('frontend_design/workspace.html', 'utf8');
           schemaRefresh: refresh, _fetch: refresh,
         },
         setRebuilding: value => rebuilding.push(value),
+        ragBusyRef: { current: false }, ragLoading: false, ragLoadError: null,
+        setRagBusy() {},
         setRagMsg: value => messages.push(value), fetchRagStats() {},
       });
       await invoke();

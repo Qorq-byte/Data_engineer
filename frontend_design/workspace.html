@@ -366,7 +366,7 @@ const api = {
   // ── Schema / Databases ──
   databases() { return api._fetch('/api/v1/databases'); },
   schema(dbId) { return api._fetch(`/api/v1/schema/${dbId}`); },
-  schemaRefresh(dbId) { return api._fetch(`/api/v1/schema/${dbId}/refresh`, { method: 'POST' }); },
+  schemaRefresh(dbId) { return api._fetch(`/api/v1/schema/${encodeURIComponent(dbId)}/refresh`, { method: 'POST' }); },
   schemaSearch(dbId, q) { return api._fetch(`/api/v1/schema/${dbId}/search?q=${encodeURIComponent(q)}`); },
   connectDb(body) {
     return api._fetch('/api/v1/databases/connect', {
@@ -3512,6 +3512,18 @@ const LearningPanel = () => {
    ════════════════════════════════════════════════════════════════════════════ */
 const BUILTIN_PROVIDERS = ["openai", "anthropic", "deepseek", "google"];
 
+const schemaIndexRows = (status, connections) => {
+  if (!status?.schema_index || !Array.isArray(connections)) return [];
+  const required = new Set(status.schema_index.refresh_required_databases || []);
+  const failed = new Set(status.schema_index.recovery_failed_databases || []);
+  const connected = new Map(connections.map(db => [db.db_id, db]));
+  return [...new Set([...connected.keys(), ...required, ...failed])].sort().map(dbId => ({
+    dbId, name: String(connected.get(dbId)?.alias || connected.get(dbId)?.database_name || dbId),
+    connected: connected.has(dbId),
+    state: failed.has(dbId) ? 'recovery_failed' : required.has(dbId) ? 'refresh_required' : 'unrestricted',
+  }));
+};
+
 const SettingsPanel = ({ userName, onLogout }) => {
   const [health, setHealth] = useState(null);
   const [llmSettings, setLlmSettings] = useState(null);
@@ -3529,6 +3541,16 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [togglingProvider, setTogglingProvider] = useState({});
   // RAG management state
   const [ragStats, setRagStats] = useState(null);
+  const [ragStatus, setRagStatus] = useState(null);
+  const [ragConnections, setRagConnections] = useState(null);
+  const [ragLoading, setRagLoading] = useState(false);
+  const [ragLoadError, setRagLoadError] = useState(null);
+  const [ragBusy, setRagBusy] = useState(false);
+  const [ragAction, setRagAction] = useState(null);
+  const ragBusyRef = useRef(false);
+  const ragReadSeq = useRef(0);
+  const ragMaintenanceDisabled = ragBusy || ragLoading || !!ragLoadError || !ragStatus || !ragConnections;
+  const ragRows = schemaIndexRows(ragStatus, ragConnections);
   const [rebuilding, setRebuilding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [ragMsg, setRagMsg] = useState(null);
@@ -3697,20 +3719,49 @@ const SettingsPanel = ({ userName, onLogout }) => {
   };
 
   // RAG index management handlers
-  const fetchRagStats = useCallback(() => {
-    api._fetch('/api/v1/learning/rag/stats').then(r => setRagStats(r)).catch(() => {});
+  const fetchRagStats = useCallback(async () => {
+    const seq = ++ragReadSeq.current;
+    setRagLoading(true);
+    const results = await Promise.allSettled([
+      Promise.resolve().then(() => api._fetch('/api/v1/learning/rag/stats')),
+      Promise.resolve().then(() => api._fetch('/api/v1/learning/rag/status')),
+      Promise.resolve().then(() => api.databases()),
+    ]);
+    if (seq !== ragReadSeq.current) return;
+    const value = i => results[i].status === 'fulfilled' ? results[i].value : null;
+    const stats = value(0), status = value(1), connections = value(2)?.databases;
+    const count = n => Number.isInteger(n) && n >= 0;
+    const statsOK = stats?.status === 'ok' && ['schema', 'metrics', 'documents'].every(
+      key => count(stats[key]?.lancedb_count) && count(stats[key]?.bm25_count));
+    const owners = list => Array.isArray(list) && list.every(id => typeof id === 'string' && id);
+    const statusOK = ['ok', 'degraded'].includes(status?.status)
+      && ['ready', 'degraded'].includes(status?.schema_index?.status)
+      && owners(status?.schema_index?.refresh_required_databases)
+      && owners(status?.schema_index?.recovery_failed_databases);
+    const connectionsOK = Array.isArray(connections)
+      && connections.every(db => typeof db?.db_id === 'string' && db.db_id);
+    setRagStats(statsOK ? stats : null);
+    setRagStatus(statusOK ? status : null);
+    setRagConnections(connectionsOK ? connections : null);
+    const failed = [!statsOK && '索引数量', !statusOK && '索引状态', !connectionsOK && '数据库连接'].filter(Boolean);
+    setRagLoadError(failed.length ? `无法读取${failed.join('、')}，请重试读取状态；维护操作暂不可用。` : null);
+    setRagLoading(false);
   }, []);
 
   useEffect(() => { if (activeTab === 'rag') fetchRagStats(); }, [activeTab, fetchRagStats]);
 
   const handleRebuildSchemaIndex = async () => {
+    if (ragBusyRef.current || ragLoading || ragLoadError) return;
+    ragBusyRef.current = true;
+    setRagBusy(true);
     setRebuilding(true);
     setRagMsg(null);
     try {
-      const allConns = await api.databases().catch(() => ({ databases: [] }));
-      const dbIds = (allConns.databases || []).map(d => d.db_id).filter(Boolean);
+      const allConns = await api.databases();
+      if (!Array.isArray(allConns?.databases)) throw new Error('无法读取数据库连接状态');
+      const dbIds = allConns.databases.map(d => d.db_id).filter(Boolean);
       if (dbIds.length === 0) {
-        setRagMsg({ type: "err", text: "没有已连接的数据库。请先在“数据库连接”面板连接数据库，然后再重建 Schema 索引。如需清理旧的脏数据，请使用“清空 RAG 索引”按钮。" });
+        setRagMsg({ type: "err", text: "没有已连接的数据库。请先在“数据库连接”面板连接数据库，然后再重建 Schema 索引。遗留库可在下方“Schema 按库维护”中单独清理。" });
         setRebuilding(false);
         return;
       }
@@ -3733,19 +3784,27 @@ const SettingsPanel = ({ userName, onLogout }) => {
       } else {
         setRagMsg({ type: "err", text: `Schema 索引重建: ${successCount} 成功, ${failCount} 失败: ${details.join(', ')}` });
       }
-      fetchRagStats();
     } catch(e) {
       setRagMsg({ type: "err", text: `重建失败: ${e.message}` });
-    } finally { setRebuilding(false); }
+    } finally {
+      await fetchRagStats();
+      setRebuilding(false);
+      ragBusyRef.current = false;
+      setRagBusy(false);
+    }
   };
 
   const handleRefreshRAG = async () => {
+    if (ragBusyRef.current || ragLoading || ragLoadError) return;
+    ragBusyRef.current = true;
+    setRagBusy(true);
     setRagMsg(null);
     try {
-      const allConns = await api.databases().catch(() => ({ databases: [] }));
-      const dbIds = (allConns.databases || []).map(d => d.db_id).filter(Boolean);
+      const allConns = await api.databases();
+      if (!Array.isArray(allConns?.databases)) throw new Error('无法读取数据库连接状态');
+      const dbIds = allConns.databases.map(d => d.db_id).filter(Boolean);
       if (dbIds.length === 0) {
-        setRagMsg({ type: "err", text: "没有已连接的数据库。RAG 索引刷新需要活跃的数据库连接。如需清理旧的脏数据，请使用“清空 RAG 索引”按钮。" });
+        setRagMsg({ type: "err", text: "没有已连接的数据库。RAG 索引刷新需要活跃的数据库连接。遗留库可在下方“Schema 按库维护”中单独清理。" });
         return;
       }
       setRagMsg({ type: "info", text: `正在刷新 ${dbIds.length} 个数据库的 RAG 索引...` });
@@ -3766,17 +3825,21 @@ const SettingsPanel = ({ userName, onLogout }) => {
       } else {
         setRagMsg({ type: "err", text: `RAG 索引刷新: ${successCount} 成功, ${failCount} 失败: ${details.join(', ')}` });
       }
-      fetchRagStats();
     } catch(e) {
       setRagMsg({ type: "err", text: `刷新失败: ${e.message}` });
+    } finally {
+      await fetchRagStats();
+      ragBusyRef.current = false;
+      setRagBusy(false);
     }
   };
 
   const handleClearRAG = async () => {
+    if (ragBusyRef.current || ragLoading || ragLoadError || !ragStats || uploadingDoc) return;
     // Confirm before destructive action
-    const schemaCount = ragStats?.schema?.lancedb_count || 0;
-    const metricsCount = ragStats?.metrics?.lancedb_count || 0;
-    const docsCount = ragStats?.documents?.lancedb_count || 0;
+    const schemaCount = Math.max(ragStats.schema.lancedb_count, ragStats.schema.bm25_count);
+    const metricsCount = Math.max(ragStats.metrics.lancedb_count, ragStats.metrics.bm25_count);
+    const docsCount = Math.max(ragStats.documents.lancedb_count, ragStats.documents.bm25_count);
     const total = schemaCount + metricsCount + docsCount;
     if (total === 0) {
       setRagMsg({ type: "info", text: "RAG 索引为空，无需清空。" });
@@ -3795,6 +3858,8 @@ const SettingsPanel = ({ userName, onLogout }) => {
     )) {
       return;
     }
+    ragBusyRef.current = true;
+    setRagBusy(true);
     setClearing(true);
     setRagMsg({ type: "info", text: "正在清空所有 RAG 索引..." });
     try {
@@ -3813,11 +3878,65 @@ const SettingsPanel = ({ userName, onLogout }) => {
       } else {
         setRagMsg({ type: "err", text: `清空失败: ${r?.message || '未知错误'}` });
       }
-      fetchRagStats();
     } catch(e) {
       setRagMsg({ type: "err", text: `清空失败: ${e.message}` });
     } finally {
+      await fetchRagStats();
       setClearing(false);
+      ragBusyRef.current = false;
+      setRagBusy(false);
+    }
+  };
+
+  const handleSchemaMaintenance = async (dbId, operation) => {
+    if (ragBusyRef.current || ragLoading || ragLoadError) return;
+    const row = schemaIndexRows(ragStatus, ragConnections).find(item => item.dbId === dbId);
+    if (!row || !['clear', 'rebuild'].includes(operation) || (operation === 'rebuild' && !row.connected)) {
+      setRagMsg({ type: 'err', text: '目标状态已不可用，请先重新读取状态；重建需要已连接的数据库。' });
+      return;
+    }
+    if (operation === 'clear' && !window.confirm(
+      `确定清理数据库“${dbId}”的 Schema 索引吗？\n\n仅清理这个库的检索索引，其他库、源数据、指标和上传文档均保留。需要时可在连接后重新构建。`
+    )) return;
+    ragBusyRef.current = true;
+    setRagBusy(true);
+    setRagAction({ dbId, operation });
+    setRagMsg({ type: 'info', text: `${operation === 'clear' ? '正在清理' : '正在重建'} ${dbId} 的 Schema 索引...` });
+    try {
+      if (operation === 'clear') {
+        const result = await api._fetch(`/api/v1/learning/rag/schema/${encodeURIComponent(dbId)}/clear`, { method: 'POST' });
+        const removed = result?.removed;
+        if (result?.status !== 'cleared' || result.scope !== 'schema' || result.db_id !== dbId
+          || !Number.isInteger(removed?.lancedb_count) || removed.lancedb_count < 0
+          || !Number.isInteger(removed?.bm25_count) || removed.bm25_count < 0) {
+          setRagMsg({ type: 'err', text: `${dbId} 的清理结果未确认，请读取状态后再决定是否重试。` });
+        } else {
+          setRagMsg({ type: 'ok', text: `${dbId} 的 Schema 索引已清理（向量 ${removed.lancedb_count} 条，关键词 ${removed.bm25_count} 条）。其他库、源数据和上传文档已保留。` });
+        }
+      } else {
+        const result = await api.schemaRefresh(dbId);
+        setRagMsg(result?.rag_indexed === true
+          ? { type: 'ok', text: `${dbId} 的 Schema 索引已重建。` }
+          : { type: 'err', text: `${dbId} 的索引重建未完成，请检查索引状态后重试。` });
+      }
+    } catch (error) {
+      let text = '操作结果未确认，请先读取状态，再决定是否重试。';
+      if (error.code === 'SCHEMA_INDEX_CLEAR_FAILED') {
+        const restored = error.body?.detail?.restored;
+        text = restored === true ? '清理未完成，旧索引已恢复。请检查存储后重试。'
+          : restored === false ? '清理未完成，该库检索仍受限。修复存储后可重试按库清理。'
+          : '清理未完成，尚无法确认数据状态。请检查存储并重新读取状态。';
+      } else if (error.status === 401 || error.status === 403) {
+        text = '没有维护权限，请使用管理员账户重新登录后读取状态。';
+      } else if (error.code === 'SCHEMA_REFRESH_CONFLICT') {
+        text = '数据库结构或连接已变化，请重新读取状态后再重建。';
+      }
+      setRagMsg({ type: 'err', text });
+    } finally {
+      await fetchRagStats();
+      setRagAction(null);
+      ragBusyRef.current = false;
+      setRagBusy(false);
     }
   };
 
@@ -4244,47 +4363,82 @@ const SettingsPanel = ({ userName, onLogout }) => {
 
               {/* RAG index management */}
               <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">
-                    索引管理
-                    <span className="text-xs font-normal text-neutral-400 ml-2">手动刷新与重建</span>
-                  </h3>
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">Schema 按库维护</h3>
+                    <p className="text-xs text-neutral-500 mt-1">先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。</p>
+                  </div>
+                  <button className="btn-outline text-xs" onClick={fetchRagStats} disabled={ragBusy || ragLoading}>
+                    {ragLoading ? '读取中...' : '重新读取状态'}
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button className="btn-outline text-xs" onClick={handleRebuildSchemaIndex} disabled={rebuilding || clearing}>
-                    {rebuilding ? "重建中..." : "重建 Schema 索引"}
+                <p className="text-xs text-neutral-500 mb-3">状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。</p>
+                {ragLoading && <p role="status" className="text-xs text-neutral-500">正在读取索引状态...</p>}
+                {ragLoadError && <div role="alert" className="mb-3 text-xs p-3 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">{ragLoadError}</div>}
+                <div className="space-y-2" aria-label="Schema 数据库维护列表" aria-busy={ragLoading}>
+                  {ragRows.map(row => (
+                    <div key={row.dbId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium break-all text-neutral-800 dark:text-neutral-200">{row.name}</div>
+                        <code className="block text-xs text-neutral-500 break-all mt-1">{row.dbId}</code>
+                        <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                          <span className="text-neutral-500">{row.connected ? '已连接' : '已断开连接'}</span>
+                          <span className={cn('px-2 py-0.5 rounded font-medium', row.state === 'recovery_failed'
+                            ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300'
+                            : row.state === 'refresh_required' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
+                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300')}>
+                            {row.state === 'recovery_failed' ? '恢复失败 · 检索受限' : row.state === 'refresh_required' ? '待刷新 · 检索受限' : '未隔离'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        <button className="btn-outline text-xs" disabled={ragMaintenanceDisabled || !row.connected}
+                          aria-label={`重建 ${row.dbId} 的 Schema 索引`} onClick={() => handleSchemaMaintenance(row.dbId, 'rebuild')}>
+                          {ragAction?.dbId === row.dbId && ragAction.operation === 'rebuild' ? '重建中...' : '重建该库'}
+                        </button>
+                        <button className="btn-outline text-xs text-red-700 dark:text-red-300" disabled={ragMaintenanceDisabled}
+                          aria-label={`清理 ${row.dbId} 的 Schema 索引`} onClick={() => handleSchemaMaintenance(row.dbId, 'clear')}>
+                          {ragAction?.dbId === row.dbId && ragAction.operation === 'clear' ? '清理中...' : '清理该库索引'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!ragLoading && !ragLoadError && ragStatus && ragConnections && !ragRows.length && (
+                    <p className="text-xs text-neutral-500 py-3">没有已连接或待处理的数据库。连接数据库后可在这里重建 Schema 索引。</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <button className="btn-outline text-xs" onClick={handleRebuildSchemaIndex} disabled={ragMaintenanceDisabled}>
+                    {rebuilding ? '重建中...' : '重建所有已连接库的 Schema'}
                   </button>
-                  <button className="btn-outline text-xs" onClick={handleRefreshRAG} disabled={clearing}>
-                    刷新所有 RAG 索引
-                  </button>
-                  <button className="btn-outline text-xs text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={handleClearRAG} disabled={clearing || rebuilding}>
-                    {clearing ? "清空中..." : "清空 RAG 索引"}
-                  </button>
+                  <button className="btn-outline text-xs" onClick={handleRefreshRAG} disabled={ragMaintenanceDisabled}>刷新已连接库</button>
                 </div>
                 {ragMsg && (
-                  <div className={cn("mt-3 text-xs px-3 py-2 rounded-lg font-medium",
-                    ragMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                    : ragMsg.type === "info" ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                    : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400")}>
+                  <div role={ragMsg.type === 'err' ? 'alert' : 'status'} aria-live="polite" className={cn('mt-3 text-xs px-3 py-2 rounded-lg font-medium break-words',
+                    ragMsg.type === 'ok' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                      : ragMsg.type === 'info' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                      : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400')}>
                     {ragMsg.text}
                   </div>
                 )}
-                {ragStats && (
-                  <div className="grid grid-cols-3 gap-3 mt-3 text-xs">
-                    <div className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
-                      <span className="text-neutral-500">Schema</span>
-                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{ragStats.schema?.lancedb_count || 0}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-xs" aria-label="索引数量快照">
+                  {[['schema', 'Schema'], ['metrics', '指标'], ['documents', '文档']].map(([key, label]) => (
+                    <div key={key} className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
+                      <span className="text-neutral-500">{label} · 向量 / 关键词</span>
+                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">
+                        {ragStats ? `${ragStats[key].lancedb_count} / ${ragStats[key].bm25_count}` : '—'}
+                      </div>
                     </div>
-                    <div className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
-                      <span className="text-neutral-500">Metrics</span>
-                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{ragStats.metrics?.lancedb_count || 0}</div>
-                    </div>
-                    <div className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
-                      <span className="text-neutral-500">Documents</span>
-                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{ragStats.documents?.lancedb_count || 0}</div>
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+                <details className="mt-4 border-t border-neutral-200 dark:border-neutral-700 pt-3">
+                  <summary className="text-xs font-medium cursor-pointer text-neutral-600 dark:text-neutral-300">全量索引维护（仅维护窗口使用）</summary>
+                  <p className="text-xs text-neutral-500 my-3">清空全部 Schema、指标和文档索引。上传文档需要重新导入；处理遗留库请优先使用上方按库清理。</p>
+                  <button className="btn-outline text-xs text-red-700 dark:text-red-300" onClick={handleClearRAG}
+                    disabled={ragMaintenanceDisabled || !ragStats || uploadingDoc}>
+                    {clearing ? '清空中...' : '清空全部 RAG 索引'}
+                  </button>
+                </details>
               </Card>
 
               {/* Document upload */}
@@ -4689,12 +4843,18 @@ const ConnectPanel = ({ onDbChange }) => {
 
   const handleDisconnect = async (dbId) => {
     try {
-      await api.disconnectDb(dbId);
+      const result = await api.disconnectDb(dbId);
       setExpandedDb(null);
       setDbPreviewData(prev => { const n = {...prev}; delete n[dbId]; return n; });
       refreshList();
       if (onDbChange) onDbChange();
-      notify("已断开数据库连接", 'ok');
+      if (result?.rag_index_cleared !== true || result?.warnings?.length) {
+        const text = '数据库已断开，但索引清理未完成。请到“系统设置 → RAG 检索 → Schema 按库维护”重试清理。';
+        setMsg({ type: 'err', text });
+        notify(text, 'error');
+      } else {
+        notify("已断开数据库连接", 'ok');
+      }
     } catch (e) {
       setMsg({ type: "err", text: e.message || "断开失败" });
       notify(e.message || "断开失败", 'error');

@@ -2,7 +2,7 @@
   "name": "nl2sql-workspace-checks",
   "private": true,
   "scripts": {
-    "check:frontend": "node frontend_design/_check_jsx.js frontend_design/workspace.html frontend_design/form.html frontend_design/landing_page.html && node frontend_design/_check_schema_refresh.js"
+    "check:frontend": "node frontend_design/_check_jsx.js frontend_design/workspace.html frontend_design/form.html frontend_design/landing_page.html && node frontend_design/_check_schema_refresh.js && node frontend_design/_check_rag_maintenance.js"
   },
   "devDependencies": {
     "@babel/standalone": "7.29.0"
