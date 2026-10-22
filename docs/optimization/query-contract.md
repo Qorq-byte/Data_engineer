@@ -63,3 +63,7 @@ None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/t
 阶段17：按库完整替换前保存两边原始记录，写入失败尝试分别恢复；补偿成功仍为本次更新失败，HTTP200/rag_indexed=false，固定 warning `Schema index update failed; previous index restored`。恢复失败或旧状态本来不可信时，warning 为 `Schema index recovery failed; retrieval unavailable until successful explicit refresh`，目标库及无范围 RAG 检索拒绝；健康库指定检索独立可用。共享刷新不公开原始后端异常，不自动重试。
 
 显式全量刷新 rag_indexed=true 后才确认对应库可用；upsert 和其他库刷新不能解除隔离。Schema Linking 沿用带 warning 的关键词降级，不使用不可信索引。低级 API 暴露 `SchemaIndexWriteError.restored` 与实例 `unavailable_databases`，不是新增 HTTP 响应字段。此隔离不跨进程持久化，重启不等于恢复；异常退出的持久部署应在开放检索前逐库完整刷新。详情及低级写路径边界见[阶段17报告](stage-17.md)。
+
+阶段18由引擎启动自动将两边持久库ID及当前连接库标为待刷新，成功的完整替换后解除；旧数据不再因重启清掉failure标记而可直接读取。初始化结束前不发布全局实例，失败/取消清理候选句柄。未能重新连接的遗留库保持待刷新，指定健康库仍可检索，SQL路径沿用带warning的关键词降级。
+
+受保护 `GET /api/v1/learning/rag/status` 保留刷新器原字段，新增 `schema_index={status: ready|degraded, refresh_required_databases: [...], recovery_failed_databases: [...], startup_schema_results: {db_id: bool}, scope: ...}`。顶层status=ok/degraded/error；引擎不可用只返回固定 `RAG engine unavailable`。startup_schema_results 是历史，后续修复查看当前两个列表；不把tracked_databases当已验证库数。公开 `/health/ready` 仅增加rag汇总状态/计数，动态更新components.rag，不暴露库ID/路径；RAG可降级，整体就绪条件不变，不调用额外后端/模型探活。详见[阶段18报告](stage-18.md)。

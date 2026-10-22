@@ -8,6 +8,10 @@ from datetime import datetime
 from typing import Any
 
 
+class SchemaIndexNotReadyError(RuntimeError):
+    """A persisted Schema index has not passed this process's source refresh."""
+
+
 class SchemaIndexWriteError(RuntimeError):
     """A failed replacement, with a safe recovery outcome for API consumers."""
 

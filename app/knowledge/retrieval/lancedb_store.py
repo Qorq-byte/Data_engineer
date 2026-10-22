@@ -406,6 +406,16 @@ class LanceDBStore:
         )
         return records
 
+    def database_ids(self, namespace: str) -> set[str]:
+        """Enumerate all owners without fetching vectors or applying a search limit."""
+        rows = self.ensure_namespace(namespace).search().select(["db_id"]).limit(None).to_list()
+        ids = {row["db_id"] for row in rows}
+        if any(not isinstance(db_id, str) or not db_id.strip() for db_id in ids):
+            raise ValueError(
+                "Schema index has invalid database ownership; explicit rebuild required"
+            )
+        return ids
+
     def restore_database(
         self, namespace: str, db_id: str, records: list[dict[str, Any]],
     ) -> None:

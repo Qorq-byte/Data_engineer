@@ -605,16 +605,19 @@ async def rag_stats() -> dict:
 
 @router.get("/learning/rag/status")
 async def rag_status() -> dict:
-    """Get RAG index refresh status."""
+    """Operator-only refresh history and live process-local Schema trust state."""
     try:
         from app.rag import get_index_refresher
+        from app.rag.engine import get_schema_index_status
 
+        schema_status = get_schema_index_status()
         return {
-            "status": "ok",
+            "status": "ok" if schema_status["status"] == "ready" else "degraded",
             **get_index_refresher().get_refresh_status(),
+            "schema_index": schema_status,
         }
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    except Exception:
+        return {"status": "error", "message": "RAG engine unavailable"}
 
 
 @router.post("/learning/rag/clear")

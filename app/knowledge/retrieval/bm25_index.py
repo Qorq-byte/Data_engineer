@@ -651,6 +651,19 @@ class BM25Index:
             "WHERE json_extract(metadata_json, '$.db_id') = ?", (db_id,),
         ).fetchall()]
 
+    def database_ids(self, namespace: str) -> set[str]:
+        """Enumerate raw metadata owners; malformed or absent ownership is an error."""
+        conn = self._ensure_connected()
+        table = self._table_name(namespace)
+        ids = {row[0] for row in conn.execute(
+            f"SELECT DISTINCT json_extract(metadata_json, '$.db_id') FROM {table}"
+        ).fetchall()}
+        if any(not isinstance(db_id, str) or not db_id.strip() for db_id in ids):
+            raise ValueError(
+                "Schema index has invalid database ownership; explicit rebuild required"
+            )
+        return ids
+
     def restore_database(
         self, namespace: str, db_id: str, rows: list[tuple[str, str, str]],
     ) -> None:

@@ -44,7 +44,7 @@ from app.knowledge.retrieval.lancedb_store import (
     schema_doc_to_record,
 )
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
-from app.models.rag_schema import SchemaIndexWriteError
+from app.models.rag_schema import SchemaIndexNotReadyError, SchemaIndexWriteError
 
 # ── Result model ───────────────────────────────────────────────────────
 
@@ -160,6 +160,7 @@ class SchemaMetadataRAG:
         )
         self._rrf = rrf_fusion or RRFFusion()
         self._unavailable_databases: set[str] = set()
+        self._refresh_required_databases: set[str] = set()
 
         # Ensure both backends are connected and the namespace exists
         self._lancedb.connect()
@@ -272,6 +273,14 @@ class SchemaMetadataRAG:
         """Process-local recovery failures; a successful scoped replacement repairs them."""
         return tuple(sorted(self._unavailable_databases))
 
+    @property
+    def refresh_required_databases(self) -> tuple[str, ...]:
+        return tuple(sorted(self._refresh_required_databases))
+
+    def require_refresh(self, db_ids: set[str]) -> None:
+        """Block existing contents until a complete replacement or removal succeeds."""
+        self._refresh_required_databases.update(db_ids)
+
     def _replace_database(
         self, db_id: str, records: list[dict[str, Any]],
         sparse_docs: list[dict[str, Any]], language: str,
@@ -302,12 +311,17 @@ class SchemaMetadataRAG:
                 self._unavailable_databases.add(db_id)
             raise SchemaIndexWriteError(restored=restored) from exc
         self._unavailable_databases.discard(db_id)
+        self._refresh_required_databases.discard(db_id)
 
     def _check_available(self, db_id: str | None) -> None:
         if (not db_id and self._unavailable_databases) or (
             db_id in self._unavailable_databases
         ):
             raise SchemaIndexWriteError(restored=False)
+        if (not db_id and self._refresh_required_databases) or (
+            db_id in self._refresh_required_databases
+        ):
+            raise SchemaIndexNotReadyError("Schema index requires successful source refresh")
 
     async def index_schema(self, doc: Any, language: str = "auto") -> int:
         """Index a single :class:`~app.models.rag_schema.SchemaDocument`.
@@ -402,6 +416,7 @@ class SchemaMetadataRAG:
         self._lancedb.delete(self.NAMESPACE, "true")
         self._bm25.clear(self.NAMESPACE)
         self._unavailable_databases.clear()
+        self._refresh_required_databases.clear()
 
     def remove_database(self, db_id: str) -> None:
         """Remove all schema documents for a specific *db_id* from both backends.
@@ -412,6 +427,7 @@ class SchemaMetadataRAG:
         self._lancedb.delete(self.NAMESPACE, f"db_id = {literal(db_id)}")
         self._bm25.delete_database(self.NAMESPACE, db_id)
         self._unavailable_databases.discard(db_id)
+        self._refresh_required_databases.discard(db_id)
 
     def stats(self) -> dict[str, int]:
         """Return document counts for both backends."""

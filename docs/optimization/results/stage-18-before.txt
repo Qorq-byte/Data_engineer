@@ -1,0 +1,61 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_____________ test_persisted_orphan_cannot_be_read_after_restart ______________
+
+persistent = <app.knowledge.retrieval.embedding.MockEmbeddingProvider object at 0x000002437A7D52B0>
+
+    async def test_persisted_orphan_cannot_be_read_after_restart(persistent):
+        rag = (await engine.initialize_rag_engine()).schema_rag
+>       with pytest.raises(RuntimeError, match="refresh"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests\test_rag\test_engine_startup.py:53: Failed
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.443 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.443 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+_______________ test_candidate_is_not_published_during_startup ________________
+
+persistent = <app.knowledge.retrieval.embedding.MockEmbeddingProvider object at 0x000002437A840F50>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002437A8AE9C0>
+
+    async def test_candidate_is_not_published_during_startup(persistent, monkeypatch):
+        entered, release = asyncio.Event(), asyncio.Event()
+        original = engine._index_all_connected_schemas
+
+        async def hold(candidate):
+            entered.set()
+            await release.wait()
+            return await original(candidate)
+
+        monkeypatch.setattr(engine, "_index_all_connected_schemas", hold)
+        task = asyncio.create_task(engine.initialize_rag_engine())
+        try:
+            await asyncio.wait_for(entered.wait(), 10)
+>           with pytest.raises(RuntimeError, match="not initialized"):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE RuntimeError
+
+tests\test_rag\test_engine_startup.py:70: Failed
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\jieba\_compat.py:18
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+..\..\..\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_engine_startup.py::test_persisted_orphan_cannot_be_read_after_restart
+FAILED tests/test_rag/test_engine_startup.py::test_candidate_is_not_published_during_startup
+2 failed, 2 warnings in 8.84s

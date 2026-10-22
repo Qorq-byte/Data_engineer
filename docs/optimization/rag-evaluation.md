@@ -73,3 +73,9 @@ SchemaDocument/索引仍没有catalog字段，不支持同一db_id在多个catal
 Schema 按 db_id 完整替换在 embedding/来源校验后保存两边原始记录，写失败分别补偿；完整恢复旧内容也不报新索引成功，返回 rag_indexed=false 和 previous index restored。补偿失败则实例记录 unavailable_databases，目标库及无范围检索拒绝，关键词降级有既有 warning；只有成功的完整替换/删除/清空解除对应隔离。普通 upsert、其他 namespace、跨进程及崩溃恢复没有此保证。历史阶段3/16写后失败边界以[阶段17报告](stage-17.md)的当前实现为准，历史测量保留。
 
 恢复保存原始向量、时间戳、FTS 已分词文本及元数据，不重跑 embedding。测试注入前后写入故障并比较完整内容；这是功能/故障恢复验证，不是 Recall@K、MRR、SQL 结果正确率或性能基线。持久部署异常重启后应先通过共享刷新入口逐库全量刷新并确认 rag_indexed=true，再开放检索；实例内隔离标记不持久化，不承诺自动检测既有损坏。大索引额外内存/同步 I/O 成本仍待按运行说明实测。
+
+## 阶段18：每次启动重新验证持久 Schema 索引
+
+引擎初始化现先枚举两后端全部库ID及当前连接库并标为待刷新，使用共享来源校验入口完整刷新；成功才解除对应标记，未验证内容不会因重启而被读取。没有持久故障日志或实时损坏检测；断开的遗留库也必须保持待刷新，健康库可指定检索。普通低级自建SchemaMetadataRAG兼容调用不自动执行启动策略。
+
+受保护 `/api/v1/learning/rag/status` 显示 schema_index 的 refresh_required_databases、recovery_failed_databases 与历史startup_schema_results；修复后看当前列表，不把历史false或tracked_databases当即时状态。无法重连相同db_id的遗留库，当前只能由管理员在维护窗口显式清空scope=schema，再完整刷新当前连接库，未增加逐库HTTP清理。文档/指标namespace尚无本阶段的完整性验证，Schema状态ready不代表所有RAG数据/模型健康或语义准确。完整验证见[阶段18报告](stage-18.md)。

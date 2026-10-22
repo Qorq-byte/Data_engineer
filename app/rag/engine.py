@@ -14,8 +14,9 @@ Usage::
 from __future__ import annotations
 
 import contextlib
+import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
@@ -31,6 +32,8 @@ from app.knowledge.retrieval.lancedb_store import LanceDBStore
 from app.knowledge.retrieval.metric_rag import MetricRAG
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
 from app.knowledge.retrieval.schema_rag import SchemaMetadataRAG
+
+logger = logging.getLogger(__name__)
 
 # ── File paths ────────────────────────────────────────────────────────────
 
@@ -56,6 +59,7 @@ class _RAGEngine:
     metric_rag: MetricRAG
     document_store: DocumentStore
     index_refresher: Any  # IndexRefresher
+    startup_schema_results: dict[str, bool] = field(default_factory=dict)
 
 
 # ── Module-level singleton ────────────────────────────────────────────────
@@ -77,6 +81,20 @@ def get_rag_engine() -> _RAGEngine:
 def get_schema_rag() -> SchemaMetadataRAG:
     """Return the SchemaMetadataRAG singleton."""
     return get_rag_engine().schema_rag
+
+
+def get_schema_index_status() -> dict[str, object]:
+    """Process state, not a live storage/model health probe; contains operator-only IDs."""
+    engine = get_rag_engine()
+    required = engine.schema_rag.refresh_required_databases
+    unavailable = engine.schema_rag.unavailable_databases
+    return {
+        "status": "degraded" if required or unavailable else "ready",
+        "refresh_required_databases": list(required),
+        "recovery_failed_databases": list(unavailable),
+        "startup_schema_results": dict(engine.startup_schema_results),
+        "scope": "schema indexes only; process state, not a live backend probe",
+    }
 
 
 def get_metric_rag() -> MetricRAG:
@@ -147,7 +165,7 @@ def _read_rag_settings() -> dict[str, Any]:
 async def initialize_rag_engine() -> _RAGEngine:
     """Create and initialise all RAG components.
 
-    Called from ``main.py`` step 9 during server startup.
+    Called from the FastAPI lifespan during server startup; repeated calls are idempotent.
     Must be called inside an async context (running event loop).
 
     Steps:
@@ -161,7 +179,17 @@ async def initialize_rag_engine() -> _RAGEngine:
         8. Index existing glossary terms from loaded domains.
     """
     global _engine
+    from app.db.runtime import gate
 
+    async with gate(("rag-engine-initialize",)):
+        if _engine is None:
+            candidate = await _build_rag_engine()
+            _engine = candidate
+        return _engine
+
+
+async def _build_rag_engine() -> _RAGEngine:
+    """Build locally; release all acquired handles on failure, timeout or cancellation."""
     rag_settings = _read_rag_settings()
     provider = _create_embedding_provider()
     embedding_gen = EmbeddingGenerator(provider=provider)
@@ -177,74 +205,93 @@ async def initialize_rag_engine() -> _RAGEngine:
     )
     bm25_index = BM25Index(settings.rag_bm25_path or _DEFAULT_BM25_PATH)
 
-    # ── RRF fusion with configured weights ─────────────────────────────
-    alpha = float(rag_settings.get("vector_weight", 0.7))
-    rrf = RRFFusion(k=60, alpha=alpha)
-
-    # ── Three RAG applications ─────────────────────────────────────────
-    schema_rag = SchemaMetadataRAG(
-        lancedb_store=lancedb_store,
-        bm25_index=bm25_index,
-        embedding_generator=embedding_gen,
-        rrf_fusion=rrf,
-    )
-
-    metric_rag = MetricRAG(
-        lancedb_store=lancedb_store,
-        bm25_index=bm25_index,
-        embedding_generator=embedding_gen,
-        rrf_fusion=rrf,
-    )
-
-    document_store = DocumentStore(
-        lancedb_store=lancedb_store,
-        bm25_index=bm25_index,
-        embedding_generator=embedding_gen,
-        rrf_fusion=rrf,
-    )
-
-    # ── Index refresher ────────────────────────────────────────────────
-    from app.rag.index_refresher import IndexRefresher
-
-    index_refresher = IndexRefresher(
-        schema_rag=schema_rag,
-        metric_rag=metric_rag,
-        ttl_minutes=60,
-    )
-
-    # ── Assemble engine ────────────────────────────────────────────────
-    _engine = _RAGEngine(
-        lancedb_store=lancedb_store,
-        bm25_index=bm25_index,
-        embedding_generator=embedding_gen,
-        schema_rag=schema_rag,
-        metric_rag=metric_rag,
-        document_store=document_store,
-        index_refresher=index_refresher,
-    )
-
-    # ── Index existing data ────────────────────────────────────────────
-    await _index_all_connected_schemas(_engine)
-    await _index_all_glossary_terms(_engine)
-
-    return _engine
-
-
-async def _index_all_connected_schemas(engine: _RAGEngine) -> None:
-    """Extract and index schemas for all currently-connected databases."""
     try:
-        from app.db.connections import ConnectionFactory
-        from app.db.schema_refresh import refresh_database_schema
-        from app.rag.converters import snapshot_to_schema_docs
-    except Exception:
-        return
+        # ── RRF fusion with configured weights ─────────────────────────────
+        alpha = float(rag_settings.get("vector_weight", 0.7))
+        rrf = RRFFusion(k=60, alpha=alpha)
 
-    for info in ConnectionFactory.list_all():
-        # One DB failing should not prevent others from indexing.
+        # ── Three RAG applications ─────────────────────────────────────────
+        schema_rag = SchemaMetadataRAG(
+            lancedb_store=lancedb_store,
+            bm25_index=bm25_index,
+            embedding_generator=embedding_gen,
+            rrf_fusion=rrf,
+        )
+
+        metric_rag = MetricRAG(
+            lancedb_store=lancedb_store,
+            bm25_index=bm25_index,
+            embedding_generator=embedding_gen,
+            rrf_fusion=rrf,
+        )
+
+        document_store = DocumentStore(
+            lancedb_store=lancedb_store,
+            bm25_index=bm25_index,
+            embedding_generator=embedding_gen,
+            rrf_fusion=rrf,
+        )
+
+        # ── Index refresher ────────────────────────────────────────────────
+        from app.rag.index_refresher import IndexRefresher
+
+        index_refresher = IndexRefresher(
+            schema_rag=schema_rag,
+            metric_rag=metric_rag,
+            ttl_minutes=60,
+        )
+
+        # ── Assemble engine ────────────────────────────────────────────────
+        candidate = _RAGEngine(
+            lancedb_store=lancedb_store,
+            bm25_index=bm25_index,
+            embedding_generator=embedding_gen,
+            schema_rag=schema_rag,
+            metric_rag=metric_rag,
+            document_store=document_store,
+            index_refresher=index_refresher,
+        )
+
+        # ── Index existing data ────────────────────────────────────────────
+        from app.db.connections import ConnectionFactory
+
+        schema_rag.require_refresh(
+            lancedb_store.database_ids(schema_rag.NAMESPACE)
+            | bm25_index.database_ids(schema_rag.NAMESPACE)
+            | {info.db_id for info in ConnectionFactory.list_all()}
+        )
+        candidate.startup_schema_results = await _index_all_connected_schemas(candidate)
+        await _index_all_glossary_terms(candidate)
+
+        return candidate
+
+    except BaseException:
+        # Cleanup must not replace the original failure, including CancelledError.
         with contextlib.suppress(Exception):
-            await refresh_database_schema(
+            bm25_index.close()
+        with contextlib.suppress(Exception):
+            lancedb_store.close()
+        raise
+
+
+async def _index_all_connected_schemas(engine: _RAGEngine) -> dict[str, bool]:
+    """Record each startup outcome; one failed source does not hide healthy sources."""
+    from app.db.connections import ConnectionFactory
+    from app.db.schema_refresh import refresh_database_schema
+    from app.rag.converters import snapshot_to_schema_docs
+
+    results: dict[str, bool] = {}
+    for info in ConnectionFactory.list_all():
+        try:
+            result = await refresh_database_schema(
                 info.db_id, engine.schema_rag, document_builder=snapshot_to_schema_docs,
             )
+            results[info.db_id] = result.rag_indexed
+        except Exception:
+            results[info.db_id] = False
+        if not results[info.db_id]:
+            logger.warning("Startup Schema index refresh failed; source remains unverified")
+    return results
 
 
 async def _index_all_glossary_terms(engine: _RAGEngine) -> None:

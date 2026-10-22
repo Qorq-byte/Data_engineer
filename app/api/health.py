@@ -24,6 +24,17 @@ async def readiness(request: Request) -> JSONResponse:
 
     components = dict(getattr(request.app.state, "components", {}))
     components["llm"] = not get_default_router().mock_mode
+    from app.rag.engine import get_rag_engine
+
+    try:
+        schema_rag = get_rag_engine().schema_rag
+        required = len(schema_rag.refresh_required_databases)
+        failed = len(schema_rag.unavailable_databases)
+        rag_status = "degraded" if required or failed else "ready"
+    except RuntimeError:
+        required, failed = 0, 0
+        rag_status = "unavailable"
+    components["rag"] = rag_status == "ready"
     database_count = len(ConnectionFactory.list_all())
     initialized = bool(getattr(request.app.state, "initialized", False))
     ready = (
@@ -37,5 +48,11 @@ async def readiness(request: Request) -> JSONResponse:
             "components": components,
             "connected_database_count": database_count,
             "database_probe": "registry only; no live database health query performed",
+            "rag": {
+                "status": rag_status,
+                "refresh_required_database_count": required,
+                "recovery_failed_database_count": failed,
+                "probe": "schema index process state only; no live storage or model query",
+            },
         },
     )
