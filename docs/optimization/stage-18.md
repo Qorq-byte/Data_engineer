@@ -36,4 +36,6 @@ Windows/Python3.13.9、SQLite3.51.0、DuckDB1.5.5、SQLGlot30.18.0、Ruff0.17.1�
 
 ## Git 与远程验收
 
-待本地验收后审查暂存和凭据、提交普通推送、核对远程SHA与Linux CI，再补记远程证据。不强推、不合并main。
+代码提交 [1fa0c1b761e78c2d4ce9d43266fa194583d8dadc](https://github.com/Qorq-byte/Data_engineer/commit/1fa0c1b761e78c2d4ce9d43266fa194583d8dadc) 已普通推送至 codex/mvp-hardening，ls-remote 核对SHA与本地一致。暂存23个范围内文件经过凭据模式扫描、完整差异审查和diff check，失败日志仅清除尾随空格，保留原始命令/断言/结果；阶段文档10个本地链接检查通过。原工作区及已有临时文件不改，不强推、不合并main。
+
+[Actions39768158966](https://github.com/Qorq-byte/Data_engineer/actions/runs/39768158966) **success**：Linux/Python3.12、Node22干净安装，前端编译/12处理函数契约、Ruff、strict34源文件全部通过；全量 **3269 passed、1 warning，40.79秒**，uvloop在Linux实际执行通过。[远程证据](results/stage-18-ci.json)保存对应headSha/结果/各步骤。阶段18代码远程验收完成，生产容量/多进程/其他namespace等限制继续保留。
