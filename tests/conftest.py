@@ -1,6 +1,7 @@
 """Shared test fixtures."""
 
 import os
+import shutil
 import sqlite3
 import sys
 from pathlib import Path
@@ -10,9 +11,29 @@ import pytest
 # Keep the suite hermetic: never let real API keys (.env / environment)
 # cause tests to hit live LLM endpoints — the router factory honors this.
 os.environ["LLM_MOCK_MODE"] = "1"
+os.environ["JWT_SECRET"] = "unit-test-signing-secret-never-used-outside-tests-2026"
 
 # Ensure app is importable
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def isolated_api_domains(tmp_path_factory):
+    """CRUD tests must never write generated domains into source configuration."""
+    from app.api import domains
+
+    original = domains.DOMAINS_DIR
+    isolated = tmp_path_factory.mktemp("api_domains")
+    for source in original.glob("*.yml"):
+        if not source.name.startswith("test_"):
+            shutil.copy2(source, isolated / source.name)
+    original_manager_dir = domains._domain_manager._domain_dir
+    domains.DOMAINS_DIR = isolated
+    domains._domain_manager._domain_dir = isolated
+    domains._domain_manager.reload()
+    yield
+    domains.DOMAINS_DIR = original
+    domains._domain_manager._domain_dir = original_manager_dir
 
 
 @pytest.fixture

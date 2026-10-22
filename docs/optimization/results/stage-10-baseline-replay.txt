@@ -1,0 +1,7 @@
+D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 1.043 seconds.
+Prefix dict has been built successfully.
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c", "case_count": 12, "passed": 2, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}

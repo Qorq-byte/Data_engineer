@@ -5,6 +5,8 @@ Covers lazy initialization and behavior of:
   ④ SkillManager  ⑤ ActionHistoryManager  ⑥ Auto-compaction  ⑦ Streaming flag
 """
 
+import pytest
+
 from app.harness.action_history import ActionHistoryManager
 from app.harness.compaction import ContextCompactor
 from app.harness.permission import PermissionManager
@@ -57,6 +59,19 @@ class TestSessionCapability:
 
 
 class TestToolRegistryCapability:
+    @pytest.mark.parametrize("name", [123, object()])
+    def test_nonstring_tool_name_is_rejected(self, name):
+        class Tool:
+            def __call__(self):
+                return "unused"
+
+        tool = Tool()
+        tool.name = name
+        node = ProbeNode(AgenticConfig(func_tools=[tool]))
+        with pytest.raises(ValueError, match="tool name must be a non-empty string"):
+            _ = node.tool_registry
+        assert node._tool_registry is None
+
     def test_tool_registry_instance(self):
         node = ProbeNode()
         assert isinstance(node.tool_registry, ToolRegistry)

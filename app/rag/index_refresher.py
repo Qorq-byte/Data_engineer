@@ -74,6 +74,11 @@ class IndexRefresher:
         age = (datetime.now(UTC) - last).total_seconds() / 60
         return age > self._ttl_minutes
 
+    def invalidate_database(self, db_id: str) -> None:
+        """Forget only this database's successful publication metadata after removal."""
+        self._version_cache.pop(db_id, None)
+        self._last_refresh.pop(db_id, None)
+
     async def refresh(self, db_id: str) -> bool:
         self._pending.add(db_id)
         try:
@@ -90,19 +95,15 @@ class IndexRefresher:
         Uses the pre-injected SchemaMetadataRAG instance (not creating a new one).
         """
         try:
-            from app.db.connections import ConnectionFactory
-            from app.db.schema_extractor import SchemaExtractor
+            from app.db.schema_refresh import refresh_database_schema
             from app.rag.converters import snapshot_to_schema_docs
 
-            info = ConnectionFactory.get_info(db_id)
-            conn = ConnectionFactory.get(db_id)
-            snapshot = await SchemaExtractor.extract(
-                conn, info.db_type, info.database_name
+            result = await refresh_database_schema(
+                db_id, self._schema_rag, document_builder=snapshot_to_schema_docs,
             )
-            self._version_cache[db_id] = self._compute_schema_hash(snapshot)
-
-            docs = snapshot_to_schema_docs(snapshot, db_id)
-            await self._schema_rag.index_schemas(docs)
+            if not result.rag_indexed:
+                return False
+            self._version_cache[db_id] = self._compute_schema_hash(result.snapshot)
             return True
         except Exception:
             return False
@@ -138,9 +139,7 @@ class IndexRefresher:
 
     def get_refresh_status(self) -> dict[str, Any]:
         now = datetime.now(UTC)
-        last_times = {
-            db_id: ts.isoformat() for db_id, ts in self._last_refresh.items()
-        }
+        last_times = {db_id: ts.isoformat() for db_id, ts in self._last_refresh.items()}
         return {
             "last_refresh_time": last_times,
             "pending_count": len(self._pending),

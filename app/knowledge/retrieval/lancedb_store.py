@@ -31,6 +31,8 @@ from typing import Any
 
 import pyarrow as pa
 
+from app.knowledge.retrieval.filters import literal
+
 logger = logging.getLogger(__name__)
 
 # ── LanceDB integration (optional — graceful degradation) ─────────────
@@ -44,9 +46,7 @@ except ImportError:
 
 # ── Constants ──────────────────────────────────────────────────────────
 
-DEFAULT_LANCEDB_DIR = os.path.join(
-    os.path.expanduser("~"), ".data_engineer", "lancedb"
-)
+DEFAULT_LANCEDB_DIR = os.path.join(os.path.expanduser("~"), ".data_engineer", "lancedb")
 
 NAMESPACE_SCHEMA_METADATA = "schema_metadata"
 NAMESPACE_METRICS = "metrics"
@@ -69,81 +69,89 @@ VECTOR_COL = "vector"
 
 def _make_schema_metadata_schema(dimension: int) -> pa.Schema:
     """PyArrow schema for the ``schema_metadata`` namespace."""
-    return pa.schema([
-        ("doc_id", pa.utf8()),
-        ("db_id", pa.utf8()),
-        ("schema_name", pa.utf8()),
-        ("table_name", pa.utf8()),
-        ("column_name", pa.utf8()),  # nullable handled at value level
-        ("data_type", pa.utf8()),
-        ("comment", pa.utf8()),
-        ("is_primary_key", pa.bool_()),
-        ("is_foreign_key", pa.bool_()),
-        ("fk_references_json", pa.utf8()),  # JSON-serialised tuple
-        ("enum_values_json", pa.utf8()),  # JSON-serialised list
-        ("sample_values_json", pa.utf8()),
-        ("table_row_count", pa.int64()),
-        ("embedding_text", pa.utf8()),
-        ("tags_json", pa.utf8()),  # JSON-serialised list
-        ("updated_at", pa.timestamp("us", tz="UTC")),
-        (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
-    ])
+    return pa.schema(
+        [
+            ("doc_id", pa.utf8()),
+            ("db_id", pa.utf8()),
+            ("schema_name", pa.utf8()),
+            ("table_name", pa.utf8()),
+            ("column_name", pa.utf8()),  # nullable handled at value level
+            ("data_type", pa.utf8()),
+            ("comment", pa.utf8()),
+            ("is_primary_key", pa.bool_()),
+            ("is_foreign_key", pa.bool_()),
+            ("fk_references_json", pa.utf8()),  # JSON-serialised tuple
+            ("enum_values_json", pa.utf8()),  # JSON-serialised list
+            ("sample_values_json", pa.utf8()),
+            ("table_row_count", pa.int64()),
+            ("embedding_text", pa.utf8()),
+            ("tags_json", pa.utf8()),  # JSON-serialised list
+            ("updated_at", pa.timestamp("us", tz="UTC")),
+            (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
+        ]
+    )
 
 
 def _make_metrics_schema(dimension: int) -> pa.Schema:
     """PyArrow schema for the ``metrics`` namespace."""
-    return pa.schema([
-        ("doc_id", pa.utf8()),
-        ("domain", pa.utf8()),
-        ("name", pa.utf8()),
-        ("name_zh", pa.utf8()),
-        ("aliases_json", pa.utf8()),
-        ("description", pa.utf8()),
-        ("formula", pa.utf8()),
-        ("metric_type", pa.utf8()),
-        ("aggregation", pa.utf8()),
-        ("dimensions_json", pa.utf8()),
-        ("time_grain", pa.utf8()),
-        ("precision", pa.int32()),
-        ("sql_template", pa.utf8()),
-        ("embedding_text", pa.utf8()),
-        ("updated_at", pa.timestamp("us", tz="UTC")),
-        ("version", pa.int32()),
-        (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
-    ])
+    return pa.schema(
+        [
+            ("doc_id", pa.utf8()),
+            ("domain", pa.utf8()),
+            ("name", pa.utf8()),
+            ("name_zh", pa.utf8()),
+            ("aliases_json", pa.utf8()),
+            ("description", pa.utf8()),
+            ("formula", pa.utf8()),
+            ("metric_type", pa.utf8()),
+            ("aggregation", pa.utf8()),
+            ("dimensions_json", pa.utf8()),
+            ("time_grain", pa.utf8()),
+            ("precision", pa.int32()),
+            ("sql_template", pa.utf8()),
+            ("embedding_text", pa.utf8()),
+            ("updated_at", pa.timestamp("us", tz="UTC")),
+            ("version", pa.int32()),
+            (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
+        ]
+    )
 
 
 def _make_documents_schema(dimension: int) -> pa.Schema:
     """PyArrow schema for the ``documents`` namespace."""
-    return pa.schema([
-        ("doc_id", pa.utf8()),
-        ("domain", pa.utf8()),
-        ("title", pa.utf8()),
-        ("content", pa.utf8()),
-        ("content_type", pa.utf8()),
-        ("source", pa.utf8()),
-        ("chunk_index", pa.int32()),
-        ("parent_doc_id", pa.utf8()),
-        ("embedding_text", pa.utf8()),
-        ("keywords_json", pa.utf8()),
-        ("language", pa.utf8()),
-        ("created_at", pa.timestamp("us", tz="UTC")),
-        ("updated_at", pa.timestamp("us", tz="UTC")),
-        (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
-    ])
+    return pa.schema(
+        [
+            ("doc_id", pa.utf8()),
+            ("domain", pa.utf8()),
+            ("title", pa.utf8()),
+            ("content", pa.utf8()),
+            ("content_type", pa.utf8()),
+            ("source", pa.utf8()),
+            ("chunk_index", pa.int32()),
+            ("parent_doc_id", pa.utf8()),
+            ("embedding_text", pa.utf8()),
+            ("keywords_json", pa.utf8()),
+            ("language", pa.utf8()),
+            ("created_at", pa.timestamp("us", tz="UTC")),
+            ("updated_at", pa.timestamp("us", tz="UTC")),
+            (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
+        ]
+    )
 
 
 def _make_query_cache_schema(dimension: int) -> pa.Schema:
     """PyArrow schema for the ``query_cache`` namespace."""
-    return pa.schema([
-        ("cache_id", pa.utf8()),
-        ("query", pa.utf8()),
-        ("sql_text", pa.utf8()),
-        ("confidence", pa.float64()),
-        ("domain", pa.utf8()),
-        ("created_at", pa.timestamp("us", tz="UTC")),
-        (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
-    ])
+    return pa.schema(
+        [
+            ("cache_id", pa.utf8()),
+            ("query", pa.utf8()),
+            ("sql_text", pa.utf8()),
+            ("confidence", pa.float64()),
+            ("domain", pa.utf8()),
+            ("created_at", pa.timestamp("us", tz="UTC")),
+            (VECTOR_COL, pa.list_(pa.float32(), list_size=dimension)),
+        ]
+    )
 
 
 # ── LanceDBStore ───────────────────────────────────────────────────────
@@ -158,12 +166,12 @@ class LanceDBStore:
             ``~/.data_engineer/lancedb``.
     """
 
-    def __init__(self, dimension: int, uri: str | None = None):
+    def __init__(self, dimension: int, uri: str | None = None, *, embedding_id: str = ""):
         if not _LANCEDB_AVAILABLE:
             raise ImportError(
-                "LanceDBStore requires the 'lancedb' package. "
-                "Install it with: pip install lancedb"
+                "LanceDBStore requires the 'lancedb' package. Install it with: pip install lancedb"
             )
+        self._embedding_id = embedding_id
         self._dimension = dimension
         self._uri = uri or DEFAULT_LANCEDB_DIR
         self._db: Any = None
@@ -188,7 +196,29 @@ class LanceDBStore:
         if self._db is not None:
             return self._db
         Path(self._uri).mkdir(parents=True, exist_ok=True)
-        self._db = lancedb.connect(self._uri)
+        db = lancedb.connect(self._uri)
+        if self._embedding_id:
+            manifest = Path(self._uri) / "embedding-version.json"
+            expected = {
+                "embedding_id": self._embedding_id,
+                "dimension": self._dimension,
+                "format_version": 1,
+            }
+            if manifest.exists():
+                if json.loads(manifest.read_text(encoding="utf-8")) != expected:
+                    raise ValueError(
+                        "Embedding version mismatch; retain index and rebuild in a new directory"
+                    )
+            else:
+                for namespace in ALL_NAMESPACES:
+                    try:
+                        table = db.open_table(namespace)
+                    except Exception:
+                        continue
+                    if table.count_rows():
+                        raise ValueError("Unversioned embedding index; rebuild in a new directory")
+                manifest.write_text(json.dumps(expected), encoding="utf-8")
+        self._db = db
         return self._db
 
     def close(self) -> None:
@@ -245,7 +275,7 @@ class LanceDBStore:
             db.drop_table(name)
 
     def _open_or_create(self, namespace: str, schema: pa.Schema) -> Any:
-        """Open *namespace*, recreating it when the vector dimension differs.
+        """Open *namespace*, refusing incompatible vector dimensions.
 
         Embedding model switches (e.g. mock 256 → ollama 768) leave stale
         vectors behind; a fixed-size list column cannot hold vectors of a
@@ -258,15 +288,11 @@ class LanceDBStore:
             return db.create_table(namespace, schema=schema, mode="create")
 
         existing_dim = self._table_vector_dim(table)
-        if existing_dim is not None and existing_dim != self._dimension:
-            logger.warning(
-                "LanceDB table '%s' dimension mismatch "
-                "(existing=%s, expected=%s) — dropping and recreating; "
-                "indexes will be rebuilt.",
-                namespace, existing_dim, self._dimension,
+        if existing_dim is None or existing_dim != self._dimension:
+            raise ValueError(
+                f"Embedding dimension mismatch in {namespace}: existing={existing_dim}, "
+                f"expected={self._dimension}; preserve index and explicitly rebuild"
             )
-            self._drop_table_safe(db, namespace)
-            return db.create_table(namespace, schema=schema, mode="create")
         return table
 
     def ensure_namespace(self, namespace: str) -> Any:
@@ -282,10 +308,7 @@ class LanceDBStore:
             ValueError: If *namespace* is not a recognised name.
         """
         if namespace not in ALL_NAMESPACES:
-            raise ValueError(
-                f"Unknown namespace '{namespace}'. "
-                f"Expected one of: {ALL_NAMESPACES}"
-            )
+            raise ValueError(f"Unknown namespace '{namespace}'. Expected one of: {ALL_NAMESPACES}")
         schemas = {
             NAMESPACE_SCHEMA_METADATA: _make_schema_metadata_schema,
             NAMESPACE_METRICS: _make_metrics_schema,
@@ -343,7 +366,7 @@ class LanceDBStore:
         table = self.ensure_namespace(namespace)
         query = table.search(vector).metric("cosine").limit(top_k)
         if filter_expr:
-            query = query.where(filter_expr)
+            query = query.where(filter_expr, prefilter=True)
         return query.to_list()
 
     def delete(self, namespace: str, where: str) -> int:
@@ -366,6 +389,43 @@ class LanceDBStore:
         """Return the number of rows in a namespace."""
         table = self.ensure_namespace(namespace)
         return table.count_rows()
+
+    def snapshot_database(
+        self, namespace: str, db_id: str, *, new_doc_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Read every raw record for a database, refusing cross-database ID collisions."""
+        table = self.ensure_namespace(namespace)
+        if new_doc_ids:
+            ids = ", ".join(literal(doc_id) for doc_id in new_doc_ids)
+            if table.search().where(
+                f"doc_id IN ({ids}) AND (db_id IS NULL OR db_id != {literal(db_id)})"
+            ).limit(1).to_list():
+                raise ValueError("Schema document ID belongs to another database")
+        records: list[dict[str, Any]] = (
+            table.search().where(f"db_id = {literal(db_id)}").limit(None).to_list()
+        )
+        return records
+
+    def database_ids(self, namespace: str) -> set[str]:
+        """Enumerate all owners without fetching vectors or applying a search limit."""
+        rows = self.ensure_namespace(namespace).search().select(["db_id"]).limit(None).to_list()
+        ids = {row["db_id"] for row in rows}
+        if any(not isinstance(db_id, str) or not db_id.strip() for db_id in ids):
+            raise ValueError(
+                "Schema index has invalid database ownership; explicit rebuild required"
+            )
+        return ids
+
+    def restore_database(
+        self, namespace: str, db_id: str, records: list[dict[str, Any]],
+    ) -> None:
+        """Compensate a database replacement, preserving original vectors and timestamps."""
+        if any(record.get("db_id") != db_id for record in records):
+            raise ValueError("Recovery records must belong to the specified database")
+        table = self.ensure_namespace(namespace)
+        table.delete(f"db_id = {literal(db_id)}")
+        if records:
+            table.add(records)
 
     def drop_namespace(self, namespace: str) -> None:
         """Drop a namespace table entirely."""
@@ -396,9 +456,7 @@ class LanceDBStore:
 # ── Helper: document → record conversion ───────────────────────────────
 
 
-def schema_doc_to_record(
-    doc: Any, vector: list[float]
-) -> dict[str, Any]:
+def schema_doc_to_record(doc: Any, vector: list[float]) -> dict[str, Any]:
     """Convert a :class:`~app.models.rag_schema.SchemaDocument` to a LanceDB record dict.
 
     Args:
@@ -429,9 +487,7 @@ def schema_doc_to_record(
     }
 
 
-def metric_doc_to_record(
-    doc: Any, vector: list[float]
-) -> dict[str, Any]:
+def metric_doc_to_record(doc: Any, vector: list[float]) -> dict[str, Any]:
     """Convert a :class:`~app.models.rag_metric.MetricDocument` to a LanceDB record dict."""
     return {
         "doc_id": doc.doc_id,
@@ -454,9 +510,7 @@ def metric_doc_to_record(
     }
 
 
-def document_to_record(
-    doc: Any, vector: list[float]
-) -> dict[str, Any]:
+def document_to_record(doc: Any, vector: list[float]) -> dict[str, Any]:
     """Convert a :class:`~app.models.rag_document.Document` to a LanceDB record dict."""
     return {
         "doc_id": doc.doc_id,

@@ -17,7 +17,9 @@ that was stubbed in Phase 1-2 ExecuteSQLNode.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any
 
 from app.llm.router import LiteLLMRouter, RouterConfig
 from app.models.query import PlanAnalysis
@@ -39,7 +41,7 @@ class ExplainPlanOutput:
         recommendations: Specific optimization suggestions from the LLM.
     """
 
-    raw_explain: dict = field(default_factory=dict)
+    raw_explain: Mapping[str, Any] = field(default_factory=dict)
     plan_analysis: PlanAnalysis = field(default_factory=PlanAnalysis)
     interpretation: str = ""
     recommendations: list[str] = field(default_factory=list)
@@ -202,7 +204,7 @@ class ExplainPlanNode(AgenticNode):
     async def _llm_interpret(
         self,
         sql: str,
-        raw_explain: dict,
+        raw_explain: Mapping[str, Any],
         plan: PlanAnalysis,
         model: str | None = None,
     ) -> tuple[str, list[str]]:
@@ -247,7 +249,7 @@ class ExplainPlanNode(AgenticNode):
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 
-def _format_explain_rows(raw: dict) -> str:
+def _format_explain_rows(raw: Mapping[str, Any]) -> str:
     """Format raw EXPLAIN output as readable text for LLM consumption."""
     columns = raw.get("columns", [])
     rows = raw.get("rows", [])

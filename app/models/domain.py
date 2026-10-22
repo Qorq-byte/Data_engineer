@@ -4,7 +4,7 @@ See SPEC §4.2.2 for the full specification.
 """
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 
 @dataclass
@@ -48,7 +48,7 @@ class DomainConfig:
     name: str
     label: dict[str, str] = field(default_factory=dict)  # {"zh": "电商", "en": "E-commerce"}
     description: dict[str, str] = field(default_factory=dict)
-    databases: list[dict] = field(default_factory=list)
+    databases: list[dict[str, Any]] = field(default_factory=list)
     keywords: list[str] = field(default_factory=list)
     timezone: str = "UTC"
     currency: str = "USD"

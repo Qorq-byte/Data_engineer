@@ -5,7 +5,7 @@ Phase 1 implements: SQLite, DuckDB, PostgreSQL, MySQL.
 """
 
 import asyncio
-import contextlib
+import inspect
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -49,12 +49,18 @@ class ConnectionFactory:
     # Registry of active connections
     _connections: dict[str, Any] = {}
     _infos: dict[str, ConnectionInfo] = {}
+    _offload_connections: dict[int, Any] = {}
     _mysql_pools: dict[int, Any] = {}  # Track MySQL connection pools for proper cleanup
 
     @classmethod
-    async def create(
-        cls, db_type: DatabaseType, config: dict, db_id: str = ""
-    ) -> Any:
+    async def create(cls, db_type: DatabaseType, config: dict[str, Any], db_id: str = "") -> Any:
+        from app.db.runtime import gate
+
+        async with gate(("connect", db_id)):
+            return await cls._create(db_type, config, db_id)
+
+    @classmethod
+    async def _create(cls, db_type: DatabaseType, config: dict[str, Any], db_id: str = "") -> Any:
         """Create a new database connection.
 
         Args:
@@ -72,6 +78,10 @@ class ConnectionFactory:
         """
         conn = await cls._connect(db_type, config)
         if db_id:
+            if db_id in cls._connections:
+                await cls.aclose(db_id)
+            if db_type == DatabaseType.SQLITE and not config.get("check_same_thread", False):
+                cls._offload_connections[id(conn)] = conn
             cls._connections[db_id] = conn
             cls._infos[db_id] = ConnectionInfo(
                 db_id=db_id,
@@ -84,7 +94,7 @@ class ConnectionFactory:
         return conn
 
     @classmethod
-    async def _connect(cls, db_type: DatabaseType, config: dict) -> Any:
+    async def _connect(cls, db_type: DatabaseType, config: dict[str, Any]) -> Any:
         """Internal dispatch to the appropriate connection method."""
         match db_type:
             case DatabaseType.SQLITE:
@@ -111,7 +121,7 @@ class ConnectionFactory:
                 raise ValueError(f"Unsupported database type: {db_type}")
 
     @classmethod
-    def _connect_sqlite(cls, config: dict) -> Any:
+    def _connect_sqlite(cls, config: dict[str, Any]) -> Any:
         import sqlite3
 
         path = config.get("path", ":memory:")
@@ -121,14 +131,14 @@ class ConnectionFactory:
         return conn
 
     @classmethod
-    def _connect_duckdb(cls, config: dict) -> Any:
+    def _connect_duckdb(cls, config: dict[str, Any]) -> Any:
         import duckdb
 
         path = config.get("path", ":memory:")
-        return duckdb.connect(path)
+        return duckdb.connect(path, config={"enable_external_access": False})
 
     @classmethod
-    async def _connect_postgresql(cls, config: dict) -> Any:
+    async def _connect_postgresql(cls, config: dict[str, Any]) -> Any:
         try:
             import asyncpg
 
@@ -145,7 +155,7 @@ class ConnectionFactory:
             ) from e
 
     @classmethod
-    async def _connect_mysql(cls, config: dict) -> Any:
+    async def _connect_mysql(cls, config: dict[str, Any]) -> Any:
         try:
             import aiomysql
 
@@ -183,48 +193,71 @@ class ConnectionFactory:
         return info
 
     @classmethod
+    def is_current(cls, db_id: str, connection: object) -> bool:
+        """Compare identity without reconnecting or handing out a replacement."""
+        return cls._connections.get(db_id) is connection
+
+    @classmethod
     def list_all(cls) -> list[ConnectionInfo]:
         """List all active connections."""
         return list(cls._infos.values())
 
     @classmethod
-    def close(cls, db_id: str) -> None:
-        """Close and remove a connection."""
-        conn = cls._connections.pop(db_id, None)
-        info = cls._infos.pop(db_id, None)
-        if conn is not None:
-            # Release MySQL pool connection and close the pool
+    async def aclose(cls, db_id: str) -> None:
+        """Wait for users of a connection, then release native/async resources."""
+        from app.db.runtime import lease
+        from app.db.schema_extractor import SchemaExtractor
+
+        conn = cls._connections.get(db_id)
+        if conn is None:
+            return
+        async with lease(conn):
+            if cls._connections.get(db_id) is not conn:
+                return
+            cls._connections.pop(db_id, None)
+            cls._infos.pop(db_id, None)
+            cls._offload_connections.pop(id(conn), None)
+            SchemaExtractor.invalidate(conn)
             pool = cls._mysql_pools.pop(id(conn), None)
             if pool is not None:
-                with contextlib.suppress(Exception):
-                    pool.close()
-                    # Schedule pool termination in event loop
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            loop.call_soon(lambda: asyncio.ensure_future(pool.wait_closed()))
-                    except RuntimeError:
-                        pass
-            with contextlib.suppress(Exception):
-                conn.close()
+                pool.release(conn)
+                pool.close()
+                await pool.wait_closed()
+            else:
+                assert conn is not None  # Identity comparison above may widen static Any.
+                result = conn.close()
+                if inspect.isawaitable(result):
+                    await result
+
+    @classmethod
+    async def aclose_all(cls) -> None:
+        for db_id in list(cls._connections):
+            await cls.aclose(db_id)
+
+    @classmethod
+    def close(cls, db_id: str) -> None:
+        """Legacy sync adapter; async applications must await aclose()."""
+        conn = cls._connections.get(db_id)
+        if conn is None:
+            return
+        if id(conn) not in cls._mysql_pools and not inspect.iscoroutinefunction(conn.close):
+            from app.db.schema_extractor import SchemaExtractor
+
+            cls._connections.pop(db_id, None)
+            cls._infos.pop(db_id, None)
+            cls._offload_connections.pop(id(conn), None)
+            SchemaExtractor.invalidate(conn)
+            conn.close()
+            return
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(cls.aclose(db_id))
+        else:
+            loop.create_task(cls.aclose(db_id))
 
     @classmethod
     def close_all(cls) -> None:
-        """Close all active connections."""
-        for conn in list(cls._connections.values()):
-            # Release MySQL pools
-            pool = cls._mysql_pools.pop(id(conn), None)
-            if pool is not None:
-                with contextlib.suppress(Exception):
-                    pool.close()
-                    try:
-                        loop = asyncio.get_event_loop()
-                        if loop.is_running():
-                            loop.call_soon(lambda p=pool: asyncio.ensure_future(p.wait_closed()))
-                    except RuntimeError:
-                        pass
-            with contextlib.suppress(Exception):
-                conn.close()
-        cls._connections.clear()
-        cls._infos.clear()
-        cls._mysql_pools.clear()
+        """Legacy adapter; use await aclose_all() during application shutdown."""
+        for db_id in list(cls._connections):
+            cls.close(db_id)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from app.core.prompt_builder import PromptBuilder
 from app.core.sql_generator import SQLGenerator, _split_alternatives
+from app.llm.protocols import CompletionRouter
 from app.llm.router import LiteLLMRouter, RouterConfig
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
@@ -31,12 +32,13 @@ class GenerateSQLNode(AgenticNode):
         ``primary_candidate`` — ``SQLCandidate | None``
     """
 
+    required_tools = ("build_prompt", "call_llm")
     name = "generate_sql"
     description = "Generate SQL from natural language via LiteLLM multi-provider routing"
 
     def __init__(
         self,
-        router: LiteLLMRouter | None = None,
+        router: CompletionRouter | None = None,
         prompt_builder: PromptBuilder | None = None,
         generator: SQLGenerator | None = None,
     ) -> None:
@@ -50,7 +52,7 @@ class GenerateSQLNode(AgenticNode):
     # ------------------------------------------------------------------
 
     @property
-    def router(self) -> LiteLLMRouter:
+    def router(self) -> CompletionRouter:
         if self._router is None:
             self._router = LiteLLMRouter(RouterConfig(providers={}), mock_mode=True)
         return self._router
@@ -99,7 +101,7 @@ class GenerateSQLNode(AgenticNode):
 
             sqr = SQR(raw_text=input.query_text)
 
-        schema = input.context.get("schema")
+        schema = input.context.get("linked_schema") or input.context.get("schema")
         domain = input.context.get("domain")
         history = input.context.get("history")
         similar_pairs = input.context.get("similar_pairs")
@@ -114,14 +116,35 @@ class GenerateSQLNode(AgenticNode):
         multi_table_hint = input.config.get("multi_table_hint")
         database_name = input.config.get("database_name", "")
 
+        prepared = input.config.get("prepared_candidates")
+        if prepared is not None:
+            primary = prepared[0] if prepared else None
+            return NodeOutput(
+                result={
+                    "candidates": prepared,
+                    "primary_sql": primary.sql_text if primary else None,
+                },
+                context={
+                    "candidates": prepared,
+                    "primary_sql": primary.sql_text if primary else None,
+                    "primary_candidate": primary,
+                },
+                metadata={"status": "success"},
+            )
+
         try:
             if streaming:
                 # Streaming mode — accumulate tokens
                 collected: list[str] = []
                 async for chunk in self.generator.generate_stream(
-                    sqr, schema=schema, domain=domain,
-                    history=history, similar_pairs=similar_pairs,
-                    model=model, dialect=dialect, rag_context=rag_context,
+                    sqr,
+                    schema=schema,
+                    domain=domain,
+                    history=history,
+                    similar_pairs=similar_pairs,
+                    model=model,
+                    dialect=dialect,
+                    rag_context=rag_context,
                     error_context=error_context,
                     multi_table_hint=multi_table_hint,
                     database_name=database_name,
@@ -131,10 +154,10 @@ class GenerateSQLNode(AgenticNode):
                 raw_sql = "".join(collected)
                 sql_text = _extract_sql(raw_sql)
 
-                from app.models.query import SQLCandidate
-
                 # ── Split multi-table alternatives in streaming mode ──
                 import uuid as _uuid
+
+                from app.models.query import SQLCandidate
 
                 alternatives = _split_alternatives(raw_sql)
                 if len(alternatives) > 1:
@@ -165,10 +188,16 @@ class GenerateSQLNode(AgenticNode):
                     candidates = [candidate]
             else:
                 candidates = await self.generator.generate(
-                    sqr, schema=schema, domain=domain,
-                    history=history, similar_pairs=similar_pairs,
-                    num_candidates=num_candidates, strategy=strategy,
-                    model=model, dialect=dialect, rag_context=rag_context,
+                    sqr,
+                    schema=schema,
+                    domain=domain,
+                    history=history,
+                    similar_pairs=similar_pairs,
+                    num_candidates=num_candidates,
+                    strategy=strategy,
+                    model=model,
+                    dialect=dialect,
+                    rag_context=rag_context,
                     error_context=error_context,
                     multi_table_hint=multi_table_hint,
                     database_name=database_name,
@@ -214,9 +243,9 @@ def _extract_sql(text: str) -> str:
         r"```(?:sql|SQL|mysql|postgresql|postgres|sqlite)?\s*\n(.*?)```",
         re.DOTALL | re.IGNORECASE,
     )
-    matches = fence.findall(text)
-    if matches:
-        return matches[0].strip()
+    match = fence.search(text)
+    if match:
+        return match.group(1).strip()
     cleaned = text.strip()
     for prefix in [
         "Here is the SQL query:",
@@ -226,5 +255,5 @@ def _extract_sql(text: str) -> str:
         "Generated SQL:",
     ]:
         if cleaned.lower().startswith(prefix.lower()):
-            cleaned = cleaned[len(prefix):].strip()
+            cleaned = cleaned[len(prefix) :].strip()
     return cleaned

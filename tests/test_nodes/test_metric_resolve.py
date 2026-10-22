@@ -155,13 +155,6 @@ class TestMetricResolveNodeConstruction:
 
 
 class TestMetricResolveNodeRegistry:
-    @pytest.fixture(autouse=True)
-    def _clear_registry(self):
-        from app.nodes.registry import NodeRegistry
-        NodeRegistry._nodes.clear()
-        yield
-        NodeRegistry._nodes.clear()
-
     def test_can_register(self):
         from app.nodes.registry import NodeRegistry
         registry = NodeRegistry()

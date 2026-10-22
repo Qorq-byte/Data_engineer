@@ -1,0 +1,182 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_ test_connection_replacement_never_executes_old_schema_on_new_database[json] _
+
+connected_query = <starlette.testclient.TestClient object at 0x00000180E53F6F90>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000180E52BAFD0>
+protocol = 'json'
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    async def test_connection_replacement_never_executes_old_schema_on_new_database(
+        connected_query, monkeypatch, protocol,
+    ):
+        original_extract = SchemaExtractor.cached_extract
+        replaced = False
+
+        async def replace_after_extract(cls, connection, *args, **kwargs):
+            nonlocal replaced
+            snapshot = await original_extract(connection, *args, **kwargs)
+            if not replaced:
+                replaced = True
+                new = await ConnectionFactory.create(DatabaseType.SQLITE, {}, "contract")
+                new.execute("CREATE TABLE orders (id INTEGER)")
+                new.execute("INSERT INTO orders VALUES (999)")
+            return snapshot
+
+        monkeypatch.setattr(SchemaExtractor, "cached_extract", classmethod(replace_after_extract))
+        body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+                "num_candidates": 1}
+
+        async def request():
+            if protocol == "mcp":
+                return await mcp_query(nl_text="find all orders", db_id="contract")
+            if protocol == "sse":
+                events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+                assert not any(event == "execution" for event, _ in events) if first else True
+                return next(value for event, value in events if event == "done")
+            response = connected_query.post("/api/v1/query", json=body)
+            assert response.status_code == 200
+            return response.json()
+
+        first = True
+        failed = await request()
+>       assert failed["status"] == "failed", failed
+E       AssertionError: {'query_id': 'q_3ff0f30ef296', 'session_id': 's_b573f77a34424580', 'status': 'completed', 'plan_id': 'request_query', ...}
+E       assert 'completed' == 'failed'
+E
+E         - failed
+E         + completed
+
+tests\test_api\test_query_contract.py:66: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.506 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.506 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+_ test_connection_replacement_never_executes_old_schema_on_new_database[sse] __
+
+connected_query = <starlette.testclient.TestClient object at 0x0000018141D52990>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000180E51A7790>
+protocol = 'sse'
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    async def test_connection_replacement_never_executes_old_schema_on_new_database(
+        connected_query, monkeypatch, protocol,
+    ):
+        original_extract = SchemaExtractor.cached_extract
+        replaced = False
+
+        async def replace_after_extract(cls, connection, *args, **kwargs):
+            nonlocal replaced
+            snapshot = await original_extract(connection, *args, **kwargs)
+            if not replaced:
+                replaced = True
+                new = await ConnectionFactory.create(DatabaseType.SQLITE, {}, "contract")
+                new.execute("CREATE TABLE orders (id INTEGER)")
+                new.execute("INSERT INTO orders VALUES (999)")
+            return snapshot
+
+        monkeypatch.setattr(SchemaExtractor, "cached_extract", classmethod(replace_after_extract))
+        body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+                "num_candidates": 1}
+
+        async def request():
+            if protocol == "mcp":
+                return await mcp_query(nl_text="find all orders", db_id="contract")
+            if protocol == "sse":
+                events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+                assert not any(event == "execution" for event, _ in events) if first else True
+                return next(value for event, value in events if event == "done")
+            response = connected_query.post("/api/v1/query", json=body)
+            assert response.status_code == 200
+            return response.json()
+
+        first = True
+>       failed = await request()
+                 ^^^^^^^^^^^^^^^
+
+tests\test_api\test_query_contract.py:65:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    async def request():
+        if protocol == "mcp":
+            return await mcp_query(nl_text="find all orders", db_id="contract")
+        if protocol == "sse":
+            events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+>           assert not any(event == "execution" for event, _ in events) if first else True
+E           assert False
+
+tests\test_api\test_query_contract.py:58: AssertionError
+_ test_connection_replacement_never_executes_old_schema_on_new_database[mcp] __
+
+connected_query = <starlette.testclient.TestClient object at 0x0000018141E57ED0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000018141E4D550>
+protocol = 'mcp'
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    async def test_connection_replacement_never_executes_old_schema_on_new_database(
+        connected_query, monkeypatch, protocol,
+    ):
+        original_extract = SchemaExtractor.cached_extract
+        replaced = False
+
+        async def replace_after_extract(cls, connection, *args, **kwargs):
+            nonlocal replaced
+            snapshot = await original_extract(connection, *args, **kwargs)
+            if not replaced:
+                replaced = True
+                new = await ConnectionFactory.create(DatabaseType.SQLITE, {}, "contract")
+                new.execute("CREATE TABLE orders (id INTEGER)")
+                new.execute("INSERT INTO orders VALUES (999)")
+            return snapshot
+
+        monkeypatch.setattr(SchemaExtractor, "cached_extract", classmethod(replace_after_extract))
+        body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+                "num_candidates": 1}
+
+        async def request():
+            if protocol == "mcp":
+                return await mcp_query(nl_text="find all orders", db_id="contract")
+            if protocol == "sse":
+                events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+                assert not any(event == "execution" for event, _ in events) if first else True
+                return next(value for event, value in events if event == "done")
+            response = connected_query.post("/api/v1/query", json=body)
+            assert response.status_code == 200
+            return response.json()
+
+        first = True
+        failed = await request()
+>       assert failed["status"] == "failed", failed
+E       AssertionError: {'status': 'completed', 'query_id': 'q_203350e6f11a', 'session_id': 's_88d9225ead394edb', 'plan_id': 'request_query', ...}
+E       assert 'completed' == 'failed'
+E
+E         - failed
+E         + completed
+
+tests\test_api\test_query_contract.py:66: AssertionError
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\python\data_engineer\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+tests/test_api/test_query_contract.py::test_connection_replacement_never_executes_old_schema_on_new_database[json]
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+tests/test_api/test_query_contract.py::test_connection_replacement_never_executes_old_schema_on_new_database[json]
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_api/test_query_contract.py::test_connection_replacement_never_executes_old_schema_on_new_database[json]
+FAILED tests/test_api/test_query_contract.py::test_connection_replacement_never_executes_old_schema_on_new_database[sse]
+FAILED tests/test_api/test_query_contract.py::test_connection_replacement_never_executes_old_schema_on_new_database[mcp]
+3 failed, 26 deselected, 3 warnings in 13.93s

@@ -1,5 +1,7 @@
 # SPEC.md — NL2SQL 数据工程智能体
 
+> 2026-10-20 状态说明：下文是历史设计/任务登记，勾选完成不代表所有路径已经联调。当前代码能力、验证证据和未完成项以 [MVP优化阶段报告](docs/optimization/stage-5.md) 和接口契约为准；真实业务质量与生产容量尚无基线。
+
 > **项目名称:** NL2SQL Data Engineering Agent  
 > **版本:** v0.1 (MVP)  
 > **许可证:** MIT  

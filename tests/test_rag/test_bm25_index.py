@@ -223,6 +223,7 @@ class TestBM25Index:
         idx = BM25Index(db_path)
         idx.connect()
         import os
+
         assert os.path.exists(db_path)
 
     def test_connect_idempotent(self, index: BM25Index):
@@ -298,11 +299,14 @@ class TestBM25Index:
     # ── Search ─────────────────────────────────────────────────────────
 
     def test_search_returns_results(self, index: BM25Index):
-        index.index("test_ns", [
-            _make_doc("d1", "monthly sales report"),
-            _make_doc("d2", "quarterly revenue analysis"),
-            _make_doc("d3", "employee attendance log"),
-        ])
+        index.index(
+            "test_ns",
+            [
+                _make_doc("d1", "monthly sales report"),
+                _make_doc("d2", "quarterly revenue analysis"),
+                _make_doc("d3", "employee attendance log"),
+            ],
+        )
         results = index.search("test_ns", "sales report")
         assert len(results) > 0
         assert results[0]["doc_id"] == "d1"
@@ -325,21 +329,27 @@ class TestBM25Index:
         assert results == []
 
     def test_search_returns_scores(self, index: BM25Index):
-        index.index("test_ns", [
-            _make_doc("d1", "sales revenue monthly report"),
-            _make_doc("d2", "employee attendance records"),
-        ])
+        index.index(
+            "test_ns",
+            [
+                _make_doc("d1", "sales revenue monthly report"),
+                _make_doc("d2", "employee attendance records"),
+            ],
+        )
         results = index.search("test_ns", "sales revenue")
         assert len(results) >= 1
         for r in results:
-            assert isinstance(r["score"], (int, float))
+            assert isinstance(r["score"], int | float)
             assert r["score"] >= 0  # positive = better match
 
     def test_search_better_match_scores_higher(self, index: BM25Index):
-        index.index("test_ns", [
-            _make_doc("exact", "monthly sales revenue report"),
-            _make_doc("partial", "annual revenue breakdown"),
-        ])
+        index.index(
+            "test_ns",
+            [
+                _make_doc("exact", "monthly sales revenue report"),
+                _make_doc("partial", "annual revenue breakdown"),
+            ],
+        )
         results = index.search("test_ns", "monthly sales revenue report")
         if len(results) >= 2:
             # exact match should score higher than partial
@@ -348,11 +358,15 @@ class TestBM25Index:
     # ── Chinese search ─────────────────────────────────────────────────
 
     def test_index_and_search_chinese(self, index: BM25Index):
-        index.index("test_ns", [
-            _make_doc("d1", "月度销售报告"),
-            _make_doc("d2", "员工考勤记录"),
-            _make_doc("d3", "季度营收分析"),
-        ], language="zh")
+        index.index(
+            "test_ns",
+            [
+                _make_doc("d1", "月度销售报告"),
+                _make_doc("d2", "员工考勤记录"),
+                _make_doc("d3", "季度营收分析"),
+            ],
+            language="zh",
+        )
         results = index.search("test_ns", "销售报告", language="zh")
         assert len(results) > 0
         assert results[0]["doc_id"] == "d1"
@@ -380,10 +394,13 @@ class TestBM25Index:
     # ── Clear ──────────────────────────────────────────────────────────
 
     def test_clear_removes_all_documents(self, index: BM25Index):
-        index.index("test_ns", [
-            _make_doc("d1", "hello"),
-            _make_doc("d2", "world"),
-        ])
+        index.index(
+            "test_ns",
+            [
+                _make_doc("d1", "hello"),
+                _make_doc("d2", "world"),
+            ],
+        )
         index.clear("test_ns")
         assert index.count("test_ns") == 0
 
@@ -412,13 +429,19 @@ class TestBM25IndexCrossNamespace:
         return idx
 
     def test_namespaces_are_isolated(self, index: BM25Index):
-        index.index("ns_a", [
-            _make_doc("a1", "sales report"),
-            _make_doc("a2", "revenue data"),
-        ])
-        index.index("ns_b", [
-            _make_doc("b1", "employee records"),
-        ])
+        index.index(
+            "ns_a",
+            [
+                _make_doc("a1", "sales report"),
+                _make_doc("a2", "revenue data"),
+            ],
+        )
+        index.index(
+            "ns_b",
+            [
+                _make_doc("b1", "employee records"),
+            ],
+        )
         assert index.count("ns_a") == 2
         assert index.count("ns_b") == 1
 

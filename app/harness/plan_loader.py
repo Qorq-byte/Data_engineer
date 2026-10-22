@@ -4,6 +4,7 @@ See SPEC §3.4.2 for the workflow Plan template specification.
 """
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -65,8 +66,12 @@ class PlanLoader:
     # ── Parser ──────────────────────────────────────────────────
 
     @staticmethod
-    def _parse(raw: dict) -> WorkflowPlan:
+    def _parse(raw: dict[str, Any]) -> WorkflowPlan:
+        if not isinstance(raw, dict):
+            raise ValueError("Workflow plan root must be a mapping")
         plan_data = raw.get("plan", raw)
+        if not isinstance(plan_data, dict):
+            raise ValueError("Workflow plan section must be a mapping")
 
         node_order = []
         for nd in plan_data.get("node_order", []):
@@ -106,7 +111,7 @@ class PlanLoader:
         )
 
     @staticmethod
-    def _parse_node_config(raw: dict | None) -> NodeConfig:
+    def _parse_node_config(raw: dict[str, Any] | None) -> NodeConfig:
         if raw is None:
             return NodeConfig()
         return NodeConfig(

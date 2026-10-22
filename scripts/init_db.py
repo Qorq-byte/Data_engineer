@@ -55,7 +55,7 @@ async def _init(drop: bool = False, config: dict | None = None) -> None:
 
     store = await init_db(config)
     print(f"Database initialized: {DEFAULT_MYSQL_CONFIG['db']}")
-    print(f"Tables created: 11")
+    print("Tables created: 11")
 
     # Verify
     settings = await store.get_settings()

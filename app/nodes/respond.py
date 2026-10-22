@@ -258,9 +258,7 @@ class RespondNode(AgenticNode):
         return "\n".join(lines)
 
     @staticmethod
-    def _format_preview(
-        execution: dict[str, Any], preview_rows: int, language: str
-    ) -> str | None:
+    def _format_preview(execution: dict[str, Any], preview_rows: int, language: str) -> str | None:
         """Render the first ``preview_rows`` rows as a compact text block."""
         rows = execution.get("rows") or []
         if not rows:
@@ -273,7 +271,7 @@ class RespondNode(AgenticNode):
         if columns:
             lines.append(" | ".join(str(c) for c in columns))
         for row in shown:
-            cells = row if isinstance(row, (list, tuple)) else [row]
+            cells = row if isinstance(row, list | tuple) else [row]
             lines.append(" | ".join(str(c) for c in cells))
         return "\n".join(lines)
 

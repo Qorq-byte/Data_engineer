@@ -1,0 +1,58 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+________________ test_operator_can_clear_only_persisted_orphan ________________
+
+client = <httpx.AsyncClient object at 0x0000026712876780>
+
+    async def test_operator_can_clear_only_persisted_orphan(client):
+        await connect()
+        current = await engine.initialize_rag_engine()
+        healthy = snapshots(current, "target")
+        response = await client.post("/api/v1/learning/rag/schema/orphan/clear")
+>       assert response.status_code == 200
+E       assert 404 == 200
+E        +  where 404 = <Response [404 Not Found]>.status_code
+
+tests\test_rag\test_schema_maintenance.py:34: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.439 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.439 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+______________ test_legacy_clear_cannot_ignore_database_argument ______________
+
+client = <httpx.AsyncClient object at 0x0000026712A04B90>
+
+    async def test_legacy_clear_cannot_ignore_database_argument(client):
+        current = await engine.initialize_rag_engine()
+        before = snapshots(current, "target"), snapshots(current, "orphan")
+        response = await client.post("/api/v1/learning/rag/clear", json={"db_id": "orphan"})
+>       assert response.status_code == 422
+E       assert 200 == 422
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_rag\test_schema_maintenance.py:45: AssertionError
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\jieba\_compat.py:18
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+..\..\..\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+..\.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\python\data_engineer\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_schema_maintenance.py::test_operator_can_clear_only_persisted_orphan
+FAILED tests/test_rag/test_schema_maintenance.py::test_legacy_clear_cannot_ignore_database_argument
+2 failed, 3 warnings in 8.69s

@@ -1,0 +1,5 @@
+Final command: python -m mypy app/ --no-incremental
+Result: NOT PASSED. Terminated after more than 180 seconds without diagnostics output.
+Earlier stage snapshot: 285 errors in 62 files, checked 142 source files.
+See stage-1-mypy-baseline.txt for the collected diagnostics.
+Existing type debt and final-check completion remain tracked for later stages.

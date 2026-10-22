@@ -1,6 +1,12 @@
 # NL2SQL Data Engineering Agent
 
-基于 LLM 的自然语言 → SQL 数据工程智能体。支持**中英双语**输入，通过 **RAG 混合语义检索**、**Evolvable Context 活知识库**和**持续学习**，将自然语言准确转换为多方言 SQL 并执行。
+> 优化分支进度与验收见[实施计划](docs/optimization/plan.md)、[阶段记录](docs/optimization/progress.md)。
+> 单进程并发边界、就绪检查、配置与本地负载实测见[运行验证](docs/optimization/runtime-and-load.md)。
+> RAG 索引更新、版本迁移与离线评测见[检索验证说明](docs/optimization/rag-evaluation.md)；真实语义/SQL 质量尚需业务标注与模型预测。
+> 主查询固定走 request_query YAML 与 WorkflowRunner，JSON/SSE/MCP 共用执行服务；字段、失败语义和限制见[查询契约](docs/optimization/query-contract.md)。
+> 当前采用私有管理员共享工作台：必须配置至少32字符的随机JWT_SECRET，注册需REGISTRATION_TOKEN邀请，业务接口仅允许ADMIN_USER_IDS；详见[安全配置](docs/optimization/security.md)。
+
+面向受信管理员的 NL2SQL MVP。中英输入经固定 `request_query.yml` 和 `WorkflowRunner` 完成理解、Schema 链接、生成、校验与可选只读执行。RAG 已有索引/混合检索与离线评测入口；真实模型的答案正确率、语义召回率和生产容量尚未建立基线。
 
 > 版本: v0.1 · 许可证: MIT · Python ≥ 3.12
 
@@ -21,6 +27,12 @@
 
 ---
 
+## 当前能力边界
+
+工作台显示服务真实阶段与跳过状态；失败不自动重发 JSON，支持取消等待/新对话隔离、历史会话复用、零行结果和 MOCK 警告。`/health` 只说明进程存活；`/health/ready` 检查初始化、认证、真实模型和已登记数据库，不是实时数据库探针。会话只保存在单进程内存；历史在浏览器本地，管理员共享业务数据，暂不提供租户隔离。
+
+质量、性能和工程检查的实测范围见[优化报告](docs/optimization/stage-5.md)、[检索评测](docs/optimization/rag-evaluation.md)和[负载实验](docs/optimization/runtime-and-load.md)。下列功能入口与查询示例不是正确率保证；学习模块存在不等于已接入请求工作流自动修复。
+
 ## 核心特性
 
 | 特性 | 说明 |
@@ -29,16 +41,16 @@
 | 🔍 Schema 感知 | 自动读取表结构、注释、外键、类型 |
 | 📖 业务术语表 | 业务术语 → SQL 字段/表达式的映射 |
 | 💬 多轮对话 | 上下文继承，逐步完善的对话式查询 |
-| 🛡️ 只读优先 | 默认只生成 SELECT，写操作需确认 |
+| 🛡️ 只读执行 | AST 与驱动约束；写操作拒绝，不提供确认后写入通道 |
 | 🔁 多候选输出 | 歧义时展示多个候选 SQL |
 | 📊 执行预览 | 生成后自动执行并展示结果预览 |
 | 🧠 持续学习 | 反馈打分 + 查询对存储 + 规则提取 + 质量趋势 |
-| 🧩 多数据库适配 | SQLite / DuckDB / PostgreSQL / MySQL / Snowflake / StarRocks |
+| 🧩 数据库连接 | SQLite / DuckDB / PostgreSQL / MySQL 已实现；其余方言支持不等于驱动已实现 |
 | 🔌 多 LLM 提供商 | OpenAI / Claude / Gemini / DeepSeek / Qwen 等 10+（LiteLLM 统一路由） |
 | 🔑 前端切换模型 | 设置面板填 API Key / 选默认模型**即生效**（AES 加密存储），聊天面板每次查询可选模型 |
 | 🧠 本地语义检索 | 默认使用 Ollama `embeddinggemma`（768 维）做向量检索，零 API Key、离线可用 |
 | 🔄 MCP 双重角色 | 既是 MCP Server（对外暴露 NL2SQL），也是 MCP Client（消费外部工具） |
-| 🗃️ MySQL 持久化 | Write-Through 模式，用户数据不丢失 |
+| 🗃️ MySQL 持久化 | 认证依赖 MySQL；业务持久化失败与降级仍需关注，不承诺零丢失 |
 
 ---
 
@@ -48,7 +60,7 @@
 
 ```
 POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
-  → schema_linking → generate_sql → validate_sql → execute_sql
+  → parse → schema_linking → generate_sql → validate_sql → execute_sql
   → ConstraintEnforcer + PermissionManager
   → WorkflowTrace (持久化)
 ```
@@ -56,7 +68,7 @@ POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
 ### 核心设计原则
 
 1. **LLM 不决定下一步** — WorkflowRunner 驱动固定的 YAML 节点序列
-2. **只读默认** — 所有 SQL 通过关键词黑名单过滤
+2. **只读默认** — SQL 使用单语句 AST 校验与驱动保护，禁止写操作
 3. **权限不可绕过** — 每个工具调用都经过 PermissionManager
 4. **硬性重试/迭代限制** — 每次执行有最大重试和反思轮次
 
@@ -82,7 +94,7 @@ POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
 ### 环境要求
 
 - Python 3.12+
-- （可选）MySQL 8.0+（用于用户数据持久化）
+- MySQL 8.0+：浏览器注册/登录所需的认证存储；业务存储也可配置 MySQL。
 - （推荐）Ollama + `embeddinggemma` 模型（RAG 本地语义检索，无需 API Key）：
   ```bash
   ollama pull embeddinggemma   # 约 600MB，保持 ollama serve 运行即可
@@ -112,7 +124,8 @@ pip install -e ".[dev]"
 # 复制环境变量模板
 cp .env.example .env
 
-# 编辑 .env，至少配置 LLM API Key（选择一个即可）
+# 编辑 .env：设置随机 JWT_SECRET（至少32字符）、REGISTRATION_TOKEN、ADMIN_USER_IDS
+# 配置 AUTH_MYSQL_*、至少一个真实 LLM API Key，并在工作台连接查询数据库
 # OPENAI_API_KEY=sk-xxx
 # DEEPSEEK_API_KEY=sk-xxx
 # ANTHROPIC_API_KEY=sk-xxx
@@ -283,11 +296,14 @@ uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
 
 除了 Web 界面，也可以直接通过 HTTP API 使用。完整 API 文档见 `http://localhost:8001/docs`。
 
+业务 API 请求需添加 `Authorization: Bearer <管理员token>`。下方 curl 示例中的 `TOKEN` 应来自真实登录；注册须带管理员发放的邀请令牌。完整错误码与 SSE 事件见[接口契约](docs/optimization/query-contract.md)。
+
 ### 核心查询 API
 
 ```bash
 # NL → SQL 完整管线（model 参数可选，指定本次查询使用的大模型）
 curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "nl_text": "上个月销售额最高的10个产品",
@@ -319,6 +335,7 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 ```bash
 curl -X POST http://localhost:8001/api/v1/query/stream \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"nl_text": "查询所有用户", "dialect": "postgresql", "model": "deepseek-v4-flash"}'
 ```
@@ -328,6 +345,7 @@ curl -X POST http://localhost:8001/api/v1/query/stream \
 ```bash
 # 为提供商配置 API Key + 切换默认模型（保存后立即生效，密钥加密存储，接口不回显明文）
 curl -X PUT http://localhost:8001/api/v1/settings/llm \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "default_model": "deepseek-v4-pro",
@@ -340,10 +358,10 @@ curl -X PUT http://localhost:8001/api/v1/settings/llm \
   }'
 
 # 查看当前配置（api_key 只返回"是否已配置"布尔值）
-curl http://localhost:8001/api/v1/settings/llm
+curl http://localhost:8001/api/v1/settings/llm -H "Authorization: Bearer $TOKEN"
 
 # 列出所有可用模型（已启用且配置了 Key 的提供商）
-curl http://localhost:8001/api/v1/settings/available-models
+curl http://localhost:8001/api/v1/settings/available-models -H "Authorization: Bearer $TOKEN"
 ```
 
 > 说明：自定义提供商若使用 LiteLLM 已知名称（openai/anthropic/deepseek/google/groq/qwen…）无需 base_url；否则按 **OpenAI 兼容端点**调用，必须提供 `base_url`。API Key 留空表示保持原值；设置保存后立即重建运行中的路由，重启服务后自动从 MySQL 回载。
@@ -460,11 +478,11 @@ YAML 驱动的 Agent 配置，包含：
 
 ### 关键特性
 
-- **Write-Through 持久化** — 大多数 API 端点采用"先写内存，再写 MySQL/文件"模式，保证数据一致性
+- **Write-Through 持久化** — 部分路径先写内存再持久化；失败可能降级，不具备跨内存/文件/MySQL 的事务一致性保证。
 - **API Key 加密存储** — 在设置面板配置的 LLM API Key 以 AES-256-GCM 密文写入 MySQL（密钥由 `JWT_SECRET` 派生），任何接口不回显明文；`.env` 中的 Key 同样可用
 - **无用户隔离** — 所有用户共享同一份数据（领域、查询历史、学习数据等）
 - **内存数据易失** — 数据库连接信息（`ConnectionFactory`）、学习统计缓存（`_learning_store`）在服务器重启后清空，需重新连接数据库
-- **MySQL 可选** — 不配置 `AUTH_MYSQL_*` 时，回退到 YAML 文件 + 内存模式
+- **认证 MySQL 必需** — 未连通时浏览器登录/注册不可用，readiness 不通过；部分业务存储可降级到 YAML/内存，不等于存在内存认证。
 
 ---
 
@@ -557,7 +575,8 @@ pytest --cov=app --cov-report=html
 ruff check .
 
 # 类型检查
-mypy app/
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
+mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
 ### 添加新的工作流节点
@@ -573,3 +592,35 @@ mypy app/
 ## License
 
 MIT
+
+### 可复现的本地检查与 CI
+
+```bash
+pip install -e ".[dev]"
+npm ci --ignore-scripts
+npm run check:frontend
+LITELLM_LOCAL_MODEL_COST_MAP=True RAG_EMBEDDING_PROVIDER=mock pytest
+ruff check .
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
+mypy app/                   # 全仓诊断，仍有已知债务
+```
+
+PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。
+
+阶段8进一步将生成/执行节点与预算适配器纳入上述strict门禁，保持默认导入追踪。全仓诊断230→201仍未通过，实施、验证和限制见[阶段8报告](docs/optimization/stage-8.md)。
+
+阶段9统一JSON/SSE的QueryResponse校验与JSON序列化，MCP nl_query新增状态、错误码和查询标识；截止/容量/内部错误分类共享，业务失败语义保留。全仓类型仍201项，详见[查询契约](docs/optimization/query-contract.md)和[阶段9报告](docs/optimization/stage-9.md)。
+
+阶段10将Schema Linking的FK扩展明确为源候选双向一跳，校验检索命中的库/表/列，并将无效匹配/异常回退警告传到JSON/SSE/MCP。合成边界评测与兼容取舍见[阶段10报告](docs/optimization/stage-10.md)；该评测不代表真实业务准确率。
+
+阶段11采用已验证的SQLGlot30.18.0（依赖锁定）做私有AST作用域校验，复用强制只读策略，改进候选响应隔离与SQL评测错误分类。兼容范围、skip_syntax收窄、命名空间限制和实测见[阶段11报告](docs/optimization/stage-11.md)。
+
+阶段12补齐来源命名空间元数据，修复SQLite临时表遮蔽内省、DuckDB挂载库同名表混合，限定名按已知来源校验。RAG旧public索引需按db_id刷新，在线多方言与search_path限制见[阶段12报告](docs/optimization/stage-12.md)及[查询契约](docs/optimization/query-contract.md)。
+
+阶段13将Schema与原生连接句柄固定为同一查询目标，重连/断开后旧请求明确失败，不会切到新库执行；新请求可显式使用新目标。实现、三协议回归和限制见[阶段13报告](docs/optimization/stage-13.md)。
+
+阶段14使SQLite Schema缓存按main.schema_version感知DDL，过期请求明确失败，带来源版本的执行与EXPLAIN拒绝临时同名表遮蔽。验证、旧快照/直接SQL兼容及其他方言限制见[阶段14报告](docs/optimization/stage-14.md)。
+
+阶段15为DuckDB保存并核对原生namespace身份、search_path与用户临时对象状态，防止同句柄切库后复用旧来源；绑定EXPLAIN使用原会话。保守main/no-temp范围、DDL与索引限制及实测见[阶段15报告](docs/optimization/stage-15.md)。
+
+阶段16统一Schema/RAG刷新并在索引删除前核对来源；冲突HTTP409、旧索引保留，前端按实际业务字段统计成功。四条写入口、取消/失败和双后端部分写限制见[阶段16报告](docs/optimization/stage-16.md)。check:frontend同时执行实际页面刷新处理函数的12项契约场景。

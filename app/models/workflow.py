@@ -3,8 +3,9 @@
 See SPEC §3.4.2-3.4.3 for the full specification.
 """
 
-import contextlib
+import asyncio
 import json
+import logging
 import os
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -57,9 +58,9 @@ class EvaluationConfig:
     """Configuration for node output evaluation."""
 
     enabled: bool = True
-    metrics: list[str] = field(default_factory=lambda: [
-        "syntax_valid", "schema_compliant", "execution_success"
-    ])
+    metrics: list[str] = field(
+        default_factory=lambda: ["syntax_valid", "schema_compliant", "execution_success"]
+    )
 
 
 @dataclass
@@ -120,6 +121,9 @@ class WorkflowTrace:
     started_at: datetime = field(default_factory=datetime.now)
     completed_at: datetime | None = None
     session_id: str = ""
+    status: str = "running"
+    error: str = ""
+    persistence_error: str = ""
 
     def record(
         self,
@@ -163,16 +167,25 @@ class WorkflowTrace:
             "session_id": self.session_id,
             "started_at": self.started_at,
             "completed_at": self.completed_at,
+            "status": self.status,
+            "error": self.error,
         }
         lines = [json.dumps(header, ensure_ascii=False, default=_json_default)]
         lines.extend(
             json.dumps(asdict(node), ensure_ascii=False, default=_json_default)
             for node in self.nodes
         )
-        with contextlib.suppress(OSError):
+
+        def write() -> None:
             trace_dir.mkdir(parents=True, exist_ok=True)
             target = trace_dir / f"{self.workflow_id}.jsonl"
             target.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        try:
+            await asyncio.to_thread(write)
+        except OSError as exc:
+            self.persistence_error = type(exc).__name__
+            logging.getLogger(__name__).warning("Workflow trace persistence failed", exc_info=True)
 
 
 @dataclass

@@ -1,0 +1,28 @@
+{
+  "version": "synthetic-smoke-v1",
+  "documents": [
+    {"id": "orders", "domain": "commerce", "text": "订单 orders 销售 sales 金额 amount，退款 refund_amount 不计入净收入。"},
+    {"id": "users", "domain": "commerce", "text": "用户 users 会员等级 tier，用户邮箱 email。"},
+    {"id": "products", "domain": "commerce", "text": "商品 products 库存 stock，商品价格 price。"},
+    {"id": "joins", "domain": "commerce", "text": "关联 orders.user_id 与 users.id，查询用户订单。"},
+    {"id": "refunds", "domain": "commerce", "text": "退款 refund_amount 从 amount 扣除计算净收入。"},
+    {"id": "payroll", "domain": "hr", "text": "工资 salary 员工 employee。"},
+    {"id": "other-orders", "domain": "hr", "text": "orders orders orders sales sales 销售 订单。"},
+    {"id": "audit", "domain": "platform", "text": "trace 工作流追踪，记录每个节点耗时。"}
+  ],
+  "queries": [
+    {"id": "q1", "query": "会员等级 tier", "domain": "commerce", "relevant": ["users"]},
+    {"id": "q2", "query": "库存 stock", "domain": "commerce", "relevant": ["products"]},
+    {"id": "q3", "query": "refund_amount 净收入", "domain": "commerce", "relevant": ["orders", "refunds"]},
+    {"id": "q4", "query": "sales", "domain": "commerce", "relevant": ["orders"]},
+    {"id": "q5", "query": "用户订单 user_id", "domain": "commerce", "relevant": ["joins"]},
+    {"id": "q6", "query": "salary 员工", "domain": "hr", "relevant": ["payroll"]},
+    {"id": "q7", "query": "工作流 trace", "domain": "platform", "relevant": ["audit"]}
+  ],
+  "sql_cases": [
+    {"id": "sql1", "question": "列出所有订单 ID 并按 ID 排序", "gold_sql": "SELECT id FROM orders ORDER BY id", "ordered": true},
+    {"id": "sql2", "question": "已完成订单的总金额", "gold_sql": "SELECT SUM(amount) FROM orders WHERE status = 'completed'", "ordered": false},
+    {"id": "sql3", "question": "每个用户的订单数量，包含没有订单的用户", "gold_sql": "SELECT u.id, COUNT(o.id) FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id", "ordered": false},
+    {"id": "sql4", "question": "没有商品属于的类别 unknown 的商品", "gold_sql": "SELECT id FROM products WHERE category='unknown'", "ordered": false}
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "version": "sql-validation-boundary-v1",
+  "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run",
+  "cases": [
+    {
+      "id": "simple",
+      "sql": "SELECT id FROM users",
+      "expected": true
+    },
+    {
+      "id": "cte",
+      "sql": "WITH active AS (SELECT id FROM users) SELECT id FROM active",
+      "expected": true
+    },
+    {
+      "id": "derived",
+      "sql": "SELECT q.total FROM (SELECT SUM(amount) AS total FROM orders) q",
+      "expected": true
+    },
+    {
+      "id": "output-alias",
+      "sql": "SELECT amount * 2 AS doubled FROM orders ORDER BY doubled",
+      "expected": true
+    },
+    {
+      "id": "shadowed-alias",
+      "sql": "SELECT a.amount FROM orders a WHERE EXISTS (SELECT 1 FROM users a WHERE a.email='x')",
+      "expected": true
+    },
+    {
+      "id": "correlated",
+      "sql": "SELECT o.id FROM orders o WHERE EXISTS (SELECT 1 FROM users u WHERE u.id=o.user_id)",
+      "expected": true
+    },
+    {
+      "id": "cte-column-alias",
+      "sql": "WITH x(v) AS (SELECT id FROM users) SELECT v FROM x",
+      "expected": true
+    },
+    {
+      "id": "star-derived",
+      "sql": "SELECT x.id FROM (SELECT * FROM users) x",
+      "expected": true
+    },
+    {
+      "id": "main-namespace",
+      "sql": "SELECT id FROM main.users",
+      "expected": true
+    },
+    {
+      "id": "out-of-scope",
+      "sql": "SELECT email FROM orders JOIN products p ON p.id=orders.id",
+      "expected": false
+    },
+    {
+      "id": "ambiguous",
+      "sql": "SELECT id FROM orders o JOIN users u ON o.user_id=u.id",
+      "expected": false
+    },
+    {
+      "id": "missing-table",
+      "sql": "SELECT * FROM ghosts",
+      "expected": false
+    },
+    {
+      "id": "alias-masks-missing",
+      "sql": "SELECT * FROM ghosts g JOIN orders ghosts ON ghosts.id=g.id",
+      "expected": false
+    },
+    {
+      "id": "wrong-namespace",
+      "sql": "SELECT id FROM other.users",
+      "expected": false
+    },
+    {
+      "id": "derived-column-missing",
+      "sql": "SELECT x.missing FROM (SELECT id FROM users) x",
+      "expected": false
+    },
+    {
+      "id": "unsafe-function",
+      "sql": "SELECT nextval('sequence')",
+      "expected": false,
+      "policy": true
+    },
+    {
+      "id": "select-into",
+      "sql": "SELECT * INTO copied FROM users",
+      "expected": false,
+      "policy": true
+    },
+    {
+      "id": "multiple",
+      "sql": "SELECT 1; SELECT 2",
+      "expected": false,
+      "policy": true
+    }
+  ]
+}

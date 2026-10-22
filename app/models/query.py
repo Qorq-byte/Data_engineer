@@ -104,8 +104,9 @@ class SQLCandidate:
     model: str = ""
     latency_ms: float = 0.0
     database_name: str = ""           # which database this SQL targets (for multi-DB)
-    validation: dict | None = None   # per-candidate validation result
-    execution: dict | None = None    # per-candidate execution result
+    validation: dict[str, Any] | None = None   # per-candidate validation result
+    execution: dict[str, Any] | None = None    # per-candidate execution result
+    db_id: str = ""
 
 
 @dataclass

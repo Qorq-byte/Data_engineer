@@ -1,0 +1,9 @@
+{
+  "baseline": "stage-11-after.jsonl at 81b01de5c7d06307f7d1f59dc97b7f91ab17e86e",
+  "before_errors": 197,
+  "after_errors": 197,
+  "after_files": 42,
+  "strict_gate_errors": 0,
+  "new_diagnostic_fingerprints": [],
+  "full_repository_passed": false
+}

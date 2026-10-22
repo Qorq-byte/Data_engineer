@@ -1,6 +1,5 @@
 """Tests for ExecuteSQLNode — the only fully implemented node in Phase 1."""
 
-
 import pytest
 
 from app.nodes.base import NodeInput
@@ -37,9 +36,7 @@ def test_is_write_statement_block():
 
 def test_is_write_statement_comments():
     """Comments should be stripped before checking."""
-    assert not ExecuteSQLNode._is_write_statement(
-        "-- This is a comment\nSELECT * FROM users"
-    )
+    assert not ExecuteSQLNode._is_write_statement("-- This is a comment\nSELECT * FROM users")
 
 
 def test_is_write_statement_empty():
@@ -77,15 +74,15 @@ async def test_execute_sql_blocked_write(exec_node, sqlite_ctx):
 
 @pytest.mark.asyncio
 async def test_execute_sql_allowed_write(exec_node, sqlite_ctx):
-    """Write operations should pass when allow_write=True."""
+    """Node configuration cannot grant write privileges."""
     input = NodeInput(
         query_text="CREATE TABLE test_allow (id INT)",
         context=sqlite_ctx,
         config={"allow_write": True, "max_rows": 100},
     )
     output = await exec_node.execute(input)
-    assert output.errors == []
-    assert output.result["row_count"] == 0  # DDL returns no rows
+    assert output.errors
+    assert output.metadata["status"] == "blocked"
 
 
 @pytest.mark.asyncio

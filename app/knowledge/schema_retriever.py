@@ -50,6 +50,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.knowledge.schema_graph import expand_foreign_keys as _expand_foreign_keys
 from app.models.query import SQR
 from app.models.schema import SchemaSnapshot, TableSchema
 
@@ -76,6 +77,7 @@ class SchemaRetrievalResult:
     method: str = "none"  # "keyword", "rag", "hybrid", "none"
     confidence: float = 0.0
     search_results: list[Any] = field(default_factory=list)  # raw RAG hits
+    warnings: list[str] = field(default_factory=list)
 
     @property
     def table_count(self) -> int:
@@ -177,6 +179,7 @@ class SchemaRetriever:
         rag_hits: list[Any] = []
         rag_tables: set[str] = set()
         rag_columns: list[dict[str, Any]] = []
+        warnings: list[str] = []
 
         if self.has_rag:
             try:
@@ -185,6 +188,29 @@ class SchemaRetriever:
                 )
             except Exception:
                 rag_hits = []
+                warnings.append("SCHEMA_RAG_UNAVAILABLE: search failed; using keyword matching")
+
+            valid_hits = []
+            for hit in rag_hits:
+                table = schema.get_table(getattr(hit, "table_name", ""))
+                column = getattr(hit, "column_name", None)
+                if (
+                    (db_id is not None and getattr(hit, "db_id", None) != db_id)
+                    or table is None
+                    or (
+                        table.schema_name is not None
+                        and getattr(hit, "schema_name", None) != table.schema_name
+                    )
+                    or (column is not None and table.get_column(column) is None)
+                ):
+                    continue
+                valid_hits.append(hit)
+            if len(valid_hits) != len(rag_hits):
+                warnings.append(
+                    "SCHEMA_RAG_HITS_REJECTED: ignored invalid "
+                    "database/namespace/table/column matches"
+                )
+            rag_hits = valid_hits
 
             for hit in rag_hits:
                 tname = getattr(hit, "table_name", None)
@@ -224,6 +250,11 @@ class SchemaRetriever:
         # Term-resolved tables
         for tname, conf in term_tables.items():
             all_tables[tname] = max(all_tables.get(tname, 0.0), conf)
+
+        for col in term_columns:
+            owner = col.get("table")
+            if owner in schema.tables:
+                all_tables[owner] = max(all_tables.get(owner, 0.0), col.get("confidence", 0.0))
 
         # Sort and select
         ranked_tables = sorted(all_tables.items(), key=lambda x: -x[1])
@@ -274,6 +305,7 @@ class SchemaRetriever:
             method=method,
             confidence=confidence,
             search_results=rag_hits,
+            warnings=warnings,
         )
 
 
@@ -445,38 +477,6 @@ def _best_table_match(name: str, schema: SchemaSnapshot) -> tuple[str | None, fl
 # ── Step 5: FK expansion ──────────────────────────────────────────────
 
 
-def _expand_foreign_keys(
-    tables: list[str], schema: SchemaSnapshot
-) -> list[str]:
-    """Expand table list by 1 level of foreign key references.
-
-    Iterates until the set stabilises (handles FK chains).
-    """
-    expanded = set(tables)
-
-    while True:
-        size_before = len(expanded)
-        for t_name in list(expanded):
-            t = schema.get_table(t_name)
-            if t is None:
-                continue
-            for fk in t.foreign_keys:
-                expanded.add(fk.ref_table)
-        for other_name, other_t in schema.tables.items():
-            for fk in other_t.foreign_keys:
-                if fk.ref_table in expanded:
-                    expanded.add(other_name)
-        if len(expanded) == size_before:
-            break
-
-    # Preserve original order, append new entries
-    result = list(tables)
-    for t in sorted(expanded):
-        if t not in result:
-            result.append(t)
-    return result
-
-
 # ── Step 6: Inject (build filtered schema) ─────────────────────────────
 
 
@@ -492,14 +492,6 @@ def _build_filtered_schema(
         t = schema.get_table(t_name)
         if t is not None:
             filtered[t_name] = t
-        else:
-            # Unknown table — create a minimal stub
-            filtered[t_name] = TableSchema(
-                name=t_name,
-                columns=[],
-                comment="[inferred — not in source schema]",
-            )
-
     # Add non-candidate tables as name-only stubs (for LLM context)
     for t_name in schema.tables:
         if t_name not in filtered:
@@ -507,12 +499,16 @@ def _build_filtered_schema(
                 name=t_name,
                 columns=[],  # no column detail for non-candidates
                 comment=schema.tables[t_name].comment if schema.tables[t_name].comment else "",
+                schema_name=schema.tables[t_name].schema_name,
+                catalog_name=schema.tables[t_name].catalog_name,
             )
 
     return SchemaSnapshot(
         database_type=schema.database_type,
         database_name=schema.database_name,
         tables=filtered,
+        source_schema_version=schema.source_schema_version,
+        duckdb_source_state=schema.duckdb_source_state,
     )
 
 

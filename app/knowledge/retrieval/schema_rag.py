@@ -12,6 +12,7 @@ Usage::
     from app.knowledge.retrieval.embedding import MockEmbeddingProvider, EmbeddingGenerator
     from app.knowledge.retrieval.lancedb_store import LanceDBStore
     from app.knowledge.retrieval.bm25_index import BM25Index
+from app.knowledge.retrieval.filters import literal
 
     rag = SchemaMetadataRAG(
         lancedb_store=LanceDBStore(dimension=256),
@@ -30,18 +31,24 @@ Usage::
 
 from __future__ import annotations
 
-import contextlib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.embedding import EmbeddingGenerator, MockEmbeddingProvider
+from app.knowledge.retrieval.filters import literal
 from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_SCHEMA_METADATA,
     LanceDBStore,
     schema_doc_to_record,
 )
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
+from app.models.rag_schema import (
+    SchemaIndexClearResult,
+    SchemaIndexNotReadyError,
+    SchemaIndexWriteError,
+)
 
 # ── Result model ───────────────────────────────────────────────────────
 
@@ -82,8 +89,14 @@ class SchemaSearchResult:
 # Key fields to store in BM25 metadata so results are self-describing even
 # without a matching LanceDB result.
 _INDEXED_META_KEYS: tuple[str, ...] = (
-    "db_id", "schema_name", "table_name", "column_name",
-    "data_type", "comment", "is_primary_key", "is_foreign_key",
+    "db_id",
+    "schema_name",
+    "table_name",
+    "column_name",
+    "data_type",
+    "comment",
+    "is_primary_key",
+    "is_foreign_key",
     "embedding_text",
 )
 
@@ -150,6 +163,8 @@ class SchemaMetadataRAG:
             provider=MockEmbeddingProvider()
         )
         self._rrf = rrf_fusion or RRFFusion()
+        self._unavailable_databases: set[str] = set()
+        self._refresh_required_databases: set[str] = set()
 
         # Ensure both backends are connected and the namespace exists
         self._lancedb.connect()
@@ -177,6 +192,30 @@ class SchemaMetadataRAG:
         self,
         docs: list[Any],
         language: str = "auto",
+        *,
+        replace_db_id: str | None = None,
+        before_replace: Callable[[], Awaitable[None]] | None = None,
+    ) -> int:
+        """Serialize replacements per database and validate before any deletion.
+
+        The optional source check runs after embedding validation, including
+        empty replacements. It does not create a transaction across backends.
+        """
+        if before_replace is not None and replace_db_id is None:
+            raise ValueError("Source validation requires database replacement")
+        if replace_db_id is not None:
+            from app.db.runtime import gate
+
+            async with gate(("schema-rag-replace", id(self), replace_db_id)):
+                return await self._index_schemas(
+                    docs, language, replace_db_id=replace_db_id, before_replace=before_replace,
+                )
+        return await self._index_schemas(docs, language)
+
+    async def _index_schemas(
+        self, docs: list[Any], language: str = "auto", *,
+        replace_db_id: str | None = None,
+        before_replace: Callable[[], Awaitable[None]] | None = None,
     ) -> int:
         """Index a batch of :class:`~app.models.rag_schema.SchemaDocument` objects.
 
@@ -191,37 +230,103 @@ class SchemaMetadataRAG:
         Returns:
             Number of documents indexed.
         """
+        if replace_db_id is not None and any(d.db_id != replace_db_id for d in docs):
+            raise ValueError("Replacement documents must belong to the specified database")
         if not docs:
+            if replace_db_id is not None:
+                if before_replace is not None:
+                    await before_replace()
+                self._replace_database(replace_db_id, [], [], language)
             return 0
 
         # 1. Generate embeddings for all docs
         texts = [d.embedding_text for d in docs]
         emb_result = await self._embedding.embed(texts)
+        if len(emb_result.vectors) != len(texts) or any(
+            len(vector) != self._lancedb.dimension for vector in emb_result.vectors
+        ):
+            raise ValueError("Embedding batch count/dimension mismatch; existing index preserved")
 
-        # 2. Delete existing LanceDB records with same doc_ids, then insert
-        doc_ids_str = ", ".join(
-            f"'{d.doc_id}'" for d in docs
-        )
-        # table may be empty or filter syntax may fail — non-critical
-        with contextlib.suppress(Exception):
-            self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
         lancedb_records = [
             schema_doc_to_record(doc, vec)
             for doc, vec in zip(docs, emb_result.vectors, strict=False)
         ]
-        self._lancedb.insert(self.NAMESPACE, lancedb_records)
-
-        # 3. Insert into BM25 (keyword)
         bm25_docs: list[dict[str, Any]] = []
         for doc in docs:
-            bm25_docs.append({
-                "doc_id": doc.doc_id,
-                "text": doc.embedding_text,
-                "metadata": _extract_index_meta(doc),
-            })
-        self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
+            bm25_docs.append(
+                {
+                    "doc_id": doc.doc_id,
+                    "text": doc.embedding_text,
+                    "metadata": _extract_index_meta(doc),
+                }
+            )
+        if replace_db_id is not None:
+            if before_replace is not None:
+                await before_replace()
+            self._replace_database(replace_db_id, lancedb_records, bm25_docs, language)
+        else:
+            doc_ids_str = ", ".join(literal(d.doc_id) for d in docs)
+            self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
+            self._lancedb.insert(self.NAMESPACE, lancedb_records)
+            self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
 
         return len(docs)
+
+    @property
+    def unavailable_databases(self) -> tuple[str, ...]:
+        """Process-local recovery failures; a successful scoped replacement repairs them."""
+        return tuple(sorted(self._unavailable_databases))
+
+    @property
+    def refresh_required_databases(self) -> tuple[str, ...]:
+        return tuple(sorted(self._refresh_required_databases))
+
+    def require_refresh(self, db_ids: set[str]) -> None:
+        """Block existing contents until a complete replacement or removal succeeds."""
+        self._refresh_required_databases.update(db_ids)
+
+    def _replace_database(
+        self, db_id: str, records: list[dict[str, Any]],
+        sparse_docs: list[dict[str, Any]], language: str,
+    ) -> tuple[int, int]:
+        # Both snapshots must succeed before any mutation. No await in this section.
+        ids = [record["doc_id"] for record in records]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Replacement document IDs must be unique")
+        old_dense = self._lancedb.snapshot_database(self.NAMESPACE, db_id, new_doc_ids=ids)
+        old_sparse = self._bm25.snapshot_database(self.NAMESPACE, db_id, new_doc_ids=ids)
+        was_unavailable = db_id in self._unavailable_databases
+        try:
+            self._lancedb.delete(self.NAMESPACE, f"db_id = {literal(db_id)}")
+            self._bm25.delete_database(self.NAMESPACE, db_id)
+            self._lancedb.insert(self.NAMESPACE, records)
+            self._bm25.index(self.NAMESPACE, sparse_docs, language=language)
+        except Exception as exc:
+            restored = not was_unavailable
+            try:
+                self._lancedb.restore_database(self.NAMESPACE, db_id, old_dense)
+            except Exception:
+                restored = False
+            try:
+                self._bm25.restore_database(self.NAMESPACE, db_id, old_sparse)
+            except Exception:
+                restored = False
+            if not restored:
+                self._unavailable_databases.add(db_id)
+            raise SchemaIndexWriteError(restored=restored) from exc
+        self._unavailable_databases.discard(db_id)
+        self._refresh_required_databases.discard(db_id)
+        return len(old_dense), len(old_sparse)
+
+    def _check_available(self, db_id: str | None) -> None:
+        if (not db_id and self._unavailable_databases) or (
+            db_id in self._unavailable_databases
+        ):
+            raise SchemaIndexWriteError(restored=False)
+        if (not db_id and self._refresh_required_databases) or (
+            db_id in self._refresh_required_databases
+        ):
+            raise SchemaIndexNotReadyError("Schema index requires successful source refresh")
 
     async def index_schema(self, doc: Any, language: str = "auto") -> int:
         """Index a single :class:`~app.models.rag_schema.SchemaDocument`.
@@ -256,11 +361,13 @@ class SchemaMetadataRAG:
         Returns:
             List of :class:`SchemaSearchResult`, sorted by RRF score (best first).
         """
+        self._check_available(db_id)
         # 1. Generate query embedding
         query_vec = await self._embedding.embed_single(query)
+        self._check_available(db_id)
 
         # 2. Dense search (LanceDB)
-        filter_expr = f"db_id = '{db_id}'" if db_id else None
+        filter_expr = f"db_id = {literal(db_id)}" if db_id else None
         dense_raw = self._lancedb.search(
             self.NAMESPACE,
             query_vec,
@@ -271,10 +378,12 @@ class SchemaMetadataRAG:
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
             dist = row.get("_distance", 1.0)
-            dense_results.append({
-                **row,
-                "score": 1.0 / (1.0 + dist),  # convert distance to similarity score
-            })
+            dense_results.append(
+                {
+                    **row,
+                    "score": 1.0 / (1.0 + dist),  # convert distance to similarity score
+                }
+            )
 
         # 3. Sparse search (BM25)
         sparse_raw = self._bm25.search(
@@ -282,6 +391,7 @@ class SchemaMetadataRAG:
             query,
             top_k=max(top_k * 2, 20),
             language=language,
+            metadata_filter={"db_id": db_id} if db_id else {},
         )
         # Unpack BM25 metadata → top-level fields so RRF merge works correctly
         sparse_results: list[dict[str, Any]] = []
@@ -306,11 +416,20 @@ class SchemaMetadataRAG:
 
     # ── Management ─────────────────────────────────────────────────────
 
+    async def clear_database(self, db_id: str) -> SchemaIndexClearResult:
+        """Compensated scoped clear; the service also serializes full source refreshes."""
+        from app.db.runtime import gate
+
+        async with gate(("schema-rag-replace", id(self), db_id)):
+            dense_count, sparse_count = self._replace_database(db_id, [], [], "auto")
+            return SchemaIndexClearResult(dense_count, sparse_count)
+
     def clear(self) -> None:
         """Remove all indexed schema documents from both backends."""
-        self._lancedb.drop_namespace(self.NAMESPACE)
-        self._lancedb.ensure_namespace(self.NAMESPACE)
+        self._lancedb.delete(self.NAMESPACE, "true")
         self._bm25.clear(self.NAMESPACE)
+        self._unavailable_databases.clear()
+        self._refresh_required_databases.clear()
 
     def remove_database(self, db_id: str) -> None:
         """Remove all schema documents for a specific *db_id* from both backends.
@@ -318,12 +437,10 @@ class SchemaMetadataRAG:
         Args:
             db_id: Database identifier to remove (e.g. ``"sqlite_test"``).
         """
-        import contextlib
-
-        with contextlib.suppress(Exception):
-            self._lancedb.delete(self.NAMESPACE, f"db_id = '{db_id}'")
-        with contextlib.suppress(Exception):
-            self._bm25.delete_by_field(self.NAMESPACE, "db_id", db_id)
+        self._lancedb.delete(self.NAMESPACE, f"db_id = {literal(db_id)}")
+        self._bm25.delete_database(self.NAMESPACE, db_id)
+        self._unavailable_databases.discard(db_id)
+        self._refresh_required_databases.discard(db_id)
 
     def stats(self) -> dict[str, int]:
         """Return document counts for both backends."""

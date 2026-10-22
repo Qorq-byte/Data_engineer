@@ -1,0 +1,2406 @@
+[
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 306
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 291
+          },
+          "location": {
+            "column": 9,
+            "row": 291
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 307
+          },
+          "location": {
+            "column": 1,
+            "row": 305
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 291
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 291,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 383
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 368
+          },
+          "location": {
+            "column": 9,
+            "row": 368
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 384
+          },
+          "location": {
+            "column": 1,
+            "row": 382
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 368
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 368,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 514
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 501
+          },
+          "location": {
+            "column": 9,
+            "row": 501
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 515
+          },
+          "location": {
+            "column": 1,
+            "row": 513
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 501
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 501,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 643
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 640
+          },
+          "location": {
+            "column": 9,
+            "row": 640
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 644
+          },
+          "location": {
+            "column": 1,
+            "row": 642
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 640
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 640,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 690
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 687
+          },
+          "location": {
+            "column": 9,
+            "row": 687
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 691
+          },
+          "location": {
+            "column": 1,
+            "row": 689
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 687
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 687,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 795
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 783
+          },
+          "location": {
+            "column": 9,
+            "row": 783
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 796
+          },
+          "location": {
+            "column": 1,
+            "row": 794
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 783
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 783,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 912
+    },
+    "filename": "app/api/domains.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 22
+          },
+          "location": {
+            "column": 1,
+            "row": 22
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 909
+          },
+          "location": {
+            "column": 9,
+            "row": 909
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 913
+          },
+          "location": {
+            "column": 1,
+            "row": 911
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 909
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 909,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 370,
+      "row": 30
+    },
+    "filename": "app/api/feedback.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 30
+    },
+    "message": "Line too long (369 > 100)",
+    "noqa_row": 30,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 74
+    },
+    "filename": "app/api/feedback.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 74
+    },
+    "message": "Line too long (111 > 100)",
+    "noqa_row": 74,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 222,
+      "row": 89
+    },
+    "filename": "app/api/feedback.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 89
+    },
+    "message": "Line too long (221 > 100)",
+    "noqa_row": 89,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 41,
+      "row": 9
+    },
+    "filename": "app/api/learning.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from datetime import datetime",
+          "end_location": {
+            "column": 41,
+            "row": 9
+          },
+          "location": {
+            "column": 1,
+            "row": 9
+          }
+        }
+      ],
+      "message": "Remove unused import: `datetime.timedelta`"
+    },
+    "location": {
+      "column": 32,
+      "row": 9
+    },
+    "message": "`datetime.timedelta` imported but unused",
+    "noqa_row": 9,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 38
+    },
+    "filename": "app/api/learning.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 38
+    },
+    "message": "Line too long (101 > 100)",
+    "noqa_row": 38,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 115,
+      "row": 97
+    },
+    "filename": "app/api/learning.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 97
+    },
+    "message": "Line too long (114 > 100)",
+    "noqa_row": 97,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 67,
+      "row": 118
+    },
+    "filename": "app/api/learning.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "    from app.learning.feedback_collector import feedback_collector\r\n    from app.learning.pattern_analyzer import PatternAnalyzer\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 119
+          },
+          "location": {
+            "column": 1,
+            "row": 117
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 5,
+      "row": 117
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 117,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 71,
+      "row": 406
+    },
+    "filename": "app/api/learning.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        from app.learning.feedback_collector import feedback_collector\r\n        from app.learning.pattern_analyzer import PatternAnalyzer\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 407
+          },
+          "location": {
+            "column": 1,
+            "row": 405
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 9,
+      "row": 405
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 405,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 54,
+      "row": 463
+    },
+    "filename": "app/api/learning.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        from datetime import UTC, datetime, timedelta\r\n\r\n        from app.learning.feedback_collector import feedback_collector\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 464
+          },
+          "location": {
+            "column": 1,
+            "row": 462
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 9,
+      "row": 462
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 462,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 79,
+      "row": 582
+    },
+    "filename": "app/api/learning.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        from app.rag import get_document_store, get_metric_rag, get_schema_rag\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 583
+          },
+          "location": {
+            "column": 1,
+            "row": 582
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 9,
+      "row": 582
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 582,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 79,
+      "row": 630
+    },
+    "filename": "app/api/learning.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "        from app.rag import get_document_store, get_metric_rag, get_schema_rag\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 631
+          },
+          "location": {
+            "column": 1,
+            "row": 630
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 9,
+      "row": 630
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "noqa_row": 630,
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 156,
+      "row": 52
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 52
+    },
+    "message": "Line too long (165 > 100)",
+    "noqa_row": 52,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 161,
+      "row": 53
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 53
+    },
+    "message": "Line too long (167 > 100)",
+    "noqa_row": 53,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 157,
+      "row": 54
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 54
+    },
+    "message": "Line too long (161 > 100)",
+    "noqa_row": 54,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 158,
+      "row": 55
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 55
+    },
+    "message": "Line too long (163 > 100)",
+    "noqa_row": 55,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 121,
+      "row": 62
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 62
+    },
+    "message": "Line too long (120 > 100)",
+    "noqa_row": 62,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 479,
+      "row": 86
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 86
+    },
+    "message": "Line too long (478 > 100)",
+    "noqa_row": 86,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 381,
+      "row": 95
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 95
+    },
+    "message": "Line too long (380 > 100)",
+    "noqa_row": 95,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 108,
+      "row": 214
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 214
+    },
+    "message": "Line too long (107 > 100)",
+    "noqa_row": 214,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 117,
+      "row": 231
+    },
+    "filename": "app/api/mcp_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 231
+    },
+    "message": "Line too long (116 > 100)",
+    "noqa_row": 231,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "SIM105",
+    "end_location": {
+      "column": 17,
+      "row": 57
+    },
+    "filename": "app/api/settings.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "import contextlib\r\n",
+          "end_location": {
+            "column": 1,
+            "row": 13
+          },
+          "location": {
+            "column": 1,
+            "row": 13
+          }
+        },
+        {
+          "content": "with contextlib.suppress(Exception)",
+          "end_location": {
+            "column": 12,
+            "row": 54
+          },
+          "location": {
+            "column": 9,
+            "row": 54
+          }
+        },
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 58
+          },
+          "location": {
+            "column": 1,
+            "row": 56
+          }
+        }
+      ],
+      "message": "Replace with `contextlib.suppress(Exception)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 54
+    },
+    "message": "Use `contextlib.suppress(Exception)` instead of `try`-`except`-`pass`",
+    "noqa_row": 54,
+    "url": "https://docs.astral.sh/ruff/rules/suppressible-exception"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 47,
+      "row": 288
+    },
+    "filename": "app/api/settings.py",
+    "fix": null,
+    "location": {
+      "column": 17,
+      "row": 286
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 286,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "UP038",
+    "end_location": {
+      "column": 83,
+      "row": 77
+    },
+    "filename": "app/api/sql_utils.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "exp.Avg | exp.Sum | exp.Count | exp.Max | exp.Min",
+          "end_location": {
+            "column": 82,
+            "row": 77
+          },
+          "location": {
+            "column": 35,
+            "row": 77
+          }
+        }
+      ],
+      "message": "Convert to `X | Y`"
+    },
+    "location": {
+      "column": 18,
+      "row": 77
+    },
+    "message": "Use `X | Y` in `isinstance` call instead of `(X, Y)`",
+    "noqa_row": 77,
+    "url": "https://docs.astral.sh/ruff/rules/non-pep604-isinstance"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 30,
+      "row": 8
+    },
+    "filename": "app/api/subagents.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 9
+          },
+          "location": {
+            "column": 1,
+            "row": 8
+          }
+        }
+      ],
+      "message": "Remove unused import: `datetime.datetime`"
+    },
+    "location": {
+      "column": 22,
+      "row": 8
+    },
+    "message": "`datetime.datetime` imported but unused",
+    "noqa_row": 8,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "W292",
+    "end_location": {
+      "column": 6,
+      "row": 93
+    },
+    "filename": "app/api/subagents.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "\r\n",
+          "end_location": {
+            "column": 6,
+            "row": 93
+          },
+          "location": {
+            "column": 6,
+            "row": 93
+          }
+        }
+      ],
+      "message": "Add trailing newline"
+    },
+    "location": {
+      "column": 6,
+      "row": 93
+    },
+    "message": "No newline at end of file",
+    "noqa_row": 93,
+    "url": "https://docs.astral.sh/ruff/rules/missing-newline-at-end-of-file"
+  },
+  {
+    "cell": null,
+    "code": "F821",
+    "end_location": {
+      "column": 16,
+      "row": 16
+    },
+    "filename": "app/auth/database.py",
+    "fix": null,
+    "location": {
+      "column": 8,
+      "row": 16
+    },
+    "message": "Undefined name `aiomysql`",
+    "noqa_row": 16,
+    "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+  },
+  {
+    "cell": null,
+    "code": "F821",
+    "end_location": {
+      "column": 38,
+      "row": 54
+    },
+    "filename": "app/auth/database.py",
+    "fix": null,
+    "location": {
+      "column": 30,
+      "row": 54
+    },
+    "message": "Undefined name `aiomysql`",
+    "noqa_row": 54,
+    "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+  },
+  {
+    "cell": null,
+    "code": "F821",
+    "end_location": {
+      "column": 54,
+      "row": 125
+    },
+    "filename": "app/auth/database.py",
+    "fix": null,
+    "location": {
+      "column": 46,
+      "row": 125
+    },
+    "message": "Undefined name `aiomysql`",
+    "noqa_row": 125,
+    "url": "https://docs.astral.sh/ruff/rules/undefined-name"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 85,
+      "row": 92
+    },
+    "filename": "app/core/intent_classifier.py",
+    "fix": null,
+    "location": {
+      "column": 74,
+      "row": 92
+    },
+    "message": "Line too long (111 > 100)",
+    "noqa_row": 92,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 104
+    },
+    "filename": "app/core/intent_classifier.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 104
+    },
+    "message": "Line too long (104 > 100)",
+    "noqa_row": 104,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 442
+    },
+    "filename": "app/core/prompt_builder.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 442
+    },
+    "message": "Line too long (102 > 100)",
+    "noqa_row": 442,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 112,
+      "row": 901
+    },
+    "filename": "app/core/prompt_builder.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 901
+    },
+    "message": "Line too long (111 > 100)",
+    "noqa_row": 906,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 104,
+      "row": 903
+    },
+    "filename": "app/core/prompt_builder.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 903
+    },
+    "message": "Line too long (103 > 100)",
+    "noqa_row": 906,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 128,
+      "row": 920
+    },
+    "filename": "app/core/prompt_builder.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 920
+    },
+    "message": "Line too long (127 > 100)",
+    "noqa_row": 920,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 194,
+      "row": 959
+    },
+    "filename": "app/core/prompt_builder.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 959
+    },
+    "message": "Line too long (193 > 100)",
+    "noqa_row": 959,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "F841",
+    "end_location": {
+      "column": 19,
+      "row": 223
+    },
+    "filename": "app/db/pii_detector.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 22,
+            "row": 223
+          },
+          "location": {
+            "column": 9,
+            "row": 223
+          }
+        }
+      ],
+      "message": "Remove assignment to unused variable `col_type_l`"
+    },
+    "location": {
+      "column": 9,
+      "row": 223
+    },
+    "message": "Local variable `col_type_l` is assigned to but never used",
+    "noqa_row": 223,
+    "url": "https://docs.astral.sh/ruff/rules/unused-variable"
+  },
+  {
+    "cell": null,
+    "code": "SIM103",
+    "end_location": {
+      "column": 16,
+      "row": 263
+    },
+    "filename": "app/learning/pattern_analyzer.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "return not _INVALID_SQL_PATTERNS.search(cleaned)",
+          "end_location": {
+            "column": 16,
+            "row": 263
+          },
+          "location": {
+            "column": 5,
+            "row": 260
+          }
+        }
+      ],
+      "message": "Replace with `return not _INVALID_SQL_PATTERNS.search(cleaned)`"
+    },
+    "location": {
+      "column": 5,
+      "row": 260
+    },
+    "message": "Return the condition `not _INVALID_SQL_PATTERNS.search(cleaned)` directly",
+    "noqa_row": 260,
+    "url": "https://docs.astral.sh/ruff/rules/needless-bool"
+  },
+  {
+    "cell": null,
+    "code": "SIM103",
+    "end_location": {
+      "column": 20,
+      "row": 298
+    },
+    "filename": "app/learning/pattern_analyzer.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "return any(kw in tail.lower() for kw in sql_keywords)",
+          "end_location": {
+            "column": 20,
+            "row": 298
+          },
+          "location": {
+            "column": 9,
+            "row": 296
+          }
+        }
+      ],
+      "message": "Replace with `return any(kw in tail.lower() for kw in sql_keywords)`"
+    },
+    "location": {
+      "column": 9,
+      "row": 296
+    },
+    "message": "Return the condition `any(kw in tail.lower() for kw in sql_keywords)` directly",
+    "noqa_row": 296,
+    "url": "https://docs.astral.sh/ruff/rules/needless-bool"
+  },
+  {
+    "cell": null,
+    "code": "UP038",
+    "end_location": {
+      "column": 58,
+      "row": 276
+    },
+    "filename": "app/nodes/respond.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "list | tuple",
+          "end_location": {
+            "column": 57,
+            "row": 276
+          },
+          "location": {
+            "column": 44,
+            "row": 276
+          }
+        }
+      ],
+      "message": "Convert to `X | Y`"
+    },
+    "location": {
+      "column": 28,
+      "row": 276
+    },
+    "message": "Use `X | Y` in `isinstance` call instead of `(X, Y)`",
+    "noqa_row": 276,
+    "url": "https://docs.astral.sh/ruff/rules/non-pep604-isinstance"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 164,
+      "row": 74
+    },
+    "filename": "app/nodes/schema_linking.py",
+    "fix": null,
+    "location": {
+      "column": 99,
+      "row": 74
+    },
+    "message": "Line too long (165 > 100)",
+    "noqa_row": 74,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 75
+    },
+    "filename": "app/nodes/schema_linking.py",
+    "fix": null,
+    "location": {
+      "column": 99,
+      "row": 75
+    },
+    "message": "Line too long (103 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 120,
+      "row": 164
+    },
+    "filename": "app/nodes/schema_linking.py",
+    "fix": null,
+    "location": {
+      "column": 99,
+      "row": 164
+    },
+    "message": "Line too long (121 > 100)",
+    "noqa_row": 164,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 46,
+      "row": 530
+    },
+    "filename": "app/nodes/schema_linking.py",
+    "fix": null,
+    "location": {
+      "column": 13,
+      "row": 529
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 529,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 104,
+      "row": 536
+    },
+    "filename": "app/nodes/schema_linking.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 536
+    },
+    "message": "Line too long (103 > 100)",
+    "noqa_row": 536,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "SIM102",
+    "end_location": {
+      "column": 23,
+      "row": 773
+    },
+    "filename": "app/nodes/schema_linking.py",
+    "fix": null,
+    "location": {
+      "column": 5,
+      "row": 771
+    },
+    "message": "Use a single `if` statement instead of nested `if` statements",
+    "noqa_row": 771,
+    "url": "https://docs.astral.sh/ruff/rules/collapsible-if"
+  },
+  {
+    "cell": null,
+    "code": "W292",
+    "end_location": {
+      "column": 49,
+      "row": 17
+    },
+    "filename": "app/storage/__init__.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "\r\n",
+          "end_location": {
+            "column": 49,
+            "row": 17
+          },
+          "location": {
+            "column": 49,
+            "row": 17
+          }
+        }
+      ],
+      "message": "Add trailing newline"
+    },
+    "location": {
+      "column": 49,
+      "row": 17
+    },
+    "message": "No newline at end of file",
+    "noqa_row": 17,
+    "url": "https://docs.astral.sh/ruff/rules/missing-newline-at-end-of-file"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 10,
+      "row": 24
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 25
+          },
+          "location": {
+            "column": 1,
+            "row": 24
+          }
+        }
+      ],
+      "message": "Remove unused import: `os`"
+    },
+    "location": {
+      "column": 8,
+      "row": 24
+    },
+    "message": "`os` imported but unused",
+    "noqa_row": 24,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "F401",
+    "end_location": {
+      "column": 30,
+      "row": 25
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "",
+          "end_location": {
+            "column": 1,
+            "row": 26
+          },
+          "location": {
+            "column": 1,
+            "row": 25
+          }
+        }
+      ],
+      "message": "Remove unused import: `datetime.datetime`"
+    },
+    "location": {
+      "column": 22,
+      "row": 25
+    },
+    "message": "`datetime.datetime` imported but unused",
+    "noqa_row": 25,
+    "url": "https://docs.astral.sh/ruff/rules/unused-import"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 102,
+      "row": 202
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 99,
+      "row": 202
+    },
+    "message": "Line too long (103 > 100)",
+    "noqa_row": 210,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 119,
+      "row": 255
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 255
+    },
+    "message": "Line too long (118 > 100)",
+    "noqa_row": 255,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 124,
+      "row": 256
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 256
+    },
+    "message": "Line too long (123 > 100)",
+    "noqa_row": 256,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 124,
+      "row": 257
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 257
+    },
+    "message": "Line too long (123 > 100)",
+    "noqa_row": 257,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 120,
+      "row": 258
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 258
+    },
+    "message": "Line too long (119 > 100)",
+    "noqa_row": 258,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 106,
+      "row": 259
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 259
+    },
+    "message": "Line too long (105 > 100)",
+    "noqa_row": 259,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP037",
+    "end_location": {
+      "column": 35,
+      "row": 323
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "MySQLStore | None",
+          "end_location": {
+            "column": 35,
+            "row": 323
+          },
+          "location": {
+            "column": 16,
+            "row": 323
+          }
+        }
+      ],
+      "message": "Remove quotes"
+    },
+    "location": {
+      "column": 16,
+      "row": 323
+    },
+    "message": "Remove quotes from type annotation",
+    "noqa_row": 323,
+    "url": "https://docs.astral.sh/ruff/rules/quoted-annotation"
+  },
+  {
+    "cell": null,
+    "code": "UP037",
+    "end_location": {
+      "column": 80,
+      "row": 329
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "MySQLStore",
+          "end_location": {
+            "column": 80,
+            "row": 329
+          },
+          "location": {
+            "column": 68,
+            "row": 329
+          }
+        }
+      ],
+      "message": "Remove quotes"
+    },
+    "location": {
+      "column": 68,
+      "row": 329
+    },
+    "message": "Remove quotes from type annotation",
+    "noqa_row": 329,
+    "url": "https://docs.astral.sh/ruff/rules/quoted-annotation"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 45,
+      "row": 364
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "        async with self._pool.acquire() as conn, conn.cursor() as cur:\r\n            await cur.execute(sql, params)\r\n            return cur.rowcount",
+          "end_location": {
+            "column": 36,
+            "row": 366
+          },
+          "location": {
+            "column": 1,
+            "row": 363
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 363
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 363,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 64,
+      "row": 371
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "        async with self._pool.acquire() as conn, conn.cursor(aiomysql.DictCursor) as cur:\r\n            await cur.execute(sql, params)\r\n            return await cur.fetchone()",
+          "end_location": {
+            "column": 44,
+            "row": 373
+          },
+          "location": {
+            "column": 1,
+            "row": 370
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 370
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 370,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "SIM117",
+    "end_location": {
+      "column": 64,
+      "row": 378
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "        async with self._pool.acquire() as conn, conn.cursor(aiomysql.DictCursor) as cur:\r\n            await cur.execute(sql, params)\r\n            return await cur.fetchall()",
+          "end_location": {
+            "column": 44,
+            "row": 380
+          },
+          "location": {
+            "column": 1,
+            "row": 377
+          }
+        }
+      ],
+      "message": "Combine `with` statements"
+    },
+    "location": {
+      "column": 9,
+      "row": 377
+    },
+    "message": "Use a single `with` statement with multiple contexts instead of nested `with` statements",
+    "noqa_row": 377,
+    "url": "https://docs.astral.sh/ruff/rules/multiple-with-statements"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 768
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 768
+    },
+    "message": "Line too long (102 > 100)",
+    "noqa_row": 768,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "W292",
+    "end_location": {
+      "column": 32,
+      "row": 895
+    },
+    "filename": "app/storage/mysql_store.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "\r\n",
+          "end_location": {
+            "column": 32,
+            "row": 895
+          },
+          "location": {
+            "column": 32,
+            "row": 895
+          }
+        }
+      ],
+      "message": "Add trailing newline"
+    },
+    "location": {
+      "column": 32,
+      "row": 895
+    },
+    "message": "No newline at end of file",
+    "noqa_row": 895,
+    "url": "https://docs.astral.sh/ruff/rules/missing-newline-at-end-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 392,
+      "row": 16
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 91,
+      "row": 16
+    },
+    "message": "Line too long (420 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 300,
+      "row": 17
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 86,
+      "row": 17
+    },
+    "message": "Line too long (321 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 412,
+      "row": 18
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 88,
+      "row": 18
+    },
+    "message": "Line too long (439 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 398,
+      "row": 19
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 87,
+      "row": 19
+    },
+    "message": "Line too long (430 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 289,
+      "row": 20
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 92,
+      "row": 20
+    },
+    "message": "Line too long (311 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 375,
+      "row": 21
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 90,
+      "row": 21
+    },
+    "message": "Line too long (397 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 133,
+      "row": 26
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 26
+    },
+    "message": "Line too long (132 > 100)",
+    "noqa_row": 35,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 156,
+      "row": 45
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 45
+    },
+    "message": "Line too long (165 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 161,
+      "row": 46
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 46
+    },
+    "message": "Line too long (167 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 157,
+      "row": 47
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 47
+    },
+    "message": "Line too long (161 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 158,
+      "row": 48
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 48
+    },
+    "message": "Line too long (163 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 432,
+      "row": 56
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 56
+    },
+    "message": "Line too long (431 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 381,
+      "row": 64
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 64
+    },
+    "message": "Line too long (380 > 100)",
+    "noqa_row": 75,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 370,
+      "row": 100
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 100
+    },
+    "message": "Line too long (369 > 100)",
+    "noqa_row": 123,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 298,
+      "row": 104
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 104
+    },
+    "message": "Line too long (297 > 100)",
+    "noqa_row": 123,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 95,
+      "row": 107
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 89,
+      "row": 107
+    },
+    "message": "Line too long (111 > 100)",
+    "noqa_row": 123,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 222,
+      "row": 117
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 117
+    },
+    "message": "Line too long (221 > 100)",
+    "noqa_row": 123,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 170,
+      "row": 151
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 151
+    },
+    "message": "Line too long (169 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 107,
+      "row": 155
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 155
+    },
+    "message": "Line too long (106 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 403,
+      "row": 167
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 167
+    },
+    "message": "Line too long (406 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 103,
+      "row": 179
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 179
+    },
+    "message": "Line too long (102 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 180
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 180
+    },
+    "message": "Line too long (104 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 178,
+      "row": 181
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 181
+    },
+    "message": "Line too long (177 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 126,
+      "row": 192
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 192
+    },
+    "message": "Line too long (125 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 452,
+      "row": 194
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 194
+    },
+    "message": "Line too long (451 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 158,
+      "row": 200
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 200
+    },
+    "message": "Line too long (168 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 212
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 97,
+      "row": 212
+    },
+    "message": "Line too long (110 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 166,
+      "row": 216
+    },
+    "filename": "scripts/gen_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 216
+    },
+    "message": "Line too long (165 > 100)",
+    "noqa_row": 217,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "F541",
+    "end_location": {
+      "column": 32,
+      "row": 58
+    },
+    "filename": "scripts/init_db.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "\"Tables created: 11\"",
+          "end_location": {
+            "column": 32,
+            "row": 58
+          },
+          "location": {
+            "column": 11,
+            "row": 58
+          }
+        }
+      ],
+      "message": "Remove extraneous `f` prefix"
+    },
+    "location": {
+      "column": 11,
+      "row": 58
+    },
+    "message": "f-string without any placeholders",
+    "noqa_row": 58,
+    "url": "https://docs.astral.sh/ruff/rules/f-string-missing-placeholders"
+  },
+  {
+    "cell": null,
+    "code": "W292",
+    "end_location": {
+      "column": 11,
+      "row": 94
+    },
+    "filename": "scripts/init_db.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "\r\n",
+          "end_location": {
+            "column": 11,
+            "row": 94
+          },
+          "location": {
+            "column": 11,
+            "row": 94
+          }
+        }
+      ],
+      "message": "Add trailing newline"
+    },
+    "location": {
+      "column": 11,
+      "row": 94
+    },
+    "message": "No newline at end of file",
+    "noqa_row": 94,
+    "url": "https://docs.astral.sh/ruff/rules/missing-newline-at-end-of-file"
+  },
+  {
+    "cell": null,
+    "code": "E501",
+    "end_location": {
+      "column": 105,
+      "row": 11
+    },
+    "filename": "tests/test_api/test_learning_api.py",
+    "fix": null,
+    "location": {
+      "column": 101,
+      "row": 11
+    },
+    "message": "Line too long (104 > 100)",
+    "noqa_row": 11,
+    "url": "https://docs.astral.sh/ruff/rules/line-too-long"
+  },
+  {
+    "cell": null,
+    "code": "UP038",
+    "end_location": {
+      "column": 56,
+      "row": 335
+    },
+    "filename": "tests/test_rag/test_bm25_index.py",
+    "fix": {
+      "applicability": "unsafe",
+      "edits": [
+        {
+          "content": "int | float",
+          "end_location": {
+            "column": 55,
+            "row": 335
+          },
+          "location": {
+            "column": 43,
+            "row": 335
+          }
+        }
+      ],
+      "message": "Convert to `X | Y`"
+    },
+    "location": {
+      "column": 20,
+      "row": 335
+    },
+    "message": "Use `X | Y` in `isinstance` call instead of `(X, Y)`",
+    "noqa_row": 335,
+    "url": "https://docs.astral.sh/ruff/rules/non-pep604-isinstance"
+  }
+]

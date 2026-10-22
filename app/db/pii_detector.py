@@ -204,10 +204,24 @@ class PiiDetector:
         n = name.lower().strip()
         # Common audit/system columns
         system_names = {
-            "id", "pk", "version", "created_at", "updated_at", "deleted_at",
-            "created_by", "updated_by", "is_active", "is_deleted", "status",
-            "tenant_id", "org_id", "company_id", "department_id",
-            "id_str", "uid", "guid",  # generic unique IDs (not national IDs)
+            "id",
+            "pk",
+            "version",
+            "created_at",
+            "updated_at",
+            "deleted_at",
+            "created_by",
+            "updated_by",
+            "is_active",
+            "is_deleted",
+            "status",
+            "tenant_id",
+            "org_id",
+            "company_id",
+            "department_id",
+            "id_str",
+            "uid",
+            "guid",  # generic unique IDs (not national IDs)
         }
         return n in system_names
 
@@ -220,7 +234,6 @@ class PiiDetector:
         the length of a Chinese national ID).
         """
         name_l = column.name.lower()
-        col_type_l = column.type.upper()
 
         # Chinese ID card is exactly 18 chars
         if "id_no" in name_l or "idno" in name_l or "cert_no" in name_l:

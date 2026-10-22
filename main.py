@@ -9,7 +9,6 @@ Usage::
 """
 
 import asyncio
-import sys
 
 import uvicorn
 
@@ -188,19 +187,17 @@ async def initialize():
 
 async def run_api():
     """Start the FastAPI server."""
-    try:
-        await initialize()
-    except Exception as e:
-        print(f"ERROR during initialization: {e}", file=sys.stderr)
-        raise
+    # FastAPI lifespan owns initialization and shutdown for every launch mode.
+    from app.config.settings import settings
 
     config = uvicorn.Config(
         "app.api:create_app",
-        host="0.0.0.0",
-        port=8001,
+        host=settings.app_host,
+        port=settings.app_port,
         reload=False,
         log_level="info",
         factory=True,
+        limit_concurrency=64,
     )
     server = uvicorn.Server(config)
     await server.serve()

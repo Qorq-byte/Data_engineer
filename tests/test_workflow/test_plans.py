@@ -31,6 +31,7 @@ class TestAllPlansExist:
         "gensql_agentic",
         "ez_query",
         "reflection",
+        "request_query",
         "chat_agentic",
         "explore",
         "metric_query",
@@ -245,7 +246,7 @@ class TestCrossPlanValidation:
         return {pid: loader.load(pid) for pid in loader.list_available()}
 
     def test_all_plans_have_unique_ids(self, all_plans):
-        assert len(all_plans) == 6
+        assert len(all_plans) == 7
 
     def test_all_plans_have_non_empty_node_order(self, all_plans):
         for pid, plan in all_plans.items():
@@ -318,7 +319,7 @@ class TestPlanSelectorNewPlans:
 
     def test_all_six_plans_in_available_list(self, selector: PlanSelector):
         available = selector._available_plans()
-        assert len(available) == 6
+        assert len(available) == 7
         assert "reflection" in available
         assert "chat_agentic" in available
         assert "explore" in available

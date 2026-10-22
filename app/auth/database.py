@@ -10,10 +10,14 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import aiomysql
 
 logger = logging.getLogger(__name__)
 
-_pool: aiomysql.Pool | None = None  # type: ignore[name-defined]
+_pool: aiomysql.Pool | None = None
 _pool_lock = asyncio.Lock()
 
 _USERS_TABLE_DDL = """
@@ -51,7 +55,7 @@ ALTER TABLE users ADD COLUMN
 """
 
 
-async def get_auth_pool() -> aiomysql.Pool:  # type: ignore[name-defined]
+async def get_auth_pool() -> aiomysql.Pool:
     """Return (or create) the module-level aiomysql connection pool."""
     global _pool
 
@@ -122,7 +126,7 @@ async def close_auth_pool() -> None:
 
 
 @asynccontextmanager
-async def get_connection() -> AsyncGenerator[aiomysql.Connection, None]:  # type: ignore[name-defined]
+async def get_connection() -> AsyncGenerator[aiomysql.Connection, None]:
     """Async context manager that acquires/releases a connection from the auth pool."""
     pool = await get_auth_pool()
     conn = await pool.acquire()

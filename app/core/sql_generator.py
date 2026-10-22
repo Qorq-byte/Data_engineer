@@ -18,7 +18,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from app.core.prompt_builder import PromptBuilder
-from app.llm.router import LiteLLMRouter
+from app.llm.protocols import CompletionRouter
 from app.models.domain import DomainConfig
 from app.models.query import SQR, QueryPair, SQLCandidate
 from app.models.schema import SchemaSnapshot
@@ -46,7 +46,7 @@ class SQLGenerator:
 
     def __init__(
         self,
-        router: LiteLLMRouter,
+        router: CompletionRouter,
         prompt_builder: PromptBuilder | None = None,
     ) -> None:
         self.router = router
@@ -200,24 +200,18 @@ class SQLGenerator:
             if isinstance(resp, Exception):
                 continue
 
-            content = ""
-            if isinstance(resp, dict) and "choices" in resp:
-                choices = resp["choices"]
-                actual_model = resp.get("model", actual_model)
-                if choices:
-                    choice = choices[0]
-                    if isinstance(choice, dict):
-                        msg = choice.get("message", {})
-                        content = msg.get("content", "") if isinstance(msg, dict) else str(msg)
-            elif hasattr(resp, "choices"):
-                choices = resp.choices
-                if choices:
-                    content = getattr(choices[0].message, "content", "")
+            if isinstance(resp, asyncio.CancelledError):
+                raise resp
+            content = _completion_text(resp)
+            if content is None:
+                continue
+            if isinstance(resp, dict) and isinstance(resp.get("model"), str):
+                actual_model = resp["model"]
 
             # ── Parse multi-SQL response ──────────────────────────
             # When multi_table_hint is active, the LLM may return several
             # SQLs separated by ---ALTERNATIVE---.  Split them into
-            # independent candidates so each gets validated & executed.
+            # independent candidates; the fixed workflow validates/executes only the primary.
             alternatives = _split_alternatives(content)
             if len(alternatives) > 1:
                 for j, alt_sql in enumerate(alternatives):
@@ -252,7 +246,9 @@ class SQLGenerator:
                 )
             idx += 1
 
-        return candidates if candidates else [_fallback_candidate(sqr, dialect)]
+        if not candidates or not any(c.sql_text.strip() for c in candidates):
+            raise RuntimeError("All SQL generation attempts failed or returned empty output")
+        return [c for c in candidates if c.sql_text.strip()]
 
     async def _multi_perspective(
         self,
@@ -300,24 +296,17 @@ class SQLGenerator:
             if isinstance(resp, Exception):
                 continue
 
-            content = ""
-            if isinstance(resp, dict) and "choices" in resp:
-                choices = resp["choices"]
-                if choices:
-                    choice = choices[0]
-                    if isinstance(choice, dict):
-                        msg = choice.get("message", {})
-                        content = msg.get("content", "") if isinstance(msg, dict) else str(msg)
-            elif hasattr(resp, "choices"):
-                choices = resp.choices
-                if choices:
-                    content = getattr(choices[0].message, "content", "")
+            if isinstance(resp, asyncio.CancelledError):
+                raise resp
+            content = _completion_text(resp)
+            if content is None:
+                continue
 
             # ── Parse multi-SQL response ──────────────────────────
             alternatives = _split_alternatives(content)
             if len(alternatives) > 1:
                 for j, alt_sql in enumerate(alternatives):
-                    mode = "primary" if (i == 0 and j == 0) else f"alt_{i}_{j}"
+                    mode = "primary" if not candidates and j == 0 else f"alt_{i}_{j}"
                     candidates.append(
                         SQLCandidate(
                             id=f"cand_{uuid.uuid4().hex[:8]}",
@@ -332,7 +321,7 @@ class SQLGenerator:
                         )
                     )
             else:
-                mode = "primary" if i == 0 else f"alt_{i}"
+                mode = "primary" if not candidates else f"alt_{i}"
                 candidates.append(
                     SQLCandidate(
                         id=f"cand_{uuid.uuid4().hex[:8]}",
@@ -347,10 +336,28 @@ class SQLGenerator:
                     )
                 )
 
-        return candidates if candidates else [_fallback_candidate(sqr, dialect)]
+        if not candidates or not any(c.sql_text.strip() for c in candidates):
+            raise RuntimeError("All SQL generation attempts failed or returned empty output")
+        return [c for c in candidates if c.sql_text.strip()]
 
 
 # ── Helpers ────────────────────────────────────────────────────────────
+
+
+def _completion_text(response: object) -> str | None:
+    """Reject malformed/non-text choices independently, preserving valid siblings."""
+    choices = (
+        response.get("choices")
+        if isinstance(response, dict) else getattr(response, "choices", None)
+    )
+    if not isinstance(choices, list) or not choices:
+        return None
+    first = choices[0]
+    message = first.get("message") if isinstance(first, dict) else getattr(first, "message", None)
+    content = (
+        message.get("content") if isinstance(message, dict) else getattr(message, "content", None)
+    )
+    return content if isinstance(content, str) and content.strip() else None
 
 
 def _split_alternatives(text: str) -> list[str]:
@@ -386,9 +393,9 @@ def _extract_sql(text: str) -> str:
         r"```(?:sql|SQL|mysql|postgresql|postgres|sqlite)?\s*\n(.*?)```",
         re.DOTALL | re.IGNORECASE,
     )
-    matches = fence_pattern.findall(text)
-    if matches:
-        return matches[0].strip()
+    match = fence_pattern.search(text)
+    if match:
+        return match.group(1).strip()
 
     # No fence — use the whole text after stripping common prefixes
     cleaned = text.strip()

@@ -8,6 +8,29 @@ from datetime import datetime
 from typing import Any
 
 
+class SchemaIndexNotReadyError(RuntimeError):
+    """A persisted Schema index has not passed this process's source refresh."""
+
+
+class SchemaIndexWriteError(RuntimeError):
+    """A failed replacement, with a safe recovery outcome for API consumers."""
+
+    def __init__(self, *, restored: bool) -> None:
+        self.restored = restored
+        super().__init__(
+            "Schema index update failed; previous index restored" if restored else
+            "Schema index recovery failed; retrieval unavailable until successful explicit refresh"
+        )
+
+
+@dataclass(frozen=True)
+class SchemaIndexClearResult:
+    """Counts removed from each backend at a successful scoped clear."""
+
+    lancedb_count: int
+    bm25_count: int
+
+
 @dataclass
 class SchemaDocument:
     """A searchable document representing a table or column in the RAG index."""
@@ -21,7 +44,7 @@ class SchemaDocument:
     comment: str | None = None
     is_primary_key: bool = False
     is_foreign_key: bool = False
-    fk_references: tuple | None = None  # (table, column)
+    fk_references: tuple[str, str] | None = None  # (table, column)
     enum_values: list[str] | None = None
     sample_values: list[Any] = field(default_factory=list)
     table_row_count: int = 0

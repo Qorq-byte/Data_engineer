@@ -22,10 +22,10 @@ from app.models.schema import SchemaSnapshot
 class PromptLevel(Enum):
     """Prompt complexity tier — matched to SQR complexity."""
 
-    L1_SIMPLE = "simple"          # Single-table, simple WHERE, ~1500 tokens
-    L2_STANDARD = "standard"      # Multi-table JOIN + aggregation, ~3500 tokens
-    L3_COMPLEX = "complex"        # CTE + window functions, ~5500 tokens
-    L4_SELF_HEAL = "self_heal"   # Error correction retry, ~2000 tokens
+    L1_SIMPLE = "simple"  # Single-table, simple WHERE, ~1500 tokens
+    L2_STANDARD = "standard"  # Multi-table JOIN + aggregation, ~3500 tokens
+    L3_COMPLEX = "complex"  # CTE + window functions, ~5500 tokens
+    L4_SELF_HEAL = "self_heal"  # Error correction retry, ~2000 tokens
 
 
 # ── Default token budgets per level ─────────────────────────────────────
@@ -418,28 +418,28 @@ class PromptBuilder:
 
         # ── Render each section ──────────────────────────────────
         schema_text = self._render_schema(
-            schema, caps.get("schema", 500),
+            schema,
+            caps.get("schema", 500),
             multi_table_hint=multi_table_hint,
             database_name=database_name,
         )
         glossary_text = self._render_glossary(domain, sqr, caps.get("glossary", 300))
         rules_text = self._render_rules(domain, sqr, caps.get("rules", 300))
         history_text = self._render_history(history, caps.get("history", 300))
-        examples_text = self._render_examples(
-            similar_pairs, caps.get("examples", 300)
-        )
-        error_text = self._render_error_context(
-            error_context, caps.get("error_context", 500)
-        )
+        examples_text = self._render_examples(similar_pairs, caps.get("examples", 300))
+        error_text = self._render_error_context(error_context, caps.get("error_context", 500))
         multi_table_text = self._render_multi_table_hint(
-            multi_table_hint, caps.get("multi_table", 800),
+            multi_table_hint,
+            caps.get("multi_table", 800),
             schema=schema,
         )
 
         # ── Heuristic multi-table: when schema has 2+ tables, always ─
         # encourage the LLM to consider multiple independent tables.
         if not multi_table_text and schema and len(schema.tables) >= 2:
-            multi_table_text = self._render_heuristic_multitable(schema, caps.get("multi_table", 800))
+            multi_table_text = self._render_heuristic_multitable(
+                schema, caps.get("multi_table", 800)
+            )
 
         # ── Select and fill template ─────────────────────────────
         template = self._select_template(level)
@@ -591,7 +591,8 @@ class PromptBuilder:
 
     @staticmethod
     def _render_schema(
-        schema: SchemaSnapshot | None, cap_tokens: int,
+        schema: SchemaSnapshot | None,
+        cap_tokens: int,
         multi_table_hint: dict[str, Any] | None = None,
         database_name: str = "",
     ) -> str:
@@ -629,9 +630,7 @@ class PromptBuilder:
         return result
 
     @staticmethod
-    def _render_glossary(
-        domain: DomainConfig | None, sqr: SQR, cap_tokens: int
-    ) -> str:
+    def _render_glossary(domain: DomainConfig | None, sqr: SQR, cap_tokens: int) -> str:
         """Render relevant glossary terms within *cap_tokens*.
 
         Filters terms by keyword match against the NL text and SQR entities,
@@ -677,9 +676,7 @@ class PromptBuilder:
         return "\n".join(lines) if lines else ""
 
     @staticmethod
-    def _render_rules(
-        domain: DomainConfig | None, sqr: SQR, cap_tokens: int
-    ) -> str:
+    def _render_rules(domain: DomainConfig | None, sqr: SQR, cap_tokens: int) -> str:
         """Render relevant business rules within *cap_tokens*.
 
         Filters rules by pattern regex against the NL query text so only
@@ -711,9 +708,7 @@ class PromptBuilder:
         return "\n".join(lines) if lines else ""
 
     @staticmethod
-    def _render_history(
-        history: list[Any] | None, cap_tokens: int
-    ) -> str:
+    def _render_history(history: list[Any] | None, cap_tokens: int) -> str:
         """Render conversation history within *cap_tokens*.
 
         Each turn is rendered as "Q: ... A: ...".  Recent turns are
@@ -752,9 +747,7 @@ class PromptBuilder:
         return "\n---\n".join(entries) if entries else ""
 
     @staticmethod
-    def _render_examples(
-        pairs: list[QueryPair] | None, cap_tokens: int
-    ) -> str:
+    def _render_examples(pairs: list[QueryPair] | None, cap_tokens: int) -> str:
         """Render few-shot NL→SQL examples within *cap_tokens*.
 
         Higher similarity pairs are prioritized (sorted descending).
@@ -776,9 +769,7 @@ class PromptBuilder:
         return "\n---\n".join(entries) if entries else ""
 
     @staticmethod
-    def _render_error_context(
-        error_context: str | None, cap_tokens: int
-    ) -> str:
+    def _render_error_context(error_context: str | None, cap_tokens: int) -> str:
         """Render error context for self-heal prompts."""
         if not error_context:
             return ""
@@ -789,7 +780,8 @@ class PromptBuilder:
 
     @staticmethod
     def _render_multi_table_hint(
-        hint: dict[str, Any] | None, cap_tokens: int,
+        hint: dict[str, Any] | None,
+        cap_tokens: int,
         schema: SchemaSnapshot | None = None,
     ) -> str:
         """Render the multi-table exploration instruction.
@@ -827,7 +819,7 @@ class PromptBuilder:
                     continue
                 col_names = [c.name for c in tbl.columns]
                 table_col_lines.append(
-                    f"  - Table \"{tbl_name}\": columns = [{', '.join(col_names)}]"
+                    f'  - Table "{tbl_name}": columns = [{", ".join(col_names)}]'
                 )
         table_columns_text = "\n".join(table_col_lines) if table_col_lines else ""
 
@@ -839,7 +831,7 @@ class PromptBuilder:
             tables = cg.get("all_tables", [])
             if tables:
                 col_mapping_lines.append(
-                    f"  - Use column \"{col_name}\" (found in: {', '.join(tables)})"
+                    f'  - Use column "{col_name}" (found in: {", ".join(tables)})'
                 )
 
         col_mapping = "\n".join(col_mapping_lines) if col_mapping_lines else ""
@@ -851,7 +843,7 @@ class PromptBuilder:
                 tables = cg.get("all_tables", [])
                 if len(tables) > 1:
                     multi_table_lines.append(
-                        f"  - Column \"{col_name}\" exists in: {', '.join(tables)}"
+                        f'  - Column "{col_name}" exists in: {", ".join(tables)}'
                     )
 
         multi_table_summary = "\n".join(multi_table_lines) if multi_table_lines else ""
@@ -893,17 +885,25 @@ the same columns exist in multiple tables:
 - Do NOT return duplicate SQLs — each alternative must use different tables.
 - Use the EXACT column names from the Per-Table Column Reference above.""")
             else:
-                parts.append(f"""## Multi-Table Alternatives — IMPORTANT
-The same kind of data may exist in DIFFERENT independent tables.
-Candidate tables: {', '.join(independent)}
-
-**INSTRUCTIONS:**
-- Check EACH of the candidate tables above — if the table can answer the question, generate a SQL query for it.
-- You MUST generate SQL for EVERY table that contains the relevant data — do NOT skip any.
-- If MULTIPLE tables can independently answer the question, generate a SEPARATE SQL query for EACH one.
-- Separate each SQL query with the exact marker: ---ALTERNATIVE---
-- Do NOT return duplicate SQLs — each alternative must use different tables.
-- Use the EXACT column names from the Per-Table Column Reference above.""")
+                parts.append(
+                    "## Multi-Table Alternatives — IMPORTANT\n"
+                    "The same kind of data may exist in DIFFERENT independent tables.\n"
+                    "Candidate tables: "
+                    f"{', '.join(independent)}"
+                    "\n"
+                    "\n"
+                    "**INSTRUCTIONS:**\n"
+                    "- Check EACH of the candidate tables above — if the table can answer the q"
+                    "uestion, generate a SQL query for it.\n"
+                    "- You MUST generate SQL for EVERY table that contains the relevant data — "
+                    "do NOT skip any.\n"
+                    "- If MULTIPLE tables can independently answer the question, generate a SEP"
+                    "ARATE SQL query for EACH one.\n"
+                    "- Separate each SQL query with the exact marker: ---ALTERNATIVE---\n"
+                    "- Do NOT return duplicate SQLs — each alternative must use different table"
+                    "s.\n"
+                    "- Use the EXACT column names from the Per-Table Column Reference above."
+                )
 
         text = "\n\n".join(parts)
         if not text:
@@ -917,7 +917,11 @@ Candidate tables: {', '.join(independent)}
             if col_mapping_lines:
                 compact_parts.append("Use EXACT columns:\n" + "\n".join(col_mapping_lines))
             if has_alternatives and len(independent) >= 2:
-                compact_parts.append(f"Generate ONE SQL per table: {', '.join(independent)}. Separate with: ---ALTERNATIVE---")
+                compact_parts.append(
+                    "Generate ONE SQL per table: "
+                    f"{', '.join(independent)}"
+                    ". Separate with: ---ALTERNATIVE---"
+                )
             short_text = "\n".join(compact_parts)
             if PromptBuilder.estimate_tokens(short_text) <= cap_tokens:
                 return short_text
@@ -926,9 +930,7 @@ Candidate tables: {', '.join(independent)}
         return text
 
     @staticmethod
-    def _render_heuristic_multitable(
-        schema: SchemaSnapshot, cap_tokens: int
-    ) -> str:
+    def _render_heuristic_multitable(schema: SchemaSnapshot, cap_tokens: int) -> str:
         """Generate a heuristic multi-table instruction when schema has many tables.
 
         This is used as a fallback when schema linking didn't explicitly
@@ -956,7 +958,14 @@ The database has {len(table_names)} tables: {table_list}
 - Match column names exactly as shown in the schema."""
 
         if PromptBuilder.estimate_tokens(text) > cap_tokens:
-            short_text = f"## Multi-Table Check\nThe database has tables: {table_list}\nIf multiple tables can answer the question, generate ONE SQL per table. Separate with: ---ALTERNATIVE---"
+            short_text = (
+                "## Multi-Table Check\n"
+                "The database has tables: "
+                f"{table_list}"
+                "\n"
+                "If multiple tables can answer the question, generate ONE SQL per table. Se"
+                "parate with: ---ALTERNATIVE---"
+            )
             if PromptBuilder.estimate_tokens(short_text) <= cap_tokens:
                 return short_text
             return ""

@@ -5,11 +5,11 @@ from __future__ import annotations
 import copy
 
 import pytest
-from fastapi.testclient import TestClient
 
 from app.api import create_app
 from app.config.settings import settings
 from app.llm.factory import reset_default_router
+from tests.api_client import authenticated_client
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ def real_mode(monkeypatch):
 @pytest.fixture
 def client():
     app = create_app()
-    return TestClient(app)
+    return authenticated_client(app)
 
 
 @pytest.fixture(autouse=True)

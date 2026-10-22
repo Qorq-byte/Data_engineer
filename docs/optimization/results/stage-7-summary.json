@@ -1,0 +1,58 @@
+{
+  "mypy": "2.4.0",
+  "target_python": "3.12",
+  "follow_imports": "normal (default)",
+  "environment_note": "Baseline has types-PyYAML. Final also wires asyncpg-stubs and local aiomysql declarations; code fixes and dependency declarations both contribute to the reduction.",
+  "before": {
+    "errors": 272,
+    "files": 63,
+    "codes": {
+      "type-arg": 155,
+      "no-any-return": 22,
+      "import-untyped": 7,
+      "unused-ignore": 3,
+      "assignment": 8,
+      "comparison-overlap": 1,
+      "arg-type": 13,
+      "misc": 4,
+      "no-untyped-def": 11,
+      "import-not-found": 1,
+      "union-attr": 8,
+      "call-arg": 6,
+      "attr-defined": 16,
+      "no-untyped-call": 5,
+      "no-redef": 1,
+      "list-item": 1,
+      "untyped-decorator": 9,
+      "operator": 1
+    }
+  },
+  "after": {
+    "errors": 230,
+    "files": 49,
+    "codes": {
+      "no-any-return": 16,
+      "type-arg": 128,
+      "import-untyped": 3,
+      "unused-ignore": 2,
+      "assignment": 8,
+      "comparison-overlap": 1,
+      "arg-type": 13,
+      "misc": 4,
+      "no-untyped-def": 10,
+      "import-not-found": 1,
+      "union-attr": 6,
+      "call-arg": 6,
+      "attr-defined": 16,
+      "no-untyped-call": 4,
+      "no-redef": 1,
+      "list-item": 1,
+      "untyped-decorator": 9,
+      "operator": 1
+    }
+  },
+  "core_before": 37,
+  "core_after": 0,
+  "new_diagnostic_fingerprints": [],
+  "full_repository_passed": false
+}

@@ -211,15 +211,15 @@ class TestExecutionSuccessMetric:
 
 
 class TestEvaluationDispatch:
-    async def test_unknown_metric_passes(self):
+    async def test_unknown_metric_fails_closed(self):
         runner = _runner(metrics=["fancy_new_metric"])
         output = NodeOutput(result={"status": "success"})
         evaluation = await runner.evaluate_result(NODE_DEF, output)
 
         metric = evaluation.metrics["fancy_new_metric"]
-        assert metric.passed is True
+        assert metric.passed is False
         assert "no checker registered" in metric.details
-        assert evaluation.passed is True
+        assert evaluation.passed is False
 
     async def test_one_failing_metric_fails_evaluation(self):
         runner = _runner(metrics=["syntax_valid", "execution_success"])
@@ -298,7 +298,7 @@ class TestReflectionBranching:
         assert revise.calls >= 1, "revise node was skipped — reflection jump bug"
         assert final.calls == 1
         assert gen.calls == 1
-        assert reflect.calls == 1  # jump goes forward to revise; reflect not re-run
+        assert reflect.calls == 2  # revised execution is evaluated again before completion
 
     async def test_trace_records_revise_after_reflect(self, registry):
         reg, register = registry
@@ -372,7 +372,8 @@ class TestReflectionBranching:
         runner = WorkflowRunner(plan=plan, registry=reg)
         result = await runner.run("test query")
 
-        assert result.status == "completed"
+        assert result.status == "aborted"
+        assert "budget exhausted" in result.error
         assert revise.calls >= 2  # loop actually ran more than once
         assert revise.calls + reflect.calls <= max_iterations
 

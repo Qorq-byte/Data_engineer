@@ -9,7 +9,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 pip install -e ".[dev]"
 
 # 启动应用
-python main.py                        # FastAPI 监听 :8000，启动时打印初始化步骤
+python main.py                        # FastAPI 默认 :8001；lifespan 统一初始化/关闭，APP_PORT 可覆盖
 
 # 测试
 pytest                                # 运行全部测试（asyncio_mode=auto）
@@ -18,12 +18,13 @@ pytest -k "test_execute"              # 按关键字筛选测试
 
 # Lint 与类型检查
 ruff check .                          # lint（行宽 100，py312，规则 E/F/I/N/W/UP/B/C4/SIM）
-mypy app/                             # 严格模式
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py            # strict 核心CI门禁（默认追踪导入）
+mypy app/                             # 全仓严格诊断，仍有已知债务
 ```
 
 ## 架构
 
-**NL2SQL 数据工程 Agent**——自然语言 → 领域感知的 SQL 生成。当前为 MVP（v0.1），架构已完整设计，但除 `ExecuteSQLNode` 外大部分节点仍为桩代码。
+**NL2SQL 数据工程 Agent**——自然语言 → 领域感知的 SQL 生成。当前为 MVP（v0.1），主查询由固定 request_query 计划驱动 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql。生成和校验已有实现；RAG 接线和其他模板的生产可用性以优化阶段报告为准。
 
 ### 核心约束：Harness 不变量（最重要的规则）
 
@@ -44,21 +45,21 @@ POST /api/v1/query → PlanLoader 加载工作流计划
 | 层 | 目录 | 职责 |
 |---|---|---|
 | **API** | `app/api/` | FastAPI 工厂函数（`create_app()`），路由涵盖 query、schema、health、domains |
-| **Node** | `app/nodes/` | 计算单元。`BaseNode` → `AgenticNode`（LLM 驱动，具备 7 项 Harness 能力）。已实现：`ExecuteSQLNode`，其余为桩代码 |
+| **Node** | `app/nodes/` | 计算单元。`BaseNode` → `AgenticNode`（LLM 驱动，具备 7 项 Harness 能力）。主查询五节点已有实现，其他节点逐项验证，不能由设计文档推断完成度 |
 | **Harness** | `app/harness/` | 运行时引擎：配置加载（热更新）、计划加载、工作流执行器、会话、权限、约束、操作历史 |
 | **DB** | `app/db/` | `ConnectionFactory`（11 种数据库，4 种完整实现）、`SchemaExtractor`（按方言内省）、`DialectAdapter`（基于 sqlglot 的 SQL 翻译） |
 | **Model** | `app/models/` | 纯 `@dataclass`（非 Pydantic）。涵盖工作流、查询（SQR）、Schema、领域、会话、MCP、RAG、子 Agent |
 | **MCP** | `app/mcp/` | FastMCP 双角色：Server（对外暴露 NL2SQL）+ Client（消费 DB 工具）。`db_server` 在 8081 端口暴露 4 个工具 + 2 个资源 |
 | **Config** | `app/config/` | `agent.yml`（LLM 提供商、节点映射、约束、技能、记忆）、`settings.py`（pydantic-settings，读取 `.env`）、领域 YAML |
-| **Workflow** | `app/workflow/plans/` | YAML 模板：`gensql_agentic.yml`（完整流水线）、`ez_query.yml`（快速通道，跳过校验） |
+| **Workflow** | `app/workflow/plans/` | YAML 模板：`gensql_agentic.yml`（完整流水线）、`ez_query.yml`（参考模板）；API 固定使用 `request_query.yml`，执行前强制校验 |
 
 ### 设计决策
 
 - **Python 3.12+**——使用 `match`/`case`、`StrEnum`、`X | None` 联合类型语法
 - **Model 使用纯 dataclass**，不用 Pydantic（Pydantic 仅用于 settings）
-- **默认安全**：通过关键字黑名单（`_is_write_statement()` 检查 12 种写入关键字）强制只读 SQL；PermissionManager 对未列出的工具默认拒绝
+- **默认安全**：通过 `app/security/sql_policy.py` 单语句 AST 策略及驱动保护强制只读 SQL；PermissionManager 对未列出的工具默认拒绝
 - **多方言**：11 种数据库共享 `TableSchema`/`SchemaSnapshot` 模型；通过 `DialectAdapter` 实现方言特定的提取与执行
-- **全局单例**充当依赖注入容器：`node_registry`、`mcp_registry`、`settings`、`ConnectionFactory`（类级别状态）
+- **全局单例**充当依赖注入容器：`mcp_registry`、`settings`、`ConnectionFactory`（类级别状态）；主请求各自创建 `NodeRegistry`，实例之间不共享节点
 - **测试使用真实 SQLite**（内存或临时文件），不 mock。`tests/conftest.py` 中的 fixture 提供完整电商 Schema（users、products、orders），数据从 `tests/fixtures/test_schema.sql` 加载
 - **声明式配置**：`agent.yml` 和工作流计划均为 YAML；`ConfigLoader` 支持基于文件 mtime 的热更新
 

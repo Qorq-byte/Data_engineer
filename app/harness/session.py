@@ -16,6 +16,7 @@ import sqlite3
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 # ── SQL schema ────────────────────────────────────────────────────────────
 
@@ -128,7 +129,7 @@ class AdvancedSQLiteSession:
         ).fetchone()
         if row is None:
             return False
-        return (self._clock() - row["last_active_at"]) <= self.session_ttl
+        return (self._clock() - float(row["last_active_at"])) <= self.session_ttl
 
     def get_summary(self, session_id: str) -> str:
         """Return a compressed summary of the session history ('' if none)."""
@@ -148,7 +149,7 @@ class AdvancedSQLiteSession:
         )
         self._maybe_commit(conn)
 
-    def save_turn(self, session_id: str, turn_data: dict) -> None:
+    def save_turn(self, session_id: str, turn_data: dict[str, Any]) -> None:
         """Save a conversation turn (JSON-serialized) and refresh session activity."""
         conn = self._get_conn()
         self._touch_session(conn, session_id)
@@ -163,7 +164,7 @@ class AdvancedSQLiteSession:
         )
         self._maybe_commit(conn)
 
-    def get_turns(self, session_id: str) -> list[dict]:
+    def get_turns(self, session_id: str) -> list[dict[str, Any]]:
         """Return all turns of a session in insertion order."""
         rows = self._get_conn().execute(
             "SELECT turn_data FROM turns WHERE node_name = ? AND session_id = ? ORDER BY id",

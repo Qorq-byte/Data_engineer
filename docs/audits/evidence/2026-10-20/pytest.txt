@@ -1,0 +1,133 @@
+........................................................................ [  2%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 30%]
+........................................................................ [ 32%]
+........................................................................ [ 35%]
+........................................................................ [ 38%]
+........................................................................ [ 40%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 48%]
+........................................................................ [ 50%]
+........................................................................ [ 53%]
+........................................................................ [ 55%]
+........................................................................ [ 58%]
+.......................................FFFFFFFFF........................ [ 60%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 68%]
+........................................................................ [ 70%]
+........................................................................ [ 73%]
+........................................................................ [ 76%]
+........................................................................ [ 78%]
+........................................................................ [ 81%]
+........................................................................ [ 83%]
+........................................................................ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 91%]
+........................................................................ [ 93%]
+........................................................................ [ 96%]
+........................................................................ [ 98%]
+..................................                                       [100%]
+================================== FAILURES ===================================
+____________ TestCreateNL2SQLServer.test_creates_fastmcp_instance _____________
+tests\test_mcp\test_fastmcp_server.py:14: in test_creates_fastmcp_instance
+    server = create_nl2sql_server(port=8090)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+__________________ TestCreateNL2SQLServer.test_default_name ___________________
+tests\test_mcp\test_fastmcp_server.py:22: in test_default_name
+    server = create_nl2sql_server()
+             ^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+___________________ TestCreateNL2SQLServer.test_custom_name ___________________
+tests\test_mcp\test_fastmcp_server.py:29: in test_custom_name
+    server = create_nl2sql_server(name="My Custom Agent")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+___________________ TestCreateNL2SQLServer.test_custom_port ___________________
+tests\test_mcp\test_fastmcp_server.py:35: in test_custom_port
+    server = create_nl2sql_server(port=9999)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+__________ TestCreateNL2SQLServer.test_different_instance_each_call ___________
+tests\test_mcp\test_fastmcp_server.py:41: in test_different_instance_each_call
+    s1 = create_nl2sql_server()
+         ^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+_____________ TestToolRegistration.test_all_five_tools_registered _____________
+tests\test_mcp\test_fastmcp_server.py:65: in test_all_five_tools_registered
+    server = create_nl2sql_server()
+             ^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+_____________ TestToolRegistration.test_nl_query_has_description ______________
+tests\test_mcp\test_fastmcp_server.py:77: in test_nl_query_has_description
+    server = create_nl2sql_server()
+             ^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+___________ TestResourceRegistration.test_all_resources_registered ____________
+tests\test_mcp\test_fastmcp_server.py:104: in test_all_resources_registered
+    server = create_nl2sql_server()
+             ^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+___________ TestResourceRegistration.test_all_templates_registered ____________
+tests\test_mcp\test_fastmcp_server.py:117: in test_all_templates_registered
+    server = create_nl2sql_server()
+             ^^^^^^^^^^^^^^^^^^^^^^
+app\mcp\fastmcp_server.py:52: in create_nl2sql_server
+    from mcp.server.fastmcp import FastMCP
+..\.venv\Lib\site-packages\mcp\server\fastmcp.py:16: in <module>
+    raise ModuleNotFoundError(_MESSAGE, name=__name__)
+E   ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
+=========================== short test summary info ===========================
+FAILED tests/test_mcp/test_fastmcp_server.py::TestCreateNL2SQLServer::test_creates_fastmcp_instance
+FAILED tests/test_mcp/test_fastmcp_server.py::TestCreateNL2SQLServer::test_default_name
+FAILED tests/test_mcp/test_fastmcp_server.py::TestCreateNL2SQLServer::test_custom_name
+FAILED tests/test_mcp/test_fastmcp_server.py::TestCreateNL2SQLServer::test_custom_port
+FAILED tests/test_mcp/test_fastmcp_server.py::TestCreateNL2SQLServer::test_different_instance_each_call
+FAILED tests/test_mcp/test_fastmcp_server.py::TestToolRegistration::test_all_five_tools_registered
+FAILED tests/test_mcp/test_fastmcp_server.py::TestToolRegistration::test_nl_query_has_description
+FAILED tests/test_mcp/test_fastmcp_server.py::TestResourceRegistration::test_all_resources_registered
+FAILED tests/test_mcp/test_fastmcp_server.py::TestResourceRegistration::test_all_templates_registered
+9 failed, 2833 passed, 4 warnings in 55.35s

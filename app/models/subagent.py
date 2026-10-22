@@ -4,6 +4,7 @@ See SPEC §4.10.2 (Subagent definition) for the full specification.
 """
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -21,7 +22,7 @@ class SubagentContext:
     """Isolated context for a subagent instance."""
 
     domain: str
-    databases: list[dict] = field(default_factory=list)
+    databases: list[dict[str, Any]] = field(default_factory=list)
     max_turns: int = 20
     enable_sql_edit: bool = True
     enable_execution: bool = True

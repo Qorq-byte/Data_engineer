@@ -2,6 +2,7 @@
 
 See SPEC §6.4 (MCP Protocol API) for the full specification.
 """
+
 from __future__ import annotations
 
 import json
@@ -49,17 +50,52 @@ def _save_stopped_servers() -> None:
 _load_stopped_servers()
 
 _BUILTIN_SERVERS = [
-    {"name": "db_server", "server_type": "database", "port": 8081, "tool_count": 4, "resource_count": 2, "status": "running", "description": "数据库内省与执行工具"},
-    {"name": "knowledge_server", "server_type": "knowledge", "port": 8082, "tool_count": 3, "resource_count": 1, "status": "running", "description": "领域知识库检索"},
-    {"name": "vector_server", "server_type": "vector", "port": 8083, "tool_count": 2, "resource_count": 1, "status": "running", "description": "向量检索与 RAG"},
-    {"name": "learning_server", "server_type": "learning", "port": 8084, "tool_count": 2, "resource_count": 0, "status": "stopped", "description": "查询历史学习"},
+    {
+        "name": "db_server",
+        "server_type": "database",
+        "port": 8081,
+        "tool_count": 4,
+        "resource_count": 2,
+        "status": "running",
+        "description": "数据库内省与执行工具",
+    },
+    {
+        "name": "knowledge_server",
+        "server_type": "knowledge",
+        "port": 8082,
+        "tool_count": 3,
+        "resource_count": 1,
+        "status": "running",
+        "description": "领域知识库检索",
+    },
+    {
+        "name": "vector_server",
+        "server_type": "vector",
+        "port": 8083,
+        "tool_count": 2,
+        "resource_count": 1,
+        "status": "running",
+        "description": "向量检索与 RAG",
+    },
+    {
+        "name": "learning_server",
+        "server_type": "learning",
+        "port": 8084,
+        "tool_count": 2,
+        "resource_count": 0,
+        "status": "stopped",
+        "description": "查询历史学习",
+    },
 ]
 
 
 class RegisterServerRequest(BaseModel):
     """Request body for POST /api/v1/mcp/servers/register."""
+
     name: str = Field(..., min_length=1, description="MCP server name")
-    server_type: str = Field(default="custom", description="Server type: database, knowledge, vector, learning, custom")
+    server_type: str = Field(
+        default="custom", description="Server type: database, knowledge, vector, learning, custom"
+    )
     transport: str = Field(default="sse", description="Transport: sse or stdio")
     host: str = Field(default="127.0.0.1", description="Server host")
     port: int = Field(default=8080, ge=1, le=65535, description="Server port")
@@ -68,6 +104,7 @@ class RegisterServerRequest(BaseModel):
 
 class CallToolRequest(BaseModel):
     """Request body for POST /api/v1/mcp/tools/{tool_id}/call."""
+
     arguments: dict = Field(default_factory=dict, description="Tool arguments")
 
 
@@ -83,7 +120,28 @@ async def list_mcp_servers() -> dict:
                 s_copy["status"] = "stopped"
             builtin.append(s_copy)
         return {"servers": builtin, "total": len(builtin)}
-    return {"servers": [{"name": s.name, "server_type": s.server_type, "transport": s.transport, "host": s.host, "port": s.port, "tool_count": len(s.tools), "resource_count": len(s.resources), "status": "stopped" if s.name in _stopped_servers else ("running" if s.status == "active" else "stopped"), "description": s.metadata.get("description", ""), "last_health_check": s.last_health_check.isoformat() if s.last_health_check else None} for s in servers], "total": len(servers)}
+    return {
+        "servers": [
+            {
+                "name": s.name,
+                "server_type": s.server_type,
+                "transport": s.transport,
+                "host": s.host,
+                "port": s.port,
+                "tool_count": len(s.tools),
+                "resource_count": len(s.resources),
+                "status": "stopped"
+                if s.name in _stopped_servers
+                else ("running" if s.status == "active" else "stopped"),
+                "description": s.metadata.get("description", ""),
+                "last_health_check": s.last_health_check.isoformat()
+                if s.last_health_check
+                else None,
+            }
+            for s in servers
+        ],
+        "total": len(servers),
+    }
 
 
 @router.get("/mcp/servers/{name}")
@@ -92,7 +150,17 @@ async def get_mcp_server(name: str) -> dict:
         s = mcp_registry.get(name)
     except KeyError:
         raise HTTPException(status_code=404, detail=f"MCP server '{name}' not found") from None
-    return {"name": s.name, "server_type": s.server_type, "transport": s.transport, "host": s.host, "port": s.port, "status": s.status, "tools": [{"name": t.name, "description": t.description} for t in s.tools], "resources": [{"uri": r.uri, "description": r.description} for r in s.resources], "last_health_check": s.last_health_check.isoformat() if s.last_health_check else None}
+    return {
+        "name": s.name,
+        "server_type": s.server_type,
+        "transport": s.transport,
+        "host": s.host,
+        "port": s.port,
+        "status": s.status,
+        "tools": [{"name": t.name, "description": t.description} for t in s.tools],
+        "resources": [{"uri": r.uri, "description": r.description} for r in s.resources],
+        "last_health_check": s.last_health_check.isoformat() if s.last_health_check else None,
+    }
 
 
 @router.post("/mcp/servers/register", status_code=201)
@@ -211,7 +279,9 @@ async def call_mcp_tool(tool_id: str, body: CallToolRequest) -> dict:
                     "arguments": body.arguments,
                     "result": {"message": f"Tool '{tool_id}' called successfully (simulated)"},
                 }
-    raise HTTPException(status_code=404, detail=f"Tool '{tool_id}' not found in any registered MCP server")
+    raise HTTPException(
+        status_code=404, detail=f"Tool '{tool_id}' not found in any registered MCP server"
+    )
 
 
 @router.get("/mcp/resources/{resource_uri:path}")
@@ -228,7 +298,9 @@ async def read_mcp_resource(resource_uri: str) -> dict:
                     "description": r.description,
                     "content": f"Resource '{resource_uri}' content (simulated)",
                 }
-    raise HTTPException(status_code=404, detail=f"Resource '{resource_uri}' not found in any registered MCP server")
+    raise HTTPException(
+        status_code=404, detail=f"Resource '{resource_uri}' not found in any registered MCP server"
+    )
 
 
 @router.post("/mcp/servers/{name}/health")

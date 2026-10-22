@@ -226,15 +226,6 @@ class TestUpdateContext:
 
 
 class TestRegistryIntegration:
-    @pytest.fixture(autouse=True)
-    def _clean_registry(self):
-        """Reset the global class-level state before each test."""
-        from app.nodes.registry import NodeRegistry
-
-        NodeRegistry._nodes.clear()
-        yield
-        NodeRegistry._nodes.clear()
-
     def test_can_register(self, node):
         from app.nodes.registry import NodeRegistry
 

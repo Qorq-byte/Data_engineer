@@ -1,0 +1,123 @@
+[browse] Starting server...
+Navigated to http://127.0.0.1:8018/workspace (200)
+
+Navigated to http://127.0.0.1:8018/workspace (200)
+{
+  "/workspace": 18,
+  "/health": 28,
+  "/health/ready": 28,
+  "/api/v1/databases": 28,
+  "/api/v1/settings/available-models": 28,
+  "/api/v1/domains/detect": 28,
+  "/api/v1/query/stream": 28,
+  "/qa-counts": 14,
+  "/api/v1/domains": 4,
+  "/api/v1/domains/ecommerce/glossary": 4,
+  "/api/v1/domains/ecommerce/rules": 4,
+  "/login": 3,
+  "/api/v1/auth/me": 3
+}
+Clicked button[title="新建对话"] → now at http://127.0.0.1:8018/workspace
+Filled textarea[aria-label="数据问题"]
+Clicked button[aria-label="发送查询"] → now at http://127.0.0.1:8018/workspace
+PASS text: 查询执行完成 · 3 行
+PASS text: 测试模型（MOCK）
+Screenshot saved: .verify_tmp_scripts/stage5-desktop.png
+Clicked button[title="新建对话"] → now at http://127.0.0.1:8018/workspace
+Filled textarea[aria-label="数据问题"]
+Clicked button[aria-label="发送查询"] → now at http://127.0.0.1:8018/workspace
+PASS text: 查询执行完成，结果为 0 行
+Clicked button[title="新建对话"] → now at http://127.0.0.1:8018/workspace
+Filled textarea[aria-label="数据问题"]
+Clicked button[aria-label="发送查询"] → now at http://127.0.0.1:8018/workspace
+PASS text: 查询失败
+Clicked button[title="新建对话"] → now at http://127.0.0.1:8018/workspace
+Filled textarea[aria-label="数据问题"]
+Clicked button[aria-label="发送查询"] → now at http://127.0.0.1:8018/workspace
+PASS text: SQL 生成 · 进行中
+Clicked text=取消查询 → now at http://127.0.0.1:8018/workspace
+Clicked button[title="新建对话"] → now at http://127.0.0.1:8018/workspace
+PASS cancel/new conversation isolation
+
+PASS exactly four stream requests, zero JSON replays
+Viewport set to 375x812
+{
+  "width": 375,
+  "scrollWidth": 375
+}
+PASS mobile input dock is visible
+Screenshot saved: .verify_tmp_scripts/stage5-mobile.png
+Viewport set to 1280x800
+Clicked a:has-text("领域知识") → now at http://127.0.0.1:8018/workspace
+Clicked text=+ 新建领域 → now at http://127.0.0.1:8018/workspace
+PASS dialog name and initial focus
+
+Pressed Tab
+PASS modal Tab cycles to first control
+Filled [role="dialog"] input[placeholder="例如: healthcare"]
+PASS modal typing keeps focus
+Pressed Escape
+PASS Escape closes modal
+
+Clicked a:has-text("数据Schema") → now at http://127.0.0.1:8018/workspace
+PASS text: 数据库信息不可用
+PASS offline schema has no fake connections
+
+Navigated to http://127.0.0.1:8018/login (200)
+--- BEGIN UNTRUSTED EXTERNAL CONTENT (source: http://127.0.0.1:8018/login) ---
+--- BEGIN UNTRUSTED EXTERNAL C​ONTENT (source: http://127.0.0.1:8018/login) ---
+@e1 [link] "返回首页"
+@e2 [button] "Log in"
+@e3 [button] "切换登入/注册"
+@e4 [button] "Sign up"
+@e5 [textbox] "Email"
+@e6 [textbox] "Password"
+@e7 [button] "Let’s go!"
+
+── cursor-interactive (not in ARIA tree) ──
+@c1 [cursor:pointer] "span"
+--- END UNTRUSTED EXTERNAL C​ONTENT ---
+--- END UNTRUSTED EXTERNAL CONTENT ---
+Clicked button:has-text("Sign up") → now at http://127.0.0.1:8018/login
+--- BEGIN UNTRUSTED EXTERNAL CONTENT (source: http://127.0.0.1:8018/login) ---
+--- BEGIN UNTRUSTED EXTERNAL C​ONTENT (source: http://127.0.0.1:8018/login) ---
+@e1 [link] "返回首页"
+@e2 [button] "Log in"
+@e3 [button] "切换登入/注册"
+@e4 [button] "Sign up"
+@e5 [textbox] "注册邀请码"
+@e6 [textbox] "Username"
+@e7 [textbox] "Email"
+@e8 [textbox] "Password"
+@e9 [textbox] "Confirm password"
+@e10 [button] "Let’s go!"
+
+── cursor-interactive (not in ARIA tree) ──
+@c1 [cursor:pointer] "span"
+--- END UNTRUSTED EXTERNAL C​ONTENT ---
+--- END UNTRUSTED EXTERNAL CONTENT ---
+PASS invitation field and hidden login inert
+
+Filled .flip-back input[aria-label="注册邀请码"]
+Filled .flip-back input[aria-label="Username"]
+Filled .flip-back input[aria-label="Email"]
+Filled .flip-back input[aria-label="Password"]
+Filled .flip-back input[aria-label="Confirm password"]
+Clicked .flip-back button[type="submit"] → now at http://127.0.0.1:8018/login
+PASS invitation header forwarded (intercepted UI test only)
+PASS text: 合成注册拒绝
+--- BEGIN UNTRUSTED EXTERNAL CONTENT (source: http://127.0.0.1:8018/login) ---
+[2026-10-20T15:15:40.103Z] [warning] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[2026-10-20T15:15:40.162Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-10-20T15:15:40.270Z] [warning] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/
+[2026-10-20T15:15:41.374Z] [error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[2026-10-20T15:15:41.375Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-20T15:15:41.375Z] [error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[2026-10-20T15:15:41.543Z] [warning] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[2026-10-20T15:15:41.573Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-10-20T15:15:41.608Z] [warning] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/
+[2026-10-20T15:15:42.625Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-20T15:16:01.367Z] [warning] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[2026-10-20T15:16:01.412Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-10-20T15:16:01.424Z] [warning] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/
+--- END UNTRUSTED EXTERNAL CONTENT ---

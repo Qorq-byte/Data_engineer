@@ -208,8 +208,8 @@ const AP = AnimatePresence;
 const cn = (...args) => args.filter(Boolean).join(" ");
 
 /* ════════════════════════════════════════════════════════════════════════════
-   API Client — connects to FastAPI backend on localhost:8000
-   Gracefully degrades to mock data when backend is unreachable.
+   API Client — authenticated requests to the same-origin FastAPI backend.
+   Failures stay visible; never substitute demo data for database responses.
    ════════════════════════════════════════════════════════════════════════════ */
 const API_BASE = (() => {
   // Use the same origin (relative path) so the frontend works on any host.
@@ -237,15 +237,17 @@ const api = {
     const timer = setTimeout(() => controller.abort(), timeout);
     // Merge signal if provided
     const origSignal = opts.signal;
-    if (origSignal) origSignal.addEventListener('abort', () => controller.abort());
+    const abortOriginal = () => controller.abort();
+    if (origSignal?.aborted) controller.abort();
+    else origSignal?.addEventListener('abort', abortOriginal, { once: true });
     try {
-      const res = await fetch(url, { ...opts, signal: controller.signal });
+      const res = await fetch(url, { ...opts, headers: { ...api._headers(), ...opts.headers }, signal: controller.signal });
       clearTimeout(timer);
       if (!res.ok) {
         let errBody = {};
         try { errBody = await res.json(); } catch(_) {}
-        const code = errBody.error?.code || errBody.code || `HTTP_${res.status}`;
-        const msg = errBody.error?.message || errBody.detail || errBody.message || res.statusText;
+        const code = errBody.error?.code || errBody.detail?.code || errBody.code || `HTTP_${res.status}`;
+        const msg = errBody.error?.message || errBody.detail?.message || (typeof errBody.detail === 'string' ? errBody.detail : Array.isArray(errBody.detail) ? errBody.detail.map(d => d.msg).join('; ') : '') || errBody.message || res.statusText;
         const e = new Error(msg);
         e.code = code;
         e.status = res.status;
@@ -268,6 +270,9 @@ const api = {
         throw err;
       }
       throw e;
+    } finally {
+      clearTimeout(timer);
+      origSignal?.removeEventListener('abort', abortOriginal);
     }
   },
   /** Check if the API is online */
@@ -384,10 +389,10 @@ const api = {
 
   // ── Domains ──
   domains() { return api._fetch('/api/v1/domains'); },
-  detectDomain(queryText) {
+  detectDomain(queryText, signal) {
     return api._fetch('/api/v1/domains/detect', {
       method: 'POST', headers: api._headers(true),
-      body: JSON.stringify({ query_text: queryText }),
+      body: JSON.stringify({ query_text: queryText }), signal,
     });
   },
   glossary(domainId) { return api._fetch(`/api/v1/domains/${domainId}/glossary`); },
@@ -629,7 +634,7 @@ const MobileSidebar = ({ className, children, ...props }) => {
   const { open, setOpen } = useSidebar();
   return (
     <Fragment>
-      <div className={cn("h-10 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full")} {...props}>
+      <div className={cn("h-10 flex-shrink-0 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full")} {...props}>
         <a href="/" className="flex items-center gap-2 no-underline">
           <div className="h-4 w-5 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
           <span className="text-sm font-medium text-black dark:text-white">NL2SQL</span>
@@ -732,15 +737,15 @@ const SqlCard = ({ sql, dialect, onSendToWorkbench, onEdit }) => (
 );
 
 const ResultTable = ({ rows, columns }) => {
-  if (!rows || rows.length === 0) return <p className="text-sm text-neutral-400 p-4">无数据</p>;
+  if (!rows || rows.length === 0) return <p className="text-sm text-neutral-400 p-4" role="status">查询执行完成，结果为 0 行</p>;
   // Support both array-of-objects and array-of-arrays
   const isObj = typeof rows[0] === 'object' && !Array.isArray(rows[0]);
   const keys = isObj ? Object.keys(rows[0]) : [];
   const headerCols = columns && columns.length > 0 ? columns : (isObj ? keys : rows[0].map((_, i) => `col_${i}`));
   return (
     <div className="overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-700">
-      <table className="table-light">
-        <thead><tr>{headerCols.map((k, i) => <th key={i}>{k}</th>)}</tr></thead>
+      <table className="table-light" aria-label="查询结果">
+        <thead><tr>{headerCols.map((k, i) => <th key={i} scope="col">{k}</th>)}</tr></thead>
         <tbody>
           {rows.map((row, i) => (
             <tr key={i}>{isObj ? keys.map(k => <td key={k}>{String(row[k] ?? '')}</td>) : row.map((v, j) => <td key={j}>{String(v ?? '')}</td>)}</tr>
@@ -755,10 +760,11 @@ const ResultTable = ({ rows, columns }) => {
    1. 智能查询 — real NL→SQL pipeline via POST /api/v1/query
    ════════════════════════════════════════════════════════════════════════════ */
 const WORKFLOW_STEPS = [
-  { key: "schema_linking", label: "Schema 链接", icon: "🔗" },
-  { key: "generate_sql",   label: "SQL 生成",   icon: "🤖" },
-  { key: "validate_sql",   label: "SQL 验证",   icon: "✅" },
-  { key: "execute_sql",    label: "SQL 执行",   icon: "▶️" },
+  { key: "parse", label: "理解输入", icon: "📝" },
+  { key: "retrieve", label: "Schema 链接", icon: "🔗" },
+  { key: "generate", label: "SQL 生成", icon: "🤖" },
+  { key: "validate", label: "SQL 验证", icon: "✅" },
+  { key: "execute", label: "SQL 执行", icon: "▶️" },
 ];
 
 const SUGGESTIONS = [
@@ -773,7 +779,8 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   const [input, setInput] = useState("");
   const [cmds, setCmds] = useState([]);
   const [cmdOpen, setCmdOpen] = useState(false);
-  const [pending, setPending] = useState(null); // { step: 0..3 } or null
+  const [pending, setPending] = useState(null); // real stage statuses, or null
+  const [readiness, setReadiness] = useState(null);
   const [online, setOnline] = useState(null); // null=checking, true, false
   const [detectedDomain, setDetectedDomain] = useState(null); // auto-detected domain
   const [database, setDatabase] = useState(""); // active database for queries (empty = all databases)
@@ -795,6 +802,19 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   });
   const scrollRef = useRef(null);
   const streamRef = useRef(null); // AbortController for SSE
+  const sessionRef = useRef("");
+  const generationRef = useRef(0);
+  const cancelQuery = () => {
+    generationRef.current += 1;
+    streamRef.current?.abort();
+    streamRef.current = null;
+    setPending(null);
+    setStreamingText("");
+  };
+  useEffect(() => () => {
+    generationRef.current += 1;
+    streamRef.current?.abort();
+  }, []);
   const composingRef = useRef(false); // IME composition state
   const notify = useNotify();
 
@@ -806,6 +826,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
       time: new Date().toLocaleString('zh-CN'),
       queryText: queryText || msgs.find(m => m.role === 'user')?.text || '',
       domain: domain || detectedDomain || '',
+      sessionId: sessionRef.current,
       messageCount: msgs.length,
       messages: msgs,
     };
@@ -815,6 +836,8 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   };
 
   const loadHistory = (entry) => {
+    cancelQuery();
+    sessionRef.current = entry.sessionId || "";
     setMessages(entry.messages || []);
     if (entry.domain) setDetectedDomain(entry.domain);
     setShowHistory(false);
@@ -843,6 +866,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
   useEffect(() => {
     api.isOnline().then(setOnline);
+    api._fetch('/health/ready').then(setReadiness).catch(e => setReadiness(e.body || { status: 'unavailable' }));
     // Fetch available databases for query execution
     api.databases().then(data => {
       const dbs = data.databases || [];
@@ -862,11 +886,11 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   }, [messages, pending, streamingText]);
 
   // ── Auto-detect domain from NL text ──
-  const detectDomain = async (text) => {
+  const detectDomain = async (text, isCurrent, signal) => {
     try {
-      const result = await api.detectDomain(text);
+      const result = await api.detectDomain(text, signal);
       const domain = result.recommendation || result.best?.domain || "ecommerce";
-      setDetectedDomain(domain);
+      if (isCurrent()) setDetectedDomain(domain);
       return domain;
     } catch(e) { /* ignore */ }
     return "ecommerce";
@@ -875,25 +899,21 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   // ── Run the real pipeline via API (with SSE streaming) ──
   const WORKFLOW_STAGES = ["parse", "retrieve", "generate", "validate", "execute"];
   const runPipeline = async (text, forceResult) => {
-    // Cancel any previous stream
-    if (streamRef.current) { streamRef.current.abort(); streamRef.current = null; }
-
-    setPending({ step: 0 });
+    cancelQuery();
+    const generation = generationRef.current;
+    const controller = new AbortController();
+    streamRef.current = controller;
+    const isCurrent = () => generationRef.current === generation && !controller.signal.aborted;
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 130000);
+    setPending({ step: -1, statuses: {} });
     setStreamingText("");
-
-    // Auto-detect domain
-    const domain = await detectDomain(text);
-
-    const tick = (s) => {
-      if (s < WORKFLOW_STAGES.length - 1) {
-        setTimeout(() => { setPending({ step: s + 1 }); tick(s + 1); }, 380);
-      }
-    };
-    tick(0);
-
     try {
+      const domain = await detectDomain(text, isCurrent, controller.signal);
+      if (!isCurrent()) return;
       const body = {
         nl_text: text,
+        session_id: sessionRef.current || undefined,
         domain: domain,
         database: database,
         dialect: dbDialect || "ansi",
@@ -906,9 +926,6 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
       // Try SSE streaming first
       try {
-        const controller = new AbortController();
-        streamRef.current = controller;
-
         const url = `${API_BASE}/api/v1/query/stream`;
         const res = await fetch(url, {
           method: 'POST',
@@ -918,7 +935,8 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
         });
 
         if (!res.ok) {
-          throw new Error(`Stream HTTP ${res.status}`);
+          const detail = await res.json().catch(() => ({}));
+          throw new Error(detail.detail?.message || (typeof detail.detail === 'string' ? detail.detail : '') || detail.error?.message || `HTTP ${res.status}`);
         }
 
         const reader = res.body.getReader();
@@ -933,9 +951,11 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           source: '', sourceNote: '',
         };
         let currentEvent = '';
+        let receivedDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
+          if (!isCurrent()) return;
           if (done) break;
           buf += decoder.decode(value, { stream: true });
           const lines = buf.split('\n');
@@ -950,16 +970,18 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
               if (!dataStr) continue;
               try {
                 const data = JSON.parse(dataStr);
+                if (data.session_id) sessionRef.current = data.session_id;
 
                 switch (currentEvent) {
+                  case 'workflow_start':
                   case 'workflow':
                     collected.workflowId = data.workflow_id || '';
                     collected.stageHistory.push({ type: 'workflow', ...data });
                     break;
                   case 'stage':
                     const stageIdx = WORKFLOW_STAGES.indexOf(data.stage);
-                    if (stageIdx >= 0 && data.status === 'started') {
-                      setPending({ step: stageIdx });
+                    if (stageIdx >= 0) {
+                      setPending(p => ({ step: stageIdx, statuses: { ...p?.statuses, [data.stage]: data.skipped ? 'skipped' : data.status } }));
                     }
                     collected.stageHistory.push({ type: 'stage', ...data });
                     break;
@@ -991,7 +1013,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                     const candData = {
                       id: data.id || ('c' + collected.candidates.length),
                       sql_text: data.sql_text || data.sql || '',
-                      confidence: data.confidence || 0.9,
+                      confidence: data.confidence ?? 0,
                       generation_mode: data.generation_mode || 'primary',
                       dialect: data.dialect || 'ansi',
                       database_name: data.database_name || '',
@@ -1038,6 +1060,13 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                     break;
                   case 'done':
                   case 'complete':
+                    receivedDone = true;
+                    if (data.session_id) sessionRef.current = data.session_id;
+                    if (data.status === 'failed') throw new Error((data.errors || []).join('; ') || '查询失败');
+                    if (data.validation) collected.validation = data.validation;
+                    if (data.execution) collected.execution = data.execution;
+                    if (data.warnings) collected.warnings = data.warnings;
+                    if (data.errors) collected.errors = data.errors;
                     if (data.primary_sql) collected.sql = data.primary_sql;
                     if (data.query_id) collected.queryId = data.query_id;
                     if (data.linked_tables) collected.tables = data.linked_tables;
@@ -1070,6 +1099,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           }
         }
 
+        if (!receivedDone) throw new Error('查询连接中断，未收到完成状态，请确认后重试');
         setPending(null);
         setStreamingText("");
 
@@ -1085,9 +1115,10 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
             text: text,
             language: collected.language || 'zh',
             intent: collected.intent || 'SELECT',
-            confidence: collected.confidence || 0.9,
-            summary: `查询完成 — 领域: ${domain}${collected.workflowId ? ` | 工作流: ${collected.workflowId}` : ''}`,
-            candidates: collected.candidates.length > 0 ? collected.candidates : [{ id: 'c1', sql_text: collected.sql, confidence: 0.9, generation_mode: 'primary' }],
+            confidence: collected.confidence ?? 0,
+            isMock: collected.warnings.some(w => /mock/i.test(w)),
+            summary: `${collected.execution ? "查询执行完成 · " + collected.execution.row_count + " 行" : "SQL 已生成，未执行"} — 领域: ${domain}${collected.workflowId ? ` | 工作流: ${collected.workflowId}` : ''}`,
+            candidates: collected.candidates.length > 0 ? collected.candidates : [{ id: 'c1', sql_text: collected.sql, confidence: collected.confidence ?? 0, generation_mode: 'primary' }],
             primarySql: collected.sql,
             linkedTables: collected.tables,
             validation: collected.validation,
@@ -1113,54 +1144,18 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           return;
         }
       } catch(streamErr) {
-        // SSE failed, fall back to regular query
-        streamRef.current = null;
-        if (streamErr.message !== 'API_OFFLINE' && streamErr.message !== 'SSE error') {
-          console.warn('SSE stream failed, falling back to regular query:', streamErr.message);
-        }
+        throw streamErr;
       }
 
-      // Fallback: regular API call
-      const result = await api.query(body);
-
-      setPending(null);
-      setStreamingText("");
-
-      const msg = {
-        role: "assistant",
-        kind: "result",
-        feedback: null,
-        queryId: result.query_id,
-        // Preserve the original user query text for feedback submissions.
-        text: text,
-        language: result.language,
-        intent: result.intent,
-        confidence: result.confidence,
-        summary: `查询完成 — 领域: ${domain}, 语言: ${result.language}, 意图: ${result.intent}`,
-        candidates: result.candidates || [],
-        primarySql: result.primary_sql,
-        validation: result.validation,
-        linkedTables: result.linked_tables,
-        linkedColumns: result.linked_columns,
-        execution: result.execution,
-        errors: result.errors,
-        warnings: result.warnings,
-        detectedDomain: domain,
-        source: result.source || '',
-        sourceNote: result.source_note || '',
-      };
-
-      if (result.execution && result.execution.rows) {
-        msg.summary = `查询完成 — 返回 ${result.execution.row_count || result.execution.rows.length} 行。`;
-      }
-
-      setMessages(m => { const updated = [...m, msg]; saveToHistory(updated, text, domain); return updated; });
+      throw new Error('服务未返回查询结果');
     } catch (e) {
+      if (generationRef.current !== generation) return;
       setPending(null);
       setStreamingText("");
+      if (e.name === 'AbortError' && !timedOut) return;
+      if (timedOut) e = new Error('请求超过 130 秒，已停止等待；请检查后端状态后重试');
       if (e.message === 'API_OFFLINE' || e.code === 'API_OFFLINE') {
-        notify("API 离线，使用演示模式", 'warn', 4000);
-        setMessages(m => { const mockMsg = buildMockResponse(text, forceResult); const updated = [...m, mockMsg]; saveToHistory(updated, text, 'ecommerce'); return updated; });
+        setMessages(m => [...m, { role: "assistant", kind: "error", text: "API 离线，请恢复连接后重试" }]);
       } else if (e.message === 'API_TIMEOUT' || e.code === 'API_TIMEOUT') {
         notify("请求超时，请检查网络连接", 'error', 4000);
         setMessages(m => [...m, {
@@ -1174,43 +1169,16 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           text: `查询失败: ${e.message}`,
         }]);
       }
+    } finally {
+      clearTimeout(timer);
+      if (generationRef.current === generation) {
+        streamRef.current = null;
+        setPending(null);
+        setStreamingText("");
+      }
     }
   };
 
-  // ── Mock fallback ──
-  const MOCK_SQL = `SELECT u.name,\n       u.email,\n       COUNT(o.id)          AS order_count,\n       SUM(o.total_amount)  AS gmv\nFROM users u\n  LEFT JOIN orders o ON u.id = o.user_id\nWHERE u.created_at >= '2026-01-01'\nGROUP BY u.id\nORDER BY order_count DESC\nLIMIT 10;`;
-
-  const MOCK_ROWS = [
-    { name: "张三", email: "zhang@example.com", order_count: 47, gmv: "¥128,400" },
-    { name: "李四", email: "lisi@example.com", order_count: 32, gmv: "¥96,120" },
-    { name: "王五", email: "wangwu@example.com", order_count: 28, gmv: "¥84,350" },
-    { name: "赵六", email: "zhaoliu@example.com", order_count: 21, gmv: "¥63,980" },
-    { name: "陈七", email: "chenqi@example.com", order_count: 18, gmv: "¥52,410" },
-  ];
-
-  const buildMockResponse = (text, forceResult) => {
-    if (!forceResult && /最近/.test(text)) {
-      return {
-        role: "assistant", kind: "clarify", feedback: null,
-        text: "消歧引擎检测到 1 处时间表述歧义：「最近」指代的范围是？",
-        options: ["最近 7 天", "最近 30 天", "本季度", "今年"],
-        original: text,
-      };
-    }
-    const used = (id) => text.indexOf("/" + id) !== -1;
-    return {
-      role: "assistant", kind: "result", feedback: null, queryId: "mock",
-      text: text,
-      summary: "查询完成 — 返回 5 行 (离线模式)。",
-      candidates: [{ id: "c1", sql_text: MOCK_SQL, confidence: 0.92, generation_mode: "primary" }],
-      primarySql: MOCK_SQL,
-      execution: { columns: ["name","email","order_count","gmv"], rows: MOCK_ROWS, row_count: 5 },
-      validation: { passed: true, score: 0.95 },
-      linkedTables: ["users", "orders"],
-      warnings: ["离线模式 — 使用示范数据"],
-      isMock: true,
-    };
-  };
 
   const ask = (text, forceResult) => {
     setMessages(m => [...m, { role: "user", text }]);
@@ -1344,17 +1312,19 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
       <PanelHeader title="智能查询" desc="自然语言 → 领域感知 SQL，由 Harness 工作流确定性驱动">
         <span className="status-badge">
           <span className={cn("w-1.5 h-1.5 rounded-full", online === true ? "bg-emerald-500 pulse-dot" : online === false ? "bg-amber-500" : "bg-neutral-300")} />
-          {online === true ? "API 在线" : online === false ? "离线模式" : "检测中…"}
+          {online === true ? "API 在线" : online === false ? "API 不可达" : "检测中…"}
         </span>
         {detectedDomain && <span className="status-badge font-mono text-[10px]">领域: {detectedDomain}</span>}
-        <span className="status-badge font-mono">gensql_agentic</span>
+        <span className="status-badge font-mono">request_query</span>
         <button className={cn("btn-outline flex items-center gap-1", showHistory && "active")} onClick={() => setShowHistory(!showHistory)} title="历史查询">
           <IconClock className="h-3.5 w-3.5" /> 历史{history.length > 0 && ` (${history.length})`}
         </button>
-        <button className="btn-outline" onClick={() => { setMessages([]); notify("已清空对话", 'ok', 2000); }} title="新建对话">
+        <button className="btn-outline" onClick={() => { cancelQuery(); sessionRef.current = ""; setMessages([]); notify("已清空对话", 'ok', 2000); }} title="新建对话">
           + 新对话
         </button>
       </PanelHeader>
+      {readiness && readiness.status !== 'ready' && <p role="status" className="text-xs text-amber-700 dark:text-amber-400 px-4 py-2 m-0">生产查询尚未就绪：请检查模型、数据库与认证配置。测试模型输出不代表真实答案。</p>}
+
 
       {/* ── History Sidebar ── */}
       {showHistory && (
@@ -1365,7 +1335,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
             </h3>
             <div className="flex gap-1">
               {history.length > 0 && <button className="btn-outline !text-[10px] !py-1 !px-2" onClick={clearHistory}>清空全部</button>}
-              <button className="icon-btn" onClick={() => setShowHistory(false)}><IconClose className="h-4 w-4" /></button>
+              <button className="icon-btn" aria-label="关闭历史记录" onClick={() => setShowHistory(false)}><IconClose className="h-4 w-4" /></button>
             </div>
           </div>
           {history.length === 0 ? (
@@ -1373,16 +1343,16 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
           ) : (
             <div className="max-h-64 overflow-auto space-y-1.5">
               {history.map(h => (
-                <div key={h.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-750 cursor-pointer group" onClick={() => loadHistory(h)}>
-                  <div className="flex-1 min-w-0">
+                <div key={h.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 dark:bg-neutral-800 hover:bg-gray-100 dark:hover:bg-neutral-750 group">
+                  <button className="flex-1 min-w-0 text-left" onClick={() => loadHistory(h)}>
                     <div className="text-xs font-medium text-neutral-700 dark:text-neutral-300 truncate">{h.queryText || '(空查询)'}</div>
                     <div className="flex items-center gap-2 text-[10px] text-neutral-400 mt-0.5">
                       <span>{h.time}</span>
                       {h.domain && <span className="font-mono">{h.domain}</span>}
                       <span>{h.messageCount} 条消息</span>
                     </div>
-                  </div>
-                  <button className="icon-btn !p-1 opacity-0 group-hover:opacity-100 flex-shrink-0" title="删除" onClick={e => { e.stopPropagation(); deleteHistory(h.id); }}>
+                  </button>
+                  <button className="icon-btn !p-1 opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0" title="删除" onClick={e => { e.stopPropagation(); deleteHistory(h.id); }}>
                     <IconTrash className="h-3.5 w-3.5 text-red-400" />
                   </button>
                 </div>
@@ -1420,7 +1390,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
                     {/* Error */}
                     {msg.kind === "error" && (
-                      <Card className="p-4 border-red-200 dark:border-red-800">
+                      <Card role="alert" className="p-4 border-red-200 dark:border-red-800">
                         <div className="flex items-center gap-2 text-sm font-medium text-red-600 dark:text-red-400 mb-2">
                           <IconAlert className="h-4 w-4" /> 错误
                         </div>
@@ -1451,7 +1421,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                           <p className="text-sm text-neutral-700 dark:text-neutral-300 m-0 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" /> {msg.summary}
                           </p>
-                          {msg.isMock && <span className="text-[10px] bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full">离线数据</span>}
+                          {msg.isMock && <span className="text-[10px] bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full">测试模型（MOCK）</span>}
                           {msg.language && <span className="text-[10px] text-neutral-400 bg-gray-100 dark:bg-neutral-800 px-1.5 rounded-full">{msg.language}</span>}
                           {msg.intent && <span className="text-[10px] text-neutral-400 bg-gray-100 dark:bg-neutral-800 px-1.5 rounded-full">{msg.intent}</span>}
                         </div>
@@ -1601,7 +1571,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                         )}
 
                         {/* Execution result */}
-                        {msg.execution && msg.execution.rows && msg.execution.rows.length > 0 && (
+                        {msg.execution && Array.isArray(msg.execution.rows) && (
                           <Fragment>
                             <p className="text-xs text-neutral-400">
                               执行结果 · {msg.execution.row_count || msg.execution.rows.length} 行{msg.execution.truncated ? ' (已截断)' : ''}
@@ -1681,15 +1651,15 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                 <Card className="p-4">
                   <div className="flex flex-col gap-2.5">
                     {WORKFLOW_STEPS.map((s, i) => (
-                      <div key={s.key} className={cn("flex items-center gap-2 text-xs transition-opacity", i > pending.step && "opacity-35")}>
-                        {i < pending.step ? (
+                      <div key={s.key} className={cn("flex items-center gap-2 text-xs transition-opacity", !pending.statuses[s.key] && "opacity-35")}>
+                        {pending.statuses[s.key] === 'completed' ? (
                           <IconCheck className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                        ) : i === pending.step ? (
+                        ) : pending.statuses[s.key] === 'started' ? (
                           <svg className="animate-spin h-3.5 w-3.5 text-neutral-400 flex-shrink-0" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
                         ) : (
                           <span className="h-3.5 w-3.5 rounded-full border border-neutral-300 dark:border-neutral-600 flex-shrink-0" />
                         )}
-                        <span className="text-neutral-700 dark:text-neutral-300">{s.icon} {s.label}</span>
+                        <span className="text-neutral-700 dark:text-neutral-300">{s.icon} {s.label} · {{ started: "进行中", completed: "完成", failed: "失败", skipped: "跳过" }[pending.statuses[s.key]] || "等待"}</span>
                         <span className="text-neutral-400 font-mono text-[10px]">{s.key}</span>
                       </div>
                     ))}
@@ -1777,8 +1747,9 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                 <IconWand className="h-5 w-5" />
               </button>
               <textarea
-                className="flex-1 resize-none bg-transparent border-none outline-none text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 px-2 py-2"
+                className="flex-1 min-w-0 resize-none bg-transparent border-none outline-none text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 px-2 py-2"
                 rows={2}
+                aria-label="数据问题"
                 placeholder="描述你的数据问题…（输入 / 唤起指令，Enter 发送）"
                 value={input}
                 onChange={e => { setInput(e.target.value); if (e.target.value === "/") setCmdOpen(true); }}
@@ -1790,12 +1761,13 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
               <button className="icon-btn" title="清空" onClick={() => setInput("")}>
                 <IconTrash className="h-5 w-5" />
               </button>
-              <button className="send-btn" title="发送" onClick={handleSend} disabled={(!input.trim() && cmds.length === 0) || !!pending}>
+              {pending && <button className="btn-outline" onClick={() => { cancelQuery(); notify("已取消查询", "ok", 2000); }}>取消查询</button>}
+              <button className="send-btn" aria-label="发送查询" title="发送" onClick={handleSend} disabled={(!input.trim() && cmds.length === 0) || !!pending}>
                 <IconSend className="h-4 w-4" />
               </button>
             </Card>
           </div>
-          <p className="text-[11px] text-neutral-400 text-center mt-2 mb-0">Enter 发送 · Shift+Enter 换行 · / 唤起指令 · 支持中英文 · 11 种数据库方言</p>
+          <p className="text-[11px] text-neutral-400 text-center mt-2 mb-0">Enter 发送 · Shift+Enter 换行 · / 唤起指令 · 支持中英文 · 4 种已实现数据库连接 · 只读执行</p>
         </div>
       </div>
     </div>
@@ -1833,6 +1805,8 @@ const SchemaPanel = () => {
   const fetchDatabases = () => {
     api.databases().then(data => {
       const dbs = data.databases || [];
+      setIsOffline(false);
+      setSchemaErrors(e => { const next = { ...e }; delete next.databases; return next; });
       setDatabases(dbs);
       if (dbs.length > 0 && !activeDbId) {
         const firstDb = dbs[0].db_id;
@@ -1840,13 +1814,10 @@ const SchemaPanel = () => {
         fetchSchema(firstDb);
       }
     }).catch((e) => {
-      if (e.message === 'API_OFFLINE' || e.code === 'API_OFFLINE') {
-        setIsOffline(true);
-        setDatabases([
-          { db_id: "sqlite_main", db_type: "sqlite", alias: "main", host: ":memory:", database_name: "ecommerce.db", status: "connected" },
-          { db_id: "pg_warehouse", db_type: "postgresql", alias: "warehouse", host: "localhost:5432", database_name: "warehouse", status: "connected" },
-        ]);
-      }
+      setIsOffline(true);
+      setDatabases([]);
+      setSchemas({});
+      setSchemaErrors({ databases: e.message });
     });
   };
 
@@ -1860,29 +1831,8 @@ const SchemaPanel = () => {
       const tblCount = data.table_count || (data.tables ? Object.keys(data.tables).length : 0);
       notify(`Schema 已加载: ${data.database_name || dbId} (${tblCount} 表)`, 'ok', 2500);
     } catch(e) {
-      if (e.message === 'API_OFFLINE') {
-        setIsOffline(true);
-        setSchemas(s => ({ ...s, [dbId]: {
-          db_id: dbId, database_type: "sqlite", database_name: "ecommerce",
-          table_count: 6,
-          tables: {
-            users: { name: "users", comment: "用户账户表", column_count: 8, row_count_estimate: 12400, columns: [
-              { name: "id", type: "INT", nullable: false, is_primary_key: true, is_foreign_key: false, comment: "主键" },
-              { name: "name", type: "VARCHAR(100)", nullable: false, is_primary_key: false, is_foreign_key: false, comment: null },
-              { name: "email", type: "VARCHAR(255)", nullable: false, is_primary_key: false, is_foreign_key: false, comment: "UNIQUE" },
-              { name: "created_at", type: "TIMESTAMP", nullable: false, is_primary_key: false, is_foreign_key: false, comment: null },
-            ], foreign_keys: [] },
-            orders: { name: "orders", comment: "订单记录表", column_count: 12, row_count_estimate: 89200, columns: [], foreign_keys: [] },
-            products: { name: "products", comment: "产品目录表", column_count: 15, row_count_estimate: 3100, columns: [], foreign_keys: [] },
-            order_items: { name: "order_items", comment: "订单明细表", column_count: 6, row_count_estimate: 256000, columns: [], foreign_keys: [] },
-            inventory: { name: "inventory", comment: "库存表", column_count: 9, row_count_estimate: 45000, columns: [], foreign_keys: [] },
-            categories: { name: "categories", comment: "产品分类表", column_count: 5, row_count_estimate: 128, columns: [], foreign_keys: [] },
-          }
-        }}));
-        setLastRefreshTime(t => ({ ...t, [dbId]: new Date().toLocaleTimeString() }));
-      } else {
-        setSchemaErrors(e2 => ({ ...e2, [dbId]: e.message }));
-      }
+      setSchemaErrors(e2 => ({ ...e2, [dbId]: e.message }));
+      setSchemas(s => { const next = { ...s }; delete next[dbId]; return next; });
     } finally { setLoadingDb(null); }
   };
 
@@ -1979,7 +1929,7 @@ const SchemaPanel = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      <PanelHeader title="数据 Schema" desc="跨 11 种数据库方言的表结构内省与向量索引">
+      <PanelHeader title="数据 Schema" desc="数据库结构快照与检索索引；行数为快照估算">
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
           <div className="flex items-center gap-0 border border-neutral-200 dark:border-neutral-700 rounded-full overflow-hidden">
@@ -2005,7 +1955,7 @@ const SchemaPanel = () => {
       {/* Offline indicator */}
       {isOffline && (
         <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 rounded-lg">
-          <IconWifiOff className="h-3.5 w-3.5 flex-shrink-0" /> 离线模式 — 显示演示数据
+          <IconWifiOff className="h-3.5 w-3.5 flex-shrink-0" /> 数据库信息不可用，请检查连接、登录状态与管理员权限
         </div>
       )}
 
@@ -2198,27 +2148,38 @@ const SchemaPanel = () => {
 // Shared modal form and field components (defined at module level to prevent re-creation)
 const ModalForm = ({ title, onClose, onSave, saving, children }) => {
   const formRef = React.useRef(null);
+  const titleId = React.useId();
+  const closeRef = React.useRef(onClose);
+  closeRef.current = onClose;
   React.useEffect(() => {
-    const handleMouseDown = (e) => {
-      if (formRef.current && !formRef.current.contains(e.target)) {
-        onClose();
+    const previous = document.activeElement;
+    const focusable = () => [...formRef.current.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), [tabindex="0"]')];
+    const timer = setTimeout(() => (formRef.current.querySelector('input, textarea') || formRef.current).focus(), 0);
+    const keydown = e => {
+      if (e.key === 'Escape') { e.preventDefault(); closeRef.current(); }
+      if (e.key === 'Tab') {
+        const items = focusable();
+        const first = items[0], last = items[items.length - 1];
+        if (!items.length) { e.preventDefault(); formRef.current.focus(); }
+        else if (e.shiftKey && (document.activeElement === first || !formRef.current.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && (document.activeElement === last || !formRef.current.contains(document.activeElement))) { e.preventDefault(); first.focus(); }
       }
     };
-    document.addEventListener('mousedown', handleMouseDown);
-    // Auto-focus the first input/textarea in the form
-    if (formRef.current) {
-      const firstInput = formRef.current.querySelector('input, textarea');
-      if (firstInput) {
-        setTimeout(() => firstInput.focus(), 50);
-      }
-    }
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, [onClose]);
+    const outside = e => { if (!formRef.current.contains(e.target)) closeRef.current(); };
+    document.addEventListener('keydown', keydown);
+    document.addEventListener('mousedown', outside);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', keydown);
+      document.removeEventListener('mousedown', outside);
+      previous?.focus();
+    };
+  }, []);
   return React.createElement('div', { className: "fixed inset-0 z-50 flex items-center justify-center bg-black/30" },
-    React.createElement(Card, { ref: formRef, className: "w-full max-w-lg p-5 mx-4 max-h-[80vh] overflow-auto" },
+    React.createElement(Card, { ref: formRef, role: 'dialog', 'aria-modal': true, 'aria-labelledby': titleId, tabIndex: -1, className: "w-full max-w-lg p-5 mx-4 max-h-[80vh] overflow-auto" },
       React.createElement('div', { className: "flex items-center justify-between mb-4" },
-        React.createElement('h3', { className: "text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0" }, title),
-        React.createElement('button', { className: "icon-btn", onClick: onClose }, React.createElement(IconClose, { className: "h-4 w-4" }))
+        React.createElement('h3', { id: titleId, className: "text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0" }, title),
+        React.createElement('button', { className: "icon-btn", 'aria-label': '关闭对话框', onClick: onClose }, React.createElement(IconClose, { className: "h-4 w-4" }))
       ),
       React.createElement('div', { className: "flex flex-col gap-3" }, children),
       React.createElement('div', { className: "flex gap-2 mt-4 justify-end" },
@@ -2230,6 +2191,7 @@ const ModalForm = ({ title, onClose, onSave, saving, children }) => {
 };
 
 const ModalField = ({ label, value, onChange, placeholder, type, isTextarea }) => {
+  const fieldId = React.useId();
   const isComposing = React.useRef(false);
   const handleCompositionStart = () => { isComposing.current = true; };
   const handleCompositionEnd = (e) => {
@@ -2240,10 +2202,10 @@ const ModalField = ({ label, value, onChange, placeholder, type, isTextarea }) =
   };
   const handleBlur = () => { isComposing.current = false; };
   return React.createElement('div', null,
-    React.createElement('label', { className: "text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1" }, label),
+    React.createElement('label', { htmlFor: fieldId, className: "text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1" }, label),
     isTextarea
-      ? React.createElement('textarea', { className: "input-light text-sm", rows: 3, value: value, onChange: handleChange, onCompositionStart: handleCompositionStart, onCompositionEnd: handleCompositionEnd, onBlur: handleBlur, placeholder: placeholder || "" })
-      : React.createElement('input', { type: type || "text", className: "input-light text-sm", value: value, onChange: handleChange, onCompositionStart: handleCompositionStart, onCompositionEnd: handleCompositionEnd, onBlur: handleBlur, placeholder: placeholder || "" })
+      ? React.createElement('textarea', { id: fieldId, className: "input-light text-sm", rows: 3, value: value, onChange: handleChange, onCompositionStart: handleCompositionStart, onCompositionEnd: handleCompositionEnd, onBlur: handleBlur, placeholder: placeholder || "" })
+      : React.createElement('input', { id: fieldId, type: type || "text", className: "input-light text-sm", value: value, onChange: handleChange, onCompositionStart: handleCompositionStart, onCompositionEnd: handleCompositionEnd, onBlur: handleBlur, placeholder: placeholder || "" })
   );
 };
 
@@ -3756,15 +3718,15 @@ const SettingsPanel = ({ userName, onLogout }) => {
       const results = await Promise.allSettled(dbIds.map(dbId =>
         api.schemaRefresh(dbId)
       ));
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value?.rag_indexed === true).length;
       const failCount = dbIds.length - successCount;
       const details = results.map((r, i) => {
         const dbName = allConns.databases[i]?.database_name || dbIds[i];
-        if (r.status === 'fulfilled') {
+        if (r.status === 'fulfilled' && r.value?.rag_indexed === true) {
           const tables = r.value?.table_count || 0;
           return `${dbName}: ${tables} 表`;
         }
-        return `${dbName}: 失败`;
+        return r.status === 'fulfilled' ? `${dbName}: RAG 索引更新未完成` : `${dbName}: 失败`;
       });
       if (failCount === 0) {
         setRagMsg({ type: "ok", text: `Schema 索引重建完成 (${successCount}/${dbIds.length}): ${details.join(', ')}` });
@@ -3790,12 +3752,12 @@ const SettingsPanel = ({ userName, onLogout }) => {
       const results = await Promise.allSettled(dbIds.map(dbId =>
         api._fetch(`/api/v1/learning/rag/refresh?db_id=${encodeURIComponent(dbId)}`, { method: 'POST' })
       ));
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value?.refreshed === true).length;
       const failCount = dbIds.length - successCount;
       const details = results.map((r, i) => {
         const dbName = allConns.databases[i]?.database_name || dbIds[i];
         if (r.status === 'fulfilled') {
-          return r.value?.refreshed ? `${dbName}: 成功` : `${dbName}: 无变更`;
+          return r.value?.refreshed === true ? `${dbName}: 成功` : `${dbName}: 未完成`;
         }
         return `${dbName}: 失败`;
       });
@@ -3843,7 +3805,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
       });
       if (r?.status === 'ok') {
         const c = r.cleared || {};
-        const parts: string[] = [];
+        const parts = [];
         if (c.schema) parts.push(`Schema: ${c.schema.before_lancedb} → ${c.schema.after_lancedb}`);
         if (c.metrics) parts.push(`Metrics: ${c.metrics.before_lancedb} → ${c.metrics.after_lancedb}`);
         if (c.documents) parts.push(`Documents: ${c.documents.before_lancedb} → ${c.documents.after_lancedb}`);
@@ -5080,7 +5042,7 @@ const App = () => {
   return (
     <div className={cn(
       "flex flex-col md:flex-row bg-gray-100 dark:bg-neutral-800 w-full flex-1 overflow-hidden",
-      "h-screen"
+      "h-[100dvh]"
     )}>
       <Sidebar open={open} setOpen={setOpen} animate={true}>
         <SidebarBody className="justify-between gap-10">
@@ -5120,9 +5082,9 @@ const App = () => {
         </SidebarBody>
       </Sidebar>
 
-      <div className="flex flex-1 min-w-0">
+      <div className="flex flex-1 min-w-0 min-h-0">
         <div
-          className="p-2 md:p-8 md:rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col flex-1 w-full h-full overflow-hidden"
+          className="p-2 md:p-8 md:rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col flex-1 w-full min-w-0 min-h-0 overflow-hidden"
           key={activePanel}
         >
           <div className="panel-enter flex flex-col flex-1 min-h-0 overflow-auto">

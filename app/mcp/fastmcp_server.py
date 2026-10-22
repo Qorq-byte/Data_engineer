@@ -23,12 +23,16 @@ Usage::
     from app.mcp.fastmcp_server import create_nl2sql_server
 
     server = create_nl2sql_server(port=8090)
-    await server.run(transport="sse")
+    await server.run_async(transport="sse")
 """
 
 from __future__ import annotations
 
+from dataclasses import asdict
+from pathlib import Path
 from typing import Any
+
+_APP_ROOT = Path(__file__).resolve().parents[1]
 
 
 def create_nl2sql_server(
@@ -49,17 +53,29 @@ def create_nl2sql_server(
     Returns:
         Configured FastMCP instance.
     """
-    from mcp.server.fastmcp import FastMCP
+    from fastmcp import FastMCP, settings
 
-    mcp = FastMCP(
+    class ConfiguredFastMCP(FastMCP):
+        """Keep factory bind defaults through FastMCP's public transport API."""
+
+        async def run_async(
+            self,
+            transport: str | None = None,
+            show_banner: bool | None = None,
+            **transport_kwargs: Any,
+        ) -> None:
+            if (transport or settings.transport) != "stdio":
+                transport_kwargs.setdefault("host", host)
+                transport_kwargs.setdefault("port", port)
+            await super().run_async(transport, show_banner, **transport_kwargs)
+
+    mcp = ConfiguredFastMCP(
         name=name,
         instructions=(
             "NL2SQL Data Engineering Agent — converts natural language to SQL "
             "with domain-aware schema linking, validation, and execution. "
             "Supports 11 database dialects."
         ),
-        host=host,
-        port=port,
     )
 
     # ── Register tools ─────────────────────────────────────────────────
@@ -101,64 +117,79 @@ def _register_nl_query(mcp: Any) -> None:
         db_id: str | None = None,
     ) -> dict[str, Any]:
         try:
-            from app.core.nlp_parser import NLParser
-            from app.core.prompt_builder import PromptBuilder
-            from app.db.connection import ConnectionFactory
-            from app.harness.config_loader import ConfigLoader
-            from app.llm.router import LiteLLMRouter
+            from app.api.query import QueryRequest, submit_query
 
-            # 1. Parse NL → SQR
-            parser = NLParser()
-            sqr = parser.parse(nl_text)
-
-            # 2. Build prompt with schema context
-            config_loader = ConfigLoader("app/config/agent.yml")
-            config_loader.load()  # validate agent config is loadable
-            prompt_builder = PromptBuilder()
-            schema_context = ""
-            if db_id:
-                try:
-                    schema_extractor = ConnectionFactory.get_schema_extractor(
-                        db_id, dialect="postgresql"
-                    )
-                    schema = schema_extractor.extract()
-                    schema_context = schema.format_for_llm()
-                except Exception:
-                    schema_context = "(schema not available)"
-
-            prompt = prompt_builder.build(
-                sqr=sqr,
-                schema_context=schema_context,
-                domain=domain or "general",
-                n_total_tokens=8000,
+            # Share the production pipeline, validation, execution limits and trace.
+            response = await submit_query(
+                QueryRequest(
+                    nl_text=nl_text,
+                    domain=domain or "default",
+                    database=db_id or "",
+                    execute=True,
+                    num_candidates=1,
+                )
             )
-
-            # 3. Generate SQL via LLM
-            router = LiteLLMRouter()
-            gen_result = await router.complete(prompt)
-            sql = _extract_sql_from_response(gen_result)
-
-            # 4. Execute
-            factory = ConnectionFactory()
-            conn = factory.create(db_id, dialect="postgresql")
-            rows = await conn.fetch_all(sql)
-            columns = list(rows[0].keys()) if rows else []
+            execution = response.execution or {}
+            errors = list(response.errors)
+            if not execution and not errors:
+                errors.append("Query did not produce an execution result")
 
             return {
-                "sql": sql,
-                "columns": columns,
-                "rows": [dict(r) for r in rows[:100]],
-                "row_count": len(rows),
+                "status": "failed" if errors else response.status,
+                "query_id": response.query_id,
+                "session_id": response.session_id,
+                "plan_id": response.plan_id,
+                "workflow_ids": response.workflow_ids,
+                "llm_calls": response.llm_calls,
+                "sql": response.primary_sql or "",
+                "columns": execution.get("columns", []),
+                "rows": execution.get("rows", [])[:100],
+                "row_count": min(execution.get("row_count", 0), 100),
+                "truncated": execution.get("truncated", False)
+                or execution.get("row_count", 0) > 100,
+                "errors": errors,
+                "warnings": response.warnings,
+                **({"error": "; ".join(errors), "error_code": "WORKFLOW_FAILED"} if errors else {}),
             }
 
         except Exception as exc:
+            from fastapi import HTTPException
+            from pydantic import ValidationError
+
+            from app.workflow.contracts import (
+                QueryCapacityError,
+                QueryFailure,
+                classify_query_failure,
+            )
+
+            failure = classify_query_failure(exc)
+            if isinstance(exc, ValidationError):
+                failure = QueryFailure("INVALID_REQUEST", "Invalid query request", 422)
+            elif isinstance(exc, HTTPException):
+                detail: dict[str, Any] = exc.detail if isinstance(exc.detail, dict) else {}
+                if detail.get("code") == "QUERY_TIMEOUT":
+                    failure = classify_query_failure(TimeoutError())
+                elif detail.get("code") == "QUERY_CAPACITY":
+                    failure = classify_query_failure(QueryCapacityError())
+                elif 400 <= exc.status_code < 500:
+                    failure = QueryFailure(
+                        "INVALID_REQUEST", "Invalid query request", exc.status_code
+                    )
             return {
-                "error": str(exc),
+                "status": "failed",
+                "error": failure.message,
+                "error_code": failure.code,
+                "http_status": failure.http_status,
                 "error_type": type(exc).__name__,
+                "errors": [failure.message],
+                "warnings": [],
                 "sql": "",
                 "columns": [],
                 "rows": [],
                 "row_count": 0,
+                "truncated": False,
+                **({"retry_after_seconds": failure.retry_after_seconds}
+                   if failure.retry_after_seconds is not None else {}),
             }
 
 
@@ -180,25 +211,25 @@ def _register_explain_sql(mcp: Any) -> None:
             return {"error": "Empty SQL provided", "raw_plan": "", "analysis": None}
 
         try:
-            from app.db.connection import ConnectionFactory
+            from app.api.query import ExecuteRequest, execute_sql_direct
             from app.nodes.execute_sql import ExecuteSQLNode
+            from app.security.sql_policy import require_read_query
 
-            factory = ConnectionFactory()
-            conn = factory.create(db_id, dialect="postgresql")
-
-            explain_rows = ExecuteSQLNode._execute_explain(conn, sql)
-            plan_analysis = ExecuteSQLNode._parse_explain_output(explain_rows)
-            raw_text = "\n".join(str(r) for r in explain_rows)
+            _, info = _get_connection(db_id)
+            dialect = "postgres" if info.db_type.value == "postgresql" else info.db_type.value
+            require_read_query(sql, dialect=dialect)
+            prefix = "EXPLAIN QUERY PLAN" if dialect == "sqlite" else "EXPLAIN"
+            explain_result = await execute_sql_direct(
+                ExecuteRequest(sql=f"{prefix} {sql}", database=info.db_id)
+            )
+            if explain_result.get("status") != "success":
+                raise ValueError("; ".join(explain_result.get("errors", ["EXPLAIN failed"])))
+            plan_analysis = ExecuteSQLNode._parse_explain_output(explain_result)
+            raw_text = "\n".join(str(r) for r in explain_result.get("rows", []))
 
             return {
                 "raw_plan": raw_text,
-                "analysis": {
-                    "scan_types": list(plan_analysis.scan_types),
-                    "estimated_rows": plan_analysis.estimated_rows,
-                    "join_types": list(plan_analysis.join_types),
-                    "has_full_scan": plan_analysis.has_full_scan,
-                    "warnings": list(plan_analysis.warnings),
-                },
+                "analysis": asdict(plan_analysis),
             }
 
         except Exception as exc:
@@ -277,49 +308,21 @@ def _register_validate_sql(mcp: Any) -> None:
         sql: str,
         db_id: str | None = None,
     ) -> dict[str, Any]:
-        if not sql.strip():
-            return {"valid": False, "errors": ["Empty SQL"]}
-
         errors: list[str] = []
-
-        # Step 1: Syntax validation via sqlglot
         try:
-            import sqlglot
+            from app.core.sql_validator import SQLValidator
+            from app.security.sql_policy import require_read_query
 
-            parsed = sqlglot.parse(sql, error_level=None)
-            if not parsed:
-                errors.append("Failed to parse SQL — no valid statements found")
+            schema = await _get_schema(db_id) if db_id else None
+            dialect = schema.database_type if schema else ""
+            dialect = "postgres" if dialect == "postgresql" else dialect
+            require_read_query(sql, dialect=dialect)
+            report = await SQLValidator(dialect=dialect).validate(sql, schema=schema)
+            errors.extend(report.syntax_errors)
+            errors.extend(report.schema_errors)
         except Exception as exc:
-            errors.append(f"Syntax error: {exc}")
-
-        # Step 2: Write-statement check
-        try:
-            from app.nodes.execute_sql import ExecuteSQLNode
-
-            if ExecuteSQLNode._is_write_statement(sql):
-                errors.append("Write statements are not allowed")
-        except Exception:
-            pass
-
-        # Step 3: Schema reference check (if db_id provided)
-        if db_id and not errors:
-            try:
-                from app.db.connection import ConnectionFactory
-                from app.db.schema_extractor import SchemaExtractor
-
-                factory = ConnectionFactory()
-                conn = factory.create(db_id, dialect="postgresql")
-                extractor = SchemaExtractor(conn)
-                table_names = extractor.list_table_names()
-
-                # Basic table reference check
-                sql_lower = sql.lower()
-                referenced_tables = _extract_table_names(sql_lower)
-                for table in referenced_tables:
-                    if table not in [t.lower() for t in table_names]:
-                        errors.append(f"Unknown table: {table}")
-            except Exception:
-                pass
+            # Missing databases and policy failures must not report validity.
+            errors.append(str(exc))
 
         return {
             "valid": len(errors) == 0,
@@ -343,34 +346,20 @@ def _register_search_schema(mcp: Any) -> None:
         db_id: str | None = None,
     ) -> dict[str, Any]:
         try:
-            from app.db.connection import ConnectionFactory
-            from app.db.schema_extractor import SchemaExtractor
-
-            factory = ConnectionFactory()
-            conn = factory.create(db_id, dialect="postgresql")
-            extractor = SchemaExtractor(conn)
-            table_names = extractor.list_table_names()
+            snapshot = await _get_schema(db_id)
+            normalized_keywords = {kw.strip().casefold() for kw in keywords if kw.strip()}
 
             matching_tables: list[dict[str, Any]] = []
             matching_columns: list[dict[str, Any]] = []
 
-            for table in table_names:
-                columns = extractor.list_columns(table)
-                col_names = [c.lower() for c in columns]
-                table_col_matches: list[str] = []
-
-                for kw in keywords:
-                    kw_lower = kw.lower()
-                    if kw_lower in table.lower() and table not in [
-                        t["table"] for t in matching_tables
-                    ]:
-                        matching_tables.append({
-                            "table": table,
-                            "match_type": "name",
-                        })
-                    for col in col_names:
-                        if kw_lower in col:
-                            table_col_matches.append(columns[col_names.index(col)])
+            for table, table_schema in snapshot.tables.items():
+                if any(kw in table.casefold() for kw in normalized_keywords):
+                    matching_tables.append({"table": table, "match_type": "name"})
+                table_col_matches = [
+                    col.name
+                    for col in table_schema.columns
+                    if any(kw in col.name.casefold() for kw in normalized_keywords)
+                ]
 
                 if table_col_matches:
                     matching_columns.append({
@@ -408,25 +397,15 @@ def _register_schema_resource(mcp: Any) -> None:
         description="Full schema snapshot for the given database ID",
         mime_type="application/json",
     )
-    def get_schema(db_id: str) -> str:
+    async def get_schema(db_id: str) -> str:
         import json
 
         try:
-            from app.db.connection import ConnectionFactory
-
-            factory = ConnectionFactory()
-            conn = factory.create(db_id, dialect="postgresql")
-            from app.db.schema_extractor import SchemaExtractor
-
-            extractor = SchemaExtractor(conn)
-            tables: dict[str, list[dict[str, str]]] = {}
-            for table in extractor.list_table_names():
-                columns = extractor.list_columns(table)
-                col_defs = []
-                for col_name in columns:
-                    col_type = extractor.get_column_type(table, col_name)
-                    col_defs.append({"name": col_name, "type": col_type or "unknown"})
-                tables[table] = col_defs
+            snapshot = await _get_schema(db_id)
+            tables = {
+                name: [{"name": col.name, "type": col.type} for col in table.columns]
+                for name, table in snapshot.tables.items()
+            }
 
             return json.dumps({"db_id": db_id, "tables": tables}, indent=2)
 
@@ -445,10 +424,8 @@ def _register_domains_resource(mcp: Any) -> None:
     )
     def get_domains() -> str:
         import json
-        from pathlib import Path
-
         try:
-            domains_dir = Path("app/config/domains")
+            domains_dir = _APP_ROOT / "config" / "domains"
             domains: list[dict[str, Any]] = []
 
             if domains_dir.exists():
@@ -456,7 +433,7 @@ def _register_domains_resource(mcp: Any) -> None:
                     name = yaml_file.stem
                     domains.append({
                         "name": name,
-                        "path": str(yaml_file.relative_to(".")),
+                        "path": yaml_file.relative_to(_APP_ROOT.parent).as_posix(),
                     })
 
             return json.dumps({"domains": domains}, indent=2)
@@ -510,7 +487,7 @@ def _register_workflows_resource(mcp: Any) -> None:
         try:
             from app.harness.plan_loader import PlanLoader
 
-            loader = PlanLoader("app/workflow/plans")
+            loader = PlanLoader(str(_APP_ROOT / "workflow" / "plans"))
             plans = []
             for plan_id in loader.list_available():
                 plan = loader.load(plan_id)
@@ -518,7 +495,7 @@ def _register_workflows_resource(mcp: Any) -> None:
                     "id": plan.id,
                     "name": plan.name,
                     "description": plan.description,
-                    "node_order": plan.node_order,
+                    "node_order": [asdict(node_def) for node_def in plan.node_order],
                     "node_count": len(plan.node_order),
                 })
 
@@ -531,6 +508,25 @@ def _register_workflows_resource(mcp: Any) -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Helpers
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _get_connection(db_id: str | None) -> tuple[Any, Any]:
+    """Resolve an already registered database; MCP never creates implicit connections."""
+    from app.db.connections import ConnectionFactory
+
+    if not db_id:
+        connections = ConnectionFactory.list_all()
+        if not connections:
+            raise ValueError("No database connected")
+        db_id = connections[0].db_id
+    return ConnectionFactory.get(db_id), ConnectionFactory.get_info(db_id)
+
+
+async def _get_schema(db_id: str | None) -> Any:
+    from app.db.schema_extractor import SchemaExtractor
+
+    connection, info = _get_connection(db_id)
+    return await SchemaExtractor.extract(connection, info.db_type, info.database_name)
 
 
 def _extract_sql_from_response(response: Any) -> str:

@@ -1,0 +1,228 @@
+{
+  "environment": {
+    "python": "3.13.9",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "logical_cpus": 24,
+    "sqlite": "3.51.0",
+    "httpx": "0.28.1",
+    "transport": "in-process ASGI; lifespan not run",
+    "database": "single factory-managed in-memory SQLite connection",
+    "rows": 10000,
+    "llm": "scripted fixed SQL; no external model calls",
+    "rag": "not initialized",
+    "query_capacity": 8,
+    "warmup_requests_per_scenario": 3,
+    "requests_per_level": 100
+  },
+  "runs": [
+    {
+      "scenario": "direct_sql",
+      "concurrency": 1,
+      "requests": 100,
+      "wall_seconds": 0.3549969999876339,
+      "attempt_rps": 281.6925213550634,
+      "successful_rps": 281.6925213550634,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 3.4837999992305413,
+        "p95_ms": 3.99189500749344,
+        "p99_ms": 4.107289022940678
+      },
+      "success_latency": {
+        "p50_ms": 3.4837999992305413,
+        "p95_ms": 3.99189500749344,
+        "p99_ms": 4.107289022940678
+      },
+      "event_loop_lag_p95_ms": 2.6025350033887635,
+      "process_peak_rss_bytes": 244285440,
+      "process_cpu_seconds": 0.34375,
+      "cpu_percent_one_core": 96.83180421580305
+    },
+    {
+      "scenario": "direct_sql",
+      "concurrency": 2,
+      "requests": 100,
+      "wall_seconds": 0.46677950001321733,
+      "attempt_rps": 214.233915579344,
+      "successful_rps": 214.233915579344,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 6.773200002498925,
+        "p95_ms": 7.893445000809151,
+        "p99_ms": 111.25609299022472
+      },
+      "success_latency": {
+        "p50_ms": 6.773200002498925,
+        "p95_ms": 7.893445000809151,
+        "p99_ms": 111.25609299022472
+      },
+      "event_loop_lag_p95_ms": 2.428840006468817,
+      "process_peak_rss_bytes": 244334592,
+      "process_cpu_seconds": 0.4375,
+      "cpu_percent_one_core": 93.727338065963
+    },
+    {
+      "scenario": "direct_sql",
+      "concurrency": 5,
+      "requests": 100,
+      "wall_seconds": 0.3502524000068661,
+      "attempt_rps": 285.50839337015157,
+      "successful_rps": 285.50839337015157,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 16.843000004882924,
+        "p95_ms": 18.911494992789812,
+        "p99_ms": 19.449443004559726
+      },
+      "success_latency": {
+        "p50_ms": 16.843000004882924,
+        "p95_ms": 18.911494992789812,
+        "p99_ms": 19.449443004559726
+      },
+      "event_loop_lag_p95_ms": 2.290040006046183,
+      "process_peak_rss_bytes": 244432896,
+      "process_cpu_seconds": 0.34375,
+      "cpu_percent_one_core": 98.14351022098961
+    },
+    {
+      "scenario": "direct_sql",
+      "concurrency": 10,
+      "requests": 100,
+      "wall_seconds": 0.37833360000513494,
+      "attempt_rps": 264.31699431042534,
+      "successful_rps": 264.31699431042534,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 35.4832000011811,
+        "p95_ms": 46.907629987981636,
+        "p99_ms": 48.794660003622994
+      },
+      "success_latency": {
+        "p50_ms": 35.4832000011811,
+        "p95_ms": 46.907629987981636,
+        "p99_ms": 48.794660003622994
+      },
+      "event_loop_lag_p95_ms": 2.5750349933514367,
+      "process_peak_rss_bytes": 244596736,
+      "process_cpu_seconds": 0.375,
+      "cpu_percent_one_core": 99.11887286640952
+    },
+    {
+      "scenario": "fixed_sql_pipeline",
+      "concurrency": 1,
+      "requests": 100,
+      "wall_seconds": 1.183843800012255,
+      "attempt_rps": 84.47060330000022,
+      "successful_rps": 84.47060330000022,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 9.933799999998882,
+        "p95_ms": 12.098079998395406,
+        "p99_ms": 14.218323016249041
+      },
+      "success_latency": {
+        "p50_ms": 9.933799999998882,
+        "p95_ms": 12.098079998395406,
+        "p99_ms": 14.218323016249041
+      },
+      "event_loop_lag_p95_ms": 3.1296400050632665,
+      "process_peak_rss_bytes": 395476992,
+      "process_cpu_seconds": 1.1875,
+      "cpu_percent_one_core": 100.30884141875028
+    },
+    {
+      "scenario": "fixed_sql_pipeline",
+      "concurrency": 2,
+      "requests": 100,
+      "wall_seconds": 1.0502038999984507,
+      "attempt_rps": 95.21960449789563,
+      "successful_rps": 95.21960449789563,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 19.817450011032633,
+        "p95_ms": 26.593485007470004,
+        "p99_ms": 30.00183299533093
+      },
+      "success_latency": {
+        "p50_ms": 19.817450011032633,
+        "p95_ms": 26.593485007470004,
+        "p99_ms": 30.00183299533093
+      },
+      "event_loop_lag_p95_ms": 3.223640016512945,
+      "process_peak_rss_bytes": 395902976,
+      "process_cpu_seconds": 1.125,
+      "cpu_percent_one_core": 107.12205506013257
+    },
+    {
+      "scenario": "fixed_sql_pipeline",
+      "concurrency": 5,
+      "requests": 100,
+      "wall_seconds": 0.9328342000080738,
+      "attempt_rps": 107.20018627011584,
+      "successful_rps": 107.20018627011584,
+      "error_rate": 0.0,
+      "statuses": {
+        "ok": 100
+      },
+      "all_latency": {
+        "p50_ms": 41.627949991379865,
+        "p95_ms": 60.79671499610413,
+        "p99_ms": 65.86724899214461
+      },
+      "success_latency": {
+        "p50_ms": 41.627949991379865,
+        "p95_ms": 60.79671499610413,
+        "p99_ms": 65.86724899214461
+      },
+      "event_loop_lag_p95_ms": 9.024500019149846,
+      "process_peak_rss_bytes": 396423168,
+      "process_cpu_seconds": 0.953125,
+      "cpu_percent_one_core": 102.17517753870415
+    },
+    {
+      "scenario": "fixed_sql_pipeline",
+      "concurrency": 10,
+      "requests": 100,
+      "wall_seconds": 0.11651130000245757,
+      "attempt_rps": 858.2858486506519,
+      "successful_rps": 68.66286789205215,
+      "error_rate": 0.92,
+      "statuses": {
+        "http_503": 92,
+        "ok": 8
+      },
+      "all_latency": {
+        "p50_ms": 0.43524999637156725,
+        "p95_ms": 91.47555999807082,
+        "p99_ms": 98.82309499109397
+      },
+      "success_latency": {
+        "p50_ms": 94.00729999470059,
+        "p95_ms": 99.45637498894939,
+        "p99_ms": 99.73343498801114
+      },
+      "event_loop_lag_p95_ms": 43.189985018689164,
+      "process_peak_rss_bytes": 396697600,
+      "process_cpu_seconds": 0.140625,
+      "cpu_percent_one_core": 120.69644746649793
+    }
+  ]
+}

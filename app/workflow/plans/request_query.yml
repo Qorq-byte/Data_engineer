@@ -1,0 +1,27 @@
+id: request_query
+name: "确定性查询请求"
+description: "JSON与SSE共用；仅计划和Runner决定节点顺序"
+plan:
+  node_order:
+    - id: parse
+      node: parse_nl
+    - id: link
+      node: schema_linking
+      depends_on: [parse]
+    - id: gen
+      node: generate_sql
+      depends_on: [link]
+    - id: validate
+      node: validate_sql
+      depends_on: [gen]
+    - id: exec
+      node: execute_sql
+      depends_on: [validate]
+  failure_policy:
+    max_retries: 0
+    on_exhausted: abort
+  evaluation:
+    enabled: true
+    metrics: [schema_compliant, execution_success]
+  max_iterations: 5
+  on_exhausted: abort

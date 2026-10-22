@@ -83,7 +83,7 @@ async def test_connection(body: dict) -> dict:
                 catalogs = [r[0] for r in rows]
             finally:
                 await cursor.close()
-        ConnectionFactory.close("test_probe")
+        await ConnectionFactory.aclose("test_probe")
         result: dict = {
             "status": "ok",
             "message": f"Successfully connected to {db_type_str}",
@@ -217,37 +217,41 @@ async def refresh_schema(db_id: str) -> dict:
     Re-extracts the full schema snapshot from the live database connection.
     This is useful after DDL changes (new tables, altered columns, etc.).
     """
-    try:
-        conn = ConnectionFactory.get(db_id)
-        info = ConnectionFactory.get_info(db_id)
-    except KeyError:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Database '{db_id}' not found. "
-            "Connect first via POST /api/v1/databases/connect",
-        ) from None
+    import contextlib
 
+    from app.db.schema_refresh import (
+        SchemaIndexWriter,
+        SchemaRefreshConflictError,
+        SchemaRefreshNotFoundError,
+        refresh_database_schema,
+    )
+    from app.rag import get_schema_rag
+    from app.rag.converters import snapshot_to_schema_docs
+
+    index: SchemaIndexWriter | None = None
+    with contextlib.suppress(Exception):
+        index = get_schema_rag()
     try:
-        snapshot = await SchemaExtractor.extract(
-            conn, info.db_type, info.database_name
+        result = await refresh_database_schema(
+            db_id, index, document_builder=snapshot_to_schema_docs,
         )
-    except NotImplementedError as e:
-        raise HTTPException(status_code=501, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Schema extraction failed: {e}") from e
+    except SchemaRefreshNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Database '{db_id}' not found.") from None
+    except SchemaRefreshConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "SCHEMA_REFRESH_CONFLICT", "message": str(exc)},
+        ) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Schema extraction failed") from exc
 
-    # Rebuild RAG index for this database
-    try:
-        from app.rag.converters import snapshot_to_schema_docs
-        from app.rag import get_schema_rag
-
-        docs = snapshot_to_schema_docs(snapshot, db_id)
-        await get_schema_rag().index_schemas(docs)
-    except Exception:
-        pass
-
+    snapshot = result.snapshot
     return {
         "status": "refreshed",
+        "rag_indexed": result.rag_indexed,
+        "warnings": list(result.warnings),
         "db_id": db_id,
         "database_type": snapshot.database_type,
         "database_name": snapshot.database_name,
@@ -359,20 +363,38 @@ async def disconnect_database(db_id: str) -> dict:
             detail=f"Database '{db_id}' not found.",
         ) from None
 
-    ConnectionFactory.close(db_id)
+    from app.rag.engine import get_rag_engine
 
-    # Clean up RAG index for this database
     try:
-        from app.rag import get_schema_rag
-        get_schema_rag().remove_database(db_id)
-    except Exception:
-        pass
+        engine = get_rag_engine()
+    except RuntimeError:
+        engine = None
+    if engine is not None:
+        # Cancellation/failure after closing must not leave stale contents trusted.
+        engine.schema_rag.require_refresh({db_id})
+    await ConnectionFactory.aclose(db_id)
+
+    rag_index_cleared = False
+    if engine is not None:
+        from app.db.schema_refresh import clear_database_schema_index
+
+        try:
+            await clear_database_schema_index(
+                db_id, engine.schema_rag, on_cleared=engine.index_refresher.invalidate_database,
+            )
+            rag_index_cleared = True
+        except Exception:
+            pass
 
     return {
         "status": "disconnected",
         "db_id": db_id,
         "db_type": info.db_type.value,
         "alias": info.alias,
+        "rag_index_cleared": rag_index_cleared,
+        "warnings": [] if rag_index_cleared else [
+            "Database disconnected but Schema index was not cleared; retry per-database index clear"
+        ],
     }
 
 
@@ -487,25 +509,21 @@ def _schedule_background_schema_indexing(db_id: str) -> None:
     without waiting for schema extraction + embedding generation.
     """
     try:
-        import asyncio
 
         async def _index_schema_background(db_id: str) -> None:
             import contextlib
 
             with contextlib.suppress(Exception):
-                from app.db.connections import ConnectionFactory
-                from app.db.schema_extractor import SchemaExtractor
-                from app.rag.converters import snapshot_to_schema_docs
+                from app.db.schema_refresh import refresh_database_schema
                 from app.rag import get_schema_rag
+                from app.rag.converters import snapshot_to_schema_docs
 
-                info = ConnectionFactory.get_info(db_id)
-                conn = ConnectionFactory.get(db_id)
-                snapshot = await SchemaExtractor.extract(
-                    conn, info.db_type, info.database_name
+                await refresh_database_schema(
+                    db_id, get_schema_rag(), document_builder=snapshot_to_schema_docs,
                 )
-                docs = snapshot_to_schema_docs(snapshot, db_id)
-                await get_schema_rag().index_schemas(docs)
 
-        asyncio.create_task(_index_schema_background(db_id))
+        from app.background import start_background
+
+        start_background(_index_schema_background(db_id))
     except Exception:
         pass

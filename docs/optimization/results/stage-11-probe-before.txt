@@ -1,0 +1,9 @@
+cte validator= False sqlite= True qualify= True
+derived validator= False sqlite= True qualify= True
+output_alias validator= False sqlite= True qualify= True
+out_of_scope validator= True sqlite= False qualify= Column 'email' could not be resolved. Line: 1, Col: 12
+ambiguous validator= True sqlite= False qualify= Column 'id' could not be resolved. Line: 1, Col: 9
+shadowed_alias validator= False sqlite= True qualify= True
+correlated validator= True sqlite= True qualify= True
+unsafe validator= True sqlite= False qualify= True
+select_into validator= False sqlite= False qualify= True

@@ -1,4 +1,5 @@
 """Feedback collection API endpoints."""
+
 from __future__ import annotations
 
 import logging
@@ -13,6 +14,7 @@ from app.storage.mysql_store import get_store
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+
 class FeedbackRequest(BaseModel):
     query_id: str = Field(default="")
     session_id: str = Field(default="")
@@ -23,11 +25,24 @@ class FeedbackRequest(BaseModel):
     feedback_text: str = Field(default="")
     domain: str = Field(default="")
 
+
 _feedback_store: list[dict[str, Any]] = []
+
 
 @router.post("/feedback")
 async def submit_feedback(body: FeedbackRequest) -> dict:
-    record = {"id": f"fb_{len(_feedback_store)+1}_{datetime.now().strftime('%Y%m%d%H%M%S')}", "query_id": body.query_id, "session_id": body.session_id, "nl_input": body.nl_input, "sql_generated": body.sql_generated, "sql_final": body.sql_final, "rating": body.rating, "feedback_text": body.feedback_text, "domain": body.domain, "created_at": datetime.now().isoformat()}
+    record = {
+        "id": f"fb_{len(_feedback_store) + 1}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "query_id": body.query_id,
+        "session_id": body.session_id,
+        "nl_input": body.nl_input,
+        "sql_generated": body.sql_generated,
+        "sql_final": body.sql_final,
+        "rating": body.rating,
+        "feedback_text": body.feedback_text,
+        "domain": body.domain,
+        "created_at": datetime.now().isoformat(),
+    }
     _feedback_store.append(record)
     try:
         store = get_store()
@@ -48,13 +63,16 @@ async def submit_feedback(body: FeedbackRequest) -> dict:
         if sql_final and sql_gen and sql_gen != sql_final:
             try:
                 from app.models.feedback import DiffOp
-                diff_operations = [DiffOp(
-                    op_type="replace",
-                    position=0,
-                    old_text=sql_gen,
-                    new_text=sql_final,
-                    length=len(sql_final),
-                )]
+
+                diff_operations = [
+                    DiffOp(
+                        op_type="replace",
+                        position=0,
+                        old_text=sql_gen,
+                        new_text=sql_final,
+                        length=len(sql_final),
+                    )
+                ]
             except Exception:
                 diff_operations = None
 
@@ -71,7 +89,12 @@ async def submit_feedback(body: FeedbackRequest) -> dict:
         )
     except Exception as e:
         logger.warning("Feedback collector unavailable: %s", e)
-    return {"status": "recorded", "feedback_id": record["id"], "message": "感谢您的反馈！反馈已记录至学习库。"}
+    return {
+        "status": "recorded",
+        "feedback_id": record["id"],
+        "message": "感谢您的反馈！反馈已记录至学习库。",
+    }
+
 
 @router.get("/feedback/stats")
 async def feedback_stats() -> dict:
@@ -86,7 +109,13 @@ async def feedback_stats() -> dict:
     dist: dict[int, int] = {}
     for r in ratings:
         dist[r] = dist.get(r, 0) + 1
-    return {"total": len(_feedback_store), "avg_rating": round(sum(ratings)/len(ratings),2) if ratings else 0.0, "ratings_distribution": {str(k):v for k,v in sorted(dist.items())}, "recent_count_7d": len(_feedback_store)}
+    return {
+        "total": len(_feedback_store),
+        "avg_rating": round(sum(ratings) / len(ratings), 2) if ratings else 0.0,
+        "ratings_distribution": {str(k): v for k, v in sorted(dist.items())},
+        "recent_count_7d": len(_feedback_store),
+    }
+
 
 @router.get("/feedback/recent")
 async def recent_feedback(limit: int = 20) -> dict:

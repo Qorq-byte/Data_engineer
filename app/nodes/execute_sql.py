@@ -8,11 +8,29 @@ are enforced here.
 See SPEC §4.12.4 (built-in nodes) and §4.12.6 (node registry).
 """
 
-import re as _re
+from __future__ import annotations
 
+import asyncio
+import re as _re
+import sqlite3
+import threading
+import time
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    import aiomysql
+    import asyncpg
+
+from app.config.settings import settings
+from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
+from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
+from app.db.sqlite_source import SchemaSourceChangedError, read_scope
 from app.models.query import PlanAnalysis
+from app.models.schema import DuckDBSourceState, SchemaSnapshot
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
+from app.security.sql_policy import require_read_query
 
 # ── Write keywords blocked by default ──────────────────────────────
 
@@ -54,10 +72,30 @@ class ExecuteSQLNode(AgenticNode):
     - Logs every execution to action history.
     """
 
+    required_tools = ("execute_read_query",)
     name = "execute_sql"
     description = "Safely execute a read-only SQL query and return results"
 
     async def execute(self, input: NodeInput) -> NodeOutput:
+        from app.db.runtime import lease
+
+        conn = input.context.get("connection")
+        if conn is None:
+            return await self._execute_locked(input)
+        async with lease(conn):
+            from app.db.connections import ConnectionFactory
+
+            db_id = input.context.get("db_id")
+            if db_id and not ConnectionFactory.is_current(db_id, conn):
+                return NodeOutput(
+                    errors=[
+                        "Connection target changed; submit a new query against the current target"
+                    ],
+                    metadata={"status": "connection_changed"},
+                )
+            return await self._execute_locked(input)
+
+    async def _execute_locked(self, input: NodeInput) -> NodeOutput:
         """Execute SQL with safety checks.
 
         Expected input.context keys:
@@ -77,7 +115,7 @@ class ExecuteSQLNode(AgenticNode):
                 metadata={"status": "no_connection"},
             )
 
-        sql = input.context.get("sql", input.query_text)
+        sql = input.context.get("sql") or input.context.get("primary_sql") or input.query_text
         if not sql or not sql.strip():
             return NodeOutput(
                 result=None,
@@ -86,12 +124,12 @@ class ExecuteSQLNode(AgenticNode):
             )
 
         # ── Invariant: read_only check ────────────────────────
-        if self._is_write_statement(sql) and not input.config.get("allow_write", False):
+        if self._is_write_statement(sql):
             return NodeOutput(
                 result=None,
                 errors=[
                     "Write operation blocked: read_only mode is enabled. "
-                    "Set allow_write=True to execute write statements."
+                    "Only approved read-only queries may be executed."
                 ],
                 metadata={
                     "status": "blocked",
@@ -99,37 +137,54 @@ class ExecuteSQLNode(AgenticNode):
                 },
             )
 
+        if input.context.get("require_validation") and not input.context.get("validation_passed"):
+            return NodeOutput(
+                errors=["SQL validation must pass before execution"], metadata={"status": "blocked"}
+            )
+
         # ── Execute ────────────────────────────────────────────
-        max_rows = input.config.get("max_rows", 100)
+        max_rows = max(1, min(int(input.config.get("max_rows", 100)), settings.max_result_rows))
+        timeout_ms = max(
+            1, min(int(input.config.get("timeout_ms", 30000)), settings.statement_timeout_ms)
+        )
         do_explain = input.config.get("explain", False)
         analyze_plan = input.config.get("analyze_plan", False)
 
         plan: PlanAnalysis | None = None
-        result: dict | None = None
+        result: ExecutionResult | None = None
+
+        from app.db.runtime import native_call
+
+        schema = input.context.get("schema")
+        source_version = (
+            schema.source_schema_version
+            if isinstance(schema, SchemaSnapshot) and schema.database_type == "sqlite" else None
+        )
+        duckdb_state = (
+            schema.duckdb_source_state
+            if isinstance(schema, SchemaSnapshot) and schema.database_type == "duckdb" else None
+        )
 
         try:
+            # Harden native connections before EXPLAIN/binding can inspect external files.
+            if self._is_duckdb_connection(conn):
+                await native_call(conn, lambda: conn.execute("SET enable_external_access=false"))
             # Static plan analysis (no DB required)
             if analyze_plan:
                 plan = self._static_plan_analysis(sql)
 
             # EXPLAIN execution
             if do_explain:
-                explain_result = self._execute_explain(conn, sql)
+                explain_result = await native_call(
+                    conn, lambda: self._execute_explain(conn, sql, source_version, duckdb_state)
+                )
                 plan = self._parse_explain_output(explain_result, plan)
 
-            # Handle different connection types
-            if self._is_aiomysql_connection(conn):
-                result = await self._execute_aiomysql(conn, sql, max_rows)
-            elif self._is_asyncpg_connection(conn):
-                result = await self._execute_asyncpg(conn, sql, max_rows)
-            elif self._is_sqlite_connection(conn):
-                result = self._execute_sqlite(conn, sql, max_rows)
-            elif self._is_duckdb_connection(conn):
-                result = self._execute_duckdb(conn, sql, max_rows)
-            else:
-                result = self._execute_generic(conn, sql, max_rows)
+            result = await self._execute_bounded(
+                conn, sql, max_rows, timeout_ms, source_version, duckdb_state,
+            )
 
-            metadata: dict = {
+            metadata: dict[str, Any] = {
                 "status": "success",
                 "row_count": result.get("row_count", 0),
                 "truncated": result.get("truncated", False),
@@ -146,6 +201,10 @@ class ExecuteSQLNode(AgenticNode):
                 },
             )
 
+        except SchemaSourceChangedError as e:
+            return NodeOutput(errors=[str(e)], metadata={"status": "schema_changed"})
+        except DuckDBSourceScopeError as e:
+            return NodeOutput(errors=[str(e)], metadata={"status": "source_scope_unsupported"})
         except Exception as e:
             return NodeOutput(
                 result=None,
@@ -159,47 +218,77 @@ class ExecuteSQLNode(AgenticNode):
     def _is_write_statement(sql: str) -> bool:
         """Check if a SQL statement is a write operation.
 
-        Normalizes the SQL and checks the first keyword against the
-        WRITE_KEYWORDS set. Also checks for common write patterns
-        like multiple statements separated by semicolons.
+        Uses the shared AST read-query guard; unparseable SQL and multiple
+        statements fail closed. Node configuration cannot grant writes.
         """
-        # Strip comments and normalize whitespace
-        normalized = sql.strip()
-        # Remove single-line comments
-        import re
-
-        normalized = re.sub(r"--.*$", "", normalized, flags=re.MULTILINE)
-        normalized = " ".join(normalized.split())
-
-        if not normalized:
+        if not sql.strip():
             return False
-
-        first_word = normalized.split()[0].upper()
-
-        # Explicit safe keywords
-        if first_word in SAFE_KEYWORDS:
+        try:
+            require_read_query(sql)
             return False
-
-        # Explicit write keywords
-        if first_word in WRITE_KEYWORDS:
+        except ValueError:
             return True
 
-        # Multiple statements (semicolons) — check each
-        statements = normalized.split(";")
-        for stmt in statements:
-            stmt = stmt.strip()
-            if stmt:
-                fw = stmt.split()[0].upper()
-                if fw in WRITE_KEYWORDS:
-                    return True
+    async def _execute_bounded(
+        self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
+        source_version: int | None = None,
+        duckdb_state: DuckDBSourceState | None = None,
+    ) -> ExecutionResult:
+        timeout = timeout_ms / 1000
+        if self._is_aiomysql_connection(conn):
+            try:
+                return await asyncio.wait_for(self._execute_aiomysql(conn, sql, max_rows), timeout)
+            except (TimeoutError, asyncio.CancelledError):
+                conn.close()
+                raise
+        if self._is_asyncpg_connection(conn):
+            return await asyncio.wait_for(self._execute_asyncpg(conn, sql, max_rows), timeout)
+        from app.db.runtime import native_call
 
-        return False
+        return await native_call(
+            conn, lambda: self._execute_native_bounded(
+                conn, sql, max_rows, timeout_ms, source_version, duckdb_state,
+            )
+        )
+
+    def _execute_native_bounded(
+        self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
+        source_version: int | None = None,
+        duckdb_state: DuckDBSourceState | None = None,
+    ) -> ExecutionResult:
+        timeout = timeout_ms / 1000
+        if self._is_sqlite_connection(conn):
+            deadline = time.monotonic() + timeout
+            busy_timeout = conn.execute("PRAGMA busy_timeout").fetchone()[0]
+            conn.execute(f"PRAGMA busy_timeout={min(busy_timeout, timeout_ms)}")
+            conn.set_progress_handler(lambda: int(time.monotonic() >= deadline), 100)
+            try:
+                with read_scope(conn, source_version):
+                    result = self._execute_sqlite(conn, sql, max_rows)
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("SQL statement deadline exceeded")
+                return result
+            finally:
+                conn.set_progress_handler(None, 0)
+                conn.execute(f"PRAGMA busy_timeout={busy_timeout}")
+        if self._is_duckdb_connection(conn):
+            timer = threading.Timer(timeout, conn.interrupt)
+            timer.daemon = True
+            timer.start()
+            try:
+                if duckdb_state is not None:
+                    require_source_state(conn, duckdb_state)
+                return self._execute_duckdb(conn, sql, max_rows)
+            finally:
+                timer.cancel()
+                timer.join()
+        raise ValueError("Unsupported execution driver")
 
     # ── Connection type detection ──────────────────────────────────
 
     @staticmethod
     def _is_sqlite_connection(conn: object) -> bool:
-        return type(conn).__name__ == "Connection" and hasattr(conn, "cursor") and not hasattr(conn, "ensure_closed")
+        return isinstance(conn, sqlite3.Connection)
 
     @staticmethod
     def _is_duckdb_connection(conn: object) -> bool:
@@ -216,7 +305,7 @@ class ExecuteSQLNode(AgenticNode):
     # ── Per-driver execution ───────────────────────────────────────
 
     @staticmethod
-    def _execute_sqlite(conn: object, sql: str, max_rows: int) -> dict:
+    def _execute_sqlite(conn: sqlite3.Connection, sql: str, max_rows: int) -> ExecutionResult:
         """Execute SQL on a sqlite3 connection."""
         cursor = conn.cursor()
         cursor.execute(sql)
@@ -233,14 +322,14 @@ class ExecuteSQLNode(AgenticNode):
         }
 
     @staticmethod
-    def _execute_duckdb(conn: object, sql: str, max_rows: int) -> dict:
+    def _execute_duckdb(conn: DuckReadConnection, sql: str, max_rows: int) -> ExecutionResult:
         """Execute SQL on a DuckDB connection."""
         result = conn.execute(sql)
         rows = result.fetchmany(max_rows + 1)
         truncated = len(rows) > max_rows
         if truncated:
             rows = rows[:max_rows]
-        columns = result.description if hasattr(result, "description") else []
+        columns = [d[0] for d in result.description] if result.description else []
         return {
             "columns": columns,
             "rows": [list(r) for r in rows],
@@ -249,9 +338,12 @@ class ExecuteSQLNode(AgenticNode):
         }
 
     @staticmethod
-    async def _execute_asyncpg(conn: object, sql: str, max_rows: int) -> dict:
+    async def _execute_asyncpg(
+        conn: asyncpg.Connection, sql: str, max_rows: int
+    ) -> ExecutionResult:
         """Execute SQL on an asyncpg connection."""
-        records = await conn.fetch(sql)
+        bounded_sql = f"SELECT * FROM ({sql.strip().rstrip(';')}) AS _result LIMIT {max_rows + 1}"
+        records = await conn.fetch(bounded_sql)
         rows = [list(r) for r in records[:max_rows]]
         truncated = len(records) > max_rows
         columns = list(records[0].keys()) if records else []
@@ -263,7 +355,9 @@ class ExecuteSQLNode(AgenticNode):
         }
 
     @staticmethod
-    async def _execute_aiomysql(conn: object, sql: str, max_rows: int) -> dict:
+    async def _execute_aiomysql(
+        conn: aiomysql.Connection, sql: str, max_rows: int
+    ) -> ExecutionResult:
         """Execute SQL on an aiomysql (MySQL) connection."""
         cursor = await conn.cursor()
         try:
@@ -283,7 +377,7 @@ class ExecuteSQLNode(AgenticNode):
             await cursor.close()
 
     @staticmethod
-    def _execute_generic(conn: object, sql: str, max_rows: int) -> dict:
+    def _execute_generic(conn: CursorConnection, sql: str, max_rows: int) -> ExecutionResult:
         """Fallback: execute using generic DB-API 2.0 interface."""
         cursor = conn.cursor()
         cursor.execute(sql)
@@ -302,7 +396,10 @@ class ExecuteSQLNode(AgenticNode):
     # ── EXPLAIN support ───────────────────────────────────────────────
 
     @staticmethod
-    def _execute_explain(conn: object, sql: str) -> dict:
+    def _execute_explain(
+        conn: CursorConnection, sql: str, source_version: int | None = None,
+        duckdb_state: DuckDBSourceState | None = None,
+    ) -> ExecutionResult:
         """Execute EXPLAIN for a query and return the plan rows.
 
         Uses ``EXPLAIN QUERY PLAN`` for SQLite, ``EXPLAIN`` for others.
@@ -311,15 +408,21 @@ class ExecuteSQLNode(AgenticNode):
         is_sqlite = ExecuteSQLNode._is_sqlite_connection(conn)
         explain_sql = f"EXPLAIN QUERY PLAN {sql}" if is_sqlite else f"EXPLAIN {sql}"
 
+        if isinstance(conn, sqlite3.Connection) and source_version is not None:
+            # Bound sources must not fall back to an unguarded EXPLAIN on failure.
+            with read_scope(conn, source_version):
+                return ExecuteSQLNode._execute_sqlite(conn, explain_sql, 1000)
+        if ExecuteSQLNode._is_duckdb_connection(conn) and duckdb_state is not None:
+            # A DuckDB cursor is a separate session: bind EXPLAIN to the original handle.
+            native = cast(DuckReadConnection, conn)
+            require_source_state(native, duckdb_state)
+            return ExecuteSQLNode._execute_duckdb(native, explain_sql, 1000)
+
         try:
             cursor = conn.cursor()
             cursor.execute(explain_sql)
             rows = cursor.fetchall()
-            columns = (
-                [d[0] for d in cursor.description]
-                if cursor.description
-                else []
-            )
+            columns = [d[0] for d in cursor.description] if cursor.description else []
             return {
                 "columns": columns,
                 "rows": [list(r) for r in rows],
@@ -332,11 +435,7 @@ class ExecuteSQLNode(AgenticNode):
                 cursor = conn.cursor()
                 cursor.execute(f"EXPLAIN {sql}")
                 rows = cursor.fetchall()
-                columns = (
-                    [d[0] for d in cursor.description]
-                    if cursor.description
-                    else []
-                )
+                columns = [d[0] for d in cursor.description] if cursor.description else []
                 return {
                     "columns": columns,
                     "rows": [list(r) for r in rows],
@@ -353,7 +452,7 @@ class ExecuteSQLNode(AgenticNode):
 
     @staticmethod
     def _parse_explain_output(
-        explain_result: dict, existing: PlanAnalysis | None = None
+        explain_result: Mapping[str, Any], existing: PlanAnalysis | None = None
     ) -> PlanAnalysis:
         """Parse EXPLAIN output into a ``PlanAnalysis``.
 
@@ -375,10 +474,7 @@ class ExecuteSQLNode(AgenticNode):
 
         # ── Detect scan types ──────────────────────────────────
         # Detect full table scan: "SCAN TABLE", "Seq Scan", "SCAN <table>"
-        has_scan = (
-            "SCAN TABLE" in full_text
-            or "SEQ SCAN" in full_text
-        )
+        has_scan = "SCAN TABLE" in full_text or "SEQ SCAN" in full_text
         # SQLite bare SCAN (not INDEX/ONLY/USING SCAN)
         if not has_scan:
             for row in explain_result.get("rows", []):
@@ -391,9 +487,7 @@ class ExecuteSQLNode(AgenticNode):
         if has_scan:
             scan_types.append("seq_scan")
             if not plan.has_full_scan:
-                warnings.append(
-                    "PERF_WARNING: Full table scan detected — consider adding an index"
-                )
+                warnings.append("PERF_WARNING: Full table scan detected — consider adding an index")
             plan.has_full_scan = True
 
         if "INDEX SCAN" in full_text or "USING INDEX" in full_text:
@@ -451,17 +545,13 @@ class ExecuteSQLNode(AgenticNode):
         has_from = bool(_re.search(r"\bFROM\s+\w+", upper))
         has_where = bool(_re.search(r"\bWHERE\b", upper))
         if has_from and not has_where:
-            warnings.append(
-                "PERF_WARNING: No WHERE clause — potential full table scan"
-            )
+            warnings.append("PERF_WARNING: No WHERE clause — potential full table scan")
             scan_types.append("seq_scan")
             has_full_scan = True
 
         # SELECT *
         if _re.search(r"\bSELECT\s+\*", upper):
-            warnings.append(
-                "STYLE_WARNING: SELECT * — consider specifying columns explicitly"
-            )
+            warnings.append("STYLE_WARNING: SELECT * — consider specifying columns explicitly")
 
         # Non-SARGable patterns: function on LHS
         sargable_check = _re.findall(
@@ -473,8 +563,7 @@ class ExecuteSQLNode(AgenticNode):
         # Function-wrapped column in WHERE: WHERE UPPER(col) = ...
         if _re.search(r"WHERE\s+\w+\(\s*\w+\s*\)", upper):
             warnings.append(
-                "PERF_WARNING: Function-wrapped column in WHERE — "
-                "may prevent index usage"
+                "PERF_WARNING: Function-wrapped column in WHERE — may prevent index usage"
             )
 
         return PlanAnalysis(

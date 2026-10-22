@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app.knowledge.schema_graph import expand_foreign_keys as _expand_foreign_keys
 from app.models.query import SQR
 from app.models.schema import SchemaSnapshot
 from app.nodes.agentic import AgenticNode
@@ -71,8 +72,25 @@ _ZH_TO_EN_MAP: dict[str, list[str]] = {
     "头像": ["avatar", "photo", "image", "picture"],
     "标签": ["tag", "label", "category"],
     "配置": ["config", "setting", "settings", "preference", "model_config", "model_configs"],
-    "会话": ["session", "sessions", "conversation", "user_session", "user_sessions", "workflow_session", "workflow_sessions", "ai_conversation", "ai_conversations"],
-    "对话": ["conversation", "conversations", "ai_conversation", "ai_conversations", "chat", "dialog"],
+    "会话": [
+        "session",
+        "sessions",
+        "conversation",
+        "user_session",
+        "user_sessions",
+        "workflow_session",
+        "workflow_sessions",
+        "ai_conversation",
+        "ai_conversations",
+    ],
+    "对话": [
+        "conversation",
+        "conversations",
+        "ai_conversation",
+        "ai_conversations",
+        "chat",
+        "dialog",
+    ],
     "统计": ["stats", "statistics", "summary", "report", "reports", "token_usage"],
     "分析": ["analytics", "analysis", "report", "reports"],
     "查询": ["query", "search", "find", "select"],
@@ -161,7 +179,14 @@ _ZH_TO_EN_MAP: dict[str, list[str]] = {
     "通知": ["notification", "notifications", "msg", "notice", "notify"],
     "报表": ["report", "reports", "report_data"],
     "报告": ["report", "reports"],
-    "记忆": ["memory", "memories", "long_term_memory", "short_term_memory", "long_term_memories", "short_term_memories"],
+    "记忆": [
+        "memory",
+        "memories",
+        "long_term_memory",
+        "short_term_memory",
+        "long_term_memories",
+        "short_term_memories",
+    ],
     "长期": ["long_term", "long"],
     "短期": ["short_term", "short"],
     "操作": ["operation", "operations", "operation_log", "operation_logs", "action"],
@@ -263,6 +288,8 @@ class SchemaLinkingNode(AgenticNode):
                 context={"linked_tables": [], "linked_columns": [], "linked_schema": None},
             )
 
+        linking_warnings: list[str] = []
+
         # ── Phase 3: RAG-powered 5-step retrieval ──────────────────
         if self._retriever is not None:
             try:
@@ -276,43 +303,50 @@ class SchemaLinkingNode(AgenticNode):
                     match_threshold=match_threshold,
                     language=language,
                 )
-                linked_schema = result.filtered_schema
-                resolved_columns: list[dict[str, Any]] = [
-                    {
-                        "name": c.name,
-                        "table": c.table,
-                        "confidence": c.confidence,
-                        "candidates": c.candidates,
-                    }
-                    for c in result.columns
-                ]
-                return NodeOutput(
-                    result={
-                        "tables": result.tables,
-                        "columns": resolved_columns,
-                        "confidence": result.confidence,
-                    },
-                    metadata={
-                        "status": "success",
-                        "tables_linked": len(result.tables),
-                        "columns_linked": len(resolved_columns),
-                        "method": result.method,
-                    },
-                    context={
-                        "linked_tables": result.tables,
-                        "linked_columns": resolved_columns,
-                        "linked_schema": linked_schema,
-                    },
+                linking_warnings.extend(result.warnings)
+                if result.tables or result.columns:
+                    linked_schema = result.filtered_schema
+                    resolved_columns: list[dict[str, Any]] = [
+                        {
+                            "name": c.name,
+                            "table": c.table,
+                            "confidence": c.confidence,
+                            "candidates": c.candidates,
+                        }
+                        for c in result.columns
+                    ]
+                    return NodeOutput(
+                        result={
+                            "tables": result.tables,
+                            "columns": resolved_columns,
+                            "confidence": result.confidence,
+                            "warnings": linking_warnings,
+                        },
+                        metadata={
+                            "status": "success",
+                            "tables_linked": len(result.tables),
+                            "columns_linked": len(resolved_columns),
+                            "method": result.method,
+                            "warnings": linking_warnings,
+                        },
+                        context={
+                            "schema_linking_warnings": linking_warnings,
+                            "linked_tables": result.tables,
+                            "linked_columns": resolved_columns,
+                            "linked_schema": linked_schema,
+                        },
+                    )
+                linking_warnings.append(
+                    "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
                 )
             except Exception:
-                # Fall through to keyword matching on error
-                pass
+                linking_warnings.append(
+                    "SCHEMA_LINKING_FALLBACK: retrieval failed; using keyword matching"
+                )
 
         # ── Phase 2: keyword matching + FK expansion ───────────────
         candidates = _gather_candidates(sqr)
-        matched_tables, matched_columns = _match_schema(
-            candidates, schema, match_threshold
-        )
+        matched_tables, matched_columns = _match_schema(candidates, schema, match_threshold)
 
         # ── Reverse table-name scan ────────────────────────────────
         # Scan ALL table names against the query text to catch tables
@@ -329,7 +363,8 @@ class SchemaLinkingNode(AgenticNode):
                     existing.add(t)
                     logger.debug(
                         "Reverse scan found table '%s' for query '%s'",
-                        t, input.query_text[:50],
+                        t,
+                        input.query_text[:50],
                     )
             # Also add table candidates so column matching can find
             # columns in these newly-discovered tables.
@@ -345,9 +380,6 @@ class SchemaLinkingNode(AgenticNode):
                 if t not in existing_tbls_2:
                     matched_tables.append(t)
                     existing_tbls_2.add(t)
-
-        if fk_expand:
-            matched_tables = _expand_foreign_keys(matched_tables, schema)
 
         # ── Add tables from matched columns to matched_tables ──────
         # When the user asks about a COLUMN (e.g. "查询创建时间"),
@@ -365,9 +397,10 @@ class SchemaLinkingNode(AgenticNode):
                         matched_tables.append(t)
                         existing_tbls.add(t)
 
-        resolved_columns = _disambiguate_columns(
-            matched_columns, matched_tables, schema
-        )
+        if fk_expand:
+            matched_tables = _expand_foreign_keys(matched_tables, schema)
+
+        resolved_columns = _disambiguate_columns(matched_columns, matched_tables, schema)
         linked_schema = _filter_schema(schema, matched_tables)
         confidence = _compute_link_confidence(matched_tables, matched_columns, candidates)
 
@@ -383,15 +416,18 @@ class SchemaLinkingNode(AgenticNode):
                 "tables": matched_tables,
                 "columns": resolved_columns,
                 "confidence": confidence,
+                "warnings": linking_warnings,
             },
             metadata={
                 "status": "success",
                 "tables_linked": len(matched_tables),
                 "columns_linked": len(resolved_columns),
                 "method": "keyword_match",
+                "warnings": linking_warnings,
                 "multi_table_hint": multi_table_hint,
             },
             context={
+                "schema_linking_warnings": linking_warnings,
                 "linked_tables": matched_tables,
                 "linked_columns": resolved_columns,
                 "linked_schema": linked_schema,
@@ -482,9 +518,7 @@ for _zh, _en_list in _ZH_TO_EN_MAP.items():
 del _zh, _en_list, _en
 
 
-def _scan_table_names_reverse(
-    query_text: str, schema: SchemaSnapshot
-) -> list[str]:
+def _scan_table_names_reverse(query_text: str, schema: SchemaSnapshot) -> list[str]:
     """Scan ALL table names against the query text via reverse lookup.
 
     For each table name in the schema, split it into parts (by underscore)
@@ -526,14 +560,15 @@ def _scan_table_names_reverse(
 
             # 2. Also check if the English part directly appears in the query
             # (e.g., user types "token" in a Chinese query)
-            if part_lower in query_lower and len(part_lower) >= 4:
-                if table_name not in matched:
-                    matched.append(table_name)
+            if (part_lower in query_lower and len(part_lower) >= 4) and (table_name not in matched):
+                matched.append(table_name)
 
             # 3. Check if any part of the query (English tokens) matches
             # the table name part
             for qtok in query_tokens_lower:
-                if len(qtok) >= 4 and (qtok == part_lower or qtok in part_lower or part_lower in qtok):
+                if len(qtok) >= 4 and (
+                    qtok == part_lower or qtok in part_lower or part_lower in qtok
+                ):
                     if table_name not in matched:
                         matched.append(table_name)
                     break
@@ -580,9 +615,7 @@ def _match_schema(
                 # all_tables.  Substring matches (0.65/0.6) produce too
                 # many false positives — e.g. "name" matching "username"
                 # in knowledge_base, model_configs, etc.
-                all_tables = list(dict.fromkeys(
-                    m[0] for m in all_matches if m[0] and m[2] >= 0.8
-                ))
+                all_tables = list(dict.fromkeys(m[0] for m in all_matches if m[0] and m[2] >= 0.8))
                 if key not in matched_columns or best_conf > matched_columns[key]["confidence"]:
                     matched_columns[key] = {
                         "name": best_col,
@@ -618,9 +651,7 @@ def _best_table_match(name: str, schema: SchemaSnapshot) -> tuple[str | None, fl
     return None, 0.0
 
 
-def _best_column_match(
-    name: str, schema: SchemaSnapshot
-) -> tuple[str | None, str | None, float]:
+def _best_column_match(name: str, schema: SchemaSnapshot) -> tuple[str | None, str | None, float]:
     """Find the best column match for *name* across all tables.
 
     Returns ``(table_name, column_name, confidence)``.
@@ -768,19 +799,17 @@ def _build_multi_table_hint(
             all_independent.add(t)
 
     # ── Fallback: when no columns matched, try direct keyword scan ──
-    if not all_independent and schema is not None and len(schema.tables) >= 2:
-        # Try direct keyword scan against query text
-        if query_text:
-            direct_matches = _direct_keyword_scan(query_text, schema)
-            if direct_matches:
-                has_alternatives = True
-                for col_name, tables in direct_matches.items():
-                    column_groups[col_name] = {
-                        "best_table": tables[0] if tables else "",
-                        "all_tables": tables,
-                    }
-                    for t in tables:
-                        all_independent.add(t)
+    if (not all_independent and schema is not None and (len(schema.tables) >= 2)) and (query_text):
+        direct_matches = _direct_keyword_scan(query_text, schema)
+        if direct_matches:
+            has_alternatives = True
+            for col_name, tables in direct_matches.items():
+                column_groups[col_name] = {
+                    "best_table": tables[0] if tables else "",
+                    "all_tables": tables,
+                }
+                for t in tables:
+                    all_independent.add(t)
 
         # No fallback: if no matches found, leave independent_tables empty
         # so the caller can skip SQL generation for this database
@@ -795,9 +824,7 @@ def _build_multi_table_hint(
 # ── FK expansion ───────────────────────────────────────────────────────
 
 
-def _direct_keyword_scan(
-    query_text: str, schema: SchemaSnapshot
-) -> dict[str, list[str]]:
+def _direct_keyword_scan(query_text: str, schema: SchemaSnapshot) -> dict[str, list[str]]:
     """Scan the NL query text directly against all schema columns.
 
     Uses jieba tokenization + Chinese→English mapping to find matching
@@ -864,50 +891,13 @@ def _direct_keyword_scan(
             for col in table.columns:
                 col_lower = col.name.lower()
                 # Exact match or token is substring of column name
-                if (
-                    col_lower == token_lower
-                    or (len(token_lower) >= 3 and token_lower in col_lower)
-                ):
+                if col_lower == token_lower or (len(token_lower) >= 3 and token_lower in col_lower):
                     if col.name not in result:
                         result[col.name] = []
                     if t_name not in result[col.name]:
                         result[col.name].append(t_name)
 
     return result
-
-
-def _expand_foreign_keys(
-    tables: list[str], schema: SchemaSnapshot
-) -> list[str]:
-    """Expand the table list by 1 level of foreign key references.
-
-    For each table in *tables*, add any tables it references via FK
-    and any tables that reference it.  Iterates until the set stabilises
-    (handles chains like orders → order_items → products).
-    """
-    expanded = set(tables)
-
-    while True:
-        size_before = len(expanded)
-
-        # Forward: tables referenced by FK in current set
-        for t_name in list(expanded):
-            t = schema.get_table(t_name)
-            if t is None:
-                continue
-            for fk in t.foreign_keys:
-                expanded.add(fk.ref_table)
-
-        # Reverse: tables that reference any table in current set
-        for other_name, other_t in schema.tables.items():
-            for fk in other_t.foreign_keys:
-                if fk.ref_table in expanded:
-                    expanded.add(other_name)
-
-        if len(expanded) == size_before:
-            break  # converged
-
-    return list(expanded)
 
 
 # ── Column disambiguation ──────────────────────────────────────────────
@@ -965,17 +955,15 @@ def _disambiguate_columns(
 # ── Filtered schema ────────────────────────────────────────────────────
 
 
-def _filter_schema(
-    schema: SchemaSnapshot, tables: list[str]
-) -> SchemaSnapshot:
+def _filter_schema(schema: SchemaSnapshot, tables: list[str]) -> SchemaSnapshot:
     """Return a SchemaSnapshot containing only the *tables*."""
-    filtered = {
-        name: t for name, t in schema.tables.items() if name in tables
-    }
+    filtered = {name: t for name, t in schema.tables.items() if name in tables}
     return SchemaSnapshot(
         database_type=schema.database_type,
         database_name=schema.database_name,
         tables=filtered,
+        source_schema_version=schema.source_schema_version,
+        duckdb_source_state=schema.duckdb_source_state,
     )
 
 
@@ -997,9 +985,7 @@ def _compute_link_confidence(
 
     # Average column confidence
     col_avg = (
-        sum(c.get("confidence", 0.0) for c in columns) / max(len(columns), 1)
-        if columns
-        else 1.0
+        sum(c.get("confidence", 0.0) for c in columns) / max(len(columns), 1) if columns else 1.0
     )
 
     return round(0.4 * coverage + 0.6 * col_avg, 3)

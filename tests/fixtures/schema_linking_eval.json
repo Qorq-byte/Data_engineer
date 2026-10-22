@@ -1,0 +1,258 @@
+{
+  "version": "schema-linking-boundary-v1",
+  "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality",
+  "tables": {
+    "users": {
+      "columns": [
+        "id",
+        "name"
+      ],
+      "references": [
+        [
+          "id",
+          "missing_table",
+          "id"
+        ]
+      ]
+    },
+    "orders": {
+      "columns": [
+        "id",
+        "user_id",
+        "amount"
+      ],
+      "references": [
+        [
+          "user_id",
+          "users",
+          "id"
+        ]
+      ]
+    },
+    "order_items": {
+      "columns": [
+        "id",
+        "order_id",
+        "product_id"
+      ],
+      "references": [
+        [
+          "order_id",
+          "orders",
+          "id"
+        ],
+        [
+          "product_id",
+          "products",
+          "id"
+        ]
+      ]
+    },
+    "products": {
+      "columns": [
+        "id",
+        "supplier_id"
+      ],
+      "references": [
+        [
+          "supplier_id",
+          "suppliers",
+          "id"
+        ]
+      ]
+    },
+    "suppliers": {
+      "columns": [
+        "id",
+        "product_id"
+      ],
+      "references": [
+        [
+          "product_id",
+          "products",
+          "id"
+        ]
+      ]
+    },
+    "audit": {
+      "columns": [
+        "id",
+        "message"
+      ],
+      "references": []
+    }
+  },
+  "cases": [
+    {
+      "id": "direct-users",
+      "query": "opaque",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "users",
+          "column_name": "id"
+        }
+      ],
+      "expected": [
+        "users",
+        "orders"
+      ]
+    },
+    {
+      "id": "direct-orders",
+      "query": "opaque",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "orders",
+          "column_name": "id"
+        }
+      ],
+      "expected": [
+        "orders",
+        "users",
+        "order_items"
+      ]
+    },
+    {
+      "id": "two-seeds",
+      "query": "opaque",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "users",
+          "column_name": "id"
+        },
+        {
+          "db_id": "fixture",
+          "table_name": "products",
+          "column_name": "id"
+        }
+      ],
+      "expected": [
+        "users",
+        "products",
+        "orders",
+        "order_items",
+        "suppliers"
+      ]
+    },
+    {
+      "id": "cycle",
+      "query": "opaque",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "products",
+          "column_name": "id"
+        }
+      ],
+      "expected": [
+        "products",
+        "order_items",
+        "suppliers"
+      ]
+    },
+    {
+      "id": "disabled-fk",
+      "query": "opaque",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "orders",
+          "column_name": "id"
+        }
+      ],
+      "fk_expand": false,
+      "expected": [
+        "orders"
+      ]
+    },
+    {
+      "id": "wrong-db",
+      "query": "unmatchablezz",
+      "hits": [
+        {
+          "db_id": "foreign",
+          "table_name": "users",
+          "column_name": "id"
+        }
+      ],
+      "expected": [],
+      "expect_warning": true
+    },
+    {
+      "id": "unknown-table",
+      "query": "unmatchablezz",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "deleted_table",
+          "column_name": "id"
+        }
+      ],
+      "expected": [],
+      "expect_warning": true
+    },
+    {
+      "id": "stale-column",
+      "query": "unmatchablezz",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "orders",
+          "column_name": "removed_column"
+        }
+      ],
+      "expected": [],
+      "expect_warning": true
+    },
+    {
+      "id": "empty-chinese-fallback",
+      "query": "查询用户",
+      "hits": [],
+      "expected": [
+        "users",
+        "orders",
+        "order_items"
+      ],
+      "expect_warning": true,
+      "label_note": "Keyword matching also directly links orders.user_id; one-hop expansion therefore includes order_items."
+    },
+    {
+      "id": "error-chinese-fallback",
+      "query": "查询用户",
+      "error": true,
+      "expected": [
+        "users",
+        "orders",
+        "order_items"
+      ],
+      "expect_warning": true,
+      "label_note": "Keyword matching also directly links orders.user_id; one-hop expansion therefore includes order_items."
+    },
+    {
+      "id": "keyword-no-rag",
+      "query": "users",
+      "no_retriever": true,
+      "expected": [
+        "users",
+        "orders"
+      ]
+    },
+    {
+      "id": "table-level",
+      "query": "opaque",
+      "hits": [
+        {
+          "db_id": "fixture",
+          "table_name": "audit",
+          "column_name": null
+        }
+      ],
+      "expected": [
+        "audit"
+      ]
+    }
+  ]
+}
