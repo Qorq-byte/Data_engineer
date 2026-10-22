@@ -13,6 +13,7 @@ Usage::
 
 from __future__ import annotations
 
+import contextlib
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -233,19 +234,17 @@ async def _index_all_connected_schemas(engine: _RAGEngine) -> None:
     """Extract and index schemas for all currently-connected databases."""
     try:
         from app.db.connections import ConnectionFactory
-        from app.db.schema_extractor import SchemaExtractor
+        from app.db.schema_refresh import refresh_database_schema
         from app.rag.converters import snapshot_to_schema_docs
     except Exception:
         return
 
     for info in ConnectionFactory.list_all():
-        try:
-            conn = ConnectionFactory.get(info.db_id)
-            snapshot = await SchemaExtractor.extract(conn, info.db_type, info.database_name)
-            docs = snapshot_to_schema_docs(snapshot, info.db_id, language="zh")
-            await engine.schema_rag.index_schemas(docs, replace_db_id=info.db_id)
-        except Exception:
-            pass  # One DB failing should not prevent others from indexing
+        # One DB failing should not prevent others from indexing.
+        with contextlib.suppress(Exception):
+            await refresh_database_schema(
+                info.db_id, engine.schema_rag, document_builder=snapshot_to_schema_docs,
+            )
 
 
 async def _index_all_glossary_terms(engine: _RAGEngine) -> None:

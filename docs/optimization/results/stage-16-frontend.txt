@@ -1,0 +1,8 @@
+npm notice run check:frontend
+npm notice run node frontend_design/_check_jsx.js frontend_design/workspace.html frontend_design/form.html frontend_design/landing_page.html && node frontend_design/_check_schema_refresh.js
+[PASS] frontend_design/workspace.html script #1
+[PASS] frontend_design/workspace.html script #2
+[PASS] frontend_design/form.html script #1
+[PASS] frontend_design/landing_page.html script #1
+[PASS] frontend_design/landing_page.html script #2
+[PASS] Schema/RAG refresh handlers: 12 contract scenarios

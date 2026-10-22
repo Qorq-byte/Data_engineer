@@ -61,3 +61,9 @@ snapshot_to_schema_docs优先使用TableSchema.schema_name；只有未知时采�
 SQLite/DuckDB旧public文档ID会改为main，需要按db_id替换索引：连接应用后使用已有`POST /api/v1/schema/{db_id}/refresh`，检查`rag_indexed=true`；false时按warnings处理并排查RAG初始化，不能将Schema刷新当作索引成功。该入口调用index_schemas(replace_db_id=db_id)清除旧库文档后建新文档，不要手动仅追加新ID。RAG初始化也会对已连接库执行替换索引。失败/旧命中被过滤可触发既有关键词回退，诊断须保留。
 
 SchemaDocument/索引仍没有catalog字段，不支持同一db_id在多个catalog切换后并存检索；db_id必须稳定绑定实际连接目标，切换目标必须刷新，不能用显示名称冒充身份。此阶段测来源与过滤契约，未重跑真实embedding、标注Recall/Precision/MRR/NDCG或模型准确率，不能声称检索质量提升。详情见[阶段12报告](stage-12.md)。
+
+## 阶段16：刷新来源与失败状态
+
+推荐调用`POST /api/v1/schema/{db_id}/refresh`，成功必须检查rag_indexed=true；409/SCHEMA_REFRESH_CONFLICT表示embedding等待后来源已变化，旧索引尚未删除，恢复目标后显式重试。200且rag_indexed=false是未索引成功，不能把Schema已提取当作检索索引已更新。后台、启动和IndexRefresher复用同一来源检查；未默认开启周期监听。
+
+真实SQLite/DuckDB、LanceDB和FTS5回归覆盖源DDL/重连/断开、空替换、取消、同库顺序与其他库独立；embedding使用16维MockEmbeddingProvider，并非真实语义检索评测。sentinel文档是否保留只验证替换一致性，不产生Recall/Precision/MRR/NDCG或NL2SQL准确率结论。两个后端写到一半失败仍可能不一致，当前报告false并要求重试，恢复/事务机制尚未实现。普通表列TTL、catalog索引字段、真实标注与性能基线仍需后续阶段。[实施证据](stage-16.md)。

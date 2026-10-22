@@ -90,17 +90,15 @@ class IndexRefresher:
         Uses the pre-injected SchemaMetadataRAG instance (not creating a new one).
         """
         try:
-            from app.db.connections import ConnectionFactory
-            from app.db.schema_extractor import SchemaExtractor
+            from app.db.schema_refresh import refresh_database_schema
             from app.rag.converters import snapshot_to_schema_docs
 
-            info = ConnectionFactory.get_info(db_id)
-            conn = ConnectionFactory.get(db_id)
-            snapshot = await SchemaExtractor.extract(conn, info.db_type, info.database_name)
-            self._version_cache[db_id] = self._compute_schema_hash(snapshot)
-
-            docs = snapshot_to_schema_docs(snapshot, db_id)
-            await self._schema_rag.index_schemas(docs, replace_db_id=db_id)
+            result = await refresh_database_schema(
+                db_id, self._schema_rag, document_builder=snapshot_to_schema_docs,
+            )
+            if not result.rag_indexed:
+                return False
+            self._version_cache[db_id] = self._compute_schema_hash(result.snapshot)
             return True
         except Exception:
             return False

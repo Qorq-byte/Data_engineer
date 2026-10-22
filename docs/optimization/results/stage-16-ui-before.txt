@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: handleRebuildSchemaIndex: Schema 索引重建完成 (2/2): fixture-0: 1 表, fixture-1: 1 表
+
+'ok' !== 'err'
+
+    at D:\python\data_engineer\.verify_tmp_optimization\frontend_design\_check_schema_refresh.js:42:14 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 'ok',
+  expected: 'err',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

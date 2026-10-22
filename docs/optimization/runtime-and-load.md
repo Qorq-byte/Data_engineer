@@ -70,3 +70,11 @@ duckdb_source.source_state通过duckdb_databases/duckdb_schemas读取当前catal
 当前只允许main且没有用户临时对象的绑定执行；这比仅检查同名temp更保守，避免猜测视图及多段标识符的内部解析。预存不支持环境和进行中状态变化分别返回source_scope_unsupported/schema_changed，均需用户显式新请求；不会自动USE或清理用户对象。DuckDB cursor()是独立会话，绑定EXPLAIN改用原句柄execute，最多1000条计划行，不回退到无守卫游标。
 
 每次检查增加元数据读取，尚未进行大catalog/临时对象数量的性能评测；不能用全量pytest耗时比较吞吐/P95/P99。表列普通DDL、外部并发直接使用原生句柄、跨进程状态原子性、持久视图跨catalog引用和数据库权限不在此次保证内。临时对象集合变化有回归，但并非所有DDL都可被该状态感知；仍需已有refresh入口替换Schema/RAG索引，确认rag_indexed。详情及验证见[阶段15报告](stage-15.md)。
+
+## 阶段16：显式刷新与索引提交
+
+数据库层schema_refresh协调器按db_id使用单服务事件循环的gate，入口显式注入索引writer和文档转换函数，不依赖RAG引擎单例。它强制提取来源、使旧缓存失效；embedding在连接lease之外准备，在删除旧索引前重新内省并确认句柄/namespace/当前模型结构一致。忽略row_count_estimate/时间戳，正常DML不误判DDL。冲突再次失效缓存并返回409，用户显式新请求可获得新结构；没有给每个DuckDB查询新增全量表列扫描。
+
+SchemaMetadataRAG同实例同db_id替换在准备与写入阶段串行，before_replace在embedding数量/维数检查之后、首次删除之前运行；空删除亦执行。其他库不必等待该库的embedding gate；这只是功能隔离，并非吞吐/SLO结论。普通低级upsert/clear及外部直接使用writer不自动获得已注册源校验，生产应使用共享入口。
+
+人工/后台/启动/IndexRefresher四条来源路径均接入；IndexRefresher的成功时间/版本只在发布成功时更新，周期任务未默认启动。现有Schema内省仍可能执行COUNT估算，刷新时二次内省对大表成本待测；两个后端的同步写、外部进程DDL、跨进程锁/事务仍不提供原子性。普通DuckDB DDL仍需TTL/显式刷新，来源正确不等于索引与所有查询时刻严格一致。详情见[阶段16报告](stage-16.md)。

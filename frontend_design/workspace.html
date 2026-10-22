@@ -3718,15 +3718,15 @@ const SettingsPanel = ({ userName, onLogout }) => {
       const results = await Promise.allSettled(dbIds.map(dbId =>
         api.schemaRefresh(dbId)
       ));
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value?.rag_indexed === true).length;
       const failCount = dbIds.length - successCount;
       const details = results.map((r, i) => {
         const dbName = allConns.databases[i]?.database_name || dbIds[i];
-        if (r.status === 'fulfilled') {
+        if (r.status === 'fulfilled' && r.value?.rag_indexed === true) {
           const tables = r.value?.table_count || 0;
           return `${dbName}: ${tables} 表`;
         }
-        return `${dbName}: 失败`;
+        return r.status === 'fulfilled' ? `${dbName}: RAG 索引更新未完成` : `${dbName}: 失败`;
       });
       if (failCount === 0) {
         setRagMsg({ type: "ok", text: `Schema 索引重建完成 (${successCount}/${dbIds.length}): ${details.join(', ')}` });
@@ -3752,12 +3752,12 @@ const SettingsPanel = ({ userName, onLogout }) => {
       const results = await Promise.allSettled(dbIds.map(dbId =>
         api._fetch(`/api/v1/learning/rag/refresh?db_id=${encodeURIComponent(dbId)}`, { method: 'POST' })
       ));
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const successCount = results.filter(r => r.status === 'fulfilled' && r.value?.refreshed === true).length;
       const failCount = dbIds.length - successCount;
       const details = results.map((r, i) => {
         const dbName = allConns.databases[i]?.database_name || dbIds[i];
         if (r.status === 'fulfilled') {
-          return r.value?.refreshed ? `${dbName}: 成功` : `${dbName}: 无变更`;
+          return r.value?.refreshed === true ? `${dbName}: 成功` : `${dbName}: 未完成`;
         }
         return `${dbName}: 失败`;
       });

@@ -53,3 +53,9 @@ MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败�
 绑定执行暂要求当前schema为main且没有用户临时表/视图，预存不支持环境返回source_scope_unsupported及“DuckDB source scope unsupported”；这些是节点状态，三协议仍按WORKFLOW_FAILED业务失败投影，无execution结果/事件。即使SQL完整限定或临时对象无关也保守拒绝；移除临时对象/恢复main后显式新请求可恢复。USE到另一个catalog的main可以由新请求重新取源，不能迁移旧请求。绑定EXPLAIN用原始句柄，避免DuckDB cursor()的独立会话语义，最多1000条计划行，失败不走无守卫回退。
 
 None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/temp约束。此状态不是表列DDL/数据版本，不能证明持久视图内部跨库血缘或对象权限；普通表列DDL仍需TTL或显式refresh，RAG也需按目标db_id刷新。无新的多schema支持/自动catalog索引迁移，详见[阶段15报告](stage-15.md)。
+
+阶段16统一手动Schema刷新、连接后后台索引、启动索引及IndexRefresher的来源生命周期；同db_id刷新按顺序捕获/强制内省/准备embedding/提交。embedding完成、任何索引删除之前，重新核对注册句柄、namespace状态和当前可提取的表列结构（忽略行数估计和时间戳）；空Schema删除也核对。冲突返回HTTP409，detail为{code: SCHEMA_REFRESH_CONFLICT, message: Schema source changed during refresh; retry explicitly}，不删除旧索引，缓存失效，要求显式重试，不自动写重试。仅连接捕获不存在为404，内部内省错误为固定500；不能将驱动KeyError误报缺连接。
+
+原200响应status=refreshed/rag_indexed/warnings字段保留。embedding不可用/失败或写后端失败仍可能200，但rag_indexed=false及warning；这不表示索引成功。取消继续传播。前端索引重建只将rag_indexed===true计为成功，RAG刷新只将refreshed===true计为成功；false/缺字段/409不再显示全部完成，部分失败保留统计。
+
+提交前来源/embedding校验失败保留旧索引；若已开始写入两个后端后再失败，当前仍可能部分更新，rag_indexed=false需显式重试，不承诺跨LanceDB/FTS5原子事务。IndexRefresher只在成功发布后记录版本/时间，其周期调度没有默认启动调用，不能当作实时DDL监听已接通。详见[阶段16报告](stage-16.md)。

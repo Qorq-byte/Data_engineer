@@ -31,6 +31,7 @@ from app.knowledge.retrieval.filters import literal
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -186,6 +187,28 @@ class SchemaMetadataRAG:
         language: str = "auto",
         *,
         replace_db_id: str | None = None,
+        before_replace: Callable[[], Awaitable[None]] | None = None,
+    ) -> int:
+        """Serialize replacements per database and validate before any deletion.
+
+        The optional source check runs after embedding validation, including
+        empty replacements. It does not create a transaction across backends.
+        """
+        if before_replace is not None and replace_db_id is None:
+            raise ValueError("Source validation requires database replacement")
+        if replace_db_id is not None:
+            from app.db.runtime import gate
+
+            async with gate(("schema-rag-replace", id(self), replace_db_id)):
+                return await self._index_schemas(
+                    docs, language, replace_db_id=replace_db_id, before_replace=before_replace,
+                )
+        return await self._index_schemas(docs, language)
+
+    async def _index_schemas(
+        self, docs: list[Any], language: str = "auto", *,
+        replace_db_id: str | None = None,
+        before_replace: Callable[[], Awaitable[None]] | None = None,
     ) -> int:
         """Index a batch of :class:`~app.models.rag_schema.SchemaDocument` objects.
 
@@ -204,6 +227,8 @@ class SchemaMetadataRAG:
             raise ValueError("Replacement documents must belong to the specified database")
         if not docs:
             if replace_db_id is not None:
+                if before_replace is not None:
+                    await before_replace()
                 self.remove_database(replace_db_id)
             return 0
 
@@ -216,6 +241,8 @@ class SchemaMetadataRAG:
             raise ValueError("Embedding batch count/dimension mismatch; existing index preserved")
 
         if replace_db_id is not None:
+            if before_replace is not None:
+                await before_replace()
             self.remove_database(replace_db_id)
 
         # 2. Delete existing LanceDB records with same doc_ids, then insert

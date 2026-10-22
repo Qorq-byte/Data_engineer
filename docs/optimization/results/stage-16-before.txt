@@ -1,0 +1,235 @@
+FFFFFF                                                                   [100%]
+================================== FAILURES ===================================
+______ test_refresh_rejects_source_changed_during_embedding[ddl-sqlite] _______
+
+environment = (<app.knowledge.retrieval.schema_rag.SchemaMetadataRAG object at 0x0000012C822B9A90>, EmbeddingGenerator(provider=<app...ngProvider object at 0x0000012C822B97F0>), <app.knowledge.retrieval.bm25_index.BM25Index object at 0x0000012C822B96A0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012C8224F100>
+db_type = <DatabaseType.SQLITE: 'sqlite'>, change = 'ddl'
+
+    @pytest.mark.parametrize("db_type", [DatabaseType.SQLITE, DatabaseType.DUCKDB])
+    @pytest.mark.parametrize("change", ["ddl", "reconnect", "disconnect"])
+    async def test_refresh_rejects_source_changed_during_embedding(
+        environment, monkeypatch, db_type, change,
+    ):
+        rag, embedding, sparse = environment
+        conn = await database(db_type)
+        original_embed = embedding.embed
+        changed = False
+
+        async def change_before_embedding(texts):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "ddl":
+                    conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+                elif change == "reconnect":
+                    await database(db_type)
+                else:
+                    await ConnectionFactory.aclose("target")
+            return await original_embed(texts)
+
+        monkeypatch.setattr(embedding, "embed", change_before_embedding)
+>       with pytest.raises(HTTPException) as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE HTTPException
+
+tests\test_rag\test_schema_refresh_source.py:69: Failed
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.411 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.411 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+______ test_refresh_rejects_source_changed_during_embedding[ddl-duckdb] _______
+
+environment = (<app.knowledge.retrieval.schema_rag.SchemaMetadataRAG object at 0x0000012C8233AFD0>, EmbeddingGenerator(provider=<app...ngProvider object at 0x0000012C82339E50>), <app.knowledge.retrieval.bm25_index.BM25Index object at 0x0000012C82339950>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012C823909E0>
+db_type = <DatabaseType.DUCKDB: 'duckdb'>, change = 'ddl'
+
+    @pytest.mark.parametrize("db_type", [DatabaseType.SQLITE, DatabaseType.DUCKDB])
+    @pytest.mark.parametrize("change", ["ddl", "reconnect", "disconnect"])
+    async def test_refresh_rejects_source_changed_during_embedding(
+        environment, monkeypatch, db_type, change,
+    ):
+        rag, embedding, sparse = environment
+        conn = await database(db_type)
+        original_embed = embedding.embed
+        changed = False
+
+        async def change_before_embedding(texts):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "ddl":
+                    conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+                elif change == "reconnect":
+                    await database(db_type)
+                else:
+                    await ConnectionFactory.aclose("target")
+            return await original_embed(texts)
+
+        monkeypatch.setattr(embedding, "embed", change_before_embedding)
+>       with pytest.raises(HTTPException) as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE HTTPException
+
+tests\test_rag\test_schema_refresh_source.py:69: Failed
+___ test_refresh_rejects_source_changed_during_embedding[reconnect-sqlite] ____
+
+environment = (<app.knowledge.retrieval.schema_rag.SchemaMetadataRAG object at 0x0000012C85C40550>, EmbeddingGenerator(provider=<app...ngProvider object at 0x0000012C8233BED0>), <app.knowledge.retrieval.bm25_index.BM25Index object at 0x0000012C8233B890>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012C85BFD350>
+db_type = <DatabaseType.SQLITE: 'sqlite'>, change = 'reconnect'
+
+    @pytest.mark.parametrize("db_type", [DatabaseType.SQLITE, DatabaseType.DUCKDB])
+    @pytest.mark.parametrize("change", ["ddl", "reconnect", "disconnect"])
+    async def test_refresh_rejects_source_changed_during_embedding(
+        environment, monkeypatch, db_type, change,
+    ):
+        rag, embedding, sparse = environment
+        conn = await database(db_type)
+        original_embed = embedding.embed
+        changed = False
+
+        async def change_before_embedding(texts):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "ddl":
+                    conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+                elif change == "reconnect":
+                    await database(db_type)
+                else:
+                    await ConnectionFactory.aclose("target")
+            return await original_embed(texts)
+
+        monkeypatch.setattr(embedding, "embed", change_before_embedding)
+>       with pytest.raises(HTTPException) as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE HTTPException
+
+tests\test_rag\test_schema_refresh_source.py:69: Failed
+___ test_refresh_rejects_source_changed_during_embedding[reconnect-duckdb] ____
+
+environment = (<app.knowledge.retrieval.schema_rag.SchemaMetadataRAG object at 0x0000012C823C9E00>, EmbeddingGenerator(provider=<app...ngProvider object at 0x0000012C823C9BA0>), <app.knowledge.retrieval.bm25_index.BM25Index object at 0x0000012C823C9A70>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012C85C0DFD0>
+db_type = <DatabaseType.DUCKDB: 'duckdb'>, change = 'reconnect'
+
+    @pytest.mark.parametrize("db_type", [DatabaseType.SQLITE, DatabaseType.DUCKDB])
+    @pytest.mark.parametrize("change", ["ddl", "reconnect", "disconnect"])
+    async def test_refresh_rejects_source_changed_during_embedding(
+        environment, monkeypatch, db_type, change,
+    ):
+        rag, embedding, sparse = environment
+        conn = await database(db_type)
+        original_embed = embedding.embed
+        changed = False
+
+        async def change_before_embedding(texts):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "ddl":
+                    conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+                elif change == "reconnect":
+                    await database(db_type)
+                else:
+                    await ConnectionFactory.aclose("target")
+            return await original_embed(texts)
+
+        monkeypatch.setattr(embedding, "embed", change_before_embedding)
+>       with pytest.raises(HTTPException) as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE HTTPException
+
+tests\test_rag\test_schema_refresh_source.py:69: Failed
+___ test_refresh_rejects_source_changed_during_embedding[disconnect-sqlite] ___
+
+environment = (<app.knowledge.retrieval.schema_rag.SchemaMetadataRAG object at 0x0000012C823C9350>, EmbeddingGenerator(provider=<app...ngProvider object at 0x0000012C823CA3F0>), <app.knowledge.retrieval.bm25_index.BM25Index object at 0x0000012C823CA8B0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012C822DDC10>
+db_type = <DatabaseType.SQLITE: 'sqlite'>, change = 'disconnect'
+
+    @pytest.mark.parametrize("db_type", [DatabaseType.SQLITE, DatabaseType.DUCKDB])
+    @pytest.mark.parametrize("change", ["ddl", "reconnect", "disconnect"])
+    async def test_refresh_rejects_source_changed_during_embedding(
+        environment, monkeypatch, db_type, change,
+    ):
+        rag, embedding, sparse = environment
+        conn = await database(db_type)
+        original_embed = embedding.embed
+        changed = False
+
+        async def change_before_embedding(texts):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "ddl":
+                    conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+                elif change == "reconnect":
+                    await database(db_type)
+                else:
+                    await ConnectionFactory.aclose("target")
+            return await original_embed(texts)
+
+        monkeypatch.setattr(embedding, "embed", change_before_embedding)
+>       with pytest.raises(HTTPException) as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE HTTPException
+
+tests\test_rag\test_schema_refresh_source.py:69: Failed
+___ test_refresh_rejects_source_changed_during_embedding[disconnect-duckdb] ___
+
+environment = (<app.knowledge.retrieval.schema_rag.SchemaMetadataRAG object at 0x0000012C85BF9FD0>, EmbeddingGenerator(provider=<app...ngProvider object at 0x0000012C85BF8EF0>), <app.knowledge.retrieval.bm25_index.BM25Index object at 0x0000012C85BF8830>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012C85BAC9F0>
+db_type = <DatabaseType.DUCKDB: 'duckdb'>, change = 'disconnect'
+
+    @pytest.mark.parametrize("db_type", [DatabaseType.SQLITE, DatabaseType.DUCKDB])
+    @pytest.mark.parametrize("change", ["ddl", "reconnect", "disconnect"])
+    async def test_refresh_rejects_source_changed_during_embedding(
+        environment, monkeypatch, db_type, change,
+    ):
+        rag, embedding, sparse = environment
+        conn = await database(db_type)
+        original_embed = embedding.embed
+        changed = False
+
+        async def change_before_embedding(texts):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "ddl":
+                    conn.execute("ALTER TABLE marker ADD COLUMN added TEXT")
+                elif change == "reconnect":
+                    await database(db_type)
+                else:
+                    await ConnectionFactory.aclose("target")
+            return await original_embed(texts)
+
+        monkeypatch.setattr(embedding, "embed", change_before_embedding)
+>       with pytest.raises(HTTPException) as error:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE HTTPException
+
+tests\test_rag\test_schema_refresh_source.py:69: Failed
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\jieba\_compat.py:18
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+..\..\..\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_schema_refresh_source.py::test_refresh_rejects_source_changed_during_embedding[ddl-sqlite]
+FAILED tests/test_rag/test_schema_refresh_source.py::test_refresh_rejects_source_changed_during_embedding[ddl-duckdb]
+FAILED tests/test_rag/test_schema_refresh_source.py::test_refresh_rejects_source_changed_during_embedding[reconnect-sqlite]
+FAILED tests/test_rag/test_schema_refresh_source.py::test_refresh_rejects_source_changed_during_embedding[reconnect-duckdb]
+FAILED tests/test_rag/test_schema_refresh_source.py::test_refresh_rejects_source_changed_during_embedding[disconnect-sqlite]
+FAILED tests/test_rag/test_schema_refresh_source.py::test_refresh_rejects_source_changed_during_embedding[disconnect-duckdb]
+6 failed, 4 deselected, 2 warnings in 12.22s

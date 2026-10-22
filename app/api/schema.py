@@ -217,43 +217,41 @@ async def refresh_schema(db_id: str) -> dict:
     Re-extracts the full schema snapshot from the live database connection.
     This is useful after DDL changes (new tables, altered columns, etc.).
     """
-    try:
-        conn = ConnectionFactory.get(db_id)
-        info = ConnectionFactory.get_info(db_id)
-    except KeyError:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Database '{db_id}' not found. "
-            "Connect first via POST /api/v1/databases/connect",
-        ) from None
+    import contextlib
 
+    from app.db.schema_refresh import (
+        SchemaIndexWriter,
+        SchemaRefreshConflictError,
+        SchemaRefreshNotFoundError,
+        refresh_database_schema,
+    )
+    from app.rag import get_schema_rag
+    from app.rag.converters import snapshot_to_schema_docs
+
+    index: SchemaIndexWriter | None = None
+    with contextlib.suppress(Exception):
+        index = get_schema_rag()
     try:
-        snapshot = await SchemaExtractor.extract(
-            conn, info.db_type, info.database_name
+        result = await refresh_database_schema(
+            db_id, index, document_builder=snapshot_to_schema_docs,
         )
-    except NotImplementedError as e:
-        raise HTTPException(status_code=501, detail=str(e)) from e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Schema extraction failed: {e}") from e
+    except SchemaRefreshNotFoundError:
+        raise HTTPException(status_code=404, detail=f"Database '{db_id}' not found.") from None
+    except SchemaRefreshConflictError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "SCHEMA_REFRESH_CONFLICT", "message": str(exc)},
+        ) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Schema extraction failed") from exc
 
-    SchemaExtractor.invalidate(conn)
-
-    # Rebuild RAG index for this database
-    rag_indexed = False
-    try:
-        from app.rag import get_schema_rag
-        from app.rag.converters import snapshot_to_schema_docs
-
-        docs = snapshot_to_schema_docs(snapshot, db_id)
-        await get_schema_rag().index_schemas(docs, replace_db_id=db_id)
-        rag_indexed = True
-    except Exception:
-        pass
-
+    snapshot = result.snapshot
     return {
         "status": "refreshed",
-        "rag_indexed": rag_indexed,
-        "warnings": [] if rag_indexed else ["Schema extracted but RAG index was not refreshed"],
+        "rag_indexed": result.rag_indexed,
+        "warnings": list(result.warnings),
         "db_id": db_id,
         "database_type": snapshot.database_type,
         "database_name": snapshot.database_name,
@@ -498,18 +496,13 @@ def _schedule_background_schema_indexing(db_id: str) -> None:
             import contextlib
 
             with contextlib.suppress(Exception):
-                from app.db.connections import ConnectionFactory
-                from app.db.schema_extractor import SchemaExtractor
+                from app.db.schema_refresh import refresh_database_schema
                 from app.rag import get_schema_rag
                 from app.rag.converters import snapshot_to_schema_docs
 
-                info = ConnectionFactory.get_info(db_id)
-                conn = ConnectionFactory.get(db_id)
-                snapshot = await SchemaExtractor.extract(
-                    conn, info.db_type, info.database_name
+                await refresh_database_schema(
+                    db_id, get_schema_rag(), document_builder=snapshot_to_schema_docs,
                 )
-                docs = snapshot_to_schema_docs(snapshot, db_id)
-                await get_schema_rag().index_schemas(docs, replace_db_id=db_id)
 
         from app.background import start_background
 
