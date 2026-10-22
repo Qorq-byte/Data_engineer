@@ -62,3 +62,11 @@ SQLite Schema提取前后读取main.schema_version，变化即拒绝混合快照
 共享read_scope沿用只读动作集合，增加带版本查询的实际database=main读取要求；SQLite某些COUNT/索引优化回调database=None，因此安装守卫前读取main/temp表与视图名，缺失数据库名仅允许无temp同名遮蔽的main对象。其他数据库读取及未能证明的来源拒绝；绑定EXPLAIN不再降级为无守卫执行，结果最多1000条计划行。退出/异常时清理authorizer，原生结果路径继续清理进度处理器并恢复busy_timeout；取消仍等待worker退出后释放lease。
 
 每次绑定读额外读取元数据，表数多时的开销是待测风险；本阶段没有吞吐/P50/P95/P99或生产容量结论。源版本不是数据/事务快照：检查后外部连接仍可发生DDL，不保证跨进程DDL与查询原子性；不可手工重置schema_version，仍以SQLite锁/编译/数据库权限为准。RAG索引不随缓存刷新自动重建，需要已有schema refresh入口并检查rag_indexed。其他方言、旧快照、直接SQL和对象授权限制见[阶段14报告](stage-14.md)。
+
+## 阶段15：DuckDB解析状态与来源缓存
+
+duckdb_source.source_state通过duckdb_databases/duckdb_schemas读取当前catalog/schema名及OID、当前search_path，并读取非internal的临时表/视图集合。OID用于识别同名namespace的替换，不是CREATE/ALTER TABLE版本。Schema内省前后及缓存命中前核对，命中仍要求TTL、句柄身份与深拷贝规则。执行/EXPLAIN在原生worker中再次核对；结果路径沿用计时中断/取消等待和lease，不在LLM生成期间持有连接锁。
+
+当前只允许main且没有用户临时对象的绑定执行；这比仅检查同名temp更保守，避免猜测视图及多段标识符的内部解析。预存不支持环境和进行中状态变化分别返回source_scope_unsupported/schema_changed，均需用户显式新请求；不会自动USE或清理用户对象。DuckDB cursor()是独立会话，绑定EXPLAIN改用原句柄execute，最多1000条计划行，不回退到无守卫游标。
+
+每次检查增加元数据读取，尚未进行大catalog/临时对象数量的性能评测；不能用全量pytest耗时比较吞吐/P95/P99。表列普通DDL、外部并发直接使用原生句柄、跨进程状态原子性、持久视图跨catalog引用和数据库权限不在此次保证内。临时对象集合变化有回归，但并非所有DDL都可被该状态感知；仍需已有refresh入口替换Schema/RAG索引，确认rag_indexed。详情及验证见[阶段15报告](stage-15.md)。

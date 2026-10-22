@@ -81,6 +81,18 @@ class TableSchema:
         return None
 
 
+@dataclass(frozen=True)
+class DuckDBSourceState:
+    """Native namespace identity, not a table/column DDL or data version."""
+
+    catalog_name: str
+    catalog_oid: int
+    schema_name: str
+    schema_oid: int
+    search_path: str
+    temporary_objects: tuple[tuple[str, str], ...] = ()
+
+
 @dataclass
 class SchemaSnapshot:
     """A point-in-time snapshot of a database's full schema."""
@@ -92,6 +104,7 @@ class SchemaSnapshot:
     version: int = 1
     # SQLite main.schema_version at introspection; unknown for legacy/other sources.
     source_schema_version: int | None = None
+    duckdb_source_state: DuckDBSourceState | None = None
 
     def get_table(self, name: str) -> TableSchema | None:
         return self.tables.get(name)

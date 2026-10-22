@@ -45,3 +45,5 @@
 
 - 阶段13补记5212be2的Actions39623166280成功。阶段14按先行计划为SQLite添加main schema_version缓存校验、过期执行/EXPLAIN拒绝和原生main读守卫；固定14例原12失败/2通过，最终新增32项。全量3163通过/Windows uvloop1跳过（92.23秒），定向153通过/1跳过；扩展strict32文件、Ruff/前端通过，全仓197项存量且新增诊断0。SQLite缺省数据库回调兼容、旧快照/直接SQL和其他方言限制见stage-14.md，待提交/远程验收。
 - 阶段14已普通推送8a83398addb7245d6978e6155cafc56aa04d4766，远程SHA一致；Actions39626188636成功：干净安装、扩展strict32文件、全仓Ruff/前端、Linux全量3164通过（36.06秒），uvloop实际执行通过。阶段14代码验收完成，远程证据已补记；未合并main。下一候选先核对DuckDB同句柄catalog/schema/search_path/temp漂移，独立规划后实施。
+
+- 阶段14补记024dd6c的Actions39626652590成功。阶段15按先行计划为DuckDB缓存/快照/执行保存并核对namespace身份、search_path及用户temp集合，修复绑定EXPLAIN游标会话混用；固定13例原全部失败后首轮20通过。新增35项，本地全量3198通过/Windows uvloop1跳过（58.88秒），定向188通过/1跳过；扩展strict33文件、Ruff/前端通过，全仓197项存量且新增诊断0。main/no-temp保守限制、普通DDL和RAG刷新范围见stage-15.md，待提交/远程验收。

@@ -35,6 +35,7 @@ class SchemaExtractor:
         cls, connection: Any, db_type: DatabaseType, db_name: str = ""
     ) -> SchemaSnapshot:
         from app.config.settings import settings
+        from app.db.duckdb_source import source_state
         from app.db.runtime import lease, native_call
         from app.db.sqlite_source import schema_version
 
@@ -44,11 +45,16 @@ class SchemaExtractor:
                 await native_call(connection, lambda: schema_version(connection))
                 if db_type == DatabaseType.SQLITE else None
             )
+            duckdb_state = (
+                await native_call(connection, lambda: source_state(connection))
+                if db_type == DatabaseType.DUCKDB else None
+            )
             cached = cls._cache.get(id(connection))
             if (
                 cached
                 and cached[0] is connection
                 and cached[2].source_schema_version == source_version
+                and cached[2].duckdb_source_state == duckdb_state
                 and time.monotonic() - cached[1] < settings.schema_cache_seconds
             ):
                 return copy.deepcopy(cached[2])
@@ -398,9 +404,13 @@ class SchemaExtractor:
     @staticmethod
     def _extract_duckdb(conn: Any, db_name: str) -> SchemaSnapshot:
         """Extract schema from DuckDB using information_schema."""
+        from app.db.duckdb_source import source_state
+        from app.db.sqlite_source import SchemaSourceChangedError
+
         tables: dict[str, TableSchema] = {}
 
-        catalog_name = conn.execute("SELECT current_database()").fetchone()[0]
+        state = source_state(conn)
+        catalog_name = state.catalog_name
         table_rows = conn.execute("""
             SELECT table_name
             FROM information_schema.tables
@@ -457,8 +467,11 @@ class SchemaExtractor:
                     table_name,
                 )
 
+        if source_state(conn) != state:
+            raise SchemaSourceChangedError("Schema source changed during introspection")
         return SchemaSnapshot(
             database_type="duckdb",
+            duckdb_source_state=state,
             database_name=db_name or "duckdb",
             tables=tables,
             created_at=datetime.now(),

@@ -16,17 +16,18 @@ import sqlite3
 import threading
 import time
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     import aiomysql
     import asyncpg
 
 from app.config.settings import settings
+from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
 from app.db.sqlite_source import SchemaSourceChangedError, read_scope
 from app.models.query import PlanAnalysis
-from app.models.schema import SchemaSnapshot
+from app.models.schema import DuckDBSourceState, SchemaSnapshot
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
 from app.security.sql_policy import require_read_query
@@ -159,6 +160,10 @@ class ExecuteSQLNode(AgenticNode):
             schema.source_schema_version
             if isinstance(schema, SchemaSnapshot) and schema.database_type == "sqlite" else None
         )
+        duckdb_state = (
+            schema.duckdb_source_state
+            if isinstance(schema, SchemaSnapshot) and schema.database_type == "duckdb" else None
+        )
 
         try:
             # Harden native connections before EXPLAIN/binding can inspect external files.
@@ -171,11 +176,13 @@ class ExecuteSQLNode(AgenticNode):
             # EXPLAIN execution
             if do_explain:
                 explain_result = await native_call(
-                    conn, lambda: self._execute_explain(conn, sql, source_version)
+                    conn, lambda: self._execute_explain(conn, sql, source_version, duckdb_state)
                 )
                 plan = self._parse_explain_output(explain_result, plan)
 
-            result = await self._execute_bounded(conn, sql, max_rows, timeout_ms, source_version)
+            result = await self._execute_bounded(
+                conn, sql, max_rows, timeout_ms, source_version, duckdb_state,
+            )
 
             metadata: dict[str, Any] = {
                 "status": "success",
@@ -196,6 +203,8 @@ class ExecuteSQLNode(AgenticNode):
 
         except SchemaSourceChangedError as e:
             return NodeOutput(errors=[str(e)], metadata={"status": "schema_changed"})
+        except DuckDBSourceScopeError as e:
+            return NodeOutput(errors=[str(e)], metadata={"status": "source_scope_unsupported"})
         except Exception as e:
             return NodeOutput(
                 result=None,
@@ -223,6 +232,7 @@ class ExecuteSQLNode(AgenticNode):
     async def _execute_bounded(
         self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
         source_version: int | None = None,
+        duckdb_state: DuckDBSourceState | None = None,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_aiomysql_connection(conn):
@@ -237,13 +247,14 @@ class ExecuteSQLNode(AgenticNode):
 
         return await native_call(
             conn, lambda: self._execute_native_bounded(
-                conn, sql, max_rows, timeout_ms, source_version,
+                conn, sql, max_rows, timeout_ms, source_version, duckdb_state,
             )
         )
 
     def _execute_native_bounded(
         self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
         source_version: int | None = None,
+        duckdb_state: DuckDBSourceState | None = None,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_sqlite_connection(conn):
@@ -265,6 +276,8 @@ class ExecuteSQLNode(AgenticNode):
             timer.daemon = True
             timer.start()
             try:
+                if duckdb_state is not None:
+                    require_source_state(conn, duckdb_state)
                 return self._execute_duckdb(conn, sql, max_rows)
             finally:
                 timer.cancel()
@@ -385,6 +398,7 @@ class ExecuteSQLNode(AgenticNode):
     @staticmethod
     def _execute_explain(
         conn: CursorConnection, sql: str, source_version: int | None = None,
+        duckdb_state: DuckDBSourceState | None = None,
     ) -> ExecutionResult:
         """Execute EXPLAIN for a query and return the plan rows.
 
@@ -398,6 +412,11 @@ class ExecuteSQLNode(AgenticNode):
             # Bound sources must not fall back to an unguarded EXPLAIN on failure.
             with read_scope(conn, source_version):
                 return ExecuteSQLNode._execute_sqlite(conn, explain_sql, 1000)
+        if ExecuteSQLNode._is_duckdb_connection(conn) and duckdb_state is not None:
+            # A DuckDB cursor is a separate session: bind EXPLAIN to the original handle.
+            native = cast(DuckReadConnection, conn)
+            require_source_state(native, duckdb_state)
+            return ExecuteSQLNode._execute_duckdb(native, explain_sql, 1000)
 
         try:
             cursor = conn.cursor()

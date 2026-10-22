@@ -508,6 +508,7 @@ def _build_filtered_schema(
         database_name=schema.database_name,
         tables=filtered,
         source_schema_version=schema.source_schema_version,
+        duckdb_source_state=schema.duckdb_source_state,
     )
 
 

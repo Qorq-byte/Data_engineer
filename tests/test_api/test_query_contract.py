@@ -134,6 +134,75 @@ async def test_sqlite_source_changes_fail_without_execution_then_fresh_query_rec
     assert execution["rows"] == [[1], [2], [3], [4], [5]]
 
 
+@pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+@pytest.mark.parametrize("change", ["use", "search_path", "temp", "preexisting_temp"])
+async def test_duckdb_source_changes_fail_then_explicit_new_query_recovers(
+    connected_query, monkeypatch, protocol, change,
+):
+    connection = await ConnectionFactory.create(DatabaseType.DUCKDB, {}, "contract")
+    connection.execute("CREATE TABLE orders(id INT)")
+    connection.execute("INSERT INTO orders VALUES (1)")
+    connection.execute("ATTACH ':memory:' AS other")
+    connection.execute("CREATE TABLE other.main.orders(id INT)")
+    connection.execute("INSERT INTO other.main.orders VALUES (999)")
+    connection.execute("CREATE SCHEMA extra")
+    if change == "preexisting_temp":
+        connection.execute("CREATE TEMP TABLE shadow(id INT)")
+    changed = False
+
+    class ChangingRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            nonlocal changed
+            if not changed:
+                changed = True
+                if change == "use":
+                    connection.execute("USE other")
+                elif change == "search_path":
+                    connection.execute("SET search_path='extra'")
+                elif change == "temp":
+                    connection.execute("CREATE TEMP TABLE orders(id INT)")
+                    connection.execute("INSERT INTO temp.main.orders VALUES (999)")
+            return {"choices": [{"message": {"content": "SELECT id FROM orders ORDER BY id"}}]}
+
+    monkeypatch.setattr(
+        query, "get_default_router", lambda: ChangingRouter(RouterConfig(), mock_mode=True),
+    )
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+
+    async def request():
+        if protocol == "mcp":
+            return await mcp_query(nl_text="find all orders", db_id="contract")
+        if protocol == "sse":
+            events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+            done = next(value for event, value in events if event == "done")
+            if done["status"] == "failed":
+                assert not any(event == "execution" for event, _ in events)
+            return done
+        response = connected_query.post("/api/v1/query", json=body)
+        assert response.status_code == 200
+        return response.json()
+
+    failed = await request()
+    assert failed["status"] == "failed", failed
+    message = "scope unsupported" if change == "preexisting_temp" else "Schema source changed"
+    assert message in str(failed)
+    if protocol == "mcp":
+        assert failed["rows"] == [] and failed["error_code"] == "WORKFLOW_FAILED"
+    else:
+        assert failed["execution"] is None
+    if change == "search_path":
+        connection.execute("USE memory")
+    elif change == "temp":
+        connection.execute("DROP TABLE temp.main.orders")
+    elif change == "preexisting_temp":
+        connection.execute("DROP TABLE temp.main.shadow")
+    recovered = await request()
+    assert recovered["status"] == "completed", recovered
+    execution = recovered if protocol == "mcp" else recovered["execution"]
+    assert execution["rows"] == [[999 if change == "use" else 1]]
+
+
 async def test_json_sse_result_and_session_match(connected_query):
     body = {
         "nl_text": "find all orders",

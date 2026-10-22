@@ -36,7 +36,7 @@ MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败�
 
 阶段12在TableSchema追加可选schema_name/catalog_name（未知为None）：实际内省覆盖PG public、SQLite main、MySQL所查数据库、DuckDB当前catalog的main。校验仅在限定名与这些元数据一致时通过；限定列必须匹配当前作用域来源，错误schema/catalog或未证明的限定仍报SCHEMA_ERROR。旧快照保留SQLite main/MySQL同库fallback；缺失元数据的PG/DuckDB限定继续拒绝。标识符按方言处理大小写，不改写primary_sql。真实SQLite/DuckDB已验证，PG/MySQL仅离线解析，未完成在线验收。
 
-表字典仍以简单表名为键，不支持跨schema同名表集合、跨catalog联查授权或完整search_path解析。内省明确固定namespace，但未限定SQL仍按数据库会话的search_path/临时表/当前catalog解析；阶段14为带来源版本的SQLite增加原生main读取守卫，其他方言与无来源版本路径仍有此限制。快照校验不是数据库权限边界。应用连接须固定到所内省的环境，改连接目标后刷新Schema和RAG；不可在共享连接任意切换USE/search_path。原生只读及权限守卫继续生效，不等于对象级授权已实现。Schema管理GET接口的现有投影未扩展，这些元数据用于内部生成/验证/索引。
+表字典仍以简单表名为键，不支持跨schema同名表集合、跨catalog联查授权或完整search_path解析。内省明确固定namespace，但未限定SQL仍按数据库会话的search_path/临时表/当前catalog解析；阶段14为带来源版本的SQLite增加原生main读取守卫，DuckDB解析状态保护见阶段15；其他方言与无来源绑定路径仍有此限制。快照校验不是数据库权限边界。应用连接须固定到所内省的环境，改连接目标后刷新Schema和RAG；不可在共享连接任意切换USE/search_path。原生只读及权限守卫继续生效，不等于对象级授权已实现。Schema管理GET接口的现有投影未扩展，这些元数据用于内部生成/验证/索引。
 
 畸形/空候选响应按调用隔离，存在有效文本候选时保留它；全部无效仍失败，取消继续传播，不自动重试。第一个有效候选作为primary，其余候选仍不自动执行。ValidateSQLNode异常会写回validation_passed=False和空报告，避免旧上下文的成功状态残留。[阶段11报告](stage-11.md)包含SQLite及三协议CTE/歧义路径验证。
 
@@ -47,3 +47,9 @@ MCP nl_query保留sql/columns/rows/row_count/truncated/errors/warnings及失败�
 阶段14：实际SQLite快照增加可选source_schema_version（main.schema_version，非模型version），裁剪保留。缓存仍按句柄/TTL/深拷贝管理，但命中前核对main版本，DDL变化即重新内省。带来源版本的EXPLAIN/结果执行都在原生worker内核对；版本不同输出schema_changed及“Schema source changed”，按现有WORKFLOW_FAILED业务失败投影，不自动刷新重执行。用户可重新发起请求获取新Schema。内省前后版本不同也拒绝快照。
 
 这些绑定查询的SQLite authorizer只接受main实际读；对数据库名为None的优化读取，先确认对象存在于main且未被temp同名对象遮蔽，其他来源拒绝。预先存在的temp同名对象也不能被当作main数据；main限定SQL仍可用。正常CTE/聚合/索引读取保持，SQL原文不改写。source_schema_version=None的旧快照与直接SQL不启用新增main限制，仍按既有只读/超时/注册身份规则执行；这是兼容边界，不是多库对象授权完成。DuckDB/PG/MySQL未应用SQLite版本机制。详见[阶段14报告](stage-14.md)。
+
+阶段15为实际DuckDB快照增加可选duckdb_source_state，包含catalog/schema名和原生OID、search_path及用户临时对象集合；裁剪保留。缓存命中前在lease/native worker核对，内省前后状态不同则拒绝混合快照。切库、namespace重建或同名catalog重新挂载后不再仅依赖TTL；进行中请求状态变化返回schema_changed及固定“Schema source changed”，不自动切库、SET或重试。
+
+绑定执行暂要求当前schema为main且没有用户临时表/视图，预存不支持环境返回source_scope_unsupported及“DuckDB source scope unsupported”；这些是节点状态，三协议仍按WORKFLOW_FAILED业务失败投影，无execution结果/事件。即使SQL完整限定或临时对象无关也保守拒绝；移除临时对象/恢复main后显式新请求可恢复。USE到另一个catalog的main可以由新请求重新取源，不能迁移旧请求。绑定EXPLAIN用原始句柄，避免DuckDB cursor()的独立会话语义，最多1000条计划行，失败不走无守卫回退。
+
+None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/temp约束。此状态不是表列DDL/数据版本，不能证明持久视图内部跨库血缘或对象权限；普通表列DDL仍需TTL或显式refresh，RAG也需按目标db_id刷新。无新的多schema支持/自动catalog索引迁移，详见[阶段15报告](stage-15.md)。
