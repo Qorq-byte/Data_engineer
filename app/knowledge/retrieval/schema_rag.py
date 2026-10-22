@@ -44,7 +44,11 @@ from app.knowledge.retrieval.lancedb_store import (
     schema_doc_to_record,
 )
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
-from app.models.rag_schema import SchemaIndexNotReadyError, SchemaIndexWriteError
+from app.models.rag_schema import (
+    SchemaIndexClearResult,
+    SchemaIndexNotReadyError,
+    SchemaIndexWriteError,
+)
 
 # ── Result model ───────────────────────────────────────────────────────
 
@@ -284,7 +288,7 @@ class SchemaMetadataRAG:
     def _replace_database(
         self, db_id: str, records: list[dict[str, Any]],
         sparse_docs: list[dict[str, Any]], language: str,
-    ) -> None:
+    ) -> tuple[int, int]:
         # Both snapshots must succeed before any mutation. No await in this section.
         ids = [record["doc_id"] for record in records]
         if len(ids) != len(set(ids)):
@@ -312,6 +316,7 @@ class SchemaMetadataRAG:
             raise SchemaIndexWriteError(restored=restored) from exc
         self._unavailable_databases.discard(db_id)
         self._refresh_required_databases.discard(db_id)
+        return len(old_dense), len(old_sparse)
 
     def _check_available(self, db_id: str | None) -> None:
         if (not db_id and self._unavailable_databases) or (
@@ -410,6 +415,14 @@ class SchemaMetadataRAG:
         return results
 
     # ── Management ─────────────────────────────────────────────────────
+
+    async def clear_database(self, db_id: str) -> SchemaIndexClearResult:
+        """Compensated scoped clear; the service also serializes full source refreshes."""
+        from app.db.runtime import gate
+
+        async with gate(("schema-rag-replace", id(self), db_id)):
+            dense_count, sparse_count = self._replace_database(db_id, [], [], "auto")
+            return SchemaIndexClearResult(dense_count, sparse_count)
 
     def clear(self) -> None:
         """Remove all indexed schema documents from both backends."""

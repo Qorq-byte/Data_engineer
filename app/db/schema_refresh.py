@@ -7,7 +7,7 @@ from typing import Protocol
 from app.db.connections import ConnectionFactory
 from app.db.runtime import gate
 from app.db.schema_extractor import SchemaExtractor
-from app.models.rag_schema import SchemaDocument, SchemaIndexWriteError
+from app.models.rag_schema import SchemaDocument, SchemaIndexClearResult, SchemaIndexWriteError
 from app.models.schema import SchemaSnapshot
 
 
@@ -21,6 +21,22 @@ class SchemaIndexWriter(Protocol):
 
 class SchemaRefreshConflictError(ValueError):
     """Prepared documents no longer represent the registered source."""
+
+
+class SchemaIndexClearer(Protocol):
+    async def clear_database(self, db_id: str) -> SchemaIndexClearResult: ...
+
+
+async def clear_database_schema_index(
+    db_id: str, index: SchemaIndexClearer, *,
+    on_cleared: Callable[[str], None] | None = None,
+) -> SchemaIndexClearResult:
+    """Serialize index-only maintenance with full source refresh; no DB connection needed."""
+    async with gate(("schema-refresh", db_id)):
+        result = await index.clear_database(db_id)
+        if on_cleared is not None:
+            on_cleared(db_id)
+        return result
 
 
 class SchemaRefreshNotFoundError(KeyError):

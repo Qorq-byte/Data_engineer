@@ -363,20 +363,38 @@ async def disconnect_database(db_id: str) -> dict:
             detail=f"Database '{db_id}' not found.",
         ) from None
 
+    from app.rag.engine import get_rag_engine
+
+    try:
+        engine = get_rag_engine()
+    except RuntimeError:
+        engine = None
+    if engine is not None:
+        # Cancellation/failure after closing must not leave stale contents trusted.
+        engine.schema_rag.require_refresh({db_id})
     await ConnectionFactory.aclose(db_id)
 
-    # Clean up RAG index for this database
-    try:
-        from app.rag import get_schema_rag
-        get_schema_rag().remove_database(db_id)
-    except Exception:
-        pass
+    rag_index_cleared = False
+    if engine is not None:
+        from app.db.schema_refresh import clear_database_schema_index
+
+        try:
+            await clear_database_schema_index(
+                db_id, engine.schema_rag, on_cleared=engine.index_refresher.invalidate_database,
+            )
+            rag_index_cleared = True
+        except Exception:
+            pass
 
     return {
         "status": "disconnected",
         "db_id": db_id,
         "db_type": info.db_type.value,
         "alias": info.alias,
+        "rag_index_cleared": rag_index_cleared,
+        "warnings": [] if rag_index_cleared else [
+            "Database disconnected but Schema index was not cleared; retry per-database index clear"
+        ],
     }
 
 

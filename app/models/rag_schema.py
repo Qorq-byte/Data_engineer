@@ -23,6 +23,14 @@ class SchemaIndexWriteError(RuntimeError):
         )
 
 
+@dataclass(frozen=True)
+class SchemaIndexClearResult:
+    """Counts removed from each backend at a successful scoped clear."""
+
+    lancedb_count: int
+    bm25_count: int
+
+
 @dataclass
 class SchemaDocument:
     """A searchable document representing a table or column in the RAG index."""

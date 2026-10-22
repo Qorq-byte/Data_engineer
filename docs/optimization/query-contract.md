@@ -67,3 +67,7 @@ None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/t
 阶段18由引擎启动自动将两边持久库ID及当前连接库标为待刷新，成功的完整替换后解除；旧数据不再因重启清掉failure标记而可直接读取。初始化结束前不发布全局实例，失败/取消清理候选句柄。未能重新连接的遗留库保持待刷新，指定健康库仍可检索，SQL路径沿用带warning的关键词降级。
 
 受保护 `GET /api/v1/learning/rag/status` 保留刷新器原字段，新增 `schema_index={status: ready|degraded, refresh_required_databases: [...], recovery_failed_databases: [...], startup_schema_results: {db_id: bool}, scope: ...}`。顶层status=ok/degraded/error；引擎不可用只返回固定 `RAG engine unavailable`。startup_schema_results 是历史，后续修复查看当前两个列表；不把tracked_databases当已验证库数。公开 `/health/ready` 仅增加rag汇总状态/计数，动态更新components.rag，不暴露库ID/路径；RAG可降级，整体就绪条件不变，不调用额外后端/模型探活。详见[阶段18报告](stage-18.md)。
+
+阶段19新增管理员 `POST /api/v1/learning/rag/schema/{db_id}/clear`，无需原连接仍存在；仅清目标Schema索引，与完整刷新串行，成功只失效目标刷新缓存。200响应 `{status: cleared, scope: schema, db_id, removed: {lancedb_count, bm25_count}, cleared_at}`，计数为完成时的真实删除量，重复/未知ID幂等0/0。无引擎503/detail.code=RAG_UNAVAILABLE；准备/写失败503/SCHEMA_INDEX_CLEAR_FAILED，固定message及restored=true/false/null；不泄漏原异常、不自动重试。清理后新的完整刷新可重新建索引。
+
+旧全量clear仅接受JSON body的scope=all/schema/metrics/documents，拒绝query、db_id等未知body字段及非法scope，422/detail.code=INVALID_RAG_CLEAR_REQUEST，拒绝发生在任何删除前；缺body仍兼容all。全量入口是维护窗口操作，不用于按库恢复。断开数据库响应新增rag_index_cleared/warnings，关闭前先标记索引待刷新，索引清理失败不改变已断开事实，可用新按库入口重试。权限仍401/403，具体并发/补偿和使用步骤见[阶段19报告](stage-19.md)。

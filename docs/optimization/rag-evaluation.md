@@ -78,4 +78,10 @@ Schema 按 db_id 完整替换在 embedding/来源校验后保存两边原始记�
 
 引擎初始化现先枚举两后端全部库ID及当前连接库并标为待刷新，使用共享来源校验入口完整刷新；成功才解除对应标记，未验证内容不会因重启而被读取。没有持久故障日志或实时损坏检测；断开的遗留库也必须保持待刷新，健康库可指定检索。普通低级自建SchemaMetadataRAG兼容调用不自动执行启动策略。
 
-受保护 `/api/v1/learning/rag/status` 显示 schema_index 的 refresh_required_databases、recovery_failed_databases 与历史startup_schema_results；修复后看当前列表，不把历史false或tracked_databases当即时状态。无法重连相同db_id的遗留库，当前只能由管理员在维护窗口显式清空scope=schema，再完整刷新当前连接库，未增加逐库HTTP清理。文档/指标namespace尚无本阶段的完整性验证，Schema状态ready不代表所有RAG数据/模型健康或语义准确。完整验证见[阶段18报告](stage-18.md)。
+受保护 `/api/v1/learning/rag/status` 显示 schema_index 的 refresh_required_databases、recovery_failed_databases 与历史startup_schema_results；修复后看当前列表，不把历史false或tracked_databases当即时状态。阶段18时遗留库需全量清理的限制已由阶段19按库HTTP操作补足。文档/指标namespace尚无本阶段的完整性验证，Schema状态ready不代表所有RAG数据/模型健康或语义准确。历史验证见[阶段18报告](stage-18.md)。
+
+## 阶段19：按库清理/重建闭环
+
+管理员可用 `POST /api/v1/learning/rag/schema/{db_id}/clear` 清除单库Schema索引，已断开遗留库也适用；成功返回两后端真实删除数，仅失效该库缓存/隔离，其他库与文档指标不改。需重建时再显式schema refresh并核对rag_indexed=true。重复清理0/0合法；后续新刷新可建索引，清理不是永久禁用。操作与完整刷新共享同库顺序，并复用原始记录补偿。
+
+503及restored结果需明确处理，不能将已补偿当作删除成功；没有引擎时不自动删文件。旧全量clear拒绝定向参数/未知scope防止误清全部，维护窗口语义仍保留。阶段19验证包含真实持久双后端、权限、故障、并发和重启，是功能一致性验证，不是语义/性能基线。具体步骤与限制见[阶段19报告](stage-19.md)。

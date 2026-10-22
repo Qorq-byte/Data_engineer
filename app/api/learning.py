@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 
 from app.storage.mysql_store import get_store
 
@@ -621,7 +621,7 @@ async def rag_status() -> dict:
 
 
 @router.post("/learning/rag/clear")
-async def clear_rag_index(body: dict | None = None) -> dict:
+async def clear_rag_index(request: Request, body: dict | None = None) -> dict:
     """Clear RAG indices to remove stale data from previously-disconnected databases.
 
     Request body (all optional):
@@ -633,9 +633,18 @@ async def clear_rag_index(body: dict | None = None) -> dict:
     from both LanceDB and BM25 backends. Use when stale entries from old
     database connections pollute search results.
     """
+    if request.query_params or (body is not None and set(body) - {"scope"}):
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_RAG_CLEAR_REQUEST",
+            "message": "Use a scope body for bulk clear or the per-database Schema clear endpoint",
+        })
     scope = "all"
     if isinstance(body, dict):
         scope = str(body.get("scope", "all")).lower().strip()
+    if scope not in {"all", "schema", "metrics", "documents"}:
+        raise HTTPException(status_code=422, detail={
+            "code": "INVALID_RAG_CLEAR_REQUEST", "message": "Invalid RAG clear scope",
+        })
 
     cleared: dict[str, dict[str, int]] = {}
     try:
@@ -697,3 +706,37 @@ async def clear_rag_index(body: dict | None = None) -> dict:
             "message": f"RAG clear failed: {e}",
             "cleared_at": datetime.now().isoformat(),
         }
+
+
+@router.post("/learning/rag/schema/{db_id}/clear")
+async def clear_schema_database_index(db_id: str) -> dict[str, object]:
+    """Clear one database's Schema index, including disconnected persistent entries."""
+    from app.db.schema_refresh import clear_database_schema_index
+    from app.models.rag_schema import SchemaIndexWriteError
+    from app.rag.engine import get_rag_engine
+
+    try:
+        engine = get_rag_engine()
+    except RuntimeError:
+        raise HTTPException(status_code=503, detail={
+            "code": "RAG_UNAVAILABLE", "message": "RAG engine unavailable",
+        }) from None
+    try:
+        result = await clear_database_schema_index(
+            db_id, engine.schema_rag, on_cleared=engine.index_refresher.invalidate_database,
+        )
+    except SchemaIndexWriteError as exc:
+        raise HTTPException(status_code=503, detail={
+            "code": "SCHEMA_INDEX_CLEAR_FAILED", "message": str(exc), "restored": exc.restored,
+        }) from None
+    except Exception:
+        raise HTTPException(status_code=503, detail={
+            "code": "SCHEMA_INDEX_CLEAR_FAILED",
+            "message": "Schema index clear failed; inspect storage and retry explicitly",
+            "restored": None,
+        }) from None
+    return {
+        "status": "cleared", "scope": "schema", "db_id": db_id,
+        "removed": {"lancedb_count": result.lancedb_count, "bm25_count": result.bm25_count},
+        "cleared_at": datetime.now().isoformat(),
+    }

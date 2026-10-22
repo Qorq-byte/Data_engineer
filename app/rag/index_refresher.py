@@ -74,6 +74,11 @@ class IndexRefresher:
         age = (datetime.now(UTC) - last).total_seconds() / 60
         return age > self._ttl_minutes
 
+    def invalidate_database(self, db_id: str) -> None:
+        """Forget only this database's successful publication metadata after removal."""
+        self._version_cache.pop(db_id, None)
+        self._last_refresh.pop(db_id, None)
+
     async def refresh(self, db_id: str) -> bool:
         self._pending.add(db_id)
         try:
