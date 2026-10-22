@@ -47,3 +47,4 @@
 - 阶段14已普通推送8a83398addb7245d6978e6155cafc56aa04d4766，远程SHA一致；Actions39626188636成功：干净安装、扩展strict32文件、全仓Ruff/前端、Linux全量3164通过（36.06秒），uvloop实际执行通过。阶段14代码验收完成，远程证据已补记；未合并main。下一候选先核对DuckDB同句柄catalog/schema/search_path/temp漂移，独立规划后实施。
 
 - 阶段14补记024dd6c的Actions39626652590成功。阶段15按先行计划为DuckDB缓存/快照/执行保存并核对namespace身份、search_path及用户temp集合，修复绑定EXPLAIN游标会话混用；固定13例原全部失败后首轮20通过。新增35项，本地全量3198通过/Windows uvloop1跳过（58.88秒），定向188通过/1跳过；扩展strict33文件、Ruff/前端通过，全仓197项存量且新增诊断0。main/no-temp保守限制、普通DDL和RAG刷新范围见stage-15.md，待提交/远程验收。
+- 阶段15已普通推送4ce204e184601fcd8e924498c6bf59e94b84296a，远程SHA一致；Actions39728629192成功：干净安装、扩展strict33文件、全仓Ruff/前端、Linux全量3199通过（30.73秒），uvloop实际执行通过。阶段15代码验收完成，远程证据已补记；未合并main。下一候选先复核DuckDB普通表列DDL与Schema/RAG刷新一致性，再独立规划。

@@ -34,4 +34,6 @@ RAG没有catalog索引字段，切换目标后仍须按db_id调用已有`POST /a
 
 ## Git与远程验收
 
-本地验收完成，待提交、普通推送、远程SHA及LinuxCI核对后补记。
+代码提交[4ce204e184601fcd8e924498c6bf59e94b84296a](https://github.com/Qorq-byte/Data_engineer/commit/4ce204e184601fcd8e924498c6bf59e94b84296a)已普通推送到codex/mvp-hardening，ls-remote核对SHA一致；未强推或合并main。
+
+[Actions39728629192](https://github.com/Qorq-byte/Data_engineer/actions/runs/39728629192) **success**：Linux/Python3.12干净安装、前端编译、全仓Ruff、扩展strict33源文件门禁通过；全量 **3199 passed，1 warning，30.73秒**，uvloop实际执行通过。[远程证据](results/stage-15-ci.json)保存对应headSha及各步骤。阶段15代码远程验收完成；全仓类型债务及普通表列DDL/RAG/外部数据库范围仍按上述记录保留。
