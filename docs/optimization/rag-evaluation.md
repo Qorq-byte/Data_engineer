@@ -8,7 +8,7 @@
 
 此阶段没有新增重排模型，也没有将文档/指标检索自动附加到所有 SQL prompt。文档搜索接口已有真实检索；主查询目前接通 Schema RAG，文档/指标增强仍需明确计划节点与业务数据支持。RRF 不是交叉编码器重排。mock embedding 基于哈希，不能用于语义准确率评估，响应会提示。
 
-双后端更新不是跨库原子事务。关键清理失败会报错而非宣称成功；进程崩溃/第二后端写入失败后应重跑同一范围索引。多进程并发刷新、索引快照切换和故障恢复需更完整的运维方案；MVP 使用单进程，第四阶段处理进程内资源边界。
+双后端更新不是跨库原子事务。关键清理失败会报错而非宣称成功；Schema 按库替换现在有阶段17的进程内补偿和失败隔离，其他 namespace 与进程崩溃仍需重建同一范围索引。多进程并发刷新、索引快照切换和持久故障恢复仍需更完整的运维方案；MVP 使用单进程。
 
 ## 模型/索引版本迁移
 
@@ -66,4 +66,10 @@ SchemaDocument/索引仍没有catalog字段，不支持同一db_id在多个catal
 
 推荐调用`POST /api/v1/schema/{db_id}/refresh`，成功必须检查rag_indexed=true；409/SCHEMA_REFRESH_CONFLICT表示embedding等待后来源已变化，旧索引尚未删除，恢复目标后显式重试。200且rag_indexed=false是未索引成功，不能把Schema已提取当作检索索引已更新。后台、启动和IndexRefresher复用同一来源检查；未默认开启周期监听。
 
-真实SQLite/DuckDB、LanceDB和FTS5回归覆盖源DDL/重连/断开、空替换、取消、同库顺序与其他库独立；embedding使用16维MockEmbeddingProvider，并非真实语义检索评测。sentinel文档是否保留只验证替换一致性，不产生Recall/Precision/MRR/NDCG或NL2SQL准确率结论。两个后端写到一半失败仍可能不一致，当前报告false并要求重试，恢复/事务机制尚未实现。普通表列TTL、catalog索引字段、真实标注与性能基线仍需后续阶段。[实施证据](stage-16.md)。
+真实SQLite/DuckDB、LanceDB和FTS5回归覆盖源DDL/重连/断开、空替换、取消、同库顺序与其他库独立；embedding使用16维MockEmbeddingProvider，并非真实语义检索评测。sentinel文档是否保留只验证替换一致性，不产生Recall/Precision/MRR/NDCG或NL2SQL准确率结论。阶段16测得的写到一半不一致已由阶段17补充进程内恢复；普通表列TTL、catalog索引字段、真实标注与性能基线仍需后续阶段。[历史实施证据](stage-16.md)。
+
+## 阶段17补充：双索引写失败恢复（当前行为）
+
+Schema 按 db_id 完整替换在 embedding/来源校验后保存两边原始记录，写失败分别补偿；完整恢复旧内容也不报新索引成功，返回 rag_indexed=false 和 previous index restored。补偿失败则实例记录 unavailable_databases，目标库及无范围检索拒绝，关键词降级有既有 warning；只有成功的完整替换/删除/清空解除对应隔离。普通 upsert、其他 namespace、跨进程及崩溃恢复没有此保证。历史阶段3/16写后失败边界以[阶段17报告](stage-17.md)的当前实现为准，历史测量保留。
+
+恢复保存原始向量、时间戳、FTS 已分词文本及元数据，不重跑 embedding。测试注入前后写入故障并比较完整内容；这是功能/故障恢复验证，不是 Recall@K、MRR、SQL 结果正确率或性能基线。持久部署异常重启后应先通过共享刷新入口逐库全量刷新并确认 rag_indexed=true，再开放检索；实例内隔离标记不持久化，不承诺自动检测既有损坏。大索引额外内存/同步 I/O 成本仍待按运行说明实测。

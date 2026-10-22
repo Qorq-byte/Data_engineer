@@ -78,3 +78,9 @@ duckdb_source.source_state通过duckdb_databases/duckdb_schemas读取当前catal
 SchemaMetadataRAG同实例同db_id替换在准备与写入阶段串行，before_replace在embedding数量/维数检查之后、首次删除之前运行；空删除亦执行。其他库不必等待该库的embedding gate；这只是功能隔离，并非吞吐/SLO结论。普通低级upsert/clear及外部直接使用writer不自动获得已注册源校验，生产应使用共享入口。
 
 人工/后台/启动/IndexRefresher四条来源路径均接入；IndexRefresher的成功时间/版本只在发布成功时更新，周期任务未默认启动。现有Schema内省仍可能执行COUNT估算，刷新时二次内省对大表成本待测；两个后端的同步写、外部进程DDL、跨进程锁/事务仍不提供原子性。普通DuckDB DDL仍需TTL/显式刷新，来源正确不等于索引与所有查询时刻严格一致。详情见[阶段16报告](stage-16.md)。
+
+## 阶段17补充：Schema 索引故障恢复与运行边界
+
+同实例同 db_id 的替换在既有 gate 内完成；两边快照准备成功后才删除，写失败分别同步恢复，恢复失败将该库隔离。检索在 embedding 等待前后核对，防止等待中失效后仍读取；健康库的指定检索独立可用。共享入口的 rag_indexed=false/warnings 是业务失败，应检查 previous index restored 与 recovery failed，不能将 HTTP200 当成功。后者先修复底层资源问题，再显式完整刷新该库，确认 rag_indexed=true；不要通过重启或直接查底层表绕过隔离。
+
+此阶段没有持久恢复日志、多进程锁或跨系统事务。异常退出后需在开放持久索引检索前逐库全量刷新；备份需要与目标库索引量成正比的额外内存，快照/写/恢复均同步，生产阻塞程度未测。后续压测应增加大 Schema（1k/10k/100k文档）、正常刷新/故障补偿/查询混合场景，观测事件循环滞后、RSS峰值、磁盘 I/O、吞吐、P50/P95/P99与错误率；对100k先确认资源预算，不将单元测试耗时当容量结论。完整证据及限制见[阶段17报告](stage-17.md)。

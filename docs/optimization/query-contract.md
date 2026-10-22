@@ -58,4 +58,8 @@ None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/t
 
 原200响应status=refreshed/rag_indexed/warnings字段保留。embedding不可用/失败或写后端失败仍可能200，但rag_indexed=false及warning；这不表示索引成功。取消继续传播。前端索引重建只将rag_indexed===true计为成功，RAG刷新只将refreshed===true计为成功；false/缺字段/409不再显示全部完成，部分失败保留统计。
 
-提交前来源/embedding校验失败保留旧索引；若已开始写入两个后端后再失败，当前仍可能部分更新，rag_indexed=false需显式重试，不承诺跨LanceDB/FTS5原子事务。IndexRefresher只在成功发布后记录版本/时间，其周期调度没有默认启动调用，不能当作实时DDL监听已接通。详见[阶段16报告](stage-16.md)。
+提交前来源/embedding校验失败保留旧索引。阶段16的双后端部分写限制已由下述阶段17补充进程内补偿，仍不承诺跨LanceDB/FTS5原子事务。IndexRefresher只在成功发布后记录版本/时间，其周期调度没有默认启动调用，不能当作实时DDL监听已接通。详见[阶段16报告](stage-16.md)。
+
+阶段17：按库完整替换前保存两边原始记录，写入失败尝试分别恢复；补偿成功仍为本次更新失败，HTTP200/rag_indexed=false，固定 warning `Schema index update failed; previous index restored`。恢复失败或旧状态本来不可信时，warning 为 `Schema index recovery failed; retrieval unavailable until successful explicit refresh`，目标库及无范围 RAG 检索拒绝；健康库指定检索独立可用。共享刷新不公开原始后端异常，不自动重试。
+
+显式全量刷新 rag_indexed=true 后才确认对应库可用；upsert 和其他库刷新不能解除隔离。Schema Linking 沿用带 warning 的关键词降级，不使用不可信索引。低级 API 暴露 `SchemaIndexWriteError.restored` 与实例 `unavailable_databases`，不是新增 HTTP 响应字段。此隔离不跨进程持久化，重启不等于恢复；异常退出的持久部署应在开放检索前逐库完整刷新。详情及低级写路径边界见[阶段17报告](stage-17.md)。

@@ -7,7 +7,7 @@ from typing import Protocol
 from app.db.connections import ConnectionFactory
 from app.db.runtime import gate
 from app.db.schema_extractor import SchemaExtractor
-from app.models.rag_schema import SchemaDocument
+from app.models.rag_schema import SchemaDocument, SchemaIndexWriteError
 from app.models.schema import SchemaSnapshot
 
 
@@ -83,6 +83,8 @@ async def refresh_database_schema(
         except SchemaRefreshConflictError:
             SchemaExtractor.invalidate(connection)
             raise
+        except SchemaIndexWriteError as exc:
+            return SchemaRefreshResult(snapshot, False, (str(exc),))
         except Exception:
             return SchemaRefreshResult(
                 snapshot, False, ("Schema extracted but RAG index was not refreshed",),

@@ -8,6 +8,17 @@ from datetime import datetime
 from typing import Any
 
 
+class SchemaIndexWriteError(RuntimeError):
+    """A failed replacement, with a safe recovery outcome for API consumers."""
+
+    def __init__(self, *, restored: bool) -> None:
+        self.restored = restored
+        super().__init__(
+            "Schema index update failed; previous index restored" if restored else
+            "Schema index recovery failed; retrieval unavailable until successful explicit refresh"
+        )
+
+
 @dataclass
 class SchemaDocument:
     """A searchable document representing a table or column in the RAG index."""

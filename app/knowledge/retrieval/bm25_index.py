@@ -633,6 +633,52 @@ class BM25Index:
         self.drop_namespace(namespace)
         self.ensure_namespace(namespace)
 
+    def snapshot_database(
+        self, namespace: str, db_id: str, *, new_doc_ids: list[str] | None = None,
+    ) -> list[tuple[str, str, str]]:
+        """Capture raw FTS text/metadata without tokenizing again; errors propagate."""
+        conn = self._ensure_connected()
+        table = self._table_name(namespace)
+        if new_doc_ids and conn.execute(
+            f"SELECT 1 FROM {table} WHERE doc_id IN (SELECT value FROM json_each(?)) "
+            "AND (json_extract(metadata_json, '$.db_id') IS NULL "
+            "OR json_extract(metadata_json, '$.db_id') != ?) LIMIT 1",
+            (json.dumps(new_doc_ids), db_id),
+        ).fetchone():
+            raise ValueError("Schema document ID belongs to another database")
+        return [tuple(row) for row in conn.execute(
+            f"SELECT doc_id, text, metadata_json FROM {table} "
+            "WHERE json_extract(metadata_json, '$.db_id') = ?", (db_id,),
+        ).fetchall()]
+
+    def restore_database(
+        self, namespace: str, db_id: str, rows: list[tuple[str, str, str]],
+    ) -> None:
+        """Restore exact FTS records in one local transaction, without swallowing errors."""
+        if any(json.loads(row[2]).get("db_id") != db_id for row in rows):
+            raise ValueError("Recovery records must belong to the specified database")
+        conn = self._ensure_connected()
+        table = self._table_name(namespace)
+        # A failed executemany may have left uncommitted partial inserts.
+        conn.rollback()
+        with conn:
+            conn.execute(
+                f"DELETE FROM {table} WHERE json_extract(metadata_json, '$.db_id') = ?",
+                (db_id,),
+            )
+            conn.executemany(
+                f"INSERT INTO {table}(doc_id, text, metadata_json) VALUES (?, ?, ?)", rows,
+            )
+
+    def delete_database(self, namespace: str, db_id: str) -> None:
+        """Strict scoped deletion for coordinated replacements; storage errors propagate."""
+        conn = self._ensure_connected()
+        table = self._table_name(namespace)
+        with conn:
+            conn.execute(
+                f"DELETE FROM {table} WHERE json_extract(metadata_json, '$.db_id') = ?", (db_id,),
+            )
+
     # ── Introspection ──────────────────────────────────────────────────
 
     def count(self, namespace: str) -> int:

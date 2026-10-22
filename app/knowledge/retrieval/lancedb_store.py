@@ -31,6 +31,8 @@ from typing import Any
 
 import pyarrow as pa
 
+from app.knowledge.retrieval.filters import literal
+
 logger = logging.getLogger(__name__)
 
 # ── LanceDB integration (optional — graceful degradation) ─────────────
@@ -387,6 +389,33 @@ class LanceDBStore:
         """Return the number of rows in a namespace."""
         table = self.ensure_namespace(namespace)
         return table.count_rows()
+
+    def snapshot_database(
+        self, namespace: str, db_id: str, *, new_doc_ids: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Read every raw record for a database, refusing cross-database ID collisions."""
+        table = self.ensure_namespace(namespace)
+        if new_doc_ids:
+            ids = ", ".join(literal(doc_id) for doc_id in new_doc_ids)
+            if table.search().where(
+                f"doc_id IN ({ids}) AND (db_id IS NULL OR db_id != {literal(db_id)})"
+            ).limit(1).to_list():
+                raise ValueError("Schema document ID belongs to another database")
+        records: list[dict[str, Any]] = (
+            table.search().where(f"db_id = {literal(db_id)}").limit(None).to_list()
+        )
+        return records
+
+    def restore_database(
+        self, namespace: str, db_id: str, records: list[dict[str, Any]],
+    ) -> None:
+        """Compensate a database replacement, preserving original vectors and timestamps."""
+        if any(record.get("db_id") != db_id for record in records):
+            raise ValueError("Recovery records must belong to the specified database")
+        table = self.ensure_namespace(namespace)
+        table.delete(f"db_id = {literal(db_id)}")
+        if records:
+            table.add(records)
 
     def drop_namespace(self, namespace: str) -> None:
         """Drop a namespace table entirely."""
