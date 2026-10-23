@@ -5,12 +5,20 @@ See SPEC §4.8 (Frontend & API) for the full specification.
 
 from __future__ import annotations
 
+import asyncio
+import copy
 import logging
+import math
 from contextlib import suppress
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
+from app.models.rag_settings import FusionWeights
+
+if TYPE_CHECKING:
+    from app.storage.mysql_store import MySQLStore
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,9 +26,10 @@ logger = logging.getLogger(__name__)
 # ── In-memory settings store (MySQL fallback) ────────
 
 _settings_store: dict[str, Any] = {}
+_RAG_SETTINGS_TIMEOUT_SECONDS = 10.0
 
 
-def _get_store():
+def _get_store() -> MySQLStore | None:
     """Get the MySQL store, or return None if not available."""
     try:
         from app.storage.mysql_store import get_store
@@ -45,7 +54,7 @@ async def _load_settings_from_db() -> None:
     # Only fill in missing sections from defaults — don't overwrite existing
     for key, value in _DEFAULT_SETTINGS.items():
         if key not in _settings_store:
-            _settings_store[key] = value
+            _settings_store[key] = copy.deepcopy(value)
 
 
 async def _persist_section(section: str) -> None:
@@ -196,11 +205,10 @@ class DatabaseSettingsUpdate(BaseModel):
 
 
 class RagSettingsUpdate(BaseModel):
-    bm25_weight: float | None = Field(default=None, ge=0.0, le=1.0)
-    vector_weight: float | None = Field(default=None, ge=0.0, le=1.0)
-    top_k: int | None = Field(default=None, ge=1, le=50)
-    similarity_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
-    embedding_model: str | None = None
+    model_config = {"extra": "forbid"}
+
+    bm25_weight: float | None = Field(default=None, ge=0.0, le=1.0, strict=True)
+    vector_weight: float | None = Field(default=None, ge=0.0, le=1.0, strict=True)
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────
@@ -222,9 +230,11 @@ def _public_settings(value: Any) -> Any:
 async def get_all_settings() -> dict:
     """Get all system settings."""
     await _load_settings_from_db()
+    public = _public_settings(_settings_store)
+    public["rag"] = await get_rag_settings()
     return {
         "status": "ok",
-        "settings": _public_settings(_settings_store),
+        "settings": public,
     }
 
 
@@ -366,24 +376,108 @@ async def update_database_settings(body: DatabaseSettingsUpdate) -> dict:
 
 
 @router.get("/settings/rag")
-async def get_rag_settings() -> dict:
-    """Get RAG configuration."""
-    await _load_setting_section("rag")
-    return {
-        "status": "ok",
-        **_settings_store["rag"],
-    }
+async def get_rag_settings() -> dict[str, Any]:
+    """Separate desired weights from actual runtime and unsupported legacy fields."""
+    from app.db.runtime import gate
+
+    async with gate(("rag-settings",)):
+        config, _, source = await _load_rag_configuration()
+        _settings_store["rag"] = copy.deepcopy(config)
+        return {"status": "ok", **_rag_settings_view(config, source)}
 
 
 @router.put("/settings/rag")
-async def update_rag_settings(body: RagSettingsUpdate) -> dict:
-    """Update RAG configuration."""
-    await _load_setting_section("rag")
-    rag = _settings_store["rag"]
-    updates = body.model_dump(exclude_none=True)
-    rag.update(updates)
-    await _persist_section("rag")
-    return {"status": "updated", "message": "RAG 配置已更新"}
+async def update_rag_settings(body: RagSettingsUpdate) -> dict[str, Any]:
+    """Persist before publishing; never report swallowed persistence failures as saved."""
+    from app.db.runtime import gate
+    from app.rag.engine import apply_fusion_weights
+
+    fields = body.model_fields_set
+    if not fields or any(getattr(body, name) is None for name in fields):
+        raise HTTPException(status_code=422, detail="Provide at least one non-null fusion weight")
+    vector = body.vector_weight
+    if vector is None:
+        assert body.bm25_weight is not None
+        vector = 1 - body.bm25_weight
+    if body.bm25_weight is not None and not math.isclose(
+        vector + body.bm25_weight, 1, rel_tol=0, abs_tol=1e-9
+    ):
+        raise HTTPException(status_code=422, detail="Fusion weights must sum to 1")
+    weights = FusionWeights(vector)
+    async with gate(("rag-settings",)):
+        existing, store, _ = await _load_rag_configuration()
+        candidate = {**existing, **weights.as_dict()}
+        persistence = "memory_only"
+        if store is not None:
+            try:
+                await asyncio.wait_for(
+                    store.save_setting("rag", candidate), timeout=_RAG_SETTINGS_TIMEOUT_SECONDS
+                )
+            except Exception as exc:
+                logger.warning("RAG settings persistence failed; runtime was not changed")
+                raise HTTPException(status_code=503, detail={
+                    "code": "RAG_SETTINGS_PERSIST_FAILED", "persistence": "unconfirmed",
+                    "runtime_applied": False,
+                    "message": "Storage result unconfirmed; read before an explicit retry.",
+                }) from exc
+            persistence = "persisted"
+        # No await between these publications: readers see all old or all new instances.
+        applied = apply_fusion_weights(weights)
+        _settings_store["rag"] = candidate
+        return {
+            "status": "updated", "runtime_applied": applied, "persistence": persistence,
+            **_rag_settings_view(candidate, "database" if store is not None else "memory"),
+        }
+
+
+async def _load_rag_configuration() -> tuple[dict[str, Any], MySQLStore | None, str]:
+    store = _get_store()
+    if store is not None:
+        try:
+            config = await asyncio.wait_for(
+                store.get_setting("rag"), timeout=_RAG_SETTINGS_TIMEOUT_SECONDS
+            )
+            if config is not None:
+                if not isinstance(config, dict):
+                    raise ValueError("Invalid RAG settings record")
+                return copy.deepcopy(config), store, "database"
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail={
+                "code": "RAG_SETTINGS_READ_FAILED", "message": "Configuration storage unavailable.",
+            }) from exc
+    config = _settings_store.get("rag")
+    if config is not None:
+        if not isinstance(config, dict):
+            raise HTTPException(status_code=503, detail={"code": "RAG_SETTINGS_READ_FAILED"})
+        return copy.deepcopy(config), store, "memory"
+    return copy.deepcopy(_DEFAULT_SETTINGS["rag"]), store, "default"
+
+
+def _rag_settings_view(config: dict[str, Any], source: str) -> dict[str, Any]:
+    from app.rag.engine import get_runtime_settings
+
+    valid = True
+    try:
+        weights = FusionWeights(config.get("vector_weight", 0.7)).as_dict()
+    except ValueError:
+        valid = False
+        weights = FusionWeights().as_dict()
+    runtime = get_runtime_settings()
+    matches = valid and runtime["available"] and all(
+        math.isclose(item["vector_weight"], weights["vector_weight"], abs_tol=1e-9)
+        for item in runtime["weights"].values()
+    )
+    return {
+        **weights, "configuration_source": source, "configuration_valid": valid,
+        "runtime": {**runtime, "matches_configured": bool(matches)},
+        "editable_fields": ["bm25_weight", "vector_weight"],
+        "unsupported_fields": ["top_k", "similarity_threshold", "embedding_model"],
+        "legacy_ignored_fields": [name for name in (
+            "top_k", "similarity_threshold", "embedding_model"
+        ) if name in config],
+        "scope": "One serving process; Top-K is per call; no global similarity threshold. "
+        "Embedding changes require environment configuration and compatible index rebuilds.",
+    }
 
 
 @router.get("/settings/available-models")

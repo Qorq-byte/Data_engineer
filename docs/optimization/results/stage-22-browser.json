@@ -1,0 +1,643 @@
+{
+  "tool": "gstack /browse",
+  "environment": "Real FastAPI on loopback 8022, real temporary SQLite settings adapter/LanceDB/FTS5, synthetic admin, mock embedding, lifespan off",
+  "scenarios": [
+    "actual embedding and supported fields only",
+    "keyboard complementary draft versus configured value",
+    "real SQLite persistence and three runtime weights",
+    "explicit memory-only acknowledgement",
+    "native INSERT denial, unknown result and no auto retry",
+    "native READ denial, unknown fields and disabled save",
+    "configured/runtime drift visible and GET does not apply",
+    "engine unready save is not runtime success",
+    "explicit reinitialize plus read clears obsolete feedback",
+    "375px layout and local-only resources"
+  ],
+  "initial": {
+    "labels": "智能查询\n数据Schema\n数据库连接\n领域知识\nSQL工作台\nMCP服务\n工作流\n持续学习\n系统设置\n用户设置\nRAG Settings QA\n退出登入\n系统设置\n\nLLM 提供商、Harness 约束、RAG 检索与数据库连接管理\n\nv0.1.0\nLLM 提供商\nHarness 约束\nRAG 检索\n数据库\n账户\nRAG 融合权重\n重新读取配置\n保存融合权重\n\n仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。\n\n正在编辑 · BM25 权重: 0.30\n纯向量\n纯 BM25\n正在编辑 · 向量权重: 0.70\n纯 BM25\n纯向量\n已配置 · 向量 / BM25: 0.70 / 0.30 · 来源: 持久化存储\n运行实例: Schema 0.70 / 0.30 · 指标 0.70 / 0.30 · 文档 0.70 / 0.30\nTop-K：由每次检索调用指定，此处不提供全局覆盖。\n相似度阈值：当前没有统一的全局过滤器，此处不可设置。\n实际 Embedding：MockEmbeddingProvider · mock-deterministic · 256 维。模型变更需部署配置与兼容索引重建。\n检索架构概览3 命名空间隔离\nSchema 命名空间\n\n表名、列名、注释、类型\n\nBM25: schema_fts · Vector: schema_lance\n\n术语 命名空间\n\n业务术语、SQL 映射、标签\n\nBM25: glossary_fts · Vector: glossary_lance\n\n历史 命名空间\n\n问答对、高质量 SQL 模板\n\nBM25: history_fts · Vector: history_lance\n\n检索流程\nNL 查询\n→\nBM25 稀疏\n→\nLanceDB 密集\n→\nRRF 融合\n→\nTop-K 结果\nSchema 按库维护\n\n先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。\n\n重新读取状态\n\n状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。\n\nsettings-fixture\nsettings-fixture\n已连接\n未隔离\n重建该库\n清理该库索引\n重建所有已连接库的 Schema\n刷新已连接库\nSchema · 向量 / 关键词\n2 / 2\n指标 · 向量 / 关键词\n9 / 9\n文档 · 向量 / 关键词\n0 / 0\n全量索引维护（仅维护窗口使用）\n文档上传Markdown 文档将被分块索引，支持直接粘贴或上传本地文件\n选择文件\n用户指南\n最佳实践\nSQL 风格\nFAQ\n上传文档",
+    "ranges": [
+      {
+        "label": "BM25 融合权重",
+        "value": "0.3",
+        "disabled": false
+      },
+      {
+        "label": "向量融合权重",
+        "value": "0.7",
+        "disabled": false
+      }
+    ],
+    "legacyEditable": false,
+    "external": [],
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 9,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 5,
+        "GET /qa/state": 9,
+        "POST /qa/mode/volatile": 1,
+        "POST /qa/mode/write_failure": 1,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 1,
+        "POST /qa/mode/drift": 1,
+        "POST /qa/mode/unready": 1,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.3,
+            "vector_weight": 0.7
+          },
+          "metrics": {
+            "bm25_weight": 0.3,
+            "vector_weight": 0.7
+          },
+          "documents": {
+            "bm25_weight": 0.3,
+            "vector_weight": 0.7
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.7,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.3
+      },
+      "source_rows": 3
+    }
+  },
+  "edited": {
+    "ranges": [
+      0.8,
+      0.2
+    ],
+    "text": "系统设置\n\nLLM 提供商、Harness 约束、RAG 检索与数据库连接管理\n\nv0.1.0\nLLM 提供商\nHarness 约束\nRAG 检索\n数据库\n账户\nRAG 融合权重\n重新读取配置\n保存融合权重\n\n仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。\n\n正在编辑 · BM25 权重: 0.80\n纯向量\n纯 BM25\n正在编辑 · 向量权重: 0.20\n纯 BM25\n纯向量\n已配置 · 向量 / BM25: 0.70 / 0.30 · 来源: 持久化存储\n运行实例: Schema 0.70 / 0.30 · 指标 0.70 / 0.30 · 文档 0.70 / 0.30\nTop-K：由每次检索调用指定，此处不提供全局覆盖。\n相似度阈值：当前没有统一的全局过滤器，此处不可设置。\n实际 Embedding：MockEmbeddingProvider · mock-deterministic · 256 维。模型变更需部署配置与兼容索引重建。\n检索架构概览3 命名空间隔离\nSchema 命名空间\n\n表名、列名、注释、类型\n\nBM25: schema_fts · Vector: schema_lance\n\n术语 命名空间\n\n业务术语、SQL 映射、标签\n\nBM25: glossary_fts · Vector: glossary_lance\n\n历史 命名空间\n\n问答对、高质量 SQL 模板\n\nBM25: history_fts · Vector: history_lance\n\n检索流程\nNL 查询\n→\nBM25 稀疏\n→\nLanceDB 密集\n→\nRRF 融合\n→\nTop-K 结果\nSchema 按库维护\n\n先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。\n\n重新读取状态\n\n状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。\n\nsettings-fixture\nsettings-fixture\n已连接\n未隔离\n重建该库\n清理该库索引\n重建所有已连接库的 Schema\n刷新已连接库\nSchema · 向量 / 关键词\n2 / 2\n指标 · 向量 / 关键词\n9 / 9\n文档 · 向量 / 关键词\n0 / 0\n全量索引维护（仅维护窗口使用）\n文档上传Markdown 文档将被分块索引，支持直接粘贴或上传本地文件\n选择文件\n用户指南\n最佳实践\nSQL 风格\nFAQ\n上传文档"
+  },
+  "persisted": {
+    "feedback": [
+      "已持久化；三个检索融合器已生效，在途检索保留原快照。"
+    ],
+    "ranges": [
+      0.8,
+      0.2
+    ],
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 9,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 6,
+        "GET /qa/state": 10,
+        "POST /qa/mode/volatile": 1,
+        "POST /qa/mode/write_failure": 1,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 1,
+        "POST /qa/mode/drift": 1,
+        "POST /qa/mode/unready": 1,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "metrics": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "documents": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.2,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.8
+      },
+      "source_rows": 3
+    }
+  },
+  "volatile": {
+    "feedback": [
+      "仅本进程临时配置，重启不保留；三个检索融合器已生效，在途检索保留原快照。"
+    ],
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 10,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 7,
+        "GET /qa/state": 11,
+        "POST /qa/mode/volatile": 2,
+        "POST /qa/mode/write_failure": 1,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 1,
+        "POST /qa/mode/drift": 1,
+        "POST /qa/mode/unready": 1,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "metrics": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "documents": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.2,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.8
+      },
+      "source_rows": 3
+    }
+  },
+  "write_failure": {
+    "feedback": [
+      "保存结果未确认，请先重新读取配置；不会自动重试保存。",
+      "保存未确认: 保存结果未确认，请重新读取配置后再决定是否重试"
+    ],
+    "saveDisabled": true,
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 10,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 8,
+        "GET /qa/state": 12,
+        "POST /qa/mode/volatile": 2,
+        "POST /qa/mode/write_failure": 2,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 1,
+        "POST /qa/mode/drift": 1,
+        "POST /qa/mode/unready": 1,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "metrics": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "documents": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.2,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.8
+      },
+      "source_rows": 3
+    }
+  },
+  "read_failure": {
+    "text": "系统设置\n\nLLM 提供商、Harness 约束、RAG 检索与数据库连接管理\n\nv0.1.0\nLLM 提供商\nHarness 约束\nRAG 检索\n数据库\n账户\nRAG 融合权重\n重新读取配置\n保存融合权重\n\n仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。\n\n无法读取 RAG 配置，当前值未知。请重试读取；不会自动重试保存。\n\n正在编辑 · BM25 权重: —\n纯向量\n纯 BM25\n正在编辑 · 向量权重: —\n纯 BM25\n纯向量\n已配置 · 向量 / BM25: 未知 · 来源: 未知\n运行实例: 未知\nTop-K：由每次检索调用指定，此处不提供全局覆盖。\n相似度阈值：当前没有统一的全局过滤器，此处不可设置。\n实际 Embedding：未知。模型变更需部署配置与兼容索引重建。\n检索架构概览3 命名空间隔离\nSchema 命名空间\n\n表名、列名、注释、类型\n\nBM25: schema_fts · Vector: schema_lance\n\n术语 命名空间\n\n业务术语、SQL 映射、标签\n\nBM25: glossary_fts · Vector: glossary_lance\n\n历史 命名空间\n\n问答对、高质量 SQL 模板\n\nBM25: history_fts · Vector: history_lance\n\n检索流程\nNL 查询\n→\nBM25 稀疏\n→\nLanceDB 密集\n→\nRRF 融合\n→\nTop-K 结果\nSchema 按库维护\n\n先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。\n\n重新读取状态\n\n状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。\n\nsettings-fixture\nsettings-fixture\n已连接\n未隔离\n重建该库\n清理该库索引\n重建所有已连接库的 Schema\n刷新已连接库\nSchema · 向量 / 关键词\n2 / 2\n指标 · 向量 / 关键词\n9 / 9\n文档 · 向量 / 关键词\n0 / 0\n全量索引维护（仅维护窗口使用）\n文档上传Markdown 文档将被分块索引，支持直接粘贴或上传本地文件\n选择文件\n用户指南\n最佳实践\nSQL 风格\nFAQ\n上传文档",
+    "saveDisabled": true,
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 11,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 8,
+        "GET /qa/state": 13,
+        "POST /qa/mode/volatile": 2,
+        "POST /qa/mode/write_failure": 2,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 2,
+        "POST /qa/mode/drift": 1,
+        "POST /qa/mode/unready": 1,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "metrics": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "documents": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.2,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.8
+      },
+      "source_rows": 3
+    }
+  },
+  "drift": {
+    "text": "系统设置\n\nLLM 提供商、Harness 约束、RAG 检索与数据库连接管理\n\nv0.1.0\nLLM 提供商\nHarness 约束\nRAG 检索\n数据库\n账户\nRAG 融合权重\n重新读取配置\n保存融合权重\n\n仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。\n\n正在编辑 · BM25 权重: 0.10\n纯向量\n纯 BM25\n正在编辑 · 向量权重: 0.90\n纯 BM25\n纯向量\n已配置 · 向量 / BM25: 0.90 / 0.10 · 来源: 持久化存储\n运行实例: Schema 0.20 / 0.80 · 指标 0.20 / 0.80 · 文档 0.20 / 0.80\n已配置值与运行值不一致；重新读取不会自动应用，请确认后显式保存。\nTop-K：由每次检索调用指定，此处不提供全局覆盖。\n相似度阈值：当前没有统一的全局过滤器，此处不可设置。\n实际 Embedding：MockEmbeddingProvider · mock-deterministic · 256 维。模型变更需部署配置与兼容索引重建。\n检索架构概览3 命名空间隔离\nSchema 命名空间\n\n表名、列名、注释、类型\n\nBM25: schema_fts · Vector: schema_lance\n\n术语 命名空间\n\n业务术语、SQL 映射、标签\n\nBM25: glossary_fts · Vector: glossary_lance\n\n历史 命名空间\n\n问答对、高质量 SQL 模板\n\nBM25: history_fts · Vector: history_lance\n\n检索流程\nNL 查询\n→\nBM25 稀疏\n→\nLanceDB 密集\n→\nRRF 融合\n→\nTop-K 结果\nSchema 按库维护\n\n先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。\n\n重新读取状态\n\n状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。\n\nsettings-fixture\nsettings-fixture\n已连接\n未隔离\n重建该库\n清理该库索引\n重建所有已连接库的 Schema\n刷新已连接库\nSchema · 向量 / 关键词\n2 / 2\n指标 · 向量 / 关键词\n9 / 9\n文档 · 向量 / 关键词\n0 / 0\n全量索引维护（仅维护窗口使用）\n文档上传Markdown 文档将被分块索引，支持直接粘贴或上传本地文件\n选择文件\n用户指南\n最佳实践\nSQL 风格\nFAQ\n上传文档",
+    "ranges": [
+      0.1,
+      0.9
+    ],
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 12,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 8,
+        "GET /qa/state": 14,
+        "POST /qa/mode/volatile": 2,
+        "POST /qa/mode/write_failure": 2,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 2,
+        "POST /qa/mode/drift": 2,
+        "POST /qa/mode/unready": 1,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "metrics": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          },
+          "documents": {
+            "bm25_weight": 0.8,
+            "vector_weight": 0.2
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.9,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37
+      },
+      "source_rows": 3
+    }
+  },
+  "unready": {
+    "feedback": [
+      "已持久化；RAG 引擎未就绪，尚未应用；初始化后请重新读取运行状态。"
+    ],
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 13,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 9,
+        "GET /qa/state": 15,
+        "POST /qa/mode/volatile": 2,
+        "POST /qa/mode/write_failure": 2,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 2,
+        "POST /qa/mode/drift": 2,
+        "POST /qa/mode/unready": 2,
+        "POST /qa/mode/reinitialize": 1,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": false,
+        "weights": null,
+        "embedding": null
+      },
+      "configured": {
+        "vector_weight": 0.9,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.1
+      },
+      "source_rows": 3
+    }
+  },
+  "reinitialized": {
+    "text": "系统设置\n\nLLM 提供商、Harness 约束、RAG 检索与数据库连接管理\n\nv0.1.0\nLLM 提供商\nHarness 约束\nRAG 检索\n数据库\n账户\nRAG 融合权重\n重新读取配置\n保存融合权重\n\n仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。\n\n正在编辑 · BM25 权重: 0.10\n纯向量\n纯 BM25\n正在编辑 · 向量权重: 0.90\n纯 BM25\n纯向量\n已配置 · 向量 / BM25: 0.90 / 0.10 · 来源: 持久化存储\n运行实例: Schema 0.90 / 0.10 · 指标 0.90 / 0.10 · 文档 0.90 / 0.10\nTop-K：由每次检索调用指定，此处不提供全局覆盖。\n相似度阈值：当前没有统一的全局过滤器，此处不可设置。\n实际 Embedding：MockEmbeddingProvider · mock-deterministic · 256 维。模型变更需部署配置与兼容索引重建。\n检索架构概览3 命名空间隔离\nSchema 命名空间\n\n表名、列名、注释、类型\n\nBM25: schema_fts · Vector: schema_lance\n\n术语 命名空间\n\n业务术语、SQL 映射、标签\n\nBM25: glossary_fts · Vector: glossary_lance\n\n历史 命名空间\n\n问答对、高质量 SQL 模板\n\nBM25: history_fts · Vector: history_lance\n\n检索流程\nNL 查询\n→\nBM25 稀疏\n→\nLanceDB 密集\n→\nRRF 融合\n→\nTop-K 结果\nSchema 按库维护\n\n先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。\n\n重新读取状态\n\n状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。\n\nsettings-fixture\nsettings-fixture\n已连接\n未隔离\n重建该库\n清理该库索引\n重建所有已连接库的 Schema\n刷新已连接库\nSchema · 向量 / 关键词\n2 / 2\n指标 · 向量 / 关键词\n9 / 9\n文档 · 向量 / 关键词\n0 / 0\n全量索引维护（仅维护窗口使用）\n文档上传Markdown 文档将被分块索引，支持直接粘贴或上传本地文件\n选择文件\n用户指南\n最佳实践\nSQL 风格\nFAQ\n上传文档",
+    "feedback": [],
+    "state": {
+      "counts": {
+        "GET /login": 1,
+        "GET /assets/utilities-55ea2f6ef44060c2.css": 2,
+        "GET /assets/form-BTROHFFV.css": 1,
+        "GET /assets/form-JRN3XVDV.js": 1,
+        "GET /assets/archivo-latin-500-normal-XF7B2NIS.woff2": 1,
+        "GET /assets/archivo-latin-700-normal-WQ7U2ON6.woff2": 1,
+        "GET /assets/archivo-latin-800-normal-AUQHHN5R.woff2": 1,
+        "GET /assets/archivo-latin-400-normal-ZHCBTBXV.woff2": 1,
+        "GET /workspace": 2,
+        "GET /assets/workspace-RD7HIF2G.css": 2,
+        "GET /assets/workspace-CVOAQ5AW.js": 1,
+        "GET /assets/default-avatar.svg": 2,
+        "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+        "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+        "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+        "GET /health": 4,
+        "GET /health/ready": 2,
+        "GET /api/v1/databases": 4,
+        "GET /api/v1/settings/available-models": 4,
+        "GET /api/v1/settings/llm": 2,
+        "GET /api/v1/settings/harness": 2,
+        "GET /api/v1/settings/database": 2,
+        "GET /api/v1/settings/rag": 14,
+        "GET /api/v1/learning/rag/stats": 2,
+        "GET /api/v1/learning/rag/status": 2,
+        "PUT /api/v1/settings/rag": 9,
+        "GET /qa/state": 16,
+        "POST /qa/mode/volatile": 2,
+        "POST /qa/mode/write_failure": 2,
+        "POST /qa/mode/none": 3,
+        "POST /qa/mode/read_failure": 2,
+        "POST /qa/mode/drift": 2,
+        "POST /qa/mode/unready": 2,
+        "POST /qa/mode/reinitialize": 2,
+        "GET /assets/workspace-NUAEJ2U3.js": 1
+      },
+      "runtime": {
+        "available": true,
+        "weights": {
+          "schema": {
+            "bm25_weight": 0.1,
+            "vector_weight": 0.9
+          },
+          "metrics": {
+            "bm25_weight": 0.1,
+            "vector_weight": 0.9
+          },
+          "documents": {
+            "bm25_weight": 0.1,
+            "vector_weight": 0.9
+          }
+        },
+        "embedding": {
+          "provider": "MockEmbeddingProvider",
+          "model": "mock-deterministic",
+          "dimension": 256
+        }
+      },
+      "configured": {
+        "vector_weight": 0.9,
+        "embedding_model": "legacy-ignored",
+        "top_k": 37,
+        "bm25_weight": 0.1
+      },
+      "source_rows": 3
+    },
+    "external": []
+  },
+  "mobile": {
+    "viewport": 375,
+    "documentWidth": 375,
+    "bodyWidth": 375,
+    "ranges": [
+      {
+        "label": "BM25 融合权重",
+        "left": 30,
+        "right": 345
+      },
+      {
+        "label": "向量融合权重",
+        "left": 30,
+        "right": 345
+      }
+    ],
+    "buttons": [
+      {
+        "text": "重新读取配置",
+        "left": 30,
+        "right": 142
+      },
+      {
+        "text": "保存融合权重",
+        "left": 150,
+        "right": 274
+      }
+    ]
+  },
+  "notes": [
+    "QA controls and same-origin CSP are not production routes/policy",
+    "SQLite validates store protocol, not real MySQL integration",
+    "No semantic accuracy or performance conclusion",
+    "Earlier stale selector and stale-message screenshots excluded; final flow rerun after fix"
+  ]
+}

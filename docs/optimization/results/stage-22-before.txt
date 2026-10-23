@@ -1,0 +1,58 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+____________ test_existing_engine_changes_after_acknowledged_save _____________
+
+active = _RAGEngine(lancedb_store=<app.knowledge.retrieval.lancedb_store.LanceDBStore object at 0x0000023F354BF230>, bm25_index...D70>, index_refresher=<app.rag.index_refresher.IndexRefresher object at 0x0000023F355E9160>, startup_schema_results={})
+
+    async def test_existing_engine_changes_after_acknowledged_save(active):
+        response = await api_settings.update_rag_settings(
+            api_settings.RagSettingsUpdate(vector_weight=0.2, bm25_weight=0.8)
+        )
+        assert response["status"] == "updated"
+>       assert [active.schema_rag.rrf_alpha, active.metric_rag.rrf_alpha,
+                active.document_store.rrf_alpha] == [0.2, 0.2, 0.2]
+E       assert [0.7, 0.7, 0.7] == [0.2, 0.2, 0.2]
+E
+E         At index 0 diff: 0.7 != 0.2
+E         Use -v to get more diff
+
+tests\test_rag\test_effective_settings.py:36: AssertionError
+---------------------------- Captured stderr setup ----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.406 seconds.
+Prefix dict has been built successfully.
+----------------------------- Captured log setup ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.406 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+____________________ test_unwired_parameters_are_rejected _____________________
+
+    def test_unwired_parameters_are_rejected():
+        client = authenticated_client(create_app())
+        response = client.put("/api/v1/settings/rag", json={"top_k": 4})
+>       assert response.status_code == 422
+E       assert 200 == 422
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_rag\test_effective_settings.py:43: AssertionError
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\jieba\_compat.py:18
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+..\..\..\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+..\.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\python\data_engineer\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_effective_settings.py::test_existing_engine_changes_after_acknowledged_save
+FAILED tests/test_rag/test_effective_settings.py::test_unwired_parameters_are_rejected
+2 failed, 3 warnings in 9.51s

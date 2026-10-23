@@ -178,6 +178,10 @@ class SchemaMetadataRAG:
     def embedding_dimension(self) -> int:
         return self._embedding.dimension
 
+    def set_fusion(self, fusion: RRFFusion) -> None:
+        """Publish a new immutable-per-search fusion reference, without touching indexes."""
+        self._rrf = fusion
+
     @property
     def rrf_alpha(self) -> float:
         return self._rrf.alpha
@@ -361,6 +365,7 @@ class SchemaMetadataRAG:
         Returns:
             List of :class:`SchemaSearchResult`, sorted by RRF score (best first).
         """
+        fusion = self._rrf  # Keep one configuration across embedding awaits.
         self._check_available(db_id)
         # 1. Generate query embedding
         query_vec = await self._embedding.embed_single(query)
@@ -403,7 +408,7 @@ class SchemaMetadataRAG:
             sparse_results.append(unpacked)
 
         # 4. RRF fusion
-        fused = self._rrf.fuse(dense_results, sparse_results, top_k=top_k)
+        fused = fusion.fuse(dense_results, sparse_results, top_k=top_k)
 
         # 5. Convert to SchemaSearchResult
         results = [_row_to_schema_result(r) for r in fused]

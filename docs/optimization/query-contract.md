@@ -75,3 +75,9 @@ None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/t
 阶段20工作台系统设置→RAG检索接入status/stats/databases，按当前列表显示连接库和遗留库；未隔离不代表索引非空或实时健康。读取失败显示未知并禁用维护，重新读取只发GET；丢弃过期读取结果。按库清理严格确认status=cleared/scope=schema/db_id及removed结构，重建仅认rag_indexed=true，取消不发POST，失败不自动写重试，503按restored三态反馈。所有库ID进入路径时编码。
 
 工作台维护操作互斥，结束重新读取；旧全量入口保留于折叠维护区。断开响应部分成功会提示后续按库处理，而不隐藏索引失败。后端契约未变，浏览器及实际函数验证见[阶段20报告](stage-20.md)。
+
+## 阶段22：RAG权重设置
+
+`GET/PUT /api/v1/settings/rag`现在区分已配置与实际运行。PUT只接受bm25_weight/vector_weight，单项互补、双项和须为1；空/null/非有限/未知字段及原top_k/similarity_threshold/embedding_model写入均422。旧客户端需只发送权重，不再提交完整GET响应。GET与聚合设置的rag段不回显旧未生效数值，返回实际三类融合权重、provider/model/dimension、配置来源与匹配状态。
+
+updated必须同时检查persistence=persisted/memory_only及runtime_applied；未初始化不冒充已应用，无存储不冒充持久化。读失败503/RAG_SETTINGS_READ_FAILED，写失败503/RAG_SETTINGS_PERSIST_FAILED且unconfirmed/未发布运行值。取消或超时可能数据库已提交，需先GET检查漂移再显式保存，不自动重试。权限与固定工作流不变；完整字段/单进程边界见[生效契约](rag-settings.md)/[阶段22报告](stage-22.md)。

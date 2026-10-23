@@ -512,7 +512,7 @@ const api = {
   },
 
   // ── RAG Settings ──
-  ragSettings() { return api._fetch('/api/v1/settings/rag').catch(() => ({})); },
+  ragSettings() { return api._fetch('/api/v1/settings/rag'); },
   updateRagSettings(body) {
     return api._fetch('/api/v1/settings/rag', {
       method: 'PUT', headers: api._headers(true),
@@ -3518,12 +3518,38 @@ const schemaIndexRows = (status, connections) => {
   }));
 };
 
+const ragConfigurationSnapshot = (value, status = 'ok') => {
+  const validWeights = weights => weights && ['bm25_weight', 'vector_weight'].every(key =>
+    typeof weights[key] === 'number' && Number.isFinite(weights[key]) && weights[key] >= 0 && weights[key] <= 1)
+    && Math.abs(weights.bm25_weight + weights.vector_weight - 1) < 1e-9;
+  if (!value || value.status !== status || !validWeights(value)
+      || !['database', 'memory', 'default'].includes(value.configuration_source)
+      || typeof value.configuration_valid !== 'boolean' || typeof value.runtime?.available !== 'boolean'
+      || typeof value.runtime?.matches_configured !== 'boolean') return null;
+  if (value.runtime.available) {
+    const groups = ['schema', 'metrics', 'documents'];
+    if (!groups.every(key => validWeights(value.runtime.weights?.[key]))
+        || typeof value.runtime.embedding?.provider !== 'string' || !value.runtime.embedding.provider
+        || typeof value.runtime.embedding?.model !== 'string' || !value.runtime.embedding.model
+        || !Number.isInteger(value.runtime.embedding?.dimension) || value.runtime.embedding.dimension <= 0) return null;
+    const matches = value.configuration_valid && groups.every(key =>
+      Math.abs(value.runtime.weights[key].vector_weight - value.vector_weight) < 1e-9);
+    if (matches !== value.runtime.matches_configured) return null;
+  } else if (value.runtime.weights !== null || value.runtime.embedding !== null || value.runtime.matches_configured) return null;
+  return { ...value, configured_weights: { bm25_weight: value.bm25_weight, vector_weight: value.vector_weight } };
+};
+
 const SettingsPanel = ({ userName, onLogout }) => {
   const [health, setHealth] = useState(null);
   const [llmSettings, setLlmSettings] = useState(null);
   const [harnessSettings, setHarnessSettings] = useState(null);
   const [databaseSettings, setDatabaseSettings] = useState(null);
   const [ragSettings, setRagSettings] = useState(null);
+  const [ragConfigLoading, setRagConfigLoading] = useState(false);
+  const [ragConfigError, setRagConfigError] = useState(null);
+  const [ragConfigMsg, setRagConfigMsg] = useState(null);
+  const ragConfigReadSeq = useRef(0);
+  const ragConfigBusyRef = useRef(false);
   const [availableModels, setAvailableModels] = useState([]);
   const [activeTab, setActiveTab] = useState("llm");
   const [loading, setLoading] = useState(true);
@@ -3554,6 +3580,26 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [uploadContent, setUploadContent] = useState("");
   const [uploadMsg, setUploadMsg] = useState(null);
 
+  const fetchRagConfig = useCallback(async () => {
+    if (ragConfigBusyRef.current) return;
+    const seq = ++ragConfigReadSeq.current;
+    setRagConfigLoading(true);
+    setRagConfigError(null);
+    setRagConfigMsg(null);
+    try {
+      const snapshot = ragConfigurationSnapshot(await api.ragSettings());
+      if (seq !== ragConfigReadSeq.current) return;
+      if (!snapshot) throw new Error('RAG 配置响应不完整');
+      setRagSettings(snapshot);
+    } catch (error) {
+      if (seq !== ragConfigReadSeq.current) return;
+      setRagSettings(null);
+      setRagConfigError('无法读取 RAG 配置，当前值未知。请重试读取；不会自动重试保存。');
+    } finally {
+      if (seq === ragConfigReadSeq.current) setRagConfigLoading(false);
+    }
+  }, []);
+
   const fetchSettings = useCallback(() => {
     setLoading(true);
     Promise.all([
@@ -3562,16 +3608,15 @@ const SettingsPanel = ({ userName, onLogout }) => {
       api._fetch('/api/v1/settings/harness').catch(() => null),
       api._fetch('/api/v1/settings/database').catch(() => null),
       api._fetch('/api/v1/settings/available-models').catch(() => null),
-      api.ragSettings().catch(() => null),
-    ]).then(([h, llm, harness, db, models, rag]) => {
+      fetchRagConfig(),
+    ]).then(([h, llm, harness, db, models]) => {
       setHealth(h);
       setLlmSettings(llm);
       setHarnessSettings(harness);
       setDatabaseSettings(db);
-      setRagSettings(rag);
       if (models && models.models) setAvailableModels(models.models);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [fetchRagConfig]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
@@ -3696,20 +3741,39 @@ const SettingsPanel = ({ userName, onLogout }) => {
   };
 
   const handleSaveRag = async () => {
+    if (ragConfigBusyRef.current || ragConfigLoading || ragConfigError || !ragSettings) return;
+    ragConfigBusyRef.current = true;
+    ++ragConfigReadSeq.current;
     setSaving(s => ({ ...s, rag: true }));
+    setRagConfigMsg(null);
     try {
-      await api.updateRagSettings({
-        bm25_weight: ragSettings?.bm25_weight,
-        vector_weight: ragSettings?.vector_weight,
-        top_k: ragSettings?.top_k,
-        similarity_threshold: ragSettings?.similarity_threshold,
-        embedding_model: ragSettings?.embedding_model,
+      const payload = {
+        bm25_weight: ragSettings.bm25_weight,
+        vector_weight: ragSettings.vector_weight,
+      };
+      const response = await api.updateRagSettings(payload);
+      const snapshot = ragConfigurationSnapshot(response, 'updated');
+      if (!snapshot || !['persisted', 'memory_only'].includes(response.persistence)
+          || typeof response.runtime_applied !== 'boolean'
+          || response.runtime_applied !== response.runtime.available
+          || (response.runtime_applied && !response.runtime.matches_configured)
+          || Math.abs(response.vector_weight - payload.vector_weight) >= 1e-9) {
+        throw new Error('保存结果未确认，请重新读取配置后再决定是否重试');
+      }
+      setRagSettings(snapshot);
+      setRagConfigMsg({
+        type: response.persistence === 'persisted' && response.runtime_applied ? 'ok' : 'warn',
+        text: `${response.persistence === 'persisted' ? '已持久化' : '仅本进程临时配置，重启不保留'}；${response.runtime_applied
+          ? '三个检索融合器已生效，在途检索保留原快照。' : 'RAG 引擎未就绪，尚未应用；初始化后请重新读取运行状态。'}`,
       });
-      setSaveMsg({ type: "ok", text: "RAG 配置已保存" });
-      setTimeout(() => setSaveMsg(null), 2000);
     } catch(e) {
-      setSaveMsg({ type: "err", text: `保存失败: ${e.message}` });
-    } finally { setSaving(s => ({ ...s, rag: false })); }
+      setRagSettings(null);
+      setRagConfigError('保存结果未确认，请先重新读取配置；不会自动重试保存。');
+      setRagConfigMsg({ type: 'err', text: `保存未确认: ${e.message}` });
+    } finally {
+      ragConfigBusyRef.current = false;
+      setSaving(s => ({ ...s, rag: false }));
+    }
   };
 
   // RAG index management handlers
@@ -4241,73 +4305,44 @@ const SettingsPanel = ({ userName, onLogout }) => {
           {activeTab === "rag" && (
             <Fragment>
               <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">
-                    RAG 混合检索配置
-                    <span className="text-xs font-normal text-neutral-400 ml-2">BM25 稀疏 + 向量密集 + RRF 融合</span>
-                  </h3>
-                  <button className="btn-dark" onClick={handleSaveRag} disabled={saving.rag}>
-                    {saving.rag ? "保存中…" : "保存配置"}
-                  </button>
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">RAG 融合权重</h3>
+                  <div className="flex gap-2">
+                    <button className="btn-outline" onClick={fetchRagConfig} disabled={ragConfigLoading || saving.rag}>重新读取配置</button>
+                    <button className="btn-dark" onClick={handleSaveRag} disabled={saving.rag || ragConfigLoading || !!ragConfigError || !ragSettings}>
+                      {saving.rag ? "保存中…" : "保存融合权重"}
+                    </button>
+                  </div>
                 </div>
-
+                <p className="text-xs text-neutral-500 m-0 mb-3">仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。</p>
+                {ragConfigLoading && <p role="status" className="text-xs text-neutral-500">正在读取配置…</p>}
+                {ragConfigError && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{ragConfigError}</p>}
+                {ragSettings && !ragSettings.configuration_valid && <p role="alert" className="text-xs text-amber-700">旧配置无效，显示默认修复值；保存后才生效。</p>}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">
-                      BM25 权重: {ragSettings?.bm25_weight ?? 0.3}
-                    </label>
-                    <input type="range" min="0" max="1" step="0.05"
-                      className="w-full"
-                      value={ragSettings?.bm25_weight ?? 0.3}
-                      onChange={e => setRagSettings(s => s ? { ...s, bm25_weight: parseFloat(e.target.value) } : s)} />
-                    <div className="flex justify-between text-[10px] text-neutral-400 mt-0.5">
-                      <span>纯向量</span><span>均衡</span><span>纯 BM25</span>
-                    </div>
+                    <label htmlFor="rag-bm25-weight" className="text-xs text-neutral-500 block mb-1.5">正在编辑 · BM25 权重: {ragSettings ? ragSettings.bm25_weight.toFixed(2) : '—'}</label>
+                    <input id="rag-bm25-weight" aria-label="BM25 融合权重" type="range" min="0" max="1" step="0.05" className="w-full"
+                      disabled={!ragSettings || ragConfigLoading || !!ragConfigError || saving.rag} value={ragSettings?.bm25_weight ?? 0}
+                      onChange={e => { const weight = Number(e.target.value); setRagSettings(s => s ? { ...s, bm25_weight: weight, vector_weight: Number((1 - weight).toFixed(12)) } : s); }} />
+                    <div className="flex justify-between text-[10px] text-neutral-400"><span>纯向量</span><span>纯 BM25</span></div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">
-                      向量权重: {ragSettings?.vector_weight ?? 0.7}
-                    </label>
-                    <input type="range" min="0" max="1" step="0.05"
-                      className="w-full"
-                      value={ragSettings?.vector_weight ?? 0.7}
-                      onChange={e => setRagSettings(s => s ? { ...s, vector_weight: parseFloat(e.target.value) } : s)} />
-                    <div className="flex justify-between text-[10px] text-neutral-400 mt-0.5">
-                      <span>纯 BM25</span><span>均衡</span><span>纯向量</span>
-                    </div>
+                    <label htmlFor="rag-vector-weight" className="text-xs text-neutral-500 block mb-1.5">正在编辑 · 向量权重: {ragSettings ? ragSettings.vector_weight.toFixed(2) : '—'}</label>
+                    <input id="rag-vector-weight" aria-label="向量融合权重" type="range" min="0" max="1" step="0.05" className="w-full"
+                      disabled={!ragSettings || ragConfigLoading || !!ragConfigError || saving.rag} value={ragSettings?.vector_weight ?? 0}
+                      onChange={e => { const weight = Number(e.target.value); setRagSettings(s => s ? { ...s, vector_weight: weight, bm25_weight: Number((1 - weight).toFixed(12)) } : s); }} />
+                    <div className="flex justify-between text-[10px] text-neutral-400"><span>纯 BM25</span><span>纯向量</span></div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Top-K 结果数</label>
-                    <input type="number" min="1" max="50"
-                      className="input-light text-sm"
-                      value={ragSettings?.top_k ?? 10}
-                      onChange={e => setRagSettings(s => s ? { ...s, top_k: parseInt(e.target.value) || 10 } : s)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">
-                      相似度阈值: {ragSettings?.similarity_threshold ?? 0.6}
-                    </label>
-                    <input type="range" min="0" max="1" step="0.05"
-                      className="w-full"
-                      value={ragSettings?.similarity_threshold ?? 0.6}
-                      onChange={e => setRagSettings(s => s ? { ...s, similarity_threshold: parseFloat(e.target.value) } : s)} />
-                    <div className="text-[10px] text-neutral-400 mt-0.5 text-right">{ragSettings?.similarity_threshold ?? 0.6}</div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Embedding 模型</label>
-                    <select className="input-light w-full text-sm py-2"
-                      value={ragSettings?.embedding_model || "text-embedding-3-small"}
-                      onChange={e => setRagSettings(s => s ? { ...s, embedding_model: e.target.value } : s)}>
-                      <option value="text-embedding-3-small">text-embedding-3-small</option>
-                      <option value="text-embedding-3-large">text-embedding-3-large</option>
-                      <option value="bge-large-zh">BGE-large-zh</option>
-                      <option value="bge-m3">BGE-M3</option>
-                    </select>
-                  </div>
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-xs text-neutral-600 dark:text-neutral-300 space-y-2 break-words">
+                  <div>已配置 · 向量 / BM25: {ragSettings ? `${ragSettings.configured_weights.vector_weight.toFixed(2)} / ${ragSettings.configured_weights.bm25_weight.toFixed(2)}` : '未知'} · 来源: {ragSettings ? ({database:'持久化存储',memory:'进程内存',default:'默认配置'}[ragSettings.configuration_source]) : '未知'}</div>
+                  <div>运行实例: {!ragSettings ? '未知' : !ragSettings.runtime.available ? '未就绪，尚未应用' : ['schema','metrics','documents'].map(key => `${({schema:'Schema',metrics:'指标',documents:'文档'}[key])} ${ragSettings.runtime.weights[key].vector_weight.toFixed(2)} / ${ragSettings.runtime.weights[key].bm25_weight.toFixed(2)}`).join(' · ')}</div>
+                  {ragSettings?.runtime.available && !ragSettings.runtime.matches_configured && <div role="status" className="text-amber-700">已配置值与运行值不一致；重新读取不会自动应用，请确认后显式保存。</div>}
+                  <div>Top-K：由每次检索调用指定，此处不提供全局覆盖。</div>
+                  <div>相似度阈值：当前没有统一的全局过滤器，此处不可设置。</div>
+                  <div>实际 Embedding：{!ragSettings ? '未知' : !ragSettings.runtime.available ? '引擎未就绪' : `${ragSettings.runtime.embedding.provider} · ${ragSettings.runtime.embedding.model} · ${ragSettings.runtime.embedding.dimension} 维`}。模型变更需部署配置与兼容索引重建。</div>
                 </div>
+                {ragConfigMsg && <p role={ragConfigMsg.type === 'err' ? 'alert' : 'status'} aria-live="polite" className={cn('text-xs mt-3 break-words', ragConfigMsg.type === 'err' ? 'text-red-600' : ragConfigMsg.type === 'warn' ? 'text-amber-700' : 'text-emerald-700')}>{ragConfigMsg.text}</p>}
               </Card>
 
               {/* RAG architecture overview */}
