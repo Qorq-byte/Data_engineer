@@ -1,5 +1,7 @@
 # RAG 更新与质量评测
 
+阶段28离线预测接口已补完成状态、生成失败、reported遥测校验/覆盖率/分位及输入哈希；现行字段和示例以[SQL评测契约](sql-evaluation.md)为准。缺失预测分母仍为全部题目，真实SQL模型质量仍未实测。
+
 ## 已接通的范围
 
 固定查询计划的 schema_linking 节点现在注入 SchemaRetriever，检索始终携带 db_id；GenerateSQLNode 优先使用 linked_schema。源数据库 Schema 仍用于最终校验，不能用检索缺失的 Schema 断言 SQL 合法。领域业务规则传给 ValidateSQLNode；没有将 LLM 授权为流程控制器。
@@ -26,7 +28,7 @@ Schema 刷新响应增加 rag_indexed 与 warnings：Schema 内省成功不能�
 
 当前评测仅测真实 FTS5 BM25，K=3：Recall@3=1，Precision@3≈0.381，MRR@3=1，NDCG@3=1。Precision 以固定 K 为分母，少于 K 条也计空位，相关文档通常只有 1–2 个。数据与实现共同构成很小的可重跑起点，不能推广为系统召回率或与原实现做定量提升比较。单次平均检索耗时记录在 JSON 中，未预热/未压测，不能据此给出吞吐结论；没有 embedding/LLM 调用，调用成本为 0。
 
-真实模型 SQL 指标目前为 null。准备预测文件 `[ {"id":"sql1","sql":"...","latency_ms":123,"cost_usd":0.001}, ... ]` 后，运行 `python -m scripts.evaluate_quality --predictions predictions.json --output result.json`。缺失预测按失败计算；重复/未知 ID 拒绝。执行器只接收只读 AST，SQLite query_only、2 秒进度超时、1000 行上限；分别报告执行成功率和结果正确率。结果比较保留重复行，对注明 ordered 的查询比较顺序；其他查询按多重集比较。生成时延/费用是输入记录，执行时延为本机实测；必须保存模型版本、prompt、usage 原始记录才能形成可信成本基线。浮点容差、日期/时区、其他数据库方言仍待业务评测扩展。
+真实模型 SQL 指标目前未测。准备预测文件 `[ {"id":"sql1","sql":"...","finish_reason":"stop","latency_ms":123,"cost_usd":0.001}, ... ]` 后，运行 `python -m scripts.evaluate_quality --predictions predictions.json --output result.json`。缺失预测按失败计算；重复/未知 ID 拒绝。执行器只接收只读 AST，SQLite query_only、2 秒进度超时、1000 行上限；分别报告执行成功率和结果正确率。结果比较保留重复行，对注明 ordered 的查询比较顺序；其他查询按多重集比较。生成时延/费用是输入记录；执行尝试时延本机实测（包含只读检查，排除gold/比较，未尝试为null），不是端到端性能。必须保存模型版本、prompt、usage 原始记录才能形成可信成本基线。浮点容差、日期/时区、其他数据库方言仍待业务评测扩展。
 
 ## 真实质量评测前置条件
 

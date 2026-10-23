@@ -1,0 +1,19 @@
+{
+  "version": "synthetic-prediction-accounting-v1",
+  "scope": "Functional accounting regression only; no model accuracy or performance estimate",
+  "cases": [
+    {"id": "0", "gold_sql": "SELECT 1"},
+    {"id": "1", "gold_sql": "SELECT 1"},
+    {"id": "2", "gold_sql": "SELECT 1"},
+    {"id": "3", "gold_sql": "SELECT 1"},
+    {"id": "4", "gold_sql": "SELECT 1"},
+    {"id": "5", "gold_sql": "SELECT 1"}
+  ],
+  "predictions": [
+    {"id": "1", "sql": ""},
+    {"id": "2", "sql": "SELECT 1", "status": "failed", "latency_ms": 0, "cost_usd": 0.25},
+    {"id": "3", "sql": "SELECT 1", "finish_reason": "length", "latency_ms": 100, "cost_usd": 0.75},
+    {"id": "4", "sql": "SELECT 2", "finish_reason": "stop"},
+    {"id": "5", "sql": "SELECT 1", "cost_usd": null}
+  ]
+}

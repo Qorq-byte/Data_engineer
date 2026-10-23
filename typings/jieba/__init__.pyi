@@ -1,0 +1,3 @@
+"""Partial jieba 0.42.1 surface used by this repository; no runtime implementation."""
+
+def lcut(sentence: str) -> list[str]: ...

@@ -289,6 +289,7 @@ uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
 - **LLM 设置**：为各提供商填写 API Key（**AES-256-GCM 加密**存储于 MySQL，任何接口不回显明文，留空则保持原 Key）、选择默认模型与回退模型、启用/停用提供商；支持**添加自定义提供商**（名称 + Key + 模型列表 + 可选 OpenAI 兼容 base_url）；点击"保存配置"后**立即生效**，无需重启
 - **LLM 设置保存与恢复**：候选构建后确认持久化再发布，明确仅内存/未确认，读写失败先重读；提供商删除同步路由，密钥不回显。字段消费与单进程边界见[LLM设置契约](docs/optimization/llm-settings.md)。 输出上限已接通，未实现的路由策略/全局温度只读并拒绝写入，见[输出参数契约](docs/optimization/llm-token-policy.md)。
 - **模型输出完整性**：明确截断、过滤或工具请求的响应不能成为SQL候选；真实模型流须正常结束。部分候选舍弃会告警，全部失败停止执行，兼容限制见[完成状态契约](docs/optimization/llm-completion-policy.md)。
+- **离线SQL评测**：外部预测按完成状态拒绝错误计分，保留全部题目分母；延迟/费用明确reported与覆盖率，缺测不补0。命令、字段、哈希及限制见[评测契约](docs/optimization/sql-evaluation.md)。CI另执行`mypy scripts/evaluate_quality.py`，默认追踪导入。
 - **Harness 约束状态**：只读显示真实计划/运行配置与来源，区分语句超时和请求总时限；旧写接口明确409，历史设置表不生效，不提供关闭只读。详见[状态与部署契约](docs/optimization/harness-settings.md)。
 - **数据库连接能力**：只读报告四类连接实现/七类未实现、驱动模块发现与进程注册数；不等于连接健康或SQL方言能力。旧通用池/超时/开关不生效，写接口409，详见[能力契约](docs/optimization/database-settings.md)。
 - **RAG 检索设置**：向量/BM25权重互补，保存后更新当前进程三个融合器，页面区分编辑/已配置/实际运行值；无存储时明确仅内存生效。Top-K由调用方指定，无全局阈值，Embedding只读显示实际实例，模型变更需部署配置与兼容索引重建。按库维护/文档上传保留，详见[配置生效契约](docs/optimization/rag-settings.md)。

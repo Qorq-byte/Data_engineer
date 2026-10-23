@@ -1,0 +1,27 @@
+{
+  "before": 181,
+  "after": 178,
+  "files": 41,
+  "new_diagnostics": 0,
+  "removed_diagnostics": 3,
+  "full_mypy_exit": 1,
+  "core_source_files": 36,
+  "evaluator_source_files": 1,
+  "removed_details": [
+    [
+      "app/knowledge/retrieval/bm25_index.py",
+      "import-untyped",
+      "Skipping analyzing \"jieba\": module is installed, but missing library stubs or py.typed marker"
+    ],
+    [
+      "app/knowledge/retrieval/bm25_index.py",
+      "unused-ignore",
+      "Unused \"type: ignore\" comment"
+    ],
+    [
+      "app/nodes/schema_linking.py",
+      "import-untyped",
+      "Skipping analyzing \"jieba\": module is installed, but missing library stubs or py.typed marker"
+    ]
+  ]
+}

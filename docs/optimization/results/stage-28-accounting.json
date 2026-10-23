@@ -1,0 +1,273 @@
+{
+  "dataset": {
+    "version": "synthetic-prediction-accounting-v1",
+    "scope": "Functional accounting regression only; no model accuracy or performance estimate",
+    "cases": [
+      {
+        "id": "0",
+        "gold_sql": "SELECT 1"
+      },
+      {
+        "id": "1",
+        "gold_sql": "SELECT 1"
+      },
+      {
+        "id": "2",
+        "gold_sql": "SELECT 1"
+      },
+      {
+        "id": "3",
+        "gold_sql": "SELECT 1"
+      },
+      {
+        "id": "4",
+        "gold_sql": "SELECT 1"
+      },
+      {
+        "id": "5",
+        "gold_sql": "SELECT 1"
+      }
+    ],
+    "predictions": [
+      {
+        "id": "1",
+        "sql": ""
+      },
+      {
+        "id": "2",
+        "sql": "SELECT 1",
+        "status": "failed",
+        "latency_ms": 0,
+        "cost_usd": 0.25
+      },
+      {
+        "id": "3",
+        "sql": "SELECT 1",
+        "finish_reason": "length",
+        "latency_ms": 100,
+        "cost_usd": 0.75
+      },
+      {
+        "id": "4",
+        "sql": "SELECT 2",
+        "finish_reason": "stop"
+      },
+      {
+        "id": "5",
+        "sql": "SELECT 1",
+        "cost_usd": null
+      }
+    ]
+  },
+  "dataset_sha256": "f2fc8ace0feca0dae9d8b8a5b1384f19de4474759497a35b0cdbdf86a95321a0",
+  "baseline_sha": "3d74f96af8f770d077a1a1c8f1266bedcd0b6495",
+  "before": {
+    "case_count": 6,
+    "execution_success_rate": 0.6666666666666666,
+    "result_correct_rate": 0.5,
+    "error_counts": {
+      "MISSING_PREDICTION": 1,
+      "EMPTY_SQL": 1,
+      "RESULT_MISMATCH": 1
+    },
+    "details": [
+      {
+        "id": "0",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "No prediction supplied",
+        "error_code": "MISSING_PREDICTION",
+        "execution_latency_ms": 0.0008999995770864189,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "1",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Prediction must contain non-empty SQL text",
+        "error_code": "EMPTY_SQL",
+        "execution_latency_ms": 0.0016000012692529708,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "2",
+        "execution_success": true,
+        "result_correct": true,
+        "error": "",
+        "error_code": null,
+        "execution_latency_ms": 0.1067000011971686,
+        "reported_generation_latency_ms": 0,
+        "reported_cost_usd": 0.25
+      },
+      {
+        "id": "3",
+        "execution_success": true,
+        "result_correct": true,
+        "error": "",
+        "error_code": null,
+        "execution_latency_ms": 0.07239999831654131,
+        "reported_generation_latency_ms": 100,
+        "reported_cost_usd": 0.75
+      },
+      {
+        "id": "4",
+        "execution_success": true,
+        "result_correct": false,
+        "error": "Executed result differs from gold result",
+        "error_code": "RESULT_MISMATCH",
+        "execution_latency_ms": 0.07539999933214858,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "5",
+        "execution_success": true,
+        "result_correct": true,
+        "error": "",
+        "error_code": null,
+        "execution_latency_ms": 0.07470000127796084,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      }
+    ]
+  },
+  "after": {
+    "report_version": "sql-evaluation-v2",
+    "cases_sha256": "217d8c61a1b6672aa5a580343677f36b61f360377bf626ab02edfe4513a4740c",
+    "predictions_sha256": "1ce59bf59504bbe18967431002e73a6d0137fac2951a195c766e6d5e92c1251f",
+    "sqlite_fixture_sha256": "0ff8fb23352acc7241fd65e275b9f1932529b41dea3fb43a8d7dd9096eef1c54",
+    "limits": {
+      "timeout_seconds": 2,
+      "max_rows": 1000,
+      "dialect": "sqlite"
+    },
+    "case_count": 6,
+    "prediction_count": 5,
+    "execution_success_count": 2,
+    "result_correct_count": 1,
+    "execution_success_rate": 0.3333333333333333,
+    "result_correct_rate": 0.16666666666666666,
+    "error_counts": {
+      "MISSING_PREDICTION": 1,
+      "EMPTY_SQL": 1,
+      "GENERATION_FAILED": 1,
+      "INCOMPLETE_COMPLETION": 1,
+      "RESULT_MISMATCH": 1
+    },
+    "completion_counts": {
+      "missing": 1,
+      "legacy_unknown": 2,
+      "generation_failed": 1,
+      "rejected": 1,
+      "stop": 1
+    },
+    "reported_generation_latency_ms": {
+      "sample_count": 2,
+      "case_count": 6,
+      "coverage": 0.3333333333333333,
+      "complete": false,
+      "mean": 50.0,
+      "p50": 0.0,
+      "p95": 100.0,
+      "p99": 100.0,
+      "percentile_method": "nearest_rank"
+    },
+    "reported_cost_usd": {
+      "sample_count": 2,
+      "case_count": 6,
+      "coverage": 0.3333333333333333,
+      "complete": false,
+      "total": 1.0,
+      "mean": 0.5
+    },
+    "execution_attempt_latency_ms": {
+      "sample_count": 2,
+      "case_count": 6,
+      "coverage": 0.3333333333333333,
+      "complete": false,
+      "mean": 0.07085000106599182,
+      "p50": 0.06639999992330559,
+      "p95": 0.07530000220867805,
+      "p99": 0.07530000220867805,
+      "percentile_method": "nearest_rank"
+    },
+    "measurement_scope": {
+      "rates": "All cases, including missing and failed predictions",
+      "generation_and_cost": "External reports, including failed predictions; not measured",
+      "execution": "Local policy+SQLite fetch attempt; excludes gold and result comparison",
+      "completion": "Missing finish_reason remains legacy_unknown, not confirmed complete"
+    },
+    "details": [
+      {
+        "id": "0",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "No prediction supplied",
+        "error_code": "MISSING_PREDICTION",
+        "completion_status": "missing",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "1",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Prediction must contain non-empty SQL text",
+        "error_code": "EMPTY_SQL",
+        "completion_status": "legacy_unknown",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "2",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Prediction reports generation failure",
+        "error_code": "GENERATION_FAILED",
+        "completion_status": "generation_failed",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": 0.0,
+        "reported_cost_usd": 0.25
+      },
+      {
+        "id": "3",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Model output reached its output limit; shorten the request or review the configured output token limit before retrying.",
+        "error_code": "INCOMPLETE_COMPLETION",
+        "completion_status": "rejected",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": 100.0,
+        "reported_cost_usd": 0.75
+      },
+      {
+        "id": "4",
+        "execution_success": true,
+        "result_correct": false,
+        "error": "Executed result differs from gold result",
+        "error_code": "RESULT_MISMATCH",
+        "completion_status": "stop",
+        "execution_latency_ms": 0.06639999992330559,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "5",
+        "execution_success": true,
+        "result_correct": true,
+        "error": "",
+        "error_code": null,
+        "completion_status": "legacy_unknown",
+        "execution_latency_ms": 0.07530000220867805,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      }
+    ]
+  },
+  "scope": "Fixed synthetic accounting regression, not model quality or performance",
+  "llm_or_embedding_calls": 0
+}
