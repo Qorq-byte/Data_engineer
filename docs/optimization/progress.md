@@ -92,3 +92,5 @@
 - 阶段25代码5e1bd01ac4028c14fa90920fac57b4387c02b28e已普通推送codex/llm-settings-persistence，远程SHA一致；Actions39947535210成功，Linux3417通过（59.23秒）、174前端契约/构建完整性和重复性/失败保留/Ruff/strict35通过，uvloop实际执行。证据见stage-25.md/results/stage-25-ci.json，代码验收完成。181项类型存量与7项构建期依赖告警保留，真实MySQL/生产模型/压测未测；main不合并，原工作区改动保留。下一候选核对路由和生成参数实际消费者，独立规划再实施。
 
 - 阶段25补记1a80342的Actions39947927462成功（Linux3417通过，55.75秒）。阶段26按先行计划从其新建codex/llm-token-policy，max_tokens接入实际请求输出上限/两种别名及预算前验证，未支持温度/路由策略改只读并整体422；配置与运行分开。新增40项、定向179、全量3456通过/Windows uvloop1跳过（104.14秒），前端182契约/构建/strict35/Ruff通过，全仓181项/42文件且新增0；gstack12场景和375px通过，真实provider/MySQL/成本质量未测，待提交/远程验收。
+
+- 阶段26代码1ac0660a658266aab475ad6aec0011da76f0075c已普通推送codex/llm-token-policy，远程SHA一致；Actions39950303020成功，Linux3457通过（57.41秒）、182前端契约/构建完整性和重复性/失败保留/Ruff/strict35通过，uvloop实际执行。证据见stage-26.md/results/stage-26-ci.json；代码验收完成，main不合并，原工作区改动保留。181项类型债务与7项构建期依赖告警保留；无真实provider/费用质量/压测新结论。下一候选核对模型响应截断/finish_reason反馈，先独立规划。

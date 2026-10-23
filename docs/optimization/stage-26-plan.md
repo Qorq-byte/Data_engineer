@@ -18,3 +18,5 @@ factory.build_router_from_settings没有读取routing_strategy/temperature/max_t
 边界：输出参数上限是单次调用（n候选的每条输出），不是整次查询token/费用预算，mock不代表真实限制。真实provider参数兼容、返回截断、NL2SQL正确率、成本及性能待真实环境评测，无跨worker广播；181类型存量/7构建期依赖告警保留。初期rg猜测不存在的runtime_budget测试已用rg --files修正，未据此判定能力缺失。下一步先失败回归。
 
 步骤1–5完成：旧3例失败→3通过，新增40项/定向179/全量3456通过、Windows uvloop1跳过（104.14秒）；前端182契约/构建/Ruff/strict35通过，全仓181项/42文件且新增0。gstack12场景及375px通过；兼容性测试调整保留原断言目的，详见stage-26.md。步骤6文档/证据已整理，待提交/远程CI。
+
+步骤6代码1ac0660已普通推送，Actions39950303020精确SHA成功；Linux3457通过（57.41秒，uvloop实际执行）、182前端/构建/Ruff/strict35通过，远程证据已归档。补记文档另行提交推送并核对CI，不合并main，原工作区改动保留。
