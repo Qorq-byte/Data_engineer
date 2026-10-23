@@ -187,12 +187,6 @@ body { font-family: 'Barlow', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
 <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
 <script>
 window.Motion = window.FramerMotion;
-var _origError = console.error;
-console.error = function() {
-  var m = arguments[0];
-  if (typeof m === 'string' && /Warning:/.test(m)) return;
-  _origError.apply(console, arguments);
-};
 </script>
 
 <script type="text/babel">
@@ -4512,7 +4506,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
             <Card className="p-5">
               <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0 mb-3">账户</h3>
               <div className="flex items-center gap-4 flex-wrap">
-                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face"
+                <img src="/assets/default-avatar.svg"
                      className="h-10 w-10 rounded-full object-cover" alt="Avatar" />
                 <div className="flex-1 min-w-[160px]">
                   <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{userName}</div>
@@ -4655,7 +4649,7 @@ const UserSettingsPanel = ({ userName, userAvatar, onLogout, onUserUpdate }) => 
         <div className="flex flex-col items-center gap-4">
           <div className="relative group">
             <img
-              src={previewAvatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=face"}
+              src={previewAvatar || "/assets/default-avatar.svg"}
               className="h-24 w-24 rounded-full object-cover ring-2 ring-neutral-200 dark:ring-neutral-700"
               alt="头像"
             />
@@ -5226,7 +5220,7 @@ const App = () => {
                 href: "#user",
                 icon: (
                   <img
-                    src={userAvatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face"}
+                    src={userAvatar || "/assets/default-avatar.svg"}
                     className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
                     alt="Avatar"
                   />

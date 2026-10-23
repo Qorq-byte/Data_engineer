@@ -94,6 +94,7 @@ POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
 ### 环境要求
 
 - Python 3.12+
+- Node.js 22+：仅前端构建需要；构建后 Python 服务不需要 Node 或 CDN。
 - MySQL 8.0+：浏览器注册/登录所需的认证存储；业务存储也可配置 MySQL。
 - （推荐）Ollama + `embeddinggemma` 模型（RAG 本地语义检索，无需 API Key）：
   ```bash
@@ -116,7 +117,16 @@ source .venv/bin/activate
 
 # 安装依赖
 pip install -e ".[dev]"
+
+# 构建三页及本地 JS/CSS/字体（首次安装需要 npm 注册表或缓存）
+npm ci --ignore-scripts
+npm run build:frontend
 ```
+
+前端源码在 `frontend_design/`，正式页面只读取生成的 `frontend_dist/`。
+未构建或构建不完整时页面返回 `503 FRONTEND_NOT_BUILT`，API 可独立使用。
+部署时携带整个生成目录，先完成构建再启动/重启服务，不在运行目录内在线重建。
+开发修改页面后需重新构建；完整步骤、许可证和依赖限制见[前端构建与部署](docs/optimization/frontend-build.md)。
 
 ### 配置环境变量
 

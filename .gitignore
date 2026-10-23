@@ -47,3 +47,6 @@ lancedb/
 # Frontend dependencies (install with npm ci)
 node_modules/
 .gstack/
+
+# Rebuilt with npm run build:frontend
+frontend_dist/
