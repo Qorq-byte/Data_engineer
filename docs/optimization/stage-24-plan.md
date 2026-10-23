@@ -24,3 +24,5 @@ app/api/settings.py数据库PUT仅存储dialects_enabled/connection_pool_size/co
 已在编码前确定范围和验收。初期按名称猜测数据库路由文件不存在，已用rg --files核对；实际入口随后按路由定义定位，不据此判定功能缺失。下一步先失败回归。
 
 步骤1–5完成：2失败→2通过，新增24项、定向30、全量3390通过/Windows uvloop1跳过（106.41秒）；新29/总141前端、构建、Ruff/strict35通过，全仓184项/42文件（基线186、新增0）；gstack9场景与375px通过，文档已整理，待步骤6提交/远程验收。调整和边界见stage-24.md。
+
+步骤6代码fd7da2c已普通推送，Actions39923472173精确SHA成功；Linux3391通过（52.80秒，uvloop实际执行）、141前端/构建/Ruff/strict35通过。验收证据已补记，文档另行提交推送/核对CI，不合并main。

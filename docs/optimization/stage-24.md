@@ -17,7 +17,7 @@ Harness计划/Runner及节点调用未变，SQL只读和权限未放宽。mysql�
 Windows/Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0，沿用已有site-packages与type-deps/driver-types。测试LLM_MOCK_MODE=1（conftest）、RAG_EMBEDDING_PROVIDER=mock、LITELLM_LOCAL_MODEL_COST_MAP=True，DE_TRACE_DIR为忽略目录，无生产凭据/模型依赖。
 
 - 新增24项Python回归：真实SQLite/DuckDB创建、SELECT及注册/关闭计数；7类真实分派拒绝、模块发现缺失/异常、固定503不泄漏、无设置存储/连接调用、聚合/401/403。python -m pytest tests/test_api/test_database_settings.py tests/test_db/test_connections.py tests/test_db/test_mysql_pool_boundary.py -q：**30通过，16.84秒**，[日志](results/stage-24-targeted.txt)。现有MySQL测试仅真实驱动空池上下文，不连接服务，不是事务/网络验收。
-- python -m pytest -q：**3390通过、1跳过、4警告，106.41秒**，[日志](results/stage-24-pytest.txt)。Windows uvloop跳过待Linux补验；测试耗时不是性能结论。Ruff通过，[日志](results/stage-24-ruff.txt)；沿用CI核心mypy命令**35文件零错误**，[日志](results/stage-24-core.txt)。全仓mypy app --output json仍退出1，**184项/42文件**，基线186、新增0/移除2（两个API返回类型）：[诊断](results/stage-24-after.jsonl)/[摘要](results/stage-24-summary.json)。未缩小检查或声称全仓类型通过。
+- python -m pytest -q：**3390通过、1跳过、4警告，106.41秒**，[日志](results/stage-24-pytest.txt)。Windows uvloop跳过，现已由下述Linux实际执行补验；测试耗时不是性能结论。Ruff通过，[日志](results/stage-24-ruff.txt)；沿用CI核心mypy命令**35文件零错误**，[日志](results/stage-24-core.txt)。全仓mypy app --output json仍退出1，**184项/42文件**，基线186、新增0/移除2（两个API返回类型）：[诊断](results/stage-24-after.jsonl)/[摘要](results/stage-24-summary.json)。未缩小检查或声称全仓类型通过。
 - npm run check:frontend：5段源码编译、既有112+新**29实际函数契约，共141项**，[日志](results/stage-24-frontend.txt)。缺字段、重复类型、畸形/负数、只读/发现状态、成功/失败未知/恢复/迟到响应、仅GET及无旧回退结构；npm run check:frontend:build三页本地资源/字体/许可证、SHA256、重复构建与编译失败保留通过，[日志](results/stage-24-build.txt)，Expected identifier为故意负例。
 - gstack /browse最终**9场景**：[证据](results/stage-24-browser.json)。正常4实现/7未实现、驱动未发现/未知、注入报告503/畸形200未知、真实临时SQLite注册1后释放0并恢复、375px无溢出/按钮在视口、实际PUT409且旧SQLite设置仍49/99（非生效值）。所有操作仅本机FastAPI :8024，lifespan关闭，SQLite设置协议/临时连接，合成认证、QA故障与同源CSP均只在忽略目录。0外部资源；[桌面](results/stage-24-desktop.png)/[手机](results/stage-24-mobile.png)已查看，不宣称完整无障碍审计。[控制台](results/stage-24-console.txt)保留未认证前401、mock就绪503、显式PUT409与注入503，无React运行异常。仅1次人工验证PUT，无页面自动保存。
 
@@ -29,4 +29,4 @@ Windows/Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0，沿用已有site-packag
 
 ## Git与下一步
 
-待范围/凭据审查后提交推送，核对精确SHA/Linux CI，再补记远程证据；不合并main。下一候选核对LLM设置持久化失败的反馈与恢复路径，独立规划后再实施。
+代码[fd7da2c](https://github.com/Qorq-byte/Data_engineer/commit/fd7da2c8130fa62b6048c5b6694a5094680715b2)已普通推送codex/database-capability-status，远程SHA一致；[Actions39923472173](https://github.com/Qorq-byte/Data_engineer/actions/runs/39923472173)成功且headSha精确匹配。Linux干净安装、141前端契约/构建完整性及重复性/失败保留/Ruff/strict35均通过，全量**3391 passed、1 warning，52.80秒**，uvloop实际执行；[结构化证据](results/stage-24-ci.json)。阶段24代码验收完成，远程补记文档另行提交推送并核对其CI；不合并main。下一候选核对LLM设置持久化失败的反馈与恢复路径，独立规划后再实施。
