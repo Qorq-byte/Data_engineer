@@ -1,0 +1,453 @@
+{
+  "scenarios_passed": 9,
+  "environment": "gstack /browse; FastAPI127.0.0.1:8024; temporary SQLite store; lifespan off; synthetic auth; QA-only fault routes/CSP",
+  "scenarios": {
+    "normal": {
+      "rows": [
+        {
+          "type": "sqlite",
+          "text": "sqlite · 连接已实现驱动：模块可发现 (sqlite3)原生单连接当前注册：0"
+        },
+        {
+          "type": "duckdb",
+          "text": "duckdb · 连接已实现驱动：模块可发现 (duckdb)原生单连接当前注册：0"
+        },
+        {
+          "type": "postgresql",
+          "text": "postgresql · 连接已实现驱动：模块可发现 (asyncpg)异步单连接当前注册：0"
+        },
+        {
+          "type": "mysql",
+          "text": "mysql · 连接已实现驱动：模块可发现 (aiomysql)建池后持有一个连接当前注册：0"
+        },
+        {
+          "type": "snowflake",
+          "text": "snowflake · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "starrocks",
+          "text": "starrocks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "bigquery",
+          "text": "bigquery · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "redshift",
+          "text": "redshift · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "clickhouse",
+          "text": "clickhouse · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "databricks",
+          "text": "databricks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "trino",
+          "text": "trino · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        }
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "missing": {
+      "rows": [
+        {
+          "type": "sqlite",
+          "text": "sqlite · 连接已实现驱动：模块未发现 (sqlite3)原生单连接当前注册：0"
+        },
+        {
+          "type": "duckdb",
+          "text": "duckdb · 连接已实现驱动：模块未发现 (duckdb)原生单连接当前注册：0"
+        },
+        {
+          "type": "postgresql",
+          "text": "postgresql · 连接已实现驱动：模块未发现 (asyncpg)异步单连接当前注册：0"
+        },
+        {
+          "type": "mysql",
+          "text": "mysql · 连接已实现驱动：模块未发现 (aiomysql)建池后持有一个连接当前注册：0"
+        },
+        {
+          "type": "snowflake",
+          "text": "snowflake · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "starrocks",
+          "text": "starrocks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "bigquery",
+          "text": "bigquery · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "redshift",
+          "text": "redshift · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "clickhouse",
+          "text": "clickhouse · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "databricks",
+          "text": "databricks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "trino",
+          "text": "trino · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        }
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "unknown": {
+      "rows": [
+        {
+          "type": "sqlite",
+          "text": "sqlite · 连接已实现驱动：发现状态未知 (sqlite3)原生单连接当前注册：0"
+        },
+        {
+          "type": "duckdb",
+          "text": "duckdb · 连接已实现驱动：发现状态未知 (duckdb)原生单连接当前注册：0"
+        },
+        {
+          "type": "postgresql",
+          "text": "postgresql · 连接已实现驱动：发现状态未知 (asyncpg)异步单连接当前注册：0"
+        },
+        {
+          "type": "mysql",
+          "text": "mysql · 连接已实现驱动：发现状态未知 (aiomysql)建池后持有一个连接当前注册：0"
+        },
+        {
+          "type": "snowflake",
+          "text": "snowflake · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "starrocks",
+          "text": "starrocks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "bigquery",
+          "text": "bigquery · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "redshift",
+          "text": "redshift · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "clickhouse",
+          "text": "clickhouse · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "databricks",
+          "text": "databricks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "trino",
+          "text": "trino · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        }
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "failed": {
+      "rows": [],
+      "alerts": [
+        "无法读取数据库连接能力，当前状态未知。请重新读取。"
+      ],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "malformed": {
+      "rows": [],
+      "alerts": [
+        "无法读取数据库连接能力，当前状态未知。请重新读取。"
+      ],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "connected": {
+      "rows": [
+        {
+          "type": "sqlite",
+          "text": "sqlite · 连接已实现驱动：模块可发现 (sqlite3)原生单连接当前注册：1"
+        },
+        {
+          "type": "duckdb",
+          "text": "duckdb · 连接已实现驱动：模块可发现 (duckdb)原生单连接当前注册：0"
+        },
+        {
+          "type": "postgresql",
+          "text": "postgresql · 连接已实现驱动：模块可发现 (asyncpg)异步单连接当前注册：0"
+        },
+        {
+          "type": "mysql",
+          "text": "mysql · 连接已实现驱动：模块可发现 (aiomysql)建池后持有一个连接当前注册：0"
+        },
+        {
+          "type": "snowflake",
+          "text": "snowflake · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "starrocks",
+          "text": "starrocks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "bigquery",
+          "text": "bigquery · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "redshift",
+          "text": "redshift · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "clickhouse",
+          "text": "clickhouse · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "databricks",
+          "text": "databricks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "trino",
+          "text": "trino · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        }
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "disconnected": {
+      "rows": [
+        {
+          "type": "sqlite",
+          "text": "sqlite · 连接已实现驱动：模块可发现 (sqlite3)原生单连接当前注册：0"
+        },
+        {
+          "type": "duckdb",
+          "text": "duckdb · 连接已实现驱动：模块可发现 (duckdb)原生单连接当前注册：0"
+        },
+        {
+          "type": "postgresql",
+          "text": "postgresql · 连接已实现驱动：模块可发现 (asyncpg)异步单连接当前注册：0"
+        },
+        {
+          "type": "mysql",
+          "text": "mysql · 连接已实现驱动：模块可发现 (aiomysql)建池后持有一个连接当前注册：0"
+        },
+        {
+          "type": "snowflake",
+          "text": "snowflake · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "starrocks",
+          "text": "starrocks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "bigquery",
+          "text": "bigquery · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "redshift",
+          "text": "redshift · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "clickhouse",
+          "text": "clickhouse · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "databricks",
+          "text": "databricks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "trino",
+          "text": "trino · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        }
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "mobile": {
+      "rows": [
+        {
+          "type": "sqlite",
+          "text": "sqlite · 连接已实现驱动：模块可发现 (sqlite3)原生单连接当前注册：0"
+        },
+        {
+          "type": "duckdb",
+          "text": "duckdb · 连接已实现驱动：模块可发现 (duckdb)原生单连接当前注册：0"
+        },
+        {
+          "type": "postgresql",
+          "text": "postgresql · 连接已实现驱动：模块可发现 (asyncpg)异步单连接当前注册：0"
+        },
+        {
+          "type": "mysql",
+          "text": "mysql · 连接已实现驱动：模块可发现 (aiomysql)建池后持有一个连接当前注册：0"
+        },
+        {
+          "type": "snowflake",
+          "text": "snowflake · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "starrocks",
+          "text": "starrocks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "bigquery",
+          "text": "bigquery · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "redshift",
+          "text": "redshift · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "clickhouse",
+          "text": "clickhouse · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "databricks",
+          "text": "databricks · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        },
+        {
+          "type": "trino",
+          "text": "trino · 连接未实现驱动：不适用暂不支持建立连接当前注册：0"
+        }
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "buttons": [
+        "重新读取连接能力"
+      ],
+      "notice": "连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。",
+      "widths": {
+        "viewport": 375,
+        "document": 375,
+        "body": 375
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "rejection": {
+      "status": 409,
+      "data": {
+        "detail": {
+          "code": "DATABASE_SETTINGS_READ_ONLY",
+          "message": "数据库连接能力仅支持读取；通用池参数与方言开关尚未接通。"
+        }
+      }
+    }
+  },
+  "final_state": {
+    "counts": {
+      "GET /workspace": 2,
+      "GET /assets/utilities-beeec87c197fceb7.css": 1,
+      "GET /assets/workspace-RD7HIF2G.css": 1,
+      "GET /assets/workspace-5X2B5LXX.js": 1,
+      "GET /assets/default-avatar.svg": 1,
+      "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 1,
+      "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 1,
+      "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 1,
+      "GET /health": 3,
+      "GET /health/ready": 2,
+      "GET /api/v1/databases": 2,
+      "GET /api/v1/settings/available-models": 3,
+      "GET /api/v1/settings/llm": 1,
+      "GET /api/v1/settings/rag": 1,
+      "GET /api/v1/settings/harness": 1,
+      "GET /api/v1/settings/database": 7,
+      "POST /qa/mode/missing": 1,
+      "POST /qa/mode/unknown": 1,
+      "POST /qa/mode/failed": 1,
+      "POST /qa/mode/malformed": 1,
+      "POST /qa/mode/connect": 1,
+      "POST /qa/mode/disconnect": 1,
+      "PUT /api/v1/settings/database": 1,
+      "GET /qa/state": 1
+    },
+    "legacy_database": {
+      "connection_pool_size": 49,
+      "connection_timeout_s": 99,
+      "dialects_enabled": {
+        "snowflake": true,
+        "sqlite": false
+      }
+    }
+  }
+}

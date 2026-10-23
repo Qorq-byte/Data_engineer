@@ -85,3 +85,7 @@ updated必须同时检查persistence=persisted/memory_only及runtime_applied；�
 ## 阶段23：Harness状态只读
 
 GET /settings/harness及聚合harness段返回实际limits/workflow/source与mode=read_only，不再透传旧表字段；PUT固定409 HARNESS_SETTINGS_READ_ONLY且不读写存储。源文件失败503 HARNESS_POLICY_UNAVAILABLE，不回退旧值。单位、来源及迁移见[harness-settings.md](harness-settings.md)。管理员和Harness不变量保持。
+
+## 阶段24：数据库能力只读
+
+GET /settings/database及聚合database段报告实际ConnectionFactory能力；PUT固定409 DATABASE_SETTINGS_READ_ONLY，无旧表读写。报告失败503 DATABASE_CAPABILITIES_UNAVAILABLE，不回退旧值。连接实现/模块发现/注册数与SQL方言或健康不同，通用池/超时均null。字段及客户端迁移见[database-settings.md](database-settings.md)。

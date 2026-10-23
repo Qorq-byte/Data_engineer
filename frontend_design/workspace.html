@@ -3518,6 +3518,28 @@ const schemaIndexRows = (status, connections) => {
   }));
 };
 
+const databaseCapabilitiesSnapshot = (value) => {
+  const types = ['sqlite', 'duckdb', 'postgresql', 'mysql', 'snowflake', 'starrocks', 'bigquery', 'redshift', 'clickhouse', 'databricks', 'trino'];
+  if (!value || value.status !== 'ok' || value.mode !== 'read_only'
+      || !Array.isArray(value.editable_fields) || value.editable_fields.length
+      || value.legacy_stored_settings_applied !== false
+      || value.connection_pool_size !== null || value.connection_timeout_s !== null
+      || typeof value.scope !== 'string' || !value.scope.trim()
+      || typeof value.configuration_source !== 'string' || !value.configuration_source.trim()
+      || !Array.isArray(value.connectors) || value.connectors.length !== types.length
+      || new Set(value.connectors.map(row => row?.type)).size !== types.length) return null;
+  for (const row of value.connectors) {
+    if (!row || !types.includes(row.type) || typeof row.implemented !== 'boolean'
+        || !Number.isInteger(row.registered_connections) || row.registered_connections < 0) return null;
+    if (row.implemented) {
+      if (typeof row.driver_module !== 'string' || !row.driver_module.trim()
+          || !['native_single_connection', 'async_single_connection', 'pool_acquired_connection'].includes(row.management)
+          || ![true, false, null].includes(row.module_discoverable)) return null;
+    } else if (row.management !== 'not_implemented' || row.driver_module !== null || row.module_discoverable !== null) return null;
+  }
+  return value;
+};
+
 const harnessPolicySnapshot = (value) => {
   const text = v => typeof v === 'string' && v.trim().length > 0;
   if (!value || value.status !== 'ok' || value.mode !== 'read_only'
@@ -3569,6 +3591,9 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [harnessError, setHarnessError] = useState(null);
   const harnessReadSeq = useRef(0);
   const [databaseSettings, setDatabaseSettings] = useState(null);
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [databaseError, setDatabaseError] = useState(null);
+  const databaseReadSeq = useRef(0);
   const [ragSettings, setRagSettings] = useState(null);
   const [ragConfigLoading, setRagConfigLoading] = useState(false);
   const [ragConfigError, setRagConfigError] = useState(null);
@@ -3625,6 +3650,24 @@ const SettingsPanel = ({ userName, onLogout }) => {
     }
   }, []);
 
+  const fetchDatabaseCapabilities = useCallback(async () => {
+    const seq = ++databaseReadSeq.current;
+    setDatabaseLoading(true);
+    setDatabaseError(null);
+    try {
+      const snapshot = databaseCapabilitiesSnapshot(await api._fetch('/api/v1/settings/database'));
+      if (seq !== databaseReadSeq.current) return;
+      if (!snapshot) throw new Error('数据库连接能力响应不完整');
+      setDatabaseSettings(snapshot);
+    } catch (error) {
+      if (seq !== databaseReadSeq.current) return;
+      setDatabaseSettings(null);
+      setDatabaseError('无法读取数据库连接能力，当前状态未知。请重新读取。');
+    } finally {
+      if (seq === databaseReadSeq.current) setDatabaseLoading(false);
+    }
+  }, []);
+
   const fetchHarnessPolicy = useCallback(async () => {
     const seq = ++harnessReadSeq.current;
     setHarnessLoading(true);
@@ -3648,17 +3691,16 @@ const SettingsPanel = ({ userName, onLogout }) => {
     Promise.all([
       api.health(),
       api._fetch('/api/v1/settings/llm').catch(() => null),
-      api._fetch('/api/v1/settings/database').catch(() => null),
       api._fetch('/api/v1/settings/available-models').catch(() => null),
       fetchRagConfig(),
       fetchHarnessPolicy(),
-    ]).then(([h, llm, db, models]) => {
+      fetchDatabaseCapabilities(),
+    ]).then(([h, llm, models]) => {
       setHealth(h);
       setLlmSettings(llm);
-      setDatabaseSettings(db);
       if (models && models.models) setAvailableModels(models.models);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [fetchRagConfig, fetchHarnessPolicy]);
+  }, [fetchRagConfig, fetchHarnessPolicy, fetchDatabaseCapabilities]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
@@ -4067,13 +4109,6 @@ const SettingsPanel = ({ userName, onLogout }) => {
     reader.onerror = () => setUploadMsg({ type: "err", text: "文件读取失败" });
     reader.readAsText(file);
   };
-
-  const dbs = databaseSettings?.dialects_enabled ? Object.entries(databaseSettings.dialects_enabled).map(([k, v]) => ({ name: k, on: v })) : [
-    { name: "PostgreSQL", on: true }, { name: "MySQL", on: true }, { name: "DuckDB", on: true },
-    { name: "SQLite", on: true },     { name: "ClickHouse", on: true }, { name: "Snowflake", on: true },
-    { name: "StarRocks", on: true },  { name: "BigQuery", on: false }, { name: "Redshift", on: false },
-    { name: "Databricks", on: false }, { name: "Trino", on: false },
-  ];
 
   const providers = llmSettings?.providers || {};
 
@@ -4526,29 +4561,25 @@ const SettingsPanel = ({ userName, onLogout }) => {
           )}
 
           {activeTab === "database" && (
-            <Card className="p-5">
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0 mb-3">
-                数据库方言支持
-                <span className="text-xs font-normal text-neutral-400 ml-2">11 种方言</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                {dbs.map(db => (
-                  <div key={db.name} className="flex items-center gap-1.5 p-2 rounded-lg bg-gray-50 dark:bg-neutral-800">
-                    <span className={cn("w-1.5 h-1.5 rounded-full", db.on ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600")} />
-                    <span className={cn("font-medium capitalize", db.on ? "text-neutral-600 dark:text-neutral-300" : "text-neutral-400")}>{db.name}</span>
-                  </div>
-                ))}
+            <Card className="p-5" data-database-capabilities>
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">数据库连接能力<span className="text-xs font-normal text-neutral-400 ml-2">只读状态</span></h3>
+                <button className="btn-outline" onClick={fetchDatabaseCapabilities} disabled={databaseLoading}>{databaseLoading ? "读取中…" : "重新读取连接能力"}</button>
               </div>
-              {databaseSettings && (
-                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">连接池大小</label>
-                    <input type="number" className="input-light" value={databaseSettings.connection_pool_size || 5} disabled />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">连接超时</label>
-                    <input type="text" className="input-light" value={(databaseSettings.connection_timeout_s || 10) + "s"} disabled />
-                  </div>
+              <p className="text-xs text-neutral-500 leading-relaxed" role="status">连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。</p>
+              <p className="text-xs text-neutral-500 leading-relaxed">通用池大小与连接超时尚未接通，当前无统一生效值；旧设置表和方言开关不生效，本页不提供保存。连接参数由各驱动实现及默认值决定。</p>
+              {databaseError && <p className="text-sm text-red-600" role="alert">{databaseError}</p>}
+              {databaseLoading && <p className="text-xs text-neutral-500" role="status">正在读取；旧值暂不展示。</p>}
+              {(!databaseSettings || databaseLoading || databaseError) ? <p className="text-sm text-neutral-400">连接能力：—</p> : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy={databaseLoading}>
+                  {databaseSettings.connectors.map(db => (
+                    <div key={db.type} data-database-type={db.type} className="p-3 min-w-0 rounded-lg bg-gray-50 dark:bg-neutral-800 text-xs flex flex-col gap-2">
+                      <span className="font-medium text-sm capitalize">{db.type} · {db.implemented ? "连接已实现" : "连接未实现"}</span>
+                      <span>驱动：{!db.implemented ? "不适用" : db.module_discoverable === null ? "发现状态未知" : db.module_discoverable ? "模块可发现" : "模块未发现"}{db.driver_module ? ` (${db.driver_module})` : ''}</span>
+                      <span>{({native_single_connection: '原生单连接', async_single_connection: '异步单连接', pool_acquired_connection: '建池后持有一个连接', not_implemented: '暂不支持建立连接'})[db.management]}</span>
+                      <span className="font-mono">当前注册：{db.registered_connections}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>

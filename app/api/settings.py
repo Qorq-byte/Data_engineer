@@ -188,12 +188,6 @@ class LLMSettingsUpdate(BaseModel):
     providers: dict[str, LLMProviderUpdate] | None = None
 
 
-class DatabaseSettingsUpdate(BaseModel):
-    dialects_enabled: dict[str, bool] | None = None
-    connection_pool_size: int | None = Field(default=None, ge=1, le=50)
-    connection_timeout_s: int | None = Field(default=None, ge=1, le=60)
-
-
 class RagSettingsUpdate(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -222,6 +216,7 @@ async def get_all_settings() -> dict:
     await _load_settings_from_db()
     public = _public_settings(_settings_store)
     public["harness"] = await get_harness_settings()
+    public["database"] = await get_database_settings()
     public["rag"] = await get_rag_settings()
     return {
         "status": "ok",
@@ -362,24 +357,40 @@ async def update_harness_settings() -> dict[str, Any]:
 
 
 @router.get("/settings/database")
-async def get_database_settings() -> dict:
-    """Get database connection settings."""
-    await _load_setting_section("database")
+async def get_database_settings() -> dict[str, Any]:
+    """Describe actual connectors, not unwired stored preferences."""
+    from app.db.connections import ConnectionFactory
+
+    try:
+        snapshot = ConnectionFactory.describe_capabilities()
+    except Exception as exc:
+        logger.warning("Database capability snapshot unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "DATABASE_CAPABILITIES_UNAVAILABLE",
+                "message": "无法读取数据库连接能力，当前状态未知；请检查后重试。",
+            },
+        ) from exc
     return {
         "status": "ok",
-        **_settings_store["database"],
+        "mode": "read_only",
+        "editable_fields": [],
+        "legacy_stored_settings_applied": False,
+        **snapshot,
     }
 
 
 @router.put("/settings/database")
-async def update_database_settings(body: DatabaseSettingsUpdate) -> dict:
-    """Update database connection settings."""
-    await _load_setting_section("database")
-    db = _settings_store["database"]
-    updates = body.model_dump(exclude_none=True)
-    db.update(updates)
-    await _persist_section("database")
-    return {"status": "updated", "message": "数据库设置已更新"}
+async def update_database_settings() -> dict[str, Any]:
+    """Reject unwired global settings; existing connections remain untouched."""
+    raise HTTPException(
+        status_code=409,
+        detail={
+            "code": "DATABASE_SETTINGS_READ_ONLY",
+            "message": "数据库连接能力仅支持读取；通用池参数与方言开关尚未接通。",
+        },
+    )
 
 
 @router.get("/settings/rag")
