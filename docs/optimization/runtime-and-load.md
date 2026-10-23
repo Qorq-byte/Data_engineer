@@ -118,3 +118,7 @@ Harness页面仅展示同一请求加载器/Settings的只读快照，不改运�
 ## 阶段24：连接能力边界
 
 页面只读快照不探测网络或创建连接，不改连接管理。四类实现与七类拒绝明确显示；MySQL建池后持有连接，通用池大小/超时旧值不生效，注册数不是健康。未新增吞吐/延迟或跨进程实测结论；部署契约见[database-settings.md](database-settings.md)。
+
+## 阶段25：LLM配置发布边界
+
+同loop的llm-settings gate串行读写/启动，候选构建后持久化再同步发布，无存储明确memory_only。读写各10秒await截止不含gate排队，也不保证底层同步驱动即时取消；取消可能已提交。新请求读新路由，旧请求保持原引用，不强关旧路由；无多worker广播或压测新结论。恢复见[llm-settings.md](llm-settings.md)。

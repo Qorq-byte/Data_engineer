@@ -1,0 +1,58 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+________________ test_failed_write_keeps_old_memory_and_router ________________
+
+stored = <tests.test_rag.test_effective_settings.SQLiteSettings object at 0x0000021BB9B37770>
+
+    async def test_failed_write_keeps_old_memory_and_router(stored):
+        original = factory.get_default_router()
+        before = copy.deepcopy(api_settings._settings_store)
+        stored.connection.set_authorizer(
+            lambda action, *args: sqlite3.SQLITE_DENY if action == sqlite3.SQLITE_INSERT else sqlite3.SQLITE_OK
+        )
+        response = authenticated_client(create_app()).put(
+            "/api/v1/settings/llm", json={"default_model": "changed-model"}
+        )
+>       assert response.status_code == 503
+E       assert 200 == 503
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_api\test_llm_persistence.py:40: AssertionError
+________________ test_invalid_strategy_cannot_partially_mutate ________________
+
+stored = <tests.test_rag.test_effective_settings.SQLiteSettings object at 0x0000021BBA356210>
+
+    async def test_invalid_strategy_cannot_partially_mutate(stored):
+        before = copy.deepcopy(api_settings._settings_store)
+        response = authenticated_client(create_app()).put(
+            "/api/v1/settings/llm", json={"default_model": "changed-model", "routing_strategy": "invalid"}
+        )
+        assert response.status_code == 400
+>       assert api_settings._settings_store == before
+E       AssertionError: assert {'llm': {'def...d': 0.6, ...}} == {'llm': {'def...d': 0.6, ...}}
+E
+E         Omitting 3 identical items, use -vv to show
+E         Differing items:
+E         {'llm': {'default_model': 'changed-model', 'fallback_model': '', 'routing_strategy': 'complexity_aware', 'temperature': 0.3, ...}} != {'llm': {'default_model': 'deepseek-v4-flash', 'fallback_model': '', 'routing_strategy': 'complexity_aware', 'temperature': 0.3, ...}}
+E         Use -v to get more diff
+
+tests\test_api\test_llm_persistence.py:51: AssertionError
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\python\data_engineer\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+..\.venv\Lib\site-packages\jieba\_compat.py:18
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+..\..\..\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_api/test_llm_persistence.py::test_failed_write_keeps_old_memory_and_router
+FAILED tests/test_api/test_llm_persistence.py::test_invalid_strategy_cannot_partially_mutate
+2 failed, 3 warnings in 8.62s

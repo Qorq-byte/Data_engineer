@@ -2,7 +2,7 @@
   "name": "nl2sql-workspace-checks",
   "private": true,
   "scripts": {
-    "check:frontend": "node frontend_design/_check_jsx.js frontend_design/workspace.html frontend_design/form.html frontend_design/landing_page.html && node frontend_design/_check_schema_refresh.js && node frontend_design/_check_rag_maintenance.js && node frontend_design/_check_rag_configuration.js && node frontend_design/_check_harness_policy.js && node frontend_design/_check_database_capabilities.js",
+    "check:frontend": "node frontend_design/_check_jsx.js frontend_design/workspace.html frontend_design/form.html frontend_design/landing_page.html && node frontend_design/_check_schema_refresh.js && node frontend_design/_check_rag_maintenance.js && node frontend_design/_check_rag_configuration.js && node frontend_design/_check_harness_policy.js && node frontend_design/_check_database_capabilities.js && node frontend_design/_check_llm_configuration.js",
     "build:frontend": "node scripts/build-frontend.cjs",
     "check:frontend:build": "node scripts/check-frontend-build.cjs"
   },

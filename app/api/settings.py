@@ -9,10 +9,12 @@ import asyncio
 import copy
 import logging
 import math
-from contextlib import suppress
+from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
 from app.models.rag_settings import FusionWeights
@@ -20,13 +22,38 @@ from app.models.rag_settings import FusionWeights
 if TYPE_CHECKING:
     from app.storage.mysql_store import MySQLStore
 
-router = APIRouter()
+
+class SettingsRoute(APIRoute):
+    """LLM validation must not echo request input containing credentials."""
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        original = super().get_route_handler()
+
+        async def handle(request: Request) -> Response:
+            try:
+                return await original(request)
+            except RequestValidationError:
+                if request.url.path.startswith("/api/v1/settings/llm"):
+                    raise HTTPException(
+                        status_code=422,
+                        detail={
+                            "code": "LLM_SETTINGS_INVALID",
+                            "message": "Invalid LLM settings request.",
+                        },
+                    ) from None
+                raise
+
+        return handle
+
+
+router = APIRouter(route_class=SettingsRoute)
 logger = logging.getLogger(__name__)
 
 # ── In-memory settings store (MySQL fallback) ────────
 
 _settings_store: dict[str, Any] = {}
 _RAG_SETTINGS_TIMEOUT_SECONDS = 10.0
+_LLM_SETTINGS_TIMEOUT_SECONDS = 10.0
 
 
 def _get_store() -> MySQLStore | None:
@@ -55,29 +82,6 @@ async def _load_settings_from_db() -> None:
     for key, value in _DEFAULT_SETTINGS.items():
         if key not in _settings_store:
             _settings_store[key] = copy.deepcopy(value)
-
-
-async def _persist_section(section: str) -> None:
-    """Persist a settings section to MySQL."""
-    store = _get_store()
-    if store is not None:
-        with suppress(Exception):
-            await store.save_setting(section, _settings_store.get(section, {}))
-
-
-async def _load_setting_section(section: str) -> None:
-    """Ensure a settings section is loaded from MySQL."""
-    store = _get_store()
-    if store is not None:
-        try:
-            db_config = await store.get_setting(section)
-            if db_config:
-                _settings_store[section] = db_config
-                return
-        except Exception:
-            pass
-    if section not in _settings_store:
-        await _load_settings_from_db()
 
 
 # Copy of default settings for fallback
@@ -213,8 +217,12 @@ def _public_settings(value: Any) -> Any:
 @router.get("/settings")
 async def get_all_settings() -> dict:
     """Get all system settings."""
-    await _load_settings_from_db()
+    from app.db.runtime import gate
+
+    async with gate(("llm-settings",)):
+        await _load_settings_from_db()
     public = _public_settings(_settings_store)
+    public["llm"] = await get_llm_settings()
     public["harness"] = await get_harness_settings()
     public["database"] = await get_database_settings()
     public["rag"] = await get_rag_settings()
@@ -224,36 +232,79 @@ async def get_all_settings() -> dict:
     }
 
 
-@router.get("/settings/llm")
-async def get_llm_settings() -> dict:
-    """Get LLM provider configuration."""
-    await _load_setting_section("llm")
-    llm = _settings_store["llm"]
-    # Mask API key status
-    providers_display = {}
-    for name, cfg in llm["providers"].items():
-        providers_display[name] = {
-            "enabled": cfg["enabled"],
-            "models": cfg["models"],
-            "api_key_configured": cfg["api_key_configured"],
-            "base_url": cfg.get("base_url"),
-        }
+async def _read_llm_configuration() -> tuple[dict[str, Any], MySQLStore | None, str]:
+    store = _get_store()
+    source = "memory"
+    try:
+        raw = None
+        if store is not None:
+            raw = await asyncio.wait_for(store.get_setting("llm"), _LLM_SETTINGS_TIMEOUT_SECONDS)
+            if raw is not None:
+                source = "database"
+        if raw is None:
+            raw = _settings_store.get("llm", _DEFAULT_SETTINGS["llm"])
+        if not isinstance(raw, dict) or not isinstance(raw.get("providers", {}), dict):
+            raise ValueError("Invalid settings record")
+        config = copy.deepcopy(_DEFAULT_SETTINGS["llm"])
+        config.update(copy.deepcopy(raw))
+        if "providers" in raw:
+            config["providers"] = {}
+            for name, value in raw["providers"].items():
+                if not isinstance(value, dict):
+                    raise ValueError("Invalid provider record")
+                config["providers"][name] = {
+                    "enabled": True,
+                    "models": [],
+                    "api_key_configured": False,
+                    "api_key_enc": "",
+                    "base_url": None,
+                    **copy.deepcopy(value),
+                }
+        return config, store, source
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "LLM_SETTINGS_READ_FAILED",
+                "message": "LLM configuration storage unavailable.",
+            },
+        ) from None
+
+
+def _llm_public_view(config: dict[str, Any], source: str) -> dict[str, Any]:
+    from app.llm.factory import current_llm_router
+
+    current = current_llm_router()
     return {
         "status": "ok",
-        "default_model": llm["default_model"],
-        "fallback_model": llm["fallback_model"],
-        "routing_strategy": llm["routing_strategy"],
-        "temperature": llm["temperature"],
-        "max_tokens": llm["max_tokens"],
-        "providers": providers_display,
+        "configuration_source": source,
+        **{
+            key: config[key]
+            for key in (
+                "default_model",
+                "fallback_model",
+                "routing_strategy",
+                "temperature",
+                "max_tokens",
+            )
+        },
+        "providers": {
+            name: {
+                key: value.get(key)
+                for key in ("enabled", "models", "api_key_configured", "base_url")
+            }
+            for name, value in config["providers"].items()
+        },
+        "runtime": {
+            "available": current is not None,
+            "active_model": current.config.default_model if current is not None else None,
+            "mock_mode": current.mock_mode if current is not None else None,
+        },
     }
 
 
-@router.put("/settings/llm")
-async def update_llm_settings(body: LLMSettingsUpdate) -> dict:
-    """Update LLM configuration."""
-    await _load_setting_section("llm")
-    llm = _settings_store["llm"]
+def _llm_candidate(body: LLMSettingsUpdate, current: dict[str, Any]) -> dict[str, Any]:
+    llm = copy.deepcopy(current)
     if body.default_model is not None:
         llm["default_model"] = body.default_model
     if body.fallback_model is not None:
@@ -300,23 +351,78 @@ async def update_llm_settings(body: LLMSettingsUpdate) -> dict:
                     "base_url": update.base_url.strip() if update.base_url else None,
                 }
 
-    await _persist_section("llm")
-    # Rebuild the runtime router so the new settings take effect immediately
-    try:
-        from app.llm.factory import apply_llm_settings
+    return llm
 
-        router = apply_llm_settings(llm)
-        return {
-            "status": "updated",
-            "message": "LLM 配置已更新",
-            "active_model": router.config.default_model,
-            "mock_mode": router.mock_mode,
-        }
-    except Exception as e:
+
+async def _commit_llm_configuration(
+    config: dict[str, Any], store: MySQLStore | None, status: str = "updated"
+) -> dict[str, Any]:
+    from app.llm.factory import build_router_from_settings, publish_llm_router
+
+    try:
+        prepared = build_router_from_settings(config)
+    except Exception:
         raise HTTPException(
-            status_code=500,
-            detail=f"LLM 配置已保存但应用失败,请检查模型与密钥配置: {e}",
-        ) from e
+            status_code=400,
+            detail={
+                "code": "LLM_SETTINGS_PREPARE_FAILED",
+                "message": "Unable to prepare LLM configuration.",
+            },
+        ) from None
+    if store is not None:
+        try:
+            await asyncio.wait_for(store.save_setting("llm", config), _LLM_SETTINGS_TIMEOUT_SECONDS)
+        except Exception:
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "code": "LLM_SETTINGS_PERSIST_FAILED",
+                    "message": "Write result unconfirmed; read before retrying.",
+                    "persistence": "unconfirmed",
+                    "runtime_applied": False,
+                },
+            ) from None
+    publish_llm_router(prepared)
+    _settings_store["llm"] = config
+    return {
+        **_llm_public_view(config, "database" if store is not None else "memory"),
+        "status": status,
+        "persistence": "persisted" if store is not None else "memory_only",
+        "runtime_applied": True,
+        "active_model": prepared.config.default_model,
+        "mock_mode": prepared.mock_mode,
+    }
+
+
+@router.get("/settings/llm")
+async def get_llm_settings() -> dict[str, Any]:
+    from app.db.runtime import gate
+
+    async with gate(("llm-settings",)):
+        config, _, source = await _read_llm_configuration()
+        _settings_store["llm"] = config
+        return _llm_public_view(config, source)
+
+
+@router.put("/settings/llm")
+async def update_llm_settings(body: LLMSettingsUpdate) -> dict[str, Any]:
+    from app.db.runtime import gate
+
+    async with gate(("llm-settings",)):
+        current, store, _ = await _read_llm_configuration()
+        try:
+            config = _llm_candidate(body, current)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "code": "LLM_SETTINGS_PREPARE_FAILED",
+                    "message": "Unable to prepare LLM configuration.",
+                },
+            ) from None
+        return await _commit_llm_configuration(config, store)
 
 
 @router.get("/settings/harness")
@@ -505,11 +611,12 @@ async def get_available_models() -> dict:
     A model is ``available`` when its provider is enabled and either has a
     configured API key or the router is running in mock mode.
     """
-    await _load_setting_section("llm")
+    await get_llm_settings()
     try:
-        from app.llm.factory import get_default_router
+        from app.llm.factory import current_llm_router
 
-        mock_mode = get_default_router().mock_mode
+        current = current_llm_router()
+        mock_mode = current.mock_mode if current is not None else False
     except Exception:
         mock_mode = False
 
@@ -536,18 +643,18 @@ async def get_available_models() -> dict:
 
 
 async def reload_llm_router_from_db() -> None:
-    """Load persisted LLM settings from MySQL and rebuild the runtime router.
+    """Restore under the same gate as writes; failures must reach startup readiness."""
+    from app.db.runtime import gate
+    from app.llm.factory import build_router_from_settings, publish_llm_router
 
-    Called at startup so user-configured providers/keys survive restarts.
-    Falls back to agent.yml/.env defaults when nothing is persisted.
-    """
-    await _load_setting_section("llm")
-    try:
-        from app.llm.factory import apply_llm_settings
-
-        apply_llm_settings(_settings_store["llm"])
-    except Exception:
-        logger.warning("Failed to rebuild LLM router from persisted settings", exc_info=True)
+    async with gate(("llm-settings",)):
+        config, _, _ = await _read_llm_configuration()
+        try:
+            prepared = build_router_from_settings(config)
+        except Exception:
+            raise RuntimeError("Persisted LLM configuration could not be prepared") from None
+        publish_llm_router(prepared)
+        _settings_store["llm"] = config
 
 
 def _env_key_available(provider_name: str) -> bool:
@@ -572,22 +679,18 @@ def _env_key_available(provider_name: str) -> bool:
 
 
 @router.delete("/settings/llm/providers/{provider_name}")
-async def delete_llm_provider(provider_name: str) -> dict:
-    """Delete an LLM provider from the settings."""
-    await _load_setting_section("llm")
-    provider_name = provider_name.strip().lower()
-    llm = _settings_store["llm"]
-    if provider_name not in llm["providers"]:
-        raise HTTPException(status_code=404, detail=f"Provider '{provider_name}' not found")
+async def delete_llm_provider(provider_name: str) -> dict[str, Any]:
+    from app.db.runtime import gate
 
-    # Prevent deleting built-in providers
-    builtin = {"openai", "anthropic", "deepseek", "google"}
-    if provider_name in builtin:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Cannot delete built-in provider '{provider_name}'. Disable it instead.",
-        )
-
-    del llm["providers"][provider_name]
-    await _persist_section("llm")
-    return {"status": "deleted", "provider": provider_name}
+    async with gate(("llm-settings",)):
+        config, store, _ = await _read_llm_configuration()
+        provider_name = provider_name.strip().lower()
+        if provider_name not in config["providers"]:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        if provider_name in {"openai", "anthropic", "deepseek", "google"}:
+            raise HTTPException(status_code=400, detail="Built-in providers cannot be deleted")
+        del config["providers"][provider_name]
+        return {
+            **await _commit_llm_configuration(config, store, "deleted"),
+            "provider": provider_name,
+        }

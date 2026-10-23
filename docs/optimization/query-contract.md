@@ -89,3 +89,7 @@ GET /settings/harness及聚合harness段返回实际limits/workflow/source与mod
 ## 阶段24：数据库能力只读
 
 GET /settings/database及聚合database段报告实际ConnectionFactory能力；PUT固定409 DATABASE_SETTINGS_READ_ONLY，无旧表读写。报告失败503 DATABASE_CAPABILITIES_UNAVAILABLE，不回退旧值。连接实现/模块发现/注册数与SQL方言或健康不同，通用池/超时均null。字段及客户端迁移见[database-settings.md](database-settings.md)。
+
+## 阶段25：LLM写入与恢复
+
+LLM PUT及提供商DELETE返回完整公开配置、persistence=persisted/memory_only、runtime_applied及实际active_model/mock_mode；失败503/unconfirmed不发布运行值。GET/启动/available-models读取失败明确503，不回退默认；LLM参数校验422不回显input。取消可能已提交，先读再显式保存，无自动写重试；详见[llm-settings.md](llm-settings.md)。

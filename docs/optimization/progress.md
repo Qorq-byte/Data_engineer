@@ -86,3 +86,5 @@
 - 阶段23补记5761992的Actions39921359522成功（Linux3367通过，38.37秒）。阶段24按先行计划新建codex/database-capability-status，ConnectionFactory只读能力/驱动发现/注册数、旧PUT409与聚合覆盖、页面未知恢复已实现；新增24项、定向30、全量3390通过/Windows uvloop1跳过（106.41秒），141前端契约/构建/strict35/Ruff通过，全仓184项/42文件且新增0；gstack9场景和375px通过，真实PG/MySQL/压测未测，待提交/远程验收。
 
 - 阶段24代码fd7da2c8130fa62b6048c5b6694a5094680715b2已普通推送codex/database-capability-status，远程SHA一致；Actions39923472173成功，Linux3391通过（52.80秒）、141前端契约/构建完整性和重复性/失败保留/Ruff/strict35通过，uvloop实际执行。远程证据见stage-24.md/results/stage-24-ci.json；代码验收完成，main不合并，原工作区改动保留。184项类型存量与7项构建期依赖告警保留，真实PG/MySQL网络/多worker/压测未测。下一候选核对LLM设置持久化失败反馈，独立规划再实施。
+
+- 阶段24补记53a6ccd的Actions39923884366成功（Linux3391通过，55.54秒）。阶段25按先行计划新建codex/llm-settings-persistence，LLM候选构建/持久化确认/同步发布、DELETE与启动gate、脱敏422和统一页面恢复已实现。新增26项、定向33、全量3416通过/Windows uvloop1跳过（115.60秒），前端174契约/构建/strict35/Ruff通过，全仓181项/42文件且新增0；gstack13场景及375px通过。跨线程适配器/环境fallback前提修正及审批恢复见stage-25.md，待提交/远程验收。

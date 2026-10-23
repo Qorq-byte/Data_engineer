@@ -3518,6 +3518,29 @@ const schemaIndexRows = (status, connections) => {
   }));
 };
 
+const llmConfigurationSnapshot = (value, status = 'ok') => {
+  if (!value || value.status !== status || !['database', 'memory'].includes(value.configuration_source)
+      || typeof value.default_model !== 'string' || typeof value.fallback_model !== 'string'
+      || !['complexity_aware', 'cost_first', 'latency_first', 'round_robin'].includes(value.routing_strategy)
+      || !Number.isFinite(value.temperature) || value.temperature < 0 || value.temperature > 2
+      || !Number.isInteger(value.max_tokens) || value.max_tokens <= 0
+      || !value.providers || Array.isArray(value.providers) || typeof value.providers !== 'object'
+      || typeof value.runtime?.available !== 'boolean') return null;
+  if (value.runtime.available ? typeof value.runtime.active_model !== 'string' || !value.runtime.active_model || typeof value.runtime.mock_mode !== 'boolean'
+      : value.runtime.active_model !== null || value.runtime.mock_mode !== null) return null;
+  const providers = {};
+  for (const [name, cfg] of Object.entries(value.providers)) {
+    if (!cfg || typeof cfg.enabled !== 'boolean' || typeof cfg.api_key_configured !== 'boolean'
+        || !Array.isArray(cfg.models) || !cfg.models.every(model => typeof model === 'string')
+        || (cfg.base_url !== null && typeof cfg.base_url !== 'string')) return null;
+    providers[name] = { enabled: cfg.enabled, api_key_configured: cfg.api_key_configured, models: [...cfg.models], base_url: cfg.base_url };
+  }
+  return { status: value.status, configuration_source: value.configuration_source,
+    default_model: value.default_model, fallback_model: value.fallback_model,
+    routing_strategy: value.routing_strategy, temperature: value.temperature, max_tokens: value.max_tokens,
+    runtime: { available: value.runtime.available, active_model: value.runtime.active_model, mock_mode: value.runtime.mock_mode }, providers };
+};
+
 const databaseCapabilitiesSnapshot = (value) => {
   const types = ['sqlite', 'duckdb', 'postgresql', 'mysql', 'snowflake', 'starrocks', 'bigquery', 'redshift', 'clickhouse', 'databricks', 'trino'];
   if (!value || value.status !== 'ok' || value.mode !== 'read_only'
@@ -3586,6 +3609,11 @@ const ragConfigurationSnapshot = (value, status = 'ok') => {
 const SettingsPanel = ({ userName, onLogout }) => {
   const [health, setHealth] = useState(null);
   const [llmSettings, setLlmSettings] = useState(null);
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmError, setLlmError] = useState(null);
+  const [llmBusy, setLlmBusy] = useState(false);
+  const llmBusyRef = useRef(false);
+  const llmReadSeq = useRef(0);
   const [harnessSettings, setHarnessSettings] = useState(null);
   const [harnessLoading, setHarnessLoading] = useState(false);
   const [harnessError, setHarnessError] = useState(null);
@@ -3608,7 +3636,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [showNewProvider, setShowNewProvider] = useState(false);
   const [newProvider, setNewProvider] = useState({ name: "", api_key: "", models: "", base_url: "" });
   const [providerKeys, setProviderKeys] = useState({}); // provider -> new API key input (never loaded from server)
-  const [togglingProvider, setTogglingProvider] = useState({});
+
   // RAG management state
   const [ragStats, setRagStats] = useState(null);
   const [ragStatus, setRagStatus] = useState(null);
@@ -3647,6 +3675,26 @@ const SettingsPanel = ({ userName, onLogout }) => {
       setRagConfigError('无法读取 RAG 配置，当前值未知。请重试读取；不会自动重试保存。');
     } finally {
       if (seq === ragConfigReadSeq.current) setRagConfigLoading(false);
+    }
+  }, []);
+
+  const fetchLlmConfiguration = useCallback(async () => {
+    if (llmBusyRef.current) return;
+    const seq = ++llmReadSeq.current;
+    setLlmLoading(true);
+    setLlmError(null);
+    setSaveMsg(null);
+    try {
+      const snapshot = llmConfigurationSnapshot(await api._fetch('/api/v1/settings/llm'));
+      if (seq !== llmReadSeq.current) return;
+      if (!snapshot) throw new Error('Invalid LLM settings response');
+      setLlmSettings(snapshot);
+    } catch (error) {
+      if (seq !== llmReadSeq.current) return;
+      setLlmSettings(null);
+      setLlmError('LLM 配置读取失败，当前状态未知。请重新读取；不会自动重试写入。');
+    } finally {
+      if (seq === llmReadSeq.current) setLlmLoading(false);
     }
   }, []);
 
@@ -3690,123 +3738,92 @@ const SettingsPanel = ({ userName, onLogout }) => {
     setLoading(true);
     Promise.all([
       api.health(),
-      api._fetch('/api/v1/settings/llm').catch(() => null),
       api._fetch('/api/v1/settings/available-models').catch(() => null),
       fetchRagConfig(),
       fetchHarnessPolicy(),
       fetchDatabaseCapabilities(),
-    ]).then(([h, llm, models]) => {
+      fetchLlmConfiguration(),
+    ]).then(([h, models]) => {
       setHealth(h);
-      setLlmSettings(llm);
       if (models && models.models) setAvailableModels(models.models);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [fetchRagConfig, fetchHarnessPolicy, fetchDatabaseCapabilities]);
+  }, [fetchRagConfig, fetchHarnessPolicy, fetchDatabaseCapabilities, fetchLlmConfiguration]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
-  const handleSaveLLM = async () => {
-    setSaving(s => ({ ...s, llm: true }));
+  const commitLlmChange = async (payload, providerName = null) => {
+    if (llmBusyRef.current || llmLoading || llmError || !llmSettings) return false;
+    llmBusyRef.current = true;
+    ++llmReadSeq.current;
+    setLlmLoading(false);
+    setLlmBusy(true);
+    setSaveMsg(null);
     try {
-      // Send newly-entered API keys (backend keeps existing keys when empty)
-      const providers = {};
-      Object.keys(providerKeys).forEach(name => {
-        const k = (providerKeys[name] || "").trim();
-        if (k) providers[name] = { api_key: k };
-      });
-      // Preserve base_url edits for custom providers
-      Object.keys(llmSettings?.providers || {}).forEach(name => {
-        if (BUILTIN_PROVIDERS.includes(name)) return;
-        const cfg = llmSettings.providers[name];
-        providers[name] = { ...(providers[name] || {}), base_url: (cfg.base_url || "").trim() };
-      });
-      const payload = {
-        default_model: llmSettings?.default_model,
-        fallback_model: llmSettings?.fallback_model,
-        routing_strategy: llmSettings?.routing_strategy,
-        temperature: llmSettings?.temperature,
-        max_tokens: llmSettings?.max_tokens,
-      };
-      if (Object.keys(providers).length > 0) payload.providers = providers;
-      const resp = await api._fetch('/api/v1/settings/llm', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify(payload),
-      });
+      const response = providerName === null
+        ? await api._fetch('/api/v1/settings/llm', { method: 'PUT', headers: api._headers(true), body: JSON.stringify(payload) })
+        : await api.deleteProvider(providerName);
+      const snapshot = llmConfigurationSnapshot(response, providerName === null ? 'updated' : 'deleted');
+      if (!snapshot || !['persisted', 'memory_only'].includes(response.persistence) || response.runtime_applied !== true
+          || !snapshot.runtime.available || response.active_model !== snapshot.runtime.active_model
+          || response.mock_mode !== snapshot.runtime.mock_mode
+          || (providerName !== null && (response.provider !== providerName || snapshot.providers[providerName]))) throw new Error('Unconfirmed LLM result');
+      if (payload && ['default_model', 'fallback_model', 'routing_strategy', 'temperature', 'max_tokens'].some(key =>
+          payload[key] !== undefined && snapshot[key] !== payload[key])) throw new Error('Mismatched LLM configuration');
+      for (const [name, update] of Object.entries(payload?.providers || {})) {
+        const cfg = snapshot.providers[name];
+        if (!cfg || (update.enabled !== undefined && cfg.enabled !== update.enabled)
+            || (update.models !== undefined && JSON.stringify(cfg.models) !== JSON.stringify(update.models))
+            || (update.base_url !== undefined && update.base_url !== null && cfg.base_url !== (update.base_url.trim() || null))
+            || (update.api_key?.trim() && !cfg.api_key_configured)) throw new Error('Unconfirmed provider change');
+      }
+      setLlmSettings(snapshot);
+      setAvailableModels(Object.entries(snapshot.providers).flatMap(([provider, cfg]) => cfg.enabled
+        ? cfg.models.map(model => ({ model, provider })) : []));
+      setSaveMsg({ type: response.persistence === 'persisted' ? 'ok' : 'warn', text:
+        `${response.persistence === 'persisted' ? 'LLM 配置已持久化并应用' : 'LLM 配置仅在当前进程生效，重启不保留'} · 当前模型: ${response.active_model}${response.mock_mode ? '（mock 模式）' : ''}` });
+      return true;
+    } catch (error) {
+      setLlmSettings(null);
+      setLlmError('写入结果未确认，当前配置状态未知。请先重新读取，再决定是否保存；不会自动重试。');
+      setSaveMsg({ type: 'err', text: 'LLM 操作未确认，请重新读取配置。' });
+      return false;
+    } finally {
       setProviderKeys({});
-      setSaveMsg({ type: "ok", text: `LLM 配置已保存 · 当前模型: ${resp.active_model || llmSettings?.default_model}${resp.mock_mode ? "（mock 模式）" : ""}` });
-      setTimeout(() => setSaveMsg(null), 3000);
-      fetchSettings();
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `保存失败: ${e.message}` });
-    } finally { setSaving(s => ({ ...s, llm: false })); }
+      setNewProvider({ name: '', api_key: '', models: '', base_url: '' });
+      llmBusyRef.current = false;
+      setLlmBusy(false);
+    }
+  };
+
+  const handleSaveLLM = async () => {
+    if (!llmSettings) return;
+    const providers = {};
+    for (const [name, key] of Object.entries(providerKeys)) {
+      if (key.trim()) providers[name] = { api_key: key.trim() };
+    }
+    for (const [name, cfg] of Object.entries(llmSettings.providers)) {
+      if (!BUILTIN_PROVIDERS.includes(name)) providers[name] = { ...providers[name], base_url: (cfg.base_url || '').trim() };
+    }
+    await commitLlmChange({ default_model: llmSettings.default_model, fallback_model: llmSettings.fallback_model,
+      routing_strategy: llmSettings.routing_strategy, temperature: llmSettings.temperature,
+      max_tokens: llmSettings.max_tokens, providers });
   };
 
   const handleProviderToggle = async (providerName) => {
-    setTogglingProvider(p => ({ ...p, [providerName]: true }));
-    const providers = { ...llmSettings?.providers };
-    if (providers[providerName]) {
-      providers[providerName] = { ...providers[providerName], enabled: !providers[providerName].enabled };
-    }
-    try {
-      await api._fetch('/api/v1/settings/llm', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify({ providers }),
-      });
-      setLlmSettings(s => s ? { ...s, providers } : s);
-      setSaveMsg({ type: "ok", text: `${providerName} 已${providers[providerName]?.enabled ? '启用' : '禁用'}` });
-      setTimeout(() => setSaveMsg(null), 2000);
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `切换失败: ${e.message}` });
-    } finally { setTogglingProvider(p => ({ ...p, [providerName]: false })); }
+    const cfg = llmSettings?.providers[providerName];
+    if (cfg) await commitLlmChange({ providers: { [providerName]: { enabled: !cfg.enabled } } });
   };
 
   const handleAddProvider = async () => {
-    if (!newProvider.name.trim()) { setSaveMsg({ type: "err", text: "请输入提供商名称" }); return; }
-    const providers = { ...llmSettings?.providers };
     const name = newProvider.name.trim().toLowerCase();
-    if (providers[name]) { setSaveMsg({ type: "err", text: "该提供商已存在" }); return; }
-    providers[name] = {
-      enabled: true,
-      models: newProvider.models.split(/[,，]/).map(m => m.trim()).filter(Boolean),
-      api_key_configured: !!newProvider.api_key.trim(),
-      api_key: newProvider.api_key,
-      base_url: newProvider.base_url.trim() || null,
-    };
-    try {
-      await api._fetch('/api/v1/settings/llm', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify({ providers }),
-      });
-      setLlmSettings(s => s ? { ...s, providers } : s);
-      setSaveMsg({ type: "ok", text: `已添加提供商 ${name}` });
-      setTimeout(() => setSaveMsg(null), 3000);
-      setShowNewProvider(false);
-      setNewProvider({ name: "", api_key: "", models: "", base_url: "" });
-      fetchSettings();
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `添加失败: ${e.message}` });
-    }
+    if (!name || llmSettings?.providers[name]) { setSaveMsg({ type: 'err', text: '请输入未使用的提供商名称' }); return; }
+    if (await commitLlmChange({ providers: { [name]: { enabled: true, models: newProvider.models.split(/[,，]/).map(model => model.trim()).filter(Boolean),
+      api_key: newProvider.api_key, base_url: newProvider.base_url.trim() || null } } })) setShowNewProvider(false);
   };
 
   const handleDeleteProvider = async (providerName) => {
-    if (!confirm(`确定要删除提供商 "${providerName}" 吗？`)) return;
-    try {
-      await api.deleteProvider(providerName);
-      setLlmSettings(s => s ? { ...s, providers: { ...s.providers, [providerName]: undefined } } : s);
-      // Remove from providers object
-      setLlmSettings(s => {
-        if (!s) return s;
-        const newProviders = { ...s.providers };
-        delete newProviders[providerName];
-        return { ...s, providers: newProviders };
-      });
-      setSaveMsg({ type: "ok", text: `已删除提供商 ${providerName}` });
-      setTimeout(() => setSaveMsg(null), 2000);
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `删除失败: ${e.message}` });
-    }
+    if (llmBusyRef.current || !confirm(`确定要删除提供商 "${providerName}" 吗？`)) return;
+    await commitLlmChange(null, providerName);
   };
 
   const handleSaveRag = async () => {
@@ -4129,7 +4146,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
       {/* Save notification */}
       {saveMsg && (
         <div className={cn("text-xs px-3 py-2 rounded-lg font-medium",
-          saveMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400")}>
+          saveMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : saveMsg.type === "warn" ? "bg-amber-50 text-amber-700" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400")}>
           {saveMsg.text}
         </div>
       )}
@@ -4151,12 +4168,18 @@ const SettingsPanel = ({ userName, onLogout }) => {
         <Fragment>
           {activeTab === "llm" && (
             <Fragment>
+              <div className="flex items-center gap-3 flex-wrap" data-llm-configuration>
+                <button className="btn-outline" onClick={fetchLlmConfiguration} disabled={llmBusy || llmLoading}>{llmLoading ? '读取中…' : '重新读取 LLM 配置'}</button>
+                {llmError && <p role="alert" className="text-sm text-red-600">{llmError}</p>}
+                {!llmError && !llmLoading && llmSettings && <p role="status" className="text-xs text-neutral-500">来源：{llmSettings.configuration_source} · 运行模型：{llmSettings.runtime.available ? llmSettings.runtime.active_model : '尚未就绪'}；保存字段不等于全部路由参数均生效。</p>}
+              </div>
+              {llmSettings && !llmError && !llmLoading && <fieldset disabled={llmBusy} className="contents">
               {/* LLM Provider Settings */}
               <Card className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">LLM 模型配置</h3>
-                  <button className="btn-dark" onClick={handleSaveLLM} disabled={saving.llm}>
-                    {saving.llm ? "保存中…" : "保存配置"}
+                  <button className="btn-dark" onClick={handleSaveLLM} disabled={llmBusy}>
+                    {llmBusy ? "保存中…" : "保存配置"}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -4282,9 +4305,9 @@ const SettingsPanel = ({ userName, onLogout }) => {
                                 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
                                 : "bg-gray-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500 border-gray-200 dark:border-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-700")}
                             onClick={() => handleProviderToggle(name)}
-                            disabled={togglingProvider[name]}
+                            disabled={llmBusy}
                           >
-                            {togglingProvider[name] ? "…" : cfg.enabled ? "启用中" : "已禁用"}
+                            {llmBusy ? "…" : cfg.enabled ? "启用中" : "已禁用"}
                           </button>
                           <button className="icon-btn !p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="删除提供商"
                             onClick={() => handleDeleteProvider(name)}>
@@ -4314,6 +4337,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
                 </div>
                 <p className="text-[11px] text-neutral-400 mt-2 mb-0">提示:修改 API Key 或接口地址后,点击上方「保存配置」统一保存并立即生效;密钥加密存储,页面不回显明文。</p>
               </Card>
+              </fieldset>}
             </Fragment>
           )}
 

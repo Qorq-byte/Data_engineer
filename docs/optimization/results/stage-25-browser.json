@@ -1,0 +1,569 @@
+{
+  "scenarios_passed": 13,
+  "environment": "gstack /browse; FastAPI127.0.0.1:8025; temporary real SQLite; mock LLM; synthetic auth and key; QA-only modes/CSP; no production calls",
+  "scenarios": {
+    "normal": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "persisted": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": true,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "volatile": {
+      "alerts": [],
+      "status": "来源：memory · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": false,
+      "memoryOnly": true,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "write-failure": {
+      "alerts": [
+        "写入结果未确认，当前配置状态未知。请先重新读取，再决定是否保存；不会自动重试。"
+      ],
+      "status": null,
+      "fieldsetVisible": false,
+      "inputsDisabled": null,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": true,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "read-failure": {
+      "alerts": [
+        "LLM 配置读取失败，当前状态未知。请重新读取；不会自动重试写入。"
+      ],
+      "status": null,
+      "fieldsetVisible": false,
+      "inputsDisabled": null,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "bad-write": {
+      "alerts": [
+        "写入结果未确认，当前配置状态未知。请先重新读取，再决定是否保存；不会自动重试。"
+      ],
+      "status": null,
+      "fieldsetVisible": false,
+      "inputsDisabled": null,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": true,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "malformed": {
+      "alerts": [
+        "LLM 配置读取失败，当前状态未知。请重新读取；不会自动重试写入。"
+      ],
+      "status": null,
+      "fieldsetVisible": false,
+      "inputsDisabled": null,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "recovered": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "added": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": true,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "toggled": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": true,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "deleted": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": true,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "restored": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 1280,
+        "document": 1280,
+        "body": 1280
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    },
+    "mobile": {
+      "alerts": [],
+      "status": "来源：database · 运行模型：deepseek-v4-flash；保存字段不等于全部路由参数均生效。",
+      "fieldsetVisible": true,
+      "inputsDisabled": false,
+      "persisted": false,
+      "memoryOnly": false,
+      "unconfirmed": false,
+      "widths": {
+        "viewport": 375,
+        "document": 375,
+        "body": 375
+      },
+      "retryWithinViewport": true,
+      "externalResources": 0
+    }
+  },
+  "added_state": {
+    "counts": {
+      "GET /workspace": 3,
+      "GET /assets/utilities-a20cc1240d4419f7.css": 2,
+      "GET /assets/workspace-RD7HIF2G.css": 2,
+      "GET /assets/workspace-MCRKCNHP.js": 1,
+      "GET /assets/default-avatar.svg": 2,
+      "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 2,
+      "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 2,
+      "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 2,
+      "GET /health": 5,
+      "GET /health/ready": 3,
+      "GET /api/v1/databases": 3,
+      "GET /api/v1/settings/available-models": 5,
+      "GET /api/v1/settings/rag": 2,
+      "GET /api/v1/settings/harness": 2,
+      "GET /api/v1/settings/database": 2,
+      "GET /api/v1/settings/llm": 6,
+      "PUT /api/v1/settings/llm": 6,
+      "GET /assets/workspace-CF5CFOPS.js": 1,
+      "POST /qa/mode/volatile": 1,
+      "POST /qa/mode/write_failure": 1,
+      "POST /qa/mode/read_failure": 1,
+      "POST /qa/mode/normal": 2,
+      "POST /qa/mode/bad_write": 1,
+      "POST /qa/mode/malformed": 1,
+      "GET /qa/state": 1
+    },
+    "configuration": {
+      "status": "ok",
+      "configuration_source": "database",
+      "default_model": "deepseek-v4-flash",
+      "fallback_model": "",
+      "routing_strategy": "complexity_aware",
+      "temperature": 0.3,
+      "max_tokens": 4096,
+      "providers": {
+        "openai": {
+          "enabled": true,
+          "models": [
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "anthropic": {
+          "enabled": true,
+          "models": [
+            "claude-sonnet-4",
+            "claude-haiku-4.5"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "deepseek": {
+          "enabled": true,
+          "models": [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "google": {
+          "enabled": true,
+          "models": [
+            "gemini-2.0-flash",
+            "gemini-2.5-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "qwen": {
+          "enabled": false,
+          "models": [
+            "qwen-max",
+            "qwen-plus"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "groq": {
+          "enabled": false,
+          "models": [
+            "llama-3.1-70b",
+            "mixtral-8x7b"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "qa-fixture": {
+          "enabled": true,
+          "models": [
+            "qa-model"
+          ],
+          "api_key_configured": true,
+          "base_url": null
+        }
+      },
+      "runtime": {
+        "available": true,
+        "active_model": "deepseek-v4-flash",
+        "mock_mode": true
+      }
+    },
+    "encrypted_keys": {
+      "openai": false,
+      "anthropic": false,
+      "deepseek": false,
+      "google": false,
+      "qwen": false,
+      "groq": false,
+      "qa-fixture": true
+    },
+    "plaintext_present": false
+  },
+  "toggled_state": {
+    "counts": {
+      "GET /workspace": 5,
+      "GET /assets/utilities-a20cc1240d4419f7.css": 3,
+      "GET /assets/workspace-RD7HIF2G.css": 3,
+      "GET /assets/workspace-MCRKCNHP.js": 1,
+      "GET /assets/default-avatar.svg": 3,
+      "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 3,
+      "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 3,
+      "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 3,
+      "GET /health": 8,
+      "GET /health/ready": 5,
+      "GET /api/v1/databases": 5,
+      "GET /api/v1/settings/available-models": 8,
+      "GET /api/v1/settings/rag": 3,
+      "GET /api/v1/settings/harness": 3,
+      "GET /api/v1/settings/database": 3,
+      "GET /api/v1/settings/llm": 7,
+      "PUT /api/v1/settings/llm": 7,
+      "GET /assets/workspace-CF5CFOPS.js": 2,
+      "POST /qa/mode/volatile": 1,
+      "POST /qa/mode/write_failure": 1,
+      "POST /qa/mode/read_failure": 1,
+      "POST /qa/mode/normal": 2,
+      "POST /qa/mode/bad_write": 1,
+      "POST /qa/mode/malformed": 1,
+      "GET /qa/state": 3
+    },
+    "configuration": {
+      "status": "ok",
+      "configuration_source": "database",
+      "default_model": "deepseek-v4-flash",
+      "fallback_model": "",
+      "routing_strategy": "complexity_aware",
+      "temperature": 0.3,
+      "max_tokens": 4096,
+      "providers": {
+        "openai": {
+          "enabled": true,
+          "models": [
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "anthropic": {
+          "enabled": true,
+          "models": [
+            "claude-sonnet-4",
+            "claude-haiku-4.5"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "deepseek": {
+          "enabled": true,
+          "models": [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "google": {
+          "enabled": true,
+          "models": [
+            "gemini-2.0-flash",
+            "gemini-2.5-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "qwen": {
+          "enabled": false,
+          "models": [
+            "qwen-max",
+            "qwen-plus"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "groq": {
+          "enabled": false,
+          "models": [
+            "llama-3.1-70b",
+            "mixtral-8x7b"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "qa-fixture": {
+          "enabled": false,
+          "models": [
+            "qa-model"
+          ],
+          "api_key_configured": true,
+          "base_url": null
+        }
+      },
+      "runtime": {
+        "available": true,
+        "active_model": "deepseek-v4-flash",
+        "mock_mode": true
+      }
+    },
+    "encrypted_keys": {
+      "openai": false,
+      "anthropic": false,
+      "deepseek": false,
+      "google": false,
+      "qwen": false,
+      "groq": false,
+      "qa-fixture": true
+    },
+    "plaintext_present": false
+  },
+  "final_state": {
+    "counts": {
+      "GET /workspace": 5,
+      "GET /assets/utilities-a20cc1240d4419f7.css": 3,
+      "GET /assets/workspace-RD7HIF2G.css": 3,
+      "GET /assets/workspace-MCRKCNHP.js": 1,
+      "GET /assets/default-avatar.svg": 3,
+      "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 3,
+      "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 3,
+      "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 3,
+      "GET /health": 8,
+      "GET /health/ready": 5,
+      "GET /api/v1/databases": 5,
+      "GET /api/v1/settings/available-models": 8,
+      "GET /api/v1/settings/rag": 3,
+      "GET /api/v1/settings/harness": 3,
+      "GET /api/v1/settings/database": 3,
+      "GET /api/v1/settings/llm": 8,
+      "PUT /api/v1/settings/llm": 7,
+      "GET /assets/workspace-CF5CFOPS.js": 2,
+      "POST /qa/mode/volatile": 1,
+      "POST /qa/mode/write_failure": 1,
+      "POST /qa/mode/read_failure": 1,
+      "POST /qa/mode/normal": 2,
+      "POST /qa/mode/bad_write": 1,
+      "POST /qa/mode/malformed": 1,
+      "GET /qa/state": 4,
+      "DELETE /api/v1/settings/llm/providers/qa-fixture": 1,
+      "POST /qa/mode/restore": 1
+    },
+    "configuration": {
+      "status": "ok",
+      "configuration_source": "database",
+      "default_model": "deepseek-v4-flash",
+      "fallback_model": "",
+      "routing_strategy": "complexity_aware",
+      "temperature": 0.3,
+      "max_tokens": 4096,
+      "providers": {
+        "openai": {
+          "enabled": true,
+          "models": [
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "anthropic": {
+          "enabled": true,
+          "models": [
+            "claude-sonnet-4",
+            "claude-haiku-4.5"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "deepseek": {
+          "enabled": true,
+          "models": [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "google": {
+          "enabled": true,
+          "models": [
+            "gemini-2.0-flash",
+            "gemini-2.5-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "qwen": {
+          "enabled": false,
+          "models": [
+            "qwen-max",
+            "qwen-plus"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "groq": {
+          "enabled": false,
+          "models": [
+            "llama-3.1-70b",
+            "mixtral-8x7b"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        }
+      },
+      "runtime": {
+        "available": true,
+        "active_model": "deepseek-v4-flash",
+        "mock_mode": true
+      }
+    },
+    "encrypted_keys": {
+      "openai": false,
+      "anthropic": false,
+      "deepseek": false,
+      "google": false,
+      "qwen": false,
+      "groq": false
+    },
+    "plaintext_present": false
+  }
+}
