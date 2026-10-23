@@ -125,6 +125,8 @@ Harness页面仅展示同一请求加载器/Settings的只读快照，不改运�
 
 ## 阶段26：输出参数上限
 
-阶段27补充[响应完成状态门禁](llm-completion-policy.md)，明确截断不执行、流式无正常结束失败；逐层关闭上游，取消/提前关闭释放并发槽。合成真实传输证明未自动重试及调用预算计数，不是外部provider并发性能证据。
-
 设置路由对max_tokens/max_completion_tokens取调用值与配置较小值，预算前验证、传输前复核；流式/重试/fallback共用，原调用次数预算保持。该参数不是总token/费用预算，不能从mock或spy推断provider实际限制、质量或成本；低值可能截断SQL，真实评测需finish_reason/usage/执行与结果指标。独立路由默认无统一上限。契约见[llm-token-policy.md](llm-token-policy.md)。
+
+## 阶段27：响应完成与流式关闭
+
+阶段27补充[响应完成状态门禁](llm-completion-policy.md)，明确截断不执行、流式无正常结束失败；逐层关闭上游，取消/提前关闭释放并发槽。合成真实传输证明未自动重试及调用预算计数，不是外部provider并发性能证据。

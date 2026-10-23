@@ -1,6 +1,6 @@
 # 阶段27：模型输出完成状态
 
-2026-10-23，基线ba237a5，独立codex/llm-completion-boundary。按[先行计划](stage-27-plan.md)完成实现与本地验证，待提交/远程验收；阶段26最终Actions39950763699已精确核验成功。
+2026-10-23，基线ba237a5，独立codex/llm-completion-boundary。按[先行计划](stage-27-plan.md)完成实现、本地与精确SHA远程验收；阶段26最终Actions39950763699已精确核验成功。
 
 ## 确认的问题与实施
 
@@ -19,7 +19,7 @@ Windows Python3.13.9/Node24，Ruff0.17.1/mypy2.4.0；沿用原.venv site-package
 
 - 新增61项：完成状态50、真实SQLite三协议11。覆盖合法但截断的SQL、两策略独立候选/整条alternative、字典/对象、缺省兼容、refusal/工具、未知原因脱敏、stop/usage/异常EOF、取消/主动关闭、后续请求恢复、单槽再次可用、物理预算与无自动重试；节点在流中收到合法前缀后失败也无候选。
 - `python -m pytest tests/test_llm tests/test_core/test_sql_generator.py tests/test_nodes/test_generate_sql_node.py tests/test_api/test_query_contract.py tests/test_harness/test_request_invariants.py -q`初版定向**305通过，15.60秒**，[日志](results/stage-27-targeted.txt)。其后补4个节点/并发诊断/全链关闭测试并修复关闭传播；提交前又补5个false/0/空集合等非文本流回归并将检查移到真值判断之前。两次最终全量分别3512/3517通过，交付以3517项版本为准。JSON/SSE/MCP失败无执行、SQLite trace无目标SQL；SSE无validation/execution事件，下一次stop恢复五行。JSON/SSE保留完整兄弟并警告；MCP固定单候选不伪造多候选入口。
-- `python -m pytest -q`最终**3517通过、1跳过、4警告，108.45秒**，[日志](results/stage-27-pytest.txt)。Windows uvloop待下述Linux补验；本机新增61项与基线3456一致。`ruff check .`通过，[日志](results/stage-27-ruff.txt)；CI同等核心mypy **36源文件零错误**，[日志](results/stage-27-core.txt)。
+- `python -m pytest -q`最终**3517通过、1跳过、4警告，108.45秒**，[日志](results/stage-27-pytest.txt)。Windows uvloop已由下述Linux实际执行补验；本机新增61项与基线3456一致。`ruff check .`通过，[日志](results/stage-27-ruff.txt)；CI同等核心mypy **36源文件零错误**，[日志](results/stage-27-core.txt)。
 - `mypy app --output json`仍退出1，**181项/42文件**，按file/code/message多重集对比新增0/移除0：[诊断](results/stage-27-after.jsonl)、[摘要](results/stage-27-summary.json)。没有降低原类型门禁。
 - `npm run check:frontend`：5脚本、**182实际函数契约**通过，[日志](results/stage-27-frontend.txt)；`npm run check:frontend:build`完整三页46文件/本地字体许可证/完整性/字节重复性/故意坏JS保留旧构建通过，[日志](results/stage-27-build.txt)。无页面实现变化，未重复视觉审核；workspace真实错误/警告消费者位于done分支及消息warnings渲染处，未新增页面契约。
 
@@ -33,4 +33,4 @@ Windows Python3.13.9/Node24，Ruff0.17.1/mypy2.4.0；沿用原.venv site-package
 
 ## Git与远程验收
 
-本地检查完成；提交前做精确范围/凭据/diff检查，普通推送后核验精确SHA的LinuxCI，再补记文档提交并核验；不合并main、不强推。
+代码[ae7ee18](https://github.com/Qorq-byte/Data_engineer/commit/ae7ee182d7637c2e98beb8d53784cf7da7737106)已普通推送codex/llm-completion-boundary，远程SHA一致；[Actions39953666451](https://github.com/Qorq-byte/Data_engineer/actions/runs/39953666451)成功且headSha精确匹配。Linux干净安装、182前端契约/构建完整性与重复性/失败保留/Ruff/strict36均通过，全量**3518 passed、1 warning，46.48秒**，uvloop实际执行；[结构化证据](results/stage-27-ci.json)。阶段27代码验收完成，补记文档另行提交推送并核验CI；不合并main、不强推，原工作区改动保留。

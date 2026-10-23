@@ -96,3 +96,5 @@
 - 阶段26代码1ac0660a658266aab475ad6aec0011da76f0075c已普通推送codex/llm-token-policy，远程SHA一致；Actions39950303020成功，Linux3457通过（57.41秒）、182前端契约/构建完整性和重复性/失败保留/Ruff/strict35通过，uvloop实际执行。证据见stage-26.md/results/stage-26-ci.json；代码验收完成，main不合并，原工作区改动保留。181项类型债务与7项构建期依赖告警保留；无真实provider/费用质量/压测新结论。下一候选核对模型响应截断/finish_reason反馈，先独立规划。
 
 - 阶段26文档ba237a5的Actions39950763699成功。阶段27按先行计划新建codex/llm-completion-boundary，拒绝明确未完成SQL/真实流缺终止、保留独立完整候选并告警，补逐层流关闭。旧3例全部失败后修复，新增61项、定向305、最终全量3517通过/Windows uvloop1跳过（108.45秒）；strict36/Ruff/182前端契约/构建通过，全仓181项/42文件且新增0。三协议真实SQLite及流传输/预算/关闭证据见stage-27.md；缺元数据兼容和真实provider未测边界保留，待提交/远程验收。
+
+- 阶段27代码ae7ee182d7637c2e98beb8d53784cf7da7737106已普通推送codex/llm-completion-boundary，远程SHA一致；Actions39953666451成功，Linux3518通过（46.48秒）、182前端契约/构建完整性与重复性/失败保留/Ruff/strict36通过，uvloop实际执行。证据见stage-27.md/results/stage-27-ci.json，代码验收完成；181类型存量与7构建期依赖告警保留，真实provider/质量/成本/压测未测。原工作区改动保留、main不合并；下一候选先核对离线NL2SQL完成状态和失败/成本/延迟口径，再独立规划。

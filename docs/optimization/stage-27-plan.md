@@ -21,3 +21,5 @@ SQLGenerator._completion_text仅取第一choice文本，GenerateSQLNode会将其
 交付：边界修复、可复现回归、响应契约、阶段报告及CI证据。生产provider兼容、真实正确率/费用/性能不在本阶段作结论；全仓类型存量及7项构建依赖告警保留。初扫猜测test_query_service.py/ci.yml不存在，已用rg定位实际test_query_contract.py/checks.yml，不据猜测判断缺失。
 
 步骤1–4完成：旧3项失败回归复现后通过，新增61项，初版定向305通过；最终全量3517通过/Windows uvloop1跳过（108.45秒）。Ruff、扩展strict36、182前端契约/构建通过，全仓181项/42文件且新增0。关闭传播补充与测试fixture修正见stage-27.md。步骤5文档已整理，待提交/远程CI；不合并main。
+
+步骤5代码ae7ee18普通推送、远程SHA一致，Actions39953666451精确SHA成功；Linux3518通过（46.48秒，uvloop实际执行）、182前端/构建/Ruff/strict36通过。阶段代码验收完成，补记文档提交推送并核验其CI，不合并main。
