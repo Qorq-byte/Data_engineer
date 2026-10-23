@@ -100,3 +100,5 @@
 - 阶段27代码ae7ee182d7637c2e98beb8d53784cf7da7737106已普通推送codex/llm-completion-boundary，远程SHA一致；Actions39953666451成功，Linux3518通过（46.48秒）、182前端契约/构建完整性与重复性/失败保留/Ruff/strict36通过，uvloop实际执行。证据见stage-27.md/results/stage-27-ci.json，代码验收完成；181类型存量与7构建期依赖告警保留，真实provider/质量/成本/压测未测。原工作区改动保留、main不合并；下一候选先核对离线NL2SQL完成状态和失败/成本/延迟口径，再独立规划。
 
 - 阶段27文档3d74f96的Actions39954157256成功（Linux3518通过、42.49秒）。2026-10-24阶段28按先行计划新建codex/sql-evaluation-accounting，离线拒绝截断/显式生成失败、全题分母、reported遥测覆盖率/分位/费用部分总额和输入哈希已实现；补无SDK导入、初始化关闭、超大限制与费用溢出前置拒绝。旧3例失败后修复，新增61项、定向314、全量3578通过/Windows uvloop1跳过（113.31秒）；strict36+评测脚本strict1/Ruff/182前端契约/构建通过，全仓181→178项/41文件且新增0。独立复审无阻塞；同输入人工功能重放和限制见stage-28.md，待提交/远程验收，main不合并，原工作区改动保留。
+
+- 阶段28代码e0cf1464e2fce695f0af73e18542814bbb209e20已普通推送codex/sql-evaluation-accounting，远程SHA一致；Actions39990182348成功，Linux3579通过（58.13秒）、182前端契约/完整构建与重复性/失败保留/Ruff/strict36+评测strict1通过，uvloop实际执行。证据见stage-28.md/results/stage-28-ci.json，代码验收完成；178类型存量和7构建期依赖告警保留，无真实模型质量/费用/压测结论。main不合并、原工作区改动保留；下一候选先核对在线LLM usage/费用/trace能否支持可信预测记录，再独立规划。

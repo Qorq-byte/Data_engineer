@@ -1,0 +1,171 @@
+{
+  "conclusion": "success",
+  "headSha": "e0cf1464e2fce695f0af73e18542814bbb209e20",
+  "jobs": [
+    {
+      "completedAt": "2026-10-23T16:53:36Z",
+      "conclusion": "success",
+      "databaseId": 120539631086,
+      "name": "test",
+      "startedAt": "2026-10-23T16:51:06Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-23T16:51:07Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-23T16:51:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:51:09Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-10-23T16:51:07Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:51:09Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-python@v5",
+          "number": 3,
+          "startedAt": "2026-10-23T16:51:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:51:10Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 4,
+          "startedAt": "2026-10-23T16:51:09Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:51:55Z",
+          "conclusion": "success",
+          "name": "Run python -m pip install -e '.[dev]'",
+          "number": 5,
+          "startedAt": "2026-10-23T16:51:10Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:51:59Z",
+          "conclusion": "success",
+          "name": "Run npm ci --ignore-scripts",
+          "number": 6,
+          "startedAt": "2026-10-23T16:51:55Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:52:00Z",
+          "conclusion": "success",
+          "name": "Run npm run check:frontend",
+          "number": 7,
+          "startedAt": "2026-10-23T16:51:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:52:02Z",
+          "conclusion": "success",
+          "name": "Run npm run check:frontend:build",
+          "number": 8,
+          "startedAt": "2026-10-23T16:52:00Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:52:02Z",
+          "conclusion": "success",
+          "name": "Run ruff check .",
+          "number": 9,
+          "startedAt": "2026-10-23T16:52:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:52:28Z",
+          "conclusion": "success",
+          "name": "Run mypy scripts/evaluate_quality.py",
+          "number": 10,
+          "startedAt": "2026-10-23T16:52:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:52:31Z",
+          "conclusion": "success",
+          "name": "Run mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py",
+          "number": 11,
+          "startedAt": "2026-10-23T16:52:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:53:32Z",
+          "conclusion": "success",
+          "name": "Run pytest",
+          "number": 12,
+          "startedAt": "2026-10-23T16:52:31Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:53:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 22,
+          "startedAt": "2026-10-23T16:53:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:53:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-python@v5",
+          "number": 23,
+          "startedAt": "2026-10-23T16:53:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:53:34Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 24,
+          "startedAt": "2026-10-23T16:53:34Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T16:53:34Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 25,
+          "startedAt": "2026-10-23T16:53:34Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/39990182348/job/120539631086"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/39990182348",
+  "validation_summary": {
+    "pytest_passed": 3579,
+    "pytest_skipped": 0,
+    "pytest_warnings": 1,
+    "pytest_seconds": 58.13,
+    "core_source_files": 36,
+    "evaluator_source_files": 1,
+    "frontend_contract_scenarios": 182,
+    "commands": [
+      "pip install -e \".[dev]\"",
+      "npm ci --ignore-scripts",
+      "npm run check:frontend",
+      "npm run check:frontend:build",
+      "ruff check .",
+      "mypy scripts/evaluate_quality.py",
+      "mypy core scope",
+      "pytest"
+    ],
+    "limitations": [
+      "178 existing full-repository mypy errors remain; new diagnostics 0 locally",
+      "7 pre-existing build-time npm dependency alerts remain",
+      "Synthetic accounting regression only; no live model quality/cost/load result"
+    ]
+  }
+}

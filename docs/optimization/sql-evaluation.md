@@ -22,7 +22,7 @@ completion_status为missing/generation_failed/rejected/stop/legacy_unknown，com
 
 report_version=sql-evaluation-v2；case_count始终是全部案例，prediction_count是实际提供预测。execution_success_count/result_correct_count及其rate均以全部案例为分母，缺失/生成失败/截断/空SQL/执行失败都算失败。结果错但执行成功仍计执行成功；无序比较是多重集，保留重复行，ordered=true比较顺序。
 
-latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受bool、字符串、NaN/Infinity），缺省/null表示未知，有效0照常计样本。任何非法值、总费用溢出或不受支持的资源边界都在SQLite打开前ValueError；失败预测的有效费用/生成延迟也进入统计，避免只统计成功。输入错误不覆盖原报告。
+latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受bool、字符串、NaN/Infinity），缺省/null表示未知，有效0照常计样本。任何非法值、总费用溢出或不受支持的资源边界都在evaluate_sql打开预测执行库前ValueError；失败预测的有效费用/生成延迟也进入统计，避免只统计成功。组合CLI会先完成独立BM25烟测（同样使用SQLite），再调用SQL评测；前述门禁针对SQL评测库，不承诺在所有检索工作前拒绝输入。输入错误不覆盖原报告。
 
 - reported_generation_latency_ms：sample_count、case_count、coverage、complete、mean、p50/p95/p99及percentile_method=nearest_rank，分位下标ceil(p*n)-1。两样本0和100的P50为0、P95/P99为100，不用插值。小样本尾分位不作为生产性能结论。
 - reported_cost_usd：sample_count/case_count/coverage/complete、total和mean。coverage不足1时total只是已报告样本的部分总额，不外推全部题目成本。无样本的总额/均值/分位均null，不能把未知补0。

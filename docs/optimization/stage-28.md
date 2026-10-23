@@ -1,6 +1,6 @@
 # 阶段28：离线SQL评测完成状态与统计
 
-2026-10-24，基线3d74f96（阶段27最终Actions39954157256成功，精确SHA一致），独立codex/sql-evaluation-accounting。按[先行计划](stage-28-plan.md)完成本地实现/验证，待提交及远程验收。不合并main，原主工作区pyproject.toml/docs/audits和隔离旧未跟踪文件保留。
+2026-10-24，基线3d74f96（阶段27最终Actions39954157256成功，精确SHA一致），独立codex/sql-evaluation-accounting。按[先行计划](stage-28-plan.md)完成实现、本地及精确SHA远程验收。不合并main，原主工作区pyproject.toml/docs/audits和隔离旧未跟踪文件保留。
 
 ## 问题与实现
 
@@ -18,7 +18,7 @@
 Windows Python3.13.9/Node24，Ruff0.17.1/mypy2.4.0；沿用原.venv site-packages、隔离type-deps/driver-types。主pytest使用LITELLM_LOCAL_MODEL_COST_MAP=True/RAG_EMBEDDING_PROVIDER=mock及conftest合成认证/LLM_MOCK_MODE，追踪只写忽略目录；离线子进程明确移除前述价格表开关并禁止SDK导入。无生产密钥或外部模型请求。
 
 - 新增61项，`python -m pytest tests/test_rag/test_prediction_accounting.py tests/test_rag/test_quality_evaluator.py tests/test_core/test_sql_quality_boundaries.py tests/test_llm -q`：**314通过、3警告，14.88秒**，[日志](results/stage-28-targeted.txt)。覆盖dict元数据、refusal/tools/status、全部题目分母、零/缺测/失败遥测、负值/NaN/Inf/bool/字符串/求和溢出、结构/ID、分位/哈希、CLI原报告保留、无SDK导入、公开导出身份、初始化关闭和超大限制。spy证明拒绝项只执行gold，不尝试预测；独立审查相关11项再验通过（包含在61项内，不额外累加）。
-- `python -m pytest -q`：**3578通过、1跳过、4警告，113.31秒**，[日志](results/stage-28-pytest.txt)，相对3517新增61项；Windows uvloop待Linux补验。`ruff check .`通过，[日志](results/stage-28-ruff.txt)；原核心**strict36零错误**，[日志](results/stage-28-core.txt)；新增脚本独立strict1文件零错误，[日志](results/stage-28-evaluator-types.txt)。
+- `python -m pytest -q`：**3578通过、1跳过、4警告，113.31秒**，[日志](results/stage-28-pytest.txt)，相对3517新增61项；Windows uvloop已由下述Linux实际执行补验。`ruff check .`通过，[日志](results/stage-28-ruff.txt)；原核心**strict36零错误**，[日志](results/stage-28-core.txt)；新增脚本独立strict1文件零错误，[日志](results/stage-28-evaluator-types.txt)。
 - `mypy app --output json`仍退出1，**181→178项/41文件**，按规范file/code/message多重集新增0/移除3（jieba两处导入和随之有效的赋值ignore），[诊断](results/stage-28-after.jsonl)/[摘要](results/stage-28-summary.json)。全仓类型仍未通过，不弱化门禁。
 - `npm run check:frontend`：5脚本、**182实际函数契约**通过，[日志](results/stage-28-frontend.txt)；`npm run check:frontend:build`：三页46文件、资源/字体/许可证/清单完整性、重复构建与故意坏JS保留旧产物通过，[日志](results/stage-28-build.txt)。页面无改动，未重复视觉测试；7项构建期依赖告警保留。
 
@@ -36,4 +36,4 @@ Windows Python3.13.9/Node24，Ruff0.17.1/mypy2.4.0；沿用原.venv site-package
 
 ## Git与远程验收
 
-本地验收完成，凭据/范围/diff检查后普通提交推送，核对精确SHA的LinuxCI，再补记文档提交推送并核验；不强推、不合并main。
+代码[e0cf146](https://github.com/Qorq-byte/Data_engineer/commit/e0cf1464e2fce695f0af73e18542814bbb209e20)已普通推送codex/sql-evaluation-accounting，远程SHA一致；[Actions39990182348](https://github.com/Qorq-byte/Data_engineer/actions/runs/39990182348)成功，headSha精确匹配。Linux干净安装、182前端契约/完整构建及重复性/故意坏JS保留/Ruff/strict36与评测脚本strict1均通过，全量**3579 passed、1 warning，58.13秒**，uvloop实际执行；[结构化证据](results/stage-28-ci.json)。阶段28代码验收完成，补记文档另行提交推送并核验最终CI；不强推、不合并main，原工作区改动保留。
