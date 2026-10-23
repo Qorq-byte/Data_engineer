@@ -36,4 +36,8 @@ Windows/Python3.13.9、Node24、npm12.0.2、Ruff0.17.1、mypy2.4.0、SQLite3.51.
 
 ## Git与下一步
 
-待暂存审查/凭据检查后普通提交推送codex/frontend-build，核对SHA与Linux CI，再补记远程证据；不合并main。原工作区未提交文件及本工作树旧未跟踪计划文件保留。下一候选先核对工作台配置展示与运行时真实生效状态，基于代码独立规划最小闭环，避免在本阶段附加行为改造。
+代码已普通推送至codex/frontend-build，[1510dd523cb34574ff252497adb8be66187ed315](https://github.com/Qorq-byte/Data_engineer/commit/1510dd523cb34574ff252497adb8be66187ed315)，远程SHA一致。暂存35个范围内文件，凭据及diff检查通过，无node_modules/生成静态目录/临时令牌/无关文件。原主工作区pyproject.toml摘要仍E9DEAEC2052B3410FC0A3C54374DA73D3F41173D4FDDFD8FF78833A87F1011F3，docs/audits及本工作树旧未跟踪文件保留；已按核实PID/命令清理本阶段临时QA服务。
+
+[Actions39887166701](https://github.com/Qorq-byte/Data_engineer/actions/runs/39887166701)在精确1510dd5成功：[结构化证据](results/stage-21-ci.json)。Ubuntu/Python3.12/Node22干净安装、49前端契约、三页资产完整性/连续字节一致/真实失败保留、Ruff、strict34文件、Linux全量**3305 passed、1 warning，47.13秒**；uvloop实际执行通过。Linux同次构建两次均46文件/2,029,294字节，与Windows交付字节数不同，符合本阶段仅同环境重复性边界；未获取跨平台全文件清单比对，不推断两平台摘要相同或将大小差异当优化结论。
+
+本次追加仅补记验收文档和CI证据，独立提交推送后核对最终SHA/CI；不合并main。阶段21代码验收完成，保留7项构建期依赖告警和全仓类型债务。下一候选先核对工作台配置展示与运行时真实生效状态，基于代码独立规划最小闭环，避免在本阶段附加行为改造。
