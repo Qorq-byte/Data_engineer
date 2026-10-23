@@ -17,7 +17,7 @@
 Windows Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0；沿用原site-packages与type-deps/driver-types。环境PYTHONPATH指向已有依赖，LLM_MOCK_MODE=1（conftest）、RAG_EMBEDDING_PROVIDER=mock、LITELLM_LOCAL_MODEL_COST_MAP=True，DE_TRACE_DIR为忽略目录。
 
 - 新增24项Python用例，真实临时配置/计划mtime_ns热重读、原生SQLite设置表保持不变、只读与两边行数最小值、1毫秒原生进度中断后可继续SELECT、来源缺失/坏YAML不泄漏、聚合与401/403。定向命令python -m pytest tests/test_api/test_harness_settings.py tests/test_harness/test_request_invariants.py tests/test_nodes/test_execute_sql_node.py -q：**45通过，22.91秒**，[日志](results/stage-23-targeted.txt)。
-- python -m pytest -q：**3366通过、1跳过、4警告，223.94秒**，[日志](results/stage-23-pytest.txt)。Windows uvloop待Linux补验；测试运行并发其他检查，不用耗时判断性能。全仓Ruff通过，[日志](results/stage-23-ruff.txt)；既有CI同一mypy核心命令**35文件零错误**，[日志](results/stage-23-core.txt)。全仓mypy app --output json仍退出1，**186项/42文件**，相对188项新增0、移除2（两个Harness端点返回类型），[诊断](results/stage-23-after.jsonl)/[摘要](results/stage-23-summary.json)，不称全仓类型检查通过。
+- python -m pytest -q：**3366通过、1跳过、4警告，223.94秒**，[日志](results/stage-23-pytest.txt)。Windows uvloop跳过，现已由下述Linux实际执行补验；测试运行并发其他检查，不用耗时判断性能。全仓Ruff通过，[日志](results/stage-23-ruff.txt)；既有CI同一mypy核心命令**35文件零错误**，[日志](results/stage-23-core.txt)。全仓mypy app --output json仍退出1，**186项/42文件**，相对188项新增0、移除2（两个Harness端点返回类型），[诊断](results/stage-23-after.jsonl)/[摘要](results/stage-23-summary.json)，不称全仓类型检查通过。
 - npm run check:frontend：5段源码编译、原83+新**29实际函数契约，共112项**，[日志](results/stage-23-frontend.txt)。覆盖只读结构/缺字段/非有限值/零预算与重试、旧响应丢弃、失败未知/恢复/仅GET；附UI无输入/保存结构检查。npm run check:frontend:build三页46文件，本地资源/字体/许可证、SHA256、重复构建及编译失败保留通过，[日志](results/stage-23-build.txt)，Expected identifier为故意负例。
 - gstack /browse **7项**：[结构化证据](results/stage-23-browser.json)，正常真实值（10次LLM、0重试、1000行、30000ms语句、120s请求）、真实409无副作用、删除临时agent.yml后503/未知、恢复重读、QA畸形200拒绝、实际Settings变更后7行/1700ms/9.5s/81s、375px不横向溢出且按钮在视口。临时FastAPI :8023关闭lifespan避免真实MySQL，临时SQLite旧表故意read_only=false/max_llm_calls=99而实际展示true/10；临时合成认证/QA路由/CSP只在忽略目录，未交付。外部资源0；[桌面](results/stage-23-desktop.png)/[手机](results/stage-23-mobile.png)均已查看，不称完整无障碍审计。[控制台](results/stage-23-console.txt)保留未认证前401、mock未就绪503、显式PUT409与配置缺失503，没有React运行异常。写拒绝为人工验证请求，不是页面自动写入。
 
@@ -29,4 +29,4 @@ Windows Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0；沿用原site-packages�
 
 ## Git与下一步
 
-待范围/凭据审查后提交推送，核对精确SHA/Linux CI，再补记远程证据；不合并main。下一候选先核对数据库连接设置与实际连接池/方言能力，独立规划最小范围，避免无效保存。
+代码[6e40463](https://github.com/Qorq-byte/Data_engineer/commit/6e40463747a2b8498735f9057be8f10a13a68235)已普通推送codex/harness-policy-status，远程SHA一致；[Actions39921014380](https://github.com/Qorq-byte/Data_engineer/actions/runs/39921014380)成功，headSha精确匹配。Linux干净安装、112前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3367 passed、1 warning，36.82秒**，uvloop实际执行；[结构化证据](results/stage-23-ci.json)。阶段23代码验收完成，远程证据文档另行提交推送并核对其CI；不合并main。下一候选先核对数据库连接设置与实际连接池/方言能力，独立规划最小范围，避免无效保存。

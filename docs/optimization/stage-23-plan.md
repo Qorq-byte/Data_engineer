@@ -26,3 +26,5 @@ settings.py的Harness PUT只更新_settings_store并调用吞错_persist_section
 已确认基线/远程与工作区，方案和步骤已在编码前确定。初期rg使用了不存在的constraints.py/ci.yml等路径，已依据rg --files定位为constraint.py/checks.yml；属于检索路径修正，没有据此判定模块缺失。下一步先失败回归，再实现。
 
 步骤1–5完成：旧2回归失败后2通过，24新增Python/定向45/全量3366通过且Windows uvloop1跳过；新29前端契约/共112、构建检查、strict35/Ruff通过，全仓186项/42文件（基线188、新增0）。gstack最终7场景及桌面/手机已验证；中断和Windows服务恢复、测试输入/格式修正详见stage-23.md。步骤6文档与证据已整理，待审查提交/推送/远程CI。
+
+步骤6代码6e40463已推送，Actions39921014380精确SHA成功；Linux3367通过（36.82秒，uvloop实际执行）、112前端/构建/Ruff/strict35通过。验收证据补入stage-23.md/results/stage-23-ci.json，远程补记文档另行提交推送；原工作区改动保留，main不合并。
