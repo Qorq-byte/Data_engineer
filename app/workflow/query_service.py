@@ -44,6 +44,64 @@ def _request_plan() -> WorkflowPlan:
     return _PLAN_LOADER.load("request_query")
 
 
+def describe_query_policy() -> dict[str, Any]:
+    """Read the same policy sources as requests; never apply stored UI settings.
+
+    This is a current-process snapshot for new requests, not a health check or
+    the policy captured by an already running request. Keep execution unchanged.
+    """
+    from app.config.settings import settings
+
+    constraints = _CONFIG_LOADER.load().constraints
+    plan = _request_plan()
+
+    def entry(value: bool | int | float, source: str) -> dict[str, Any]:
+        return {"value": value, "source": source}
+
+    return {
+        "scope": "JSON/SSE request_query; MCP nl_query uses the same submit_query path",
+        "workflow": {
+            "plan_id": plan.id,
+            "source": "app/workflow/plans/request_query.yml",
+            "controller": "WorkflowRunner",
+            "node_order": [{"id": node.id, "node": node.node} for node in plan.node_order],
+            "max_iterations": max(0, plan.max_iterations),
+        },
+        "limits": {
+            "read_only": entry(True, "ExecuteSQLNode: unconditional read-only SQL check"),
+            "max_llm_calls": entry(
+                max(0, constraints.max_llm_calls_per_query),
+                "agent.yml constraints.max_llm_calls_per_query; shared across query targets",
+            ),
+            "max_retries": entry(
+                max(0, min(plan.failure_policy.max_retries, constraints.max_node_retries)),
+                "min(request_query.failure_policy.max_retries, agent.yml max_node_retries)",
+            ),
+            "max_result_rows": entry(
+                max(1, min(constraints.max_result_rows, settings.max_result_rows)),
+                "max(1, min(agent.yml max_result_rows, Settings.max_result_rows)); per execution",
+            ),
+            "statement_timeout_ms": entry(
+                max(1, min(constraints.statement_timeout_ms, settings.statement_timeout_ms)),
+                "max(1, min(agent.yml statement_timeout_ms, Settings.statement_timeout_ms))",
+            ),
+            "query_timeout_s": entry(
+                settings.query_timeout_seconds, "Settings.query_timeout_seconds; JSON/SSE deadline"
+            ),
+            "session_ttl_s": entry(
+                settings.session_ttl_seconds,
+                "Settings.session_ttl_seconds; process-local query session eviction",
+            ),
+        },
+        "candidate_policy": "request.num_candidates; MCP nl_query requests one candidate",
+        "direct_sql_scope": (
+            "Direct SQL uses ExecuteSQLNode read-only checks and Settings row/statement caps, "
+            "not this workflow's LLM/retry budget or HTTP query deadline"
+        ),
+        "snapshot_scope": "current process, read time; not in-flight requests or driver health",
+    }
+
+
 async def run_query(
     body: QueryInput,
     emit: QueryEventHandler | None = None,

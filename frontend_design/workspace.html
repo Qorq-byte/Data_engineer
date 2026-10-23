@@ -3518,6 +3518,28 @@ const schemaIndexRows = (status, connections) => {
   }));
 };
 
+const harnessPolicySnapshot = (value) => {
+  const text = v => typeof v === 'string' && v.trim().length > 0;
+  if (!value || value.status !== 'ok' || value.mode !== 'read_only'
+      || !Array.isArray(value.editable_fields) || value.editable_fields.length !== 0
+      || value.legacy_stored_settings_applied !== false
+      || !['scope', 'candidate_policy', 'direct_sql_scope', 'snapshot_scope'].every(key => text(value[key]))) return null;
+  const flow = value.workflow;
+  if (!flow || flow.plan_id !== 'request_query' || flow.controller !== 'WorkflowRunner'
+      || !text(flow.source) || !Number.isInteger(flow.max_iterations) || flow.max_iterations < 0
+      || !Array.isArray(flow.node_order) || flow.node_order.length === 0
+      || !flow.node_order.every(node => text(node?.id) && text(node?.node))
+      || new Set(flow.node_order.map(node => node.id)).size !== flow.node_order.length) return null;
+  if (value.limits?.read_only?.value !== true || !text(value.limits.read_only.source)) return null;
+  for (const key of ['max_llm_calls', 'max_retries', 'max_result_rows', 'statement_timeout_ms', 'query_timeout_s', 'session_ttl_s']) {
+    const entry = value.limits[key];
+    const minimum = ['max_llm_calls', 'max_retries'].includes(key) ? 0 : Number.MIN_VALUE;
+    if (!entry || !Number.isFinite(entry.value) || entry.value < minimum || !text(entry.source)
+        || (key !== 'query_timeout_s' && !Number.isInteger(entry.value))) return null;
+  }
+  return value;
+};
+
 const ragConfigurationSnapshot = (value, status = 'ok') => {
   const validWeights = weights => weights && ['bm25_weight', 'vector_weight'].every(key =>
     typeof weights[key] === 'number' && Number.isFinite(weights[key]) && weights[key] >= 0 && weights[key] <= 1)
@@ -3543,6 +3565,9 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [health, setHealth] = useState(null);
   const [llmSettings, setLlmSettings] = useState(null);
   const [harnessSettings, setHarnessSettings] = useState(null);
+  const [harnessLoading, setHarnessLoading] = useState(false);
+  const [harnessError, setHarnessError] = useState(null);
+  const harnessReadSeq = useRef(0);
   const [databaseSettings, setDatabaseSettings] = useState(null);
   const [ragSettings, setRagSettings] = useState(null);
   const [ragConfigLoading, setRagConfigLoading] = useState(false);
@@ -3600,23 +3625,40 @@ const SettingsPanel = ({ userName, onLogout }) => {
     }
   }, []);
 
+  const fetchHarnessPolicy = useCallback(async () => {
+    const seq = ++harnessReadSeq.current;
+    setHarnessLoading(true);
+    setHarnessError(null);
+    try {
+      const snapshot = harnessPolicySnapshot(await api._fetch('/api/v1/settings/harness'));
+      if (seq !== harnessReadSeq.current) return;
+      if (!snapshot) throw new Error('Harness 约束响应不完整');
+      setHarnessSettings(snapshot);
+    } catch (error) {
+      if (seq !== harnessReadSeq.current) return;
+      setHarnessSettings(null);
+      setHarnessError('无法读取实际 Harness 约束，当前状态未知。请检查配置后重新读取。');
+    } finally {
+      if (seq === harnessReadSeq.current) setHarnessLoading(false);
+    }
+  }, []);
+
   const fetchSettings = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.health(),
       api._fetch('/api/v1/settings/llm').catch(() => null),
-      api._fetch('/api/v1/settings/harness').catch(() => null),
       api._fetch('/api/v1/settings/database').catch(() => null),
       api._fetch('/api/v1/settings/available-models').catch(() => null),
       fetchRagConfig(),
-    ]).then(([h, llm, harness, db, models]) => {
+      fetchHarnessPolicy(),
+    ]).then(([h, llm, db, models]) => {
       setHealth(h);
       setLlmSettings(llm);
-      setHarnessSettings(harness);
       setDatabaseSettings(db);
       if (models && models.models) setAvailableModels(models.models);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [fetchRagConfig]);
+  }, [fetchRagConfig, fetchHarnessPolicy]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
@@ -3723,21 +3765,6 @@ const SettingsPanel = ({ userName, onLogout }) => {
     } catch(e) {
       setSaveMsg({ type: "err", text: `删除失败: ${e.message}` });
     }
-  };
-
-  const handleSaveHarness = async () => {
-    setSaving(s => ({ ...s, harness: true }));
-    try {
-      await api._fetch('/api/v1/settings/harness', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify(harnessSettings),
-      });
-      setSaveMsg({ type: "ok", text: "Harness 约束已保存" });
-      setTimeout(() => setSaveMsg(null), 2000);
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `保存失败: ${e.message}` });
-    } finally { setSaving(s => ({ ...s, harness: false })); }
   };
 
   const handleSaveRag = async () => {
@@ -4258,47 +4285,36 @@ const SettingsPanel = ({ userName, onLogout }) => {
           {activeTab === "harness" && (
             <Fragment>
               <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">
-                    Harness 约束
-                    <span className="text-xs font-normal text-neutral-400 ml-2">LLM 无法绕过</span>
-                  </h3>
-                  <button className="btn-dark" onClick={handleSaveHarness} disabled={saving.harness}>
-                    {saving.harness ? "保存中…" : "保存配置"}
-                  </button>
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">实际 Harness 约束<span className="text-xs font-normal text-neutral-400 ml-2">只读状态</span></h3>
+                  <button className="btn-outline" onClick={fetchHarnessPolicy} disabled={harnessLoading}>{harnessLoading ? "读取中…" : "重新读取约束"}</button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <p className="text-xs text-neutral-500 leading-relaxed" role="status">约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。</p>
+                {harnessError && <p className="text-sm text-red-600" role="alert">{harnessError}</p>}
+                {harnessLoading && <p className="text-xs text-neutral-500" role="status">正在读取约束；下方旧值暂不展示。</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy={harnessLoading}>
                   {[
-                    { label: "只读模式", desc: "禁止 INSERT/UPDATE/DELETE", key: "read_only", type: "toggle" },
-                    { label: "最大 LLM 调用", desc: "每查询上限", key: "max_llm_calls", type: "number", min: 1, max: 100 },
-                    { label: "最大结果行数", desc: "单次查询上限", key: "max_result_rows", type: "number", min: 1, max: 100000 },
-                    { label: "语句超时 (秒)", desc: "SQL 执行超时", key: "query_timeout_s", type: "number", min: 1, max: 300 },
-                    { label: "会话 TTL (秒)", desc: "自动过期", key: "session_ttl_s", type: "number", min: 60, max: 86400 },
-                    { label: "最大重试", desc: "节点级重试", key: "max_retries", type: "number", min: 0, max: 10 },
-                    { label: "最大候选数", desc: "SQL 生成候选", key: "max_candidates", type: "number", min: 1, max: 5 },
+                    { label: "只读 SQL", desc: "执行器始终检查只读；不是可关闭开关", key: "read_only" },
+                    { label: "最大 LLM 调用", desc: "一次查询的所有目标库共享预算", key: "max_llm_calls" },
+                    { label: "最大结果行数", desc: "每次 SQL 执行的上限", key: "max_result_rows" },
+                    { label: "语句超时 (毫秒)", desc: "执行器传递的截止值，实际中断依赖驱动", key: "statement_timeout_ms" },
+                    { label: "查询总时限 (秒)", desc: "JSON/SSE 路径，包含排队与工作流", key: "query_timeout_s" },
+                    { label: "内存会话 TTL (秒)", desc: "按访问/清理触发过期，不代表持久历史删除", key: "session_ttl_s" },
+                    { label: "节点重试上限", desc: "计划与全局预算取较小值，0 表示不重试", key: "max_retries" },
                   ].map(c => (
-                    <div key={c.key} className="p-3 rounded-lg bg-gray-50 dark:bg-neutral-800 flex flex-col gap-1.5">
+                    <div key={c.key} data-harness-limit={c.key} className="p-3 min-w-0 rounded-lg bg-gray-50 dark:bg-neutral-800 flex flex-col gap-1.5">
                       <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{c.label}</span>
                       <span className="text-xs text-neutral-400">{c.desc}</span>
-                      {c.type === "toggle" ? (
-                        <button
-                          className={cn("mt-1 text-xs px-3 py-1.5 rounded-full border cursor-pointer transition-all font-medium self-start",
-                            harnessSettings?.read_only
-                              ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                              : "bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 border-red-200 dark:border-red-800")}
-                          onClick={() => setHarnessSettings(s => s ? { ...s, read_only: !s.read_only } : s)}
-                        >
-                          {harnessSettings?.read_only ? "只读模式: 开启" : "只读模式: 关闭"}
-                        </button>
-                      ) : (
-                        <input type="number" min={c.min} max={c.max}
-                          className="input-light text-sm mt-1"
-                          value={harnessSettings ? harnessSettings[c.key] ?? "" : ""}
-                          onChange={e => setHarnessSettings(s => s ? { ...s, [c.key]: parseInt(e.target.value) || 0 } : s)} />
-                      )}
+                      <span className="font-mono text-sm mt-1">{!harnessSettings || harnessLoading || harnessError ? "—" : c.key === "read_only" ? "始终启用" : harnessSettings.limits[c.key].value}</span>
+                      {harnessSettings && !harnessLoading && !harnessError && <span className="text-[11px] text-neutral-500 break-words">来源：{harnessSettings.limits[c.key].source}</span>}
                     </div>
                   ))}
                 </div>
+                {harnessSettings && !harnessLoading && !harnessError && <div className="mt-4 text-xs text-neutral-500 leading-relaxed break-words">
+                  <p>固定流程（{harnessSettings.workflow.plan_id}）：{harnessSettings.workflow.node_order.map(node => node.node).join(' → ')}；由 {harnessSettings.workflow.controller} 执行，最多 {harnessSettings.workflow.max_iterations} 次节点尝试。</p>
+                  <p>适用范围：JSON/SSE 查询与复用 submit_query 的 MCP nl_query。候选数由每次请求 num_candidates 指定，MCP 当前请求 1 个；没有已接通的全局候选数保存项。</p>
+                  <p>直接 SQL 执行复用只读检查及 Settings 行数/语句上限，不使用此工作流的 LLM/重试预算或查询总时限。环境配置通常需重启，计划与 agent.yml 按既有加载器重读；更改前请按运维文档核对来源。</p>
+                </div>}
               </Card>
             </Fragment>
           )}

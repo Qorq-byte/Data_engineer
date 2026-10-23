@@ -188,16 +188,6 @@ class LLMSettingsUpdate(BaseModel):
     providers: dict[str, LLMProviderUpdate] | None = None
 
 
-class HarnessSettingsUpdate(BaseModel):
-    read_only: bool | None = None
-    max_llm_calls: int | None = Field(default=None, ge=1, le=100)
-    max_result_rows: int | None = Field(default=None, ge=1, le=100000)
-    query_timeout_s: int | None = Field(default=None, ge=1, le=300)
-    session_ttl_s: int | None = Field(default=None, ge=60, le=86400)
-    max_retries: int | None = Field(default=None, ge=0, le=10)
-    max_candidates: int | None = Field(default=None, ge=1, le=5)
-
-
 class DatabaseSettingsUpdate(BaseModel):
     dialects_enabled: dict[str, bool] | None = None
     connection_pool_size: int | None = Field(default=None, ge=1, le=50)
@@ -231,6 +221,7 @@ async def get_all_settings() -> dict:
     """Get all system settings."""
     await _load_settings_from_db()
     public = _public_settings(_settings_store)
+    public["harness"] = await get_harness_settings()
     public["rag"] = await get_rag_settings()
     return {
         "status": "ok",
@@ -334,24 +325,40 @@ async def update_llm_settings(body: LLMSettingsUpdate) -> dict:
 
 
 @router.get("/settings/harness")
-async def get_harness_settings() -> dict:
-    """Get Harness constraint settings."""
-    await _load_setting_section("harness")
+async def get_harness_settings() -> dict[str, Any]:
+    """Describe actual read-only policy, independently of legacy settings storage."""
+    from app.workflow.query_service import describe_query_policy
+
+    try:
+        snapshot = describe_query_policy()
+    except Exception as exc:
+        logger.warning("Harness policy snapshot unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "HARNESS_POLICY_UNAVAILABLE",
+                "message": "无法读取实际 Harness 约束，当前状态未知；请检查计划和配置后重试。",
+            },
+        ) from exc
     return {
         "status": "ok",
-        **_settings_store["harness"],
+        "mode": "read_only",
+        "editable_fields": [],
+        "legacy_stored_settings_applied": False,
+        **snapshot,
     }
 
 
 @router.put("/settings/harness")
-async def update_harness_settings(body: HarnessSettingsUpdate) -> dict:
-    """Update Harness constraints."""
-    await _load_setting_section("harness")
-    harness = _settings_store["harness"]
-    updates = body.model_dump(exclude_none=True)
-    harness.update(updates)
-    await _persist_section("harness")
-    return {"status": "updated", "message": "Harness 约束已更新"}
+async def update_harness_settings() -> dict[str, Any]:
+    """Reject legacy unwired writes; changing safety policy needs deployment config."""
+    raise HTTPException(
+        status_code=409,
+        detail={
+            "code": "HARNESS_SETTINGS_READ_ONLY",
+            "message": "Harness 约束仅支持读取；请按实际来源修改部署配置，旧设置表不生效。",
+        },
+    )
 
 
 @router.get("/settings/database")

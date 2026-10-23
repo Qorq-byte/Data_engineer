@@ -81,3 +81,7 @@ None状态的旧快照/直接SQL保留既有只读范围，不应用上述main/t
 `GET/PUT /api/v1/settings/rag`现在区分已配置与实际运行。PUT只接受bm25_weight/vector_weight，单项互补、双项和须为1；空/null/非有限/未知字段及原top_k/similarity_threshold/embedding_model写入均422。旧客户端需只发送权重，不再提交完整GET响应。GET与聚合设置的rag段不回显旧未生效数值，返回实际三类融合权重、provider/model/dimension、配置来源与匹配状态。
 
 updated必须同时检查persistence=persisted/memory_only及runtime_applied；未初始化不冒充已应用，无存储不冒充持久化。读失败503/RAG_SETTINGS_READ_FAILED，写失败503/RAG_SETTINGS_PERSIST_FAILED且unconfirmed/未发布运行值。取消或超时可能数据库已提交，需先GET检查漂移再显式保存，不自动重试。权限与固定工作流不变；完整字段/单进程边界见[生效契约](rag-settings.md)/[阶段22报告](stage-22.md)。
+
+## 阶段23：Harness状态只读
+
+GET /settings/harness及聚合harness段返回实际limits/workflow/source与mode=read_only，不再透传旧表字段；PUT固定409 HARNESS_SETTINGS_READ_ONLY且不读写存储。源文件失败503 HARNESS_POLICY_UNAVAILABLE，不回退旧值。单位、来源及迁移见[harness-settings.md](harness-settings.md)。管理员和Harness不变量保持。
