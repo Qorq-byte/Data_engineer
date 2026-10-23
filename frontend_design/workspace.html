@@ -3744,6 +3744,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
     if (ragConfigBusyRef.current || ragConfigLoading || ragConfigError || !ragSettings) return;
     ragConfigBusyRef.current = true;
     ++ragConfigReadSeq.current;
+    setRagConfigLoading(false); // Superseded GET must not leave maintenance permanently disabled.
     setSaving(s => ({ ...s, rag: true }));
     setRagConfigMsg(null);
     try {

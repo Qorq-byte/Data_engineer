@@ -63,6 +63,14 @@ function harness(options = {}) {
   const pending = delayed.read(); delayed.ctx.ragConfigReadSeq.current++;
   delayed.state.settings = snapshot(data(0.2)); resolve(data(0.7)); await pending;
   assert.equal(delayed.state.settings.vector_weight, 0.2); checked++;
+  let finishRead;
+  const race = harness({ api: {
+    ragSettings: () => new Promise(done => { finishRead = done; }),
+    updateRagSettings: async () => data(0.7, { status: 'updated', persistence: 'memory_only', runtime_applied: true }),
+  } });
+  const reading = race.read(); await race.save(); finishRead(data(0.2)); await reading;
+  assert.equal(race.state.settings.vector_weight, 0.7);
+  assert.equal(race.state.loading, false); checked++;
   const saved = harness(); await saved.save();
   assert.deepEqual(JSON.parse(JSON.stringify(saved.state.calls)), [weights(0.7)]);
   assert.equal(saved.state.message.type, 'warn');

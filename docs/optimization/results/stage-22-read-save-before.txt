@@ -1,0 +1,12 @@
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+true !== false
+
+    at D:\python\data_engineer\.verify_tmp_optimization\frontend_design\_check_rag_configuration.js:73:10 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: true,
+  expected: false,
+  operator: 'strictEqual',
+  diff: 'simple'
+}

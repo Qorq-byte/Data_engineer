@@ -20,12 +20,14 @@ Windows/Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0、SQLite3.51.0、DuckDB1.
 - 新增38项Python回归，真实临时SQLite设置适配器、LanceDB/FTS5，不mock数据库。包含严格参数/权限、单项互补/边界、持久化后清内存加载、读写原生权限拒绝、真实await超时、提交后取消漂移、保存顺序/初始化竞争、三个在途检索快照及聚合视图/默认值不别名。定向原配置/启动加新增首轮**61通过**，[日志](results/stage-22-targeted.txt)；之后补两项聚合/默认引用验证，全量覆盖。
 - 可控正交向量让真实dense/BM25排序冲突，保存alpha=0与1后结果分别为rank.a/rank.b；证明实际新检索融合接线，不能当真实语义Recall/准确率。真实MySQL驱动/事务没有运行环境，SQLite仅验证存储协议；延迟/取消用显式控制事件，原生SQLITE_INSERT/READ拒绝与人工超时分开标注。
 - 最终`python -m pytest -q`：**3342 passed、1 skipped、4 warnings，102.85秒**，[记录](results/stage-22-pytest.txt)。Windows uvloop跳过待Linux补验。新增dataclass自动进入既有app/models门禁，核心strict由34扩至**35文件零错误**，[记录](results/stage-22-core.txt)；Ruff通过，[记录](results/stage-22-ruff.txt)。全仓mypy仍退出1，**188项/42文件**，相对194项新增0、移除6（_get_store返回类型及RAG端点类型完善）：[诊断](results/stage-22-after.jsonl)/[摘要](results/stage-22-summary.json)。不缩小导入或类型检查范围。
-- `npm run check:frontend`：5段源码脚本编译、原49契约+新**33实际函数场景，共82项**，[记录](results/stage-22-frontend.txt)。覆盖无/有引擎快照、畸形/非有限权重、读失败/过期响应、仅权重payload、持久化/临时/未就绪、错误200不当成功、失败后未知、不重试、busy/ref/finally、重新读取清过时反馈。`npm run check:frontend:build`三页资源/字体/许可证、字节一致、真实编译失败保留旧产物均通过，[记录](results/stage-22-build.txt)；日志Expected identifier为故意负例。
+- `npm run check:frontend`：5段源码脚本编译、原49契约+新**34实际函数场景，共83项**，[记录](results/stage-22-frontend.txt)。覆盖无/有引擎快照、畸形/非有限权重、读失败/过期响应、仅权重payload、持久化/临时/未就绪、错误200不当成功、失败后未知、不重试、busy/ref/finally、重新读取清过时反馈。`npm run check:frontend:build`三页资源/字体/许可证、字节一致、真实编译失败保留旧产物均通过，[记录](results/stage-22-build.txt)；日志Expected identifier为故意负例。
 - gstack `/browse`最终复跑**10项浏览器场景**，[结构化证据](results/stage-22-browser.json)。临时真实FastAPI仅127.0.0.1:8022，关闭lifespan避免真实MySQL，显式初始化SQLite源3行、SQLite设置协议、持久临时LanceDB/FTS5和mock embedding。合成管理员/QA控制仅忽略目录；同源CSP仅QA注入，外部资源请求0，不作为生产路由或安全策略交付。
 - 键盘Home/ArrowRight将向量改0.2时BM25自动0.8，已配置值仍旧0.7直到保存；真实PUT后SQLite与三个运行实例0.2。无存储显示重启不保留；原生INSERT拒绝仅1次PUT、不自动写重试，显示未确认并禁保存；原生READ拒绝显示未知；外部存储改0.9后GET显示配置0.9/运行0.2漂移而不应用；显式关闭引擎保存不称已应用，再初始化/读取确认0.9并清除旧反馈。全过程源行数3不变。
 - [桌面](results/stage-22-desktop.png)/[手机](results/stage-22-mobile.png)均查看；375px文档/正文宽均375，滑块及按钮在视口内、标签关联正确。不宣称完整无障碍审计。[控制台](results/stage-22-console.txt)保留mock readiness503和两轮故障注入503，无React运行异常。
 
 ## 发现后的调整与限制
+
+初版代码3c2b679推送后的最终交错回归发现：保存使旧GET失效后，旧请求finally按序号跳过，但读取loading未由保存接管释放，可能一直禁用按钮。新增真实页面函数交错用例先失败（true !== false）后修复，保存开始时显式释放被替代的读取状态；[失败证据](results/stage-22-read-save-before.txt)。修复后34项配置契约/共83项前端契约及完整构建校验复跑通过，单独提交推送并以新SHA重新验收CI。该修复仅前端异步状态；Python代码未变，不重复本地全仓测试。10项浏览器证据对应修复前的主实现，最终交错边界由实际函数回归验证，未再次声称浏览器复现这一罕见交错。
 
 浏览器首轮发现：重新就绪并成功读取后仍留“尚未应用”旧提示，已在fetchRagConfig清除旧反馈，并增加实际函数断言、重新构建/复跑全部浏览器情形，旧截图不计验收。侧栏动画导致过期ref、宽泛状态选择器匹配多个，改fresh snapshot/可见导航和精确role后重做；属于测试定位问题。Ruff格式与新增类型诊断已修复，未禁用规则或弱化测试。
 
