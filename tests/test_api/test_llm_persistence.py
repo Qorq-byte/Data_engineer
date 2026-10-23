@@ -62,7 +62,7 @@ async def test_invalid_strategy_cannot_partially_mutate(stored):
         "/api/v1/settings/llm",
         json={"default_model": "changed-model", "routing_strategy": "invalid"},
     )
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert api_settings._settings_store == before
 
 
@@ -200,15 +200,16 @@ async def test_two_writes_and_startup_share_gate(stored, monkeypatch):
     monkeypatch.setattr(stored, "save_setting", save)
     first = asyncio.create_task(api_settings.update_llm_settings(update(default_model="first")))
     await entered.wait()
-    second = asyncio.create_task(api_settings.update_llm_settings(update(temperature=0.6)))
+    second = asyncio.create_task(api_settings.update_llm_settings(update(max_tokens=777)))
     startup = asyncio.create_task(api_settings.reload_llm_router_from_db())
     await asyncio.sleep(0)
     assert writes == ["first"] and not second.done() and not startup.done()
     release.set()
     await asyncio.gather(first, second, startup)
     raw = await stored.get_setting("llm")
-    assert raw["default_model"] == "first" and raw["temperature"] == 0.6
+    assert raw["default_model"] == "first" and raw["max_tokens"] == 777
     assert factory.get_default_router().config.default_model == "first"
+    assert factory.get_default_router().config.max_output_tokens == 777
 
 
 @pytest.mark.parametrize(

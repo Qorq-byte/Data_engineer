@@ -1,6 +1,6 @@
 # LLM设置：持久化、运行时与恢复
 
-阶段25起，GET /api/v1/settings/llm返回公开配置、configuration_source=database/memory及runtime={available,active_model,mock_mode}；runtime来自当前路由实例，不从default_model猜测，不由GET创建实例。聚合GET /settings的llm段使用相同视图，available-models与启动恢复也用专用加载器；读取失败503 LLM_SETTINGS_READ_FAILED，不偷偷回退旧值或默认值。没有数据库存储实例时允许明确仅内存配置。
+阶段25完成持久化闭环；阶段26补充输出参数和未支持字段。GET /api/v1/settings/llm返回公开配置、configuration_source=database/memory及runtime={available,active_model,mock_mode}；runtime来自当前路由实例，不从default_model猜测，不由GET创建实例。聚合GET /settings的llm段使用相同视图，available-models与启动恢复也用专用加载器；读取失败503 LLM_SETTINGS_READ_FAILED，不偷偷回退旧值或默认值。没有数据库存储实例时允许明确仅内存配置。
 
 PUT /settings/llm及DELETE /settings/llm/providers/{name}都在当前loop的llm-settings gate内依次读取候选、构建路由、持久化确认、无await同步发布路由/内存。候选是深拷贝，非法策略不留下部分修改；删除也同步更新路由，原内置提供商保护/404保持。构建或加密失败固定400 LLM_SETTINGS_PREPARE_FAILED，不先写设置；旧策略错误仍400。LLM请求参数校验固定422 LLM_SETTINGS_INVALID，不回显input/ctx或明密文key；其他设置段仍用原校验行为。
 
@@ -18,4 +18,4 @@ API公开视图只选择已知字段，不回显api_key/api_key_enc及其他旧�
 
 ## 保留边界
 
-当前工厂只消费提供商/密钥/base_url/models、default/fallback及既有环境限流配置；保存routing_strategy、temperature、max_tokens不意味着这些值已成为全查询路由/生成参数。本阶段保留既有行为，在页面/文档明确提示，后续需单独核对消费者。真实MySQL/LLM服务、多进程、性能和RAG语义质量未实测。流程与证据见[阶段25报告](stage-25.md)。
+当前工厂消费提供商/密钥/base_url/models、default/fallback、max_tokens输出参数上限及既有环境限流配置。阶段26起routing_strategy/temperature写入422，旧值忽略并改只读；max_tokens严格1–32768整数，runtime.max_output_tokens报告实际路由上限，配置与运行可漂移。别名、独立路由/Mock与provider兼容边界见[输出参数契约](llm-token-policy.md)。真实MySQL/LLM服务、多进程、性能和RAG语义质量未实测。流程与证据见[阶段25报告](stage-25.md)。

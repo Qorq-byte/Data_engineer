@@ -93,3 +93,7 @@ GET /settings/database及聚合database段报告实际ConnectionFactory能力；
 ## 阶段25：LLM写入与恢复
 
 LLM PUT及提供商DELETE返回完整公开配置、persistence=persisted/memory_only、runtime_applied及实际active_model/mock_mode；失败503/unconfirmed不发布运行值。GET/启动/available-models读取失败明确503，不回退默认；LLM参数校验422不回显input。取消可能已提交，先读再显式保存，无自动写重试；详见[llm-settings.md](llm-settings.md)。
+
+## 阶段26：LLM输出参数与兼容
+
+max_tokens接入设置生成路由的max_output_tokens，严格整数1–32768，公开配置与实际runtime分开。routing_strategy/temperature/未知字段写入422，整次请求拒绝，旧字段只报告名称/忽略；客户端须停止发送。传输别名/Mock/多候选边界见[llm-token-policy.md](llm-token-policy.md)，原持久化/权限/Harness不变量保持。

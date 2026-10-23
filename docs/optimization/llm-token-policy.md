@@ -1,0 +1,21 @@
+# LLM输出参数上限与未支持配置
+
+阶段26起，设置生成路由的max_tokens是单次输出请求参数的上限，默认4096，API仅接受1–32768严格整数（bool/字符串/小数/显式null拒绝）。factory.build_router_from_settings复制到RouterConfig.max_output_tokens；已有独立RouterConfig和环境路由默认None，表示没有该统一上限。不是整次查询/多库/候选总token或费用预算，也不改变Harness物理调用次数预算。
+
+## 实际调用
+
+LiteLLMRouter._completion_options在_route_with_fallback预算预留之前处理参数，_call_provider构建真实LiteLLM kwargs后再次规范化：max_tokens和max_completion_tokens只允许一个有效正整数值，None视为未指定；调用值较小则保留，较大则取配置上限，没有值且有上限时补max_tokens。双有效别名、非正整数、max_new_tokens和extra_body中的同类覆盖拒绝，不消耗物理尝试预算。无统一上限的路由不自动增加上限，仍使用这些参数校验规则。流式/非流式、重试及fallback共用这条路径，原始temperature/n不因上限改变，LiteLLM内部重试仍强制0。
+
+这验证的是本项目传给LiteLLM的参数，不能替代真实provider对参数/截断/usage的验证；不同模型参数兼容仍需实测，未声称所有provider专有kwargs均构成不可绕过的安全边界。n>1、重试、fallback及多节点会增加总量；mock合成文本/usage没有按该值裁剪，不能拿mock输出证明真实token限制。调低上限可能截断SQL，应以实际执行成功/结果正确率、finish_reason、usage、费用评测再定值。本阶段没有生产模型或压测结论。
+
+## API与兼容
+
+GET/PUT/DELETE公开视图包含配置max_tokens与runtime.max_output_tokens；无实例或独立路由未设上限时runtime值为null。GET可显示配置/运行漂移而不自动应用；设置发布与取消/仅内存语义沿用[持久化契约](llm-settings.md)。PUT/DELETE成功必须同时确认persistence、runtime_applied和运行上限与返回配置一致。
+
+routing_strategy和temperature没有全局消费者，现从可编辑请求模型移除，PUT带任一字段（含null/合法旧值）均422 LLM_SETTINGS_INVALID，整次请求拒绝，不部分保存。unknown字段也拒绝。旧客户端须停止发送这两个字段。历史表字段保留/忽略，GET不回显其数值，只报告unsupported_fields/legacy_ignored_fields名称（含规范化默认配置中保留的字段）。公开routing_policy=primary_then_fallback、temperature_policy=caller_supplied；editable_fields为default_model/fallback_model/max_tokens/providers。
+
+实际路由仍主模型与有序fallback，温度由调用方指定；SQLGenerator各生成路径当前显式0.3，独立Router默认参数仍0.7。没有成本/复杂度/延迟/轮询策略，不把SQL候选策略temperature/multi_perspective与模型路由策略混为一谈。节点固定计划和WorkflowRunner不变，LLM不决定节点流转。
+
+## 页面与恢复
+
+策略选择器/温度滑块改只读说明，保存仅发支持字段。输出上限显示编辑输入、已配置快照和当前路由值，较小调用值仍保留。超范围/非整数编辑在页面阻止写；旧响应缺运行上限或假称应用时转未知，须重读。来源、memory_only、取消后可能已提交及多worker不广播等边界保持。冷启动/显式保存应用当前存储上限，GET不应用。坏历史max_tokens不静默转默认：读取503/路由构建失败，应修正来源后重试；不要用写入未知字段“修复”。真实MySQL恢复仍待环境验证。

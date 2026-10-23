@@ -122,3 +122,7 @@ Harness页面仅展示同一请求加载器/Settings的只读快照，不改运�
 ## 阶段25：LLM配置发布边界
 
 同loop的llm-settings gate串行读写/启动，候选构建后持久化再同步发布，无存储明确memory_only。读写各10秒await截止不含gate排队，也不保证底层同步驱动即时取消；取消可能已提交。新请求读新路由，旧请求保持原引用，不强关旧路由；无多worker广播或压测新结论。恢复见[llm-settings.md](llm-settings.md)。
+
+## 阶段26：输出参数上限
+
+设置路由对max_tokens/max_completion_tokens取调用值与配置较小值，预算前验证、传输前复核；流式/重试/fallback共用，原调用次数预算保持。该参数不是总token/费用预算，不能从mock或spy推断provider实际限制、质量或成本；低值可能截断SQL，真实评测需finish_reason/usage/执行与结果指标。独立路由默认无统一上限。契约见[llm-token-policy.md](llm-token-policy.md)。

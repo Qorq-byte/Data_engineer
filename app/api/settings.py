@@ -184,11 +184,11 @@ class LLMProviderUpdate(BaseModel):
 
 
 class LLMSettingsUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+
     default_model: str | None = None
     fallback_model: str | None = None
-    routing_strategy: str | None = None
-    temperature: float | None = Field(default=None, ge=0.0, le=2.0)
-    max_tokens: int | None = Field(default=None, ge=1, le=32768)
+    max_tokens: int | None = Field(default=None, ge=1, le=32768, strict=True)
     providers: dict[str, LLMProviderUpdate] | None = None
 
 
@@ -247,6 +247,9 @@ async def _read_llm_configuration() -> tuple[dict[str, Any], MySQLStore | None, 
             raise ValueError("Invalid settings record")
         config = copy.deepcopy(_DEFAULT_SETTINGS["llm"])
         config.update(copy.deepcopy(raw))
+        output_limit = config["max_tokens"]
+        if type(output_limit) is not int or not 1 <= output_limit <= 32768:
+            raise ValueError("Invalid stored output token limit")
         if "providers" in raw:
             config["providers"] = {}
             for name, value in raw["providers"].items():
@@ -283,8 +286,6 @@ def _llm_public_view(config: dict[str, Any], source: str) -> dict[str, Any]:
             for key in (
                 "default_model",
                 "fallback_model",
-                "routing_strategy",
-                "temperature",
                 "max_tokens",
             )
         },
@@ -299,7 +300,15 @@ def _llm_public_view(config: dict[str, Any], source: str) -> dict[str, Any]:
             "available": current is not None,
             "active_model": current.config.default_model if current is not None else None,
             "mock_mode": current.mock_mode if current is not None else None,
+            "max_output_tokens": current.config.max_output_tokens if current is not None else None,
         },
+        "routing_policy": "primary_then_fallback",
+        "temperature_policy": "caller_supplied",
+        "editable_fields": ["default_model", "fallback_model", "max_tokens", "providers"],
+        "unsupported_fields": ["routing_strategy", "temperature"],
+        "legacy_ignored_fields": [
+            key for key in ("routing_strategy", "temperature") if key in config
+        ],
     }
 
 
@@ -309,16 +318,8 @@ def _llm_candidate(body: LLMSettingsUpdate, current: dict[str, Any]) -> dict[str
         llm["default_model"] = body.default_model
     if body.fallback_model is not None:
         llm["fallback_model"] = body.fallback_model
-    if body.routing_strategy is not None:
-        valid_strategies = ["complexity_aware", "cost_first", "latency_first", "round_robin"]
-        if body.routing_strategy not in valid_strategies:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid routing strategy. Must be one of: {valid_strategies}",
-            )
-        llm["routing_strategy"] = body.routing_strategy
-    if body.temperature is not None:
-        llm["temperature"] = body.temperature
+    if "max_tokens" in body.model_fields_set and body.max_tokens is None:
+        raise HTTPException(status_code=422, detail={"code": "LLM_SETTINGS_INVALID"})
     if body.max_tokens is not None:
         llm["max_tokens"] = body.max_tokens
     if body.providers:

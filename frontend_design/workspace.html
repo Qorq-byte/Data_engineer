@@ -3521,13 +3521,16 @@ const schemaIndexRows = (status, connections) => {
 const llmConfigurationSnapshot = (value, status = 'ok') => {
   if (!value || value.status !== status || !['database', 'memory'].includes(value.configuration_source)
       || typeof value.default_model !== 'string' || typeof value.fallback_model !== 'string'
-      || !['complexity_aware', 'cost_first', 'latency_first', 'round_robin'].includes(value.routing_strategy)
-      || !Number.isFinite(value.temperature) || value.temperature < 0 || value.temperature > 2
-      || !Number.isInteger(value.max_tokens) || value.max_tokens <= 0
+      || value.routing_policy !== 'primary_then_fallback' || value.temperature_policy !== 'caller_supplied'
+      || !Array.isArray(value.unsupported_fields) || !['routing_strategy', 'temperature'].every(key => value.unsupported_fields.includes(key))
+      || !Number.isInteger(value.max_tokens) || value.max_tokens <= 0 || value.max_tokens > 32768
       || !value.providers || Array.isArray(value.providers) || typeof value.providers !== 'object'
       || typeof value.runtime?.available !== 'boolean') return null;
   if (value.runtime.available ? typeof value.runtime.active_model !== 'string' || !value.runtime.active_model || typeof value.runtime.mock_mode !== 'boolean'
       : value.runtime.active_model !== null || value.runtime.mock_mode !== null) return null;
+  const cap = value.runtime.max_output_tokens;
+  if (cap !== null && (!Number.isInteger(cap) || cap < 1 || cap > 32768)) return null;
+  if (!value.runtime.available && cap !== null) return null;
   const providers = {};
   for (const [name, cfg] of Object.entries(value.providers)) {
     if (!cfg || typeof cfg.enabled !== 'boolean' || typeof cfg.api_key_configured !== 'boolean'
@@ -3537,8 +3540,9 @@ const llmConfigurationSnapshot = (value, status = 'ok') => {
   }
   return { status: value.status, configuration_source: value.configuration_source,
     default_model: value.default_model, fallback_model: value.fallback_model,
-    routing_strategy: value.routing_strategy, temperature: value.temperature, max_tokens: value.max_tokens,
-    runtime: { available: value.runtime.available, active_model: value.runtime.active_model, mock_mode: value.runtime.mock_mode }, providers };
+    routing_policy: value.routing_policy, temperature_policy: value.temperature_policy, unsupported_fields: [...value.unsupported_fields],
+    max_tokens: value.max_tokens, configured_max_tokens: value.max_tokens,
+    runtime: { available: value.runtime.available, active_model: value.runtime.active_model, mock_mode: value.runtime.mock_mode, max_output_tokens: cap }, providers };
 };
 
 const databaseCapabilitiesSnapshot = (value) => {
@@ -3765,9 +3769,9 @@ const SettingsPanel = ({ userName, onLogout }) => {
       const snapshot = llmConfigurationSnapshot(response, providerName === null ? 'updated' : 'deleted');
       if (!snapshot || !['persisted', 'memory_only'].includes(response.persistence) || response.runtime_applied !== true
           || !snapshot.runtime.available || response.active_model !== snapshot.runtime.active_model
-          || response.mock_mode !== snapshot.runtime.mock_mode
+          || response.mock_mode !== snapshot.runtime.mock_mode || snapshot.runtime.max_output_tokens !== snapshot.max_tokens
           || (providerName !== null && (response.provider !== providerName || snapshot.providers[providerName]))) throw new Error('Unconfirmed LLM result');
-      if (payload && ['default_model', 'fallback_model', 'routing_strategy', 'temperature', 'max_tokens'].some(key =>
+      if (payload && ['default_model', 'fallback_model', 'max_tokens'].some(key =>
           payload[key] !== undefined && snapshot[key] !== payload[key])) throw new Error('Mismatched LLM configuration');
       for (const [name, update] of Object.entries(payload?.providers || {})) {
         const cfg = snapshot.providers[name];
@@ -3797,6 +3801,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
 
   const handleSaveLLM = async () => {
     if (!llmSettings) return;
+    if (!Number.isInteger(llmSettings.max_tokens) || llmSettings.max_tokens < 1 || llmSettings.max_tokens > 32768) { setSaveMsg({ type: 'err', text: '输出上限必须是 1–32768 的整数。' }); return; }
     const providers = {};
     for (const [name, key] of Object.entries(providerKeys)) {
       if (key.trim()) providers[name] = { api_key: key.trim() };
@@ -3805,7 +3810,6 @@ const SettingsPanel = ({ userName, onLogout }) => {
       if (!BUILTIN_PROVIDERS.includes(name)) providers[name] = { ...providers[name], base_url: (cfg.base_url || '').trim() };
     }
     await commitLlmChange({ default_model: llmSettings.default_model, fallback_model: llmSettings.fallback_model,
-      routing_strategy: llmSettings.routing_strategy, temperature: llmSettings.temperature,
       max_tokens: llmSettings.max_tokens, providers });
   };
 
@@ -4210,33 +4214,17 @@ const SettingsPanel = ({ userName, onLogout }) => {
                       )}
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">路由策略</label>
-                    <select className="input-light w-full text-sm py-2"
-                      value={llmSettings?.routing_strategy || "complexity_aware"}
-                      onChange={e => setLlmSettings(s => s ? { ...s, routing_strategy: e.target.value } : s)}>
-                      <option value="complexity_aware">复杂度感知路由</option>
-                      <option value="cost_first">成本优先</option>
-                      <option value="latency_first">延迟优先</option>
-                      <option value="round_robin">轮询</option>
-                    </select>
+                  <div className="text-xs text-neutral-500 leading-relaxed">
+                    <p>路由：固定主模型 → fallback，不支持复杂度、成本、延迟或轮询策略。</p>
+                    <p>温度：由各调用方传入；SQL 生成当前使用 0.3。旧全局温度不生效。</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Temperature: {llmSettings?.temperature ?? 0.3}</label>
-                    <input type="range" min="0" max="2" step="0.1"
-                      className="w-full"
-                      value={llmSettings?.temperature ?? 0.3}
-                      onChange={e => setLlmSettings(s => s ? { ...s, temperature: parseFloat(e.target.value) } : s)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Max Tokens</label>
-                    <input type="number" min="1" max="32768"
-                      className="input-light text-sm"
-                      value={llmSettings?.max_tokens ?? 4096}
-                      onChange={e => setLlmSettings(s => s ? { ...s, max_tokens: parseInt(e.target.value) || 4096 } : s)} />
-                  </div>
+                <div className="mt-4 text-sm" data-output-token-policy>
+                  <label htmlFor="llm-output-limit" className="text-xs font-medium text-neutral-500 block mb-1.5">单次输出 token 上限</label>
+                  <input id="llm-output-limit" type="number" min="1" max="32768" step="1" className="input-light text-sm"
+                    value={llmSettings.max_tokens}
+                    onChange={e => setLlmSettings(s => s ? { ...s, max_tokens: Number(e.target.value) } : s)} />
+                  <p className="text-xs text-neutral-500 leading-relaxed">已配置：{llmSettings.configured_max_tokens} · 运行上限：{!llmSettings.runtime.available ? '尚未就绪' : llmSettings.runtime.max_output_tokens === null ? '未设置统一上限' : llmSettings.runtime.max_output_tokens}。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。</p>
                 </div>
               </Card>
 

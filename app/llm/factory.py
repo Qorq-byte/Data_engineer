@@ -239,6 +239,9 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
         A router in real mode when at least one provider is usable,
         otherwise a mock-mode router.
     """
+    output_limit = llm_settings.get("max_tokens", 4096)
+    if type(output_limit) is not int or not 1 <= output_limit <= 32768:
+        raise ValueError("Invalid configured output token limit")
     providers: dict[str, ProviderConfig] = {}
     provider_cfg: dict[str, Any] = llm_settings.get("providers") or {}
 
@@ -275,6 +278,7 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
     config = RouterConfig(
         providers=providers,
         default_model=default_model,
+        max_output_tokens=output_limit,
         fallback_chain=fallback_chain,
         max_concurrency=settings.llm_max_concurrency,
         max_retries=settings.llm_max_retries,

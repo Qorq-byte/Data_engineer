@@ -79,6 +79,7 @@ class RouterConfig:
     max_concurrency: int = 4
     retry_backoff_seconds: float = 0.1
     cooldown_seconds: float = 5
+    max_output_tokens: int | None = None
 
 
 # ── Cost models ────────────────────────────────────────────────────────
@@ -414,6 +415,8 @@ class LiteLLMRouter:
         """
         from app.llm.budget import reserve_llm_call
 
+        kwargs = self._completion_options(kwargs)
+
         # Mock mode: skip provider resolution entirely
         if self.mock_mode:
             t0 = time.perf_counter()
@@ -481,6 +484,41 @@ class LiteLLMRouter:
 
         # All providers exhausted
         raise last_error or RuntimeError(f"All providers exhausted for model '{model}'")
+
+    def _completion_options(self, options: dict[str, Any]) -> dict[str, Any]:
+        """Bound supported output options before budgeting or transport.
+
+        This is an output request parameter, not a total query/cost budget.
+        Provider acceptance and actual output usage require live evaluation.
+        """
+        result = dict(options)
+        aliases = ("max_tokens", "max_completion_tokens")
+        cap = self.config.max_output_tokens
+        if cap is not None and (type(cap) is not int or not 1 <= cap <= 32768):
+            raise ValueError("Invalid configured output token limit")
+        extra = result.get("extra_body")
+        if isinstance(extra, dict) and any(key in extra for key in (*aliases, "max_new_tokens")):
+            raise ValueError("Output token overrides in extra_body are not supported")
+        if "max_new_tokens" in result:
+            raise ValueError("Use max_tokens or max_completion_tokens")
+        present = []
+        for key in aliases:
+            if result.get(key) is None:
+                result.pop(key, None)
+            else:
+                value = result[key]
+                if type(value) is not int or value <= 0:
+                    raise ValueError("Output token limit must be a positive integer")
+                present.append(key)
+        if len(present) > 1:
+            raise ValueError("Use only one output token limit parameter")
+        if cap is not None:
+            if present:
+                key = present[0]
+                result[key] = min(result[key], cap)
+            else:
+                result["max_tokens"] = cap
+        return result
 
     async def _wait_rate(self, provider_name: str, rpm: int) -> None:
         if rpm <= 0:
@@ -635,6 +673,7 @@ class LiteLLMRouter:
         if provider.base_url:
             call_kwargs["api_base"] = provider.base_url
         call_kwargs.update(kwargs)
+        call_kwargs = self._completion_options(call_kwargs)
         call_kwargs["num_retries"] = 0
 
         try:
