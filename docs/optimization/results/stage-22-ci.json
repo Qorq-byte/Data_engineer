@@ -1,0 +1,139 @@
+{
+  "conclusion": "success",
+  "headSha": "77b9705556e0f15c4a3c45b7b12925673e1a5331",
+  "jobs": [
+    {
+      "completedAt": "2026-10-23T05:02:29Z",
+      "conclusion": "success",
+      "databaseId": 120249530712,
+      "name": "test",
+      "startedAt": "2026-10-23T05:00:01Z",
+      "status": "completed",
+      "steps": [
+        {
+          "completedAt": "2026-10-23T05:00:02Z",
+          "conclusion": "success",
+          "name": "Set up job",
+          "number": 1,
+          "startedAt": "2026-10-23T05:00:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:00:03Z",
+          "conclusion": "success",
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "startedAt": "2026-10-23T05:00:03Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:00:04Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-python@v5",
+          "number": 3,
+          "startedAt": "2026-10-23T05:00:03Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:00:05Z",
+          "conclusion": "success",
+          "name": "Run actions/setup-node@v4",
+          "number": 4,
+          "startedAt": "2026-10-23T05:00:04Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:00:59Z",
+          "conclusion": "success",
+          "name": "Run python -m pip install -e '.[dev]'",
+          "number": 5,
+          "startedAt": "2026-10-23T05:00:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:01:02Z",
+          "conclusion": "success",
+          "name": "Run npm ci --ignore-scripts",
+          "number": 6,
+          "startedAt": "2026-10-23T05:00:59Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:01:03Z",
+          "conclusion": "success",
+          "name": "Run npm run check:frontend",
+          "number": 7,
+          "startedAt": "2026-10-23T05:01:02Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:01:05Z",
+          "conclusion": "success",
+          "name": "Run npm run check:frontend:build",
+          "number": 8,
+          "startedAt": "2026-10-23T05:01:03Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:01:05Z",
+          "conclusion": "success",
+          "name": "Run ruff check .",
+          "number": 9,
+          "startedAt": "2026-10-23T05:01:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:01:32Z",
+          "conclusion": "success",
+          "name": "Run mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py",
+          "number": 10,
+          "startedAt": "2026-10-23T05:01:05Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:02:28Z",
+          "conclusion": "success",
+          "name": "Run pytest",
+          "number": 11,
+          "startedAt": "2026-10-23T05:01:32Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:02:28Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-node@v4",
+          "number": 20,
+          "startedAt": "2026-10-23T05:02:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:02:28Z",
+          "conclusion": "success",
+          "name": "Post Run actions/setup-python@v5",
+          "number": 21,
+          "startedAt": "2026-10-23T05:02:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:02:28Z",
+          "conclusion": "success",
+          "name": "Post Run actions/checkout@v4",
+          "number": 22,
+          "startedAt": "2026-10-23T05:02:28Z",
+          "status": "completed"
+        },
+        {
+          "completedAt": "2026-10-23T05:02:28Z",
+          "conclusion": "success",
+          "name": "Complete job",
+          "number": 23,
+          "startedAt": "2026-10-23T05:02:28Z",
+          "status": "completed"
+        }
+      ],
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/39903315109/job/120249530712"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/39903315109"
+}
