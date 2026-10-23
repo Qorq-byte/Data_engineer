@@ -38,4 +38,6 @@ Windows/Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0、SQLite3.51.0、DuckDB1.
 
 ## Git 与远程验收
 
-待暂存审查后普通提交/推送codex/rag-maintenance-ui，核对SHA与Linux CI，再补记远程证据。本阶段不自动合并main；原主工作区保护检查继续保留。
+2026-10-23补齐远程验收：代码已普通推送至codex/rag-maintenance-ui，[提交77c6919d45d15c81601f5844ce99bc072e707028](https://github.com/Qorq-byte/Data_engineer/commit/77c6919d45d15c81601f5844ce99bc072e707028)，核对远程分支SHA一致。[Actions39776823412](https://github.com/Qorq-byte/Data_engineer/actions/runs/39776823412)在该精确SHA成功：Ubuntu/Python3.12/Node22干净安装、前端49项契约、Ruff、核心strict34源文件及Linux全量**3299 passed、1 warning，50.22秒**，包括Windows跳过的uvloop。[结构化CI证据](results/stage-20-ci.json)。全仓mypy存量197项并未因此消除。
+
+本次追加仅更新验收文档与证据，提交前继续检查暂存范围、凭据与空白；不重复运行未改动的源码测试。文档提交推送后另核对其SHA与CI。本阶段不自动合并main；原主工作区保护检查继续保留。
