@@ -336,6 +336,9 @@ async def _run_query(
             for warning in context.get("schema_linking_warnings", []):
                 if warning not in warnings:
                     warnings.append(warning)
+            for warning in context.get("generation_warnings", []):
+                if warning not in warnings:
+                    warnings.append(warning)
             candidates = context.get("candidates", [])
             report = context.get("validation_report")
             for candidate in candidates:

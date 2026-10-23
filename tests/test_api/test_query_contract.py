@@ -353,6 +353,92 @@ async def mcp_query(**kwargs):
         return result.structured_content
 
 
+@pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+@pytest.mark.parametrize("reason", ["length", "content_filter", "tool_calls"])
+async def test_incomplete_sql_fails_before_validation_execution_and_next_request_recovers(
+    connected_query, monkeypatch, protocol, reason,
+):
+    calls, statements = [], []
+    sql = "SELECT id FROM orders ORDER BY id"
+    current_reason = reason
+
+    class FinishRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            calls.append(True)
+            return {"choices": [{"finish_reason": current_reason,
+                                 "message": {"content": sql}}]}
+
+    monkeypatch.setattr(query, "get_default_router", lambda: FinishRouter(RouterConfig()))
+    ConnectionFactory.get("contract").set_trace_callback(statements.append)
+    body = {"nl_text": "find orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+
+    async def request():
+        if protocol == "mcp":
+            return await mcp_query(nl_text="find orders", db_id="contract")
+        if protocol == "sse":
+            events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+            if current_reason != "stop":
+                assert not any(event in ("validation", "execution") for event, _ in events)
+                assert next(value for event, value in events if event == "error")["code"] == (
+                    "WORKFLOW_FAILED"
+                )
+            return next(value for event, value in events if event == "done")
+        response = connected_query.post("/api/v1/query", json=body)
+        assert response.status_code == 200
+        return response.json()
+
+    failed = await request()
+    assert failed["status"] == "failed", failed
+    if protocol == "mcp":
+        assert failed["sql"] == ""
+    else:
+        assert failed["primary_sql"] is None
+    assert len(calls) == 1  # no automatic token increase or regeneration
+    assert not any(sql.lower() in statement.lower() for statement in statements)
+    if reason == "length":
+        assert "output limit" in str(failed["errors"])
+    if protocol == "mcp":
+        assert failed["rows"] == [] and failed["error_code"] == "WORKFLOW_FAILED"
+    else:
+        assert failed["candidates"] == [] and failed["execution"] is None
+        assert failed["validation"] is None
+    current_reason = "stop"
+    recovered = await request()
+    assert recovered["status"] == "completed", recovered
+    execution = recovered if protocol == "mcp" else recovered["execution"]
+    assert execution["rows"] == [[1], [2], [3], [4], [5]]
+    assert len(calls) == 2
+
+
+@pytest.mark.parametrize("protocol", ["json", "sse"])
+async def test_independent_completed_sql_executes_with_visible_discard_warning(
+    connected_query, monkeypatch, protocol,
+):
+    calls = []
+
+    class PartialRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            calls.append(True)
+            return {"choices": [{"finish_reason": "length" if len(calls) == 1 else "stop",
+                                 "message": {"content": "SELECT id FROM orders ORDER BY id"}}]}
+
+    monkeypatch.setattr(query, "get_default_router", lambda: PartialRouter(RouterConfig()))
+    body = {"nl_text": "find orders", "database": "contract", "execute": True,
+            "num_candidates": 2}
+    if protocol == "sse":
+        events = stream_events(connected_query.post("/api/v1/query/stream", json=body))
+        result = next(value for event, value in events if event == "done")
+    else:
+        result = connected_query.post("/api/v1/query", json=body).json()
+    assert result["status"] == "completed", result
+    assert len(result["candidates"]) == 1
+    discarded = [warning for warning in result["warnings"] if "Discarded incomplete" in warning]
+    assert len(discarded) == 1 and "output limit" in discarded[0]
+    assert any("RAG unavailable" in warning for warning in result["warnings"])
+    assert result["execution"]["rows"] == [[1], [2], [3], [4], [5]]
+
+
 @pytest.mark.parametrize("kind", ["timeout", "capacity", "internal", "invalid_response"])
 async def test_three_protocols_share_infrastructure_failure_contract(
     connected_query, monkeypatch, kind

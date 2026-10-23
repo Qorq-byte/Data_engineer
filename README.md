@@ -288,6 +288,7 @@ uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
 
 - **LLM 设置**：为各提供商填写 API Key（**AES-256-GCM 加密**存储于 MySQL，任何接口不回显明文，留空则保持原 Key）、选择默认模型与回退模型、启用/停用提供商；支持**添加自定义提供商**（名称 + Key + 模型列表 + 可选 OpenAI 兼容 base_url）；点击"保存配置"后**立即生效**，无需重启
 - **LLM 设置保存与恢复**：候选构建后确认持久化再发布，明确仅内存/未确认，读写失败先重读；提供商删除同步路由，密钥不回显。字段消费与单进程边界见[LLM设置契约](docs/optimization/llm-settings.md)。 输出上限已接通，未实现的路由策略/全局温度只读并拒绝写入，见[输出参数契约](docs/optimization/llm-token-policy.md)。
+- **模型输出完整性**：明确截断、过滤或工具请求的响应不能成为SQL候选；真实模型流须正常结束。部分候选舍弃会告警，全部失败停止执行，兼容限制见[完成状态契约](docs/optimization/llm-completion-policy.md)。
 - **Harness 约束状态**：只读显示真实计划/运行配置与来源，区分语句超时和请求总时限；旧写接口明确409，历史设置表不生效，不提供关闭只读。详见[状态与部署契约](docs/optimization/harness-settings.md)。
 - **数据库连接能力**：只读报告四类连接实现/七类未实现、驱动模块发现与进程注册数；不等于连接健康或SQL方言能力。旧通用池/超时/开关不生效，写接口409，详见[能力契约](docs/optimization/database-settings.md)。
 - **RAG 检索设置**：向量/BM25权重互补，保存后更新当前进程三个融合器，页面区分编辑/已配置/实际运行值；无存储时明确仅内存生效。Top-K由调用方指定，无全局阈值，Embedding只读显示实际实例，模型变更需部署配置与兼容索引重建。按库维护/文档上传保留，详见[配置生效契约](docs/optimization/rag-settings.md)。
@@ -586,7 +587,7 @@ pytest --cov=app --cov-report=html
 ruff check .
 
 # 类型检查
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
 mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
@@ -612,11 +613,11 @@ npm ci --ignore-scripts
 npm run check:frontend
 LITELLM_LOCAL_MODEL_COST_MAP=True RAG_EMBEDDING_PROVIDER=mock pytest
 ruff check .
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
 mypy app/                   # 全仓诊断，仍有已知债务
 ```
 
-PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。前端仍使用 CDN Tailwind/React 与浏览器 Babel；离线交付和生产静态资源预编译是后续事项。
+PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。生产前端已由阶段21改为本地静态构建与同源资源，源码中的CDN/JSX只作为构建输入，详见[构建说明](docs/optimization/frontend-build.md)。
 
 阶段8进一步将生成/执行节点与预算适配器纳入上述strict门禁，保持默认导入追踪。全仓诊断230→201仍未通过，实施、验证和限制见[阶段8报告](docs/optimization/stage-8.md)。
 

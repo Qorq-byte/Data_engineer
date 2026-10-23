@@ -1,0 +1,9 @@
+{
+  "before": 181,
+  "after": 181,
+  "files": 42,
+  "new_diagnostics": 0,
+  "removed_diagnostics": 0,
+  "full_mypy_exit": 1,
+  "core_source_files": 36
+}

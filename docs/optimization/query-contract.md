@@ -1,5 +1,7 @@
 # 查询执行与流式契约
 
+阶段27新增[模型完成状态门禁](llm-completion-policy.md)：明确未正常结束的响应整条丢弃，全部失败沿用WORKFLOW_FAILED；独立完整候选成功时warnings说明舍弃。JSON/SSE使用primary_sql，MCP使用sql（失败为空字符串）；MCP固定单候选，SSE工作流事件不等于模型token流。
+
 JSON `POST /api/v1/query`、SSE `POST /api/v1/query/stream` 和 MCP `nl_query` 共用 `app/workflow/query_service.py:run_query`。API 不能传入计划 ID；由 `request_query.yml` 和 `WorkflowRunner` 固定执行 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql。节点不调用其他节点，LLM 只提供候选 SQL。
 
 请求保留 nl_text/domain/database/dialect/num_candidates/execute/link_schema/model；`validate` 与 `run_validation` 都映射到同一字段。execute=true 时忽略关闭校验的请求，必须校验通过后执行。execute=false 可以只生成；link_schema=false 不连接数据库执行，execute=true 将返回失败。database 应使用稳定 db_id，不以显示名称合并数据库。

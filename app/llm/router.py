@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from app.llm.completion import IncompleteCompletionError, check_completion, response_field
+
 # ── LiteLLM integration (optional — graceful degradation) ────────────
 try:
     import litellm
@@ -378,8 +380,12 @@ class LiteLLMRouter:
         gen = await self._route_with_fallback(
             messages, model, temperature, 1, stream=True, **kwargs
         )
-        async for chunk in gen:
-            yield chunk
+        try:
+            async for chunk in gen:
+                yield chunk
+        finally:
+            if hasattr(gen, "aclose"):
+                await gen.aclose()
 
     def provider_healthy(self, provider_name: str) -> bool | None:
         """Check whether *provider_name* is currently considered healthy.
@@ -722,10 +728,35 @@ class LiteLLMRouter:
 
     @staticmethod
     async def _stream_to_async_gen(response: Any) -> AsyncIterator[str]:
-        """Convert a litellm streaming response to an async generator of text chunks."""
-        async for chunk in response:
-            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        """Yield provisional text, requiring a normal terminal marker before success."""
+        finished = False
+        try:
+            async for chunk in response:
+                choices = response_field(chunk, "choices")
+                if not choices:  # usage-only chunks are allowed, including after stop
+                    continue
+                choice = choices[0]
+                check_completion(choice)
+                content = response_field(response_field(choice, "delta"), "content")
+                reason = response_field(choice, "finish_reason")
+                if content is not None and not isinstance(content, str):
+                    raise IncompleteCompletionError("Model stream contained non-text output.")
+                if finished and (content or reason is not None):
+                    raise IncompleteCompletionError(
+                        "Model stream continued after its completion marker; SQL discarded."
+                    )
+                if content:
+                    yield content
+                if reason == "stop":
+                    finished = True
+            if not finished:
+                raise IncompleteCompletionError(
+                    "Model stream ended without a completion marker; SQL discarded."
+                )
+        finally:
+            if hasattr(response, "aclose"):
+                with contextlib.suppress(Exception):
+                    await response.aclose()
 
     async def _mock_call(
         self,

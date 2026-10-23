@@ -40,7 +40,8 @@ def transport(monkeypatch):
 
             async def chunks():
                 yield SimpleNamespace(
-                    choices=[SimpleNamespace(delta=SimpleNamespace(content="ok"))]
+                    choices=[SimpleNamespace(delta=SimpleNamespace(content="ok"),
+                                             finish_reason="stop")]
                 )
 
             return chunks()
