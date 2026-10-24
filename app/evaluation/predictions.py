@@ -147,6 +147,12 @@ def _calls(value: object) -> int | None:
 
 
 def _finish(candidate: dict[str, Any] | None) -> tuple[str | None, str]:
+    if candidate is not None and "generation_source" in candidate:
+        source = candidate["generation_source"]
+        if source == "prepared":
+            raise ValueError("Prepared SQL is not a model prediction")
+        if source not in ("model_response", "stream_text", "unknown"):
+            raise ValueError("Invalid candidate generation source")
     if candidate is None or not any(
         k in candidate for k in ("finish_reason", "refusal", "tool_calls", "function_call")
     ):
@@ -154,6 +160,10 @@ def _finish(candidate: dict[str, Any] | None) -> tuple[str | None, str]:
     if any(candidate.get(k) for k in ("refusal", "tool_calls", "function_call")):
         return "other", "candidate_fields"
     reason = candidate.get("finish_reason")
+    if reason in (None, "stop") and candidate.get("generation_source") in (
+        "stream_text", "unknown",
+    ):
+        return None, "unavailable"
     return (reason if reason in (None, "stop", "length") else "other"), "candidate_fields"
 
 

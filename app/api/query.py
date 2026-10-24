@@ -14,7 +14,7 @@ import re as _re_module
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi import Path as PathParam
@@ -223,6 +223,7 @@ def _detect_metadata_query(
                 sql_text=sql,
                 confidence=0.95,
                 generation_mode="metadata_query",
+                generation_source="prepared",
                 dialect=db_type,
                 database_name=db_name,
             )
@@ -270,6 +271,8 @@ class CandidateResult(BaseModel):
     db_id: str = ""
     validation: dict[str, Any] | None = None
     execution: dict[str, Any] | None = None
+    generation_source: Literal["model_response", "prepared", "stream_text", "unknown"] = "unknown"
+    finish_reason: Literal["stop"] | None = None
 
 
 class QueryResponse(BaseModel):

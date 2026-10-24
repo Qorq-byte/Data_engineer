@@ -1,0 +1,572 @@
+FFFFFFFFFFFFFFFFFFFFFF.......F                                           [100%]
+================================== FAILURES ===================================
+_ test_alternatives_share_only_their_own_response_evidence[False-temperature] _
+
+strategy = 'temperature', object_shape = False
+
+    @pytest.mark.parametrize("strategy", ["temperature", "multi_perspective"])
+    @pytest.mark.parametrize("object_shape", [False, True])
+    async def test_alternatives_share_only_their_own_response_evidence(strategy, object_shape):
+        first = completion("stop", "SELECT 1\n---ALTERNATIVE---\nSELECT 2")
+        second = completion(None, "SELECT 3")
+        first["model"] = "first-response-model"
+        if object_shape:
+            first = SimpleNamespace(model=first["model"], choices=[SimpleNamespace(
+                finish_reason="stop", message=SimpleNamespace(content=first["choices"][0]["message"]["content"]),
+            )])
+            second = SimpleNamespace(choices=[SimpleNamespace(
+                message=SimpleNamespace(content="SELECT 3"),
+            )])
+        candidates = await SQLGenerator(ScriptedRouter([first, second])).generate(
+            SQR(raw_text="orders"), num_candidates=2, strategy=strategy,
+        )
+        assert [c.sql_text for c in candidates] == ["SELECT 1", "SELECT 2", "SELECT 3"]
+>       assert [c.finish_reason for c in candidates] == ["stop", "stop", None]
+                ^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:40: AttributeError
+_ test_alternatives_share_only_their_own_response_evidence[False-multi_perspective] _
+
+strategy = 'multi_perspective', object_shape = False
+
+    @pytest.mark.parametrize("strategy", ["temperature", "multi_perspective"])
+    @pytest.mark.parametrize("object_shape", [False, True])
+    async def test_alternatives_share_only_their_own_response_evidence(strategy, object_shape):
+        first = completion("stop", "SELECT 1\n---ALTERNATIVE---\nSELECT 2")
+        second = completion(None, "SELECT 3")
+        first["model"] = "first-response-model"
+        if object_shape:
+            first = SimpleNamespace(model=first["model"], choices=[SimpleNamespace(
+                finish_reason="stop", message=SimpleNamespace(content=first["choices"][0]["message"]["content"]),
+            )])
+            second = SimpleNamespace(choices=[SimpleNamespace(
+                message=SimpleNamespace(content="SELECT 3"),
+            )])
+        candidates = await SQLGenerator(ScriptedRouter([first, second])).generate(
+            SQR(raw_text="orders"), num_candidates=2, strategy=strategy,
+        )
+        assert [c.sql_text for c in candidates] == ["SELECT 1", "SELECT 2", "SELECT 3"]
+>       assert [c.finish_reason for c in candidates] == ["stop", "stop", None]
+                ^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:40: AttributeError
+_ test_alternatives_share_only_their_own_response_evidence[True-temperature] __
+
+strategy = 'temperature', object_shape = True
+
+    @pytest.mark.parametrize("strategy", ["temperature", "multi_perspective"])
+    @pytest.mark.parametrize("object_shape", [False, True])
+    async def test_alternatives_share_only_their_own_response_evidence(strategy, object_shape):
+        first = completion("stop", "SELECT 1\n---ALTERNATIVE---\nSELECT 2")
+        second = completion(None, "SELECT 3")
+        first["model"] = "first-response-model"
+        if object_shape:
+            first = SimpleNamespace(model=first["model"], choices=[SimpleNamespace(
+                finish_reason="stop", message=SimpleNamespace(content=first["choices"][0]["message"]["content"]),
+            )])
+            second = SimpleNamespace(choices=[SimpleNamespace(
+                message=SimpleNamespace(content="SELECT 3"),
+            )])
+        candidates = await SQLGenerator(ScriptedRouter([first, second])).generate(
+            SQR(raw_text="orders"), num_candidates=2, strategy=strategy,
+        )
+        assert [c.sql_text for c in candidates] == ["SELECT 1", "SELECT 2", "SELECT 3"]
+>       assert [c.finish_reason for c in candidates] == ["stop", "stop", None]
+                ^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:40: AttributeError
+_ test_alternatives_share_only_their_own_response_evidence[True-multi_perspective] _
+
+strategy = 'multi_perspective', object_shape = True
+
+    @pytest.mark.parametrize("strategy", ["temperature", "multi_perspective"])
+    @pytest.mark.parametrize("object_shape", [False, True])
+    async def test_alternatives_share_only_their_own_response_evidence(strategy, object_shape):
+        first = completion("stop", "SELECT 1\n---ALTERNATIVE---\nSELECT 2")
+        second = completion(None, "SELECT 3")
+        first["model"] = "first-response-model"
+        if object_shape:
+            first = SimpleNamespace(model=first["model"], choices=[SimpleNamespace(
+                finish_reason="stop", message=SimpleNamespace(content=first["choices"][0]["message"]["content"]),
+            )])
+            second = SimpleNamespace(choices=[SimpleNamespace(
+                message=SimpleNamespace(content="SELECT 3"),
+            )])
+        candidates = await SQLGenerator(ScriptedRouter([first, second])).generate(
+            SQR(raw_text="orders"), num_candidates=2, strategy=strategy,
+        )
+        assert [c.sql_text for c in candidates] == ["SELECT 1", "SELECT 2", "SELECT 3"]
+>       assert [c.finish_reason for c in candidates] == ["stop", "stop", None]
+                ^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:40: AttributeError
+________ test_interleaved_generations_do_not_share_completion_evidence ________
+
+    async def test_interleaved_generations_do_not_share_completion_evidence():
+        entered = asyncio.Event()
+    
+        class Router(ScriptedRouter):
+            async def complete(self, *args, **kwargs):
+                if "slow" in kwargs["messages"][0]["content"]:
+                    entered.set()
+                    await asyncio.sleep(0.01)
+                    return completion(None, "SELECT 1")
+                await entered.wait()
+                return completion("stop", "SELECT 2")
+    
+        generator = SQLGenerator(Router([]))
+        unknown, stopped = await asyncio.gather(
+            generator.generate(SQR(raw_text="slow")), generator.generate(SQR(raw_text="fast")),
+        )
+>       assert unknown[0].finish_reason is None
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:62: AttributeError
+___________ test_legacy_candidate_and_dto_do_not_invent_completion ____________
+
+    def test_legacy_candidate_and_dto_do_not_invent_completion():
+        candidate = SQLCandidate(id="old", sql_text="SELECT 1")
+        dto = query.CandidateResult(**asdict(candidate)).model_dump()
+>       assert dto["generation_source"] == "unknown"
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'generation_source'
+
+tests\test_llm\test_candidate_provenance.py:69: KeyError
+___________ test_prepared_branch_copies_and_clears_model_completion ___________
+
+    async def test_prepared_branch_copies_and_clears_model_completion():
+        original = SQLCandidate(id="prepared", sql_text="SELECT 1")
+        original.finish_reason = "stop"
+        original.generation_source = "model_response"
+        node = GenerateSQLNode()
+        output = await node.execute(NodeInput("orders", config={"prepared_candidates": [original]}))
+        candidate = output.context["primary_candidate"]
+>       assert candidate is not original
+E       AssertionError: assert SQLCandidate(id='prepared', sql_text='SELECT 1', confidence=0.0, generation_mode='primary', reasoning='', dialect='ansi', model='', latency_ms=0.0, database_name='', validation=None, execution=None, db_id='') is not SQLCandidate(id='prepared', sql_text='SELECT 1', confidence=0.0, generation_mode='primary', reasoning='', dialect='ansi', model='', latency_ms=0.0, database_name='', validation=None, execution=None, db_id='')
+
+tests\test_llm\test_candidate_provenance.py:80: AssertionError
+__________ test_text_stream_does_not_invent_terminal_evidence[False] __________
+
+alternatives = False
+
+    @pytest.mark.parametrize("alternatives", [False, True])
+    async def test_text_stream_does_not_invent_terminal_evidence(alternatives):
+        closed = []
+    
+        class Generator:
+            async def generate_stream(self, *args, **kwargs):
+                try:
+                    yield "SELECT 1"
+                    if alternatives:
+                        yield "\n---ALTERNATIVE---\nSELECT 2"
+                finally:
+                    closed.append(True)
+    
+        node = GenerateSQLNode()
+        node._generator = Generator()
+        output = await node.execute(NodeInput("orders", config={"streaming": True}))
+        assert closed == [True]
+        candidates = output.context["candidates"]
+        assert len(candidates) == (2 if alternatives else 1)
+>       assert all(c.generation_source == "stream_text" and c.finish_reason is None for c in candidates)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_provenance.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+.0 = <list_iterator object at 0x000002BBF8425990>
+
+>   assert all(c.generation_source == "stream_text" and c.finish_reason is None for c in candidates)
+               ^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'SQLCandidate' object has no attribute 'generation_source'. Did you mean: 'generation_mode'?
+
+tests\test_llm\test_candidate_provenance.py:104: AttributeError
+__________ test_text_stream_does_not_invent_terminal_evidence[True] ___________
+
+alternatives = True
+
+    @pytest.mark.parametrize("alternatives", [False, True])
+    async def test_text_stream_does_not_invent_terminal_evidence(alternatives):
+        closed = []
+    
+        class Generator:
+            async def generate_stream(self, *args, **kwargs):
+                try:
+                    yield "SELECT 1"
+                    if alternatives:
+                        yield "\n---ALTERNATIVE---\nSELECT 2"
+                finally:
+                    closed.append(True)
+    
+        node = GenerateSQLNode()
+        node._generator = Generator()
+        output = await node.execute(NodeInput("orders", config={"streaming": True}))
+        assert closed == [True]
+        candidates = output.context["candidates"]
+        assert len(candidates) == (2 if alternatives else 1)
+>       assert all(c.generation_source == "stream_text" and c.finish_reason is None for c in candidates)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_provenance.py:104: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+.0 = <list_iterator object at 0x000002BBF84247C0>
+
+>   assert all(c.generation_source == "stream_text" and c.finish_reason is None for c in candidates)
+               ^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'SQLCandidate' object has no attribute 'generation_source'. Did you mean: 'generation_mode'?
+
+tests\test_llm\test_candidate_provenance.py:104: AttributeError
+_________ test_healing_preserves_corrected_candidate_evidence[False] __________
+
+validated = False
+
+    @pytest.mark.parametrize("validated", [False, True])
+    async def test_healing_preserves_corrected_candidate_evidence(validated):
+        generator = SQLGenerator(ScriptedRouter([completion("stop", "SELECT 1")]))
+    
+        class Validator:
+            async def validate(self, *args, **kwargs):
+                return ValidationReport(passed=True)
+    
+        healer = SelfHealingRetry(generator, Validator() if validated else None)
+        corrected = await healer.retry_until_valid(SQR(raw_text="orders"), "SELECT broken", "syntax")
+>       assert corrected.finish_reason == "stop" and corrected.generation_source == "model_response"
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:117: AttributeError
+__________ test_healing_preserves_corrected_candidate_evidence[True] __________
+
+validated = True
+
+    @pytest.mark.parametrize("validated", [False, True])
+    async def test_healing_preserves_corrected_candidate_evidence(validated):
+        generator = SQLGenerator(ScriptedRouter([completion("stop", "SELECT 1")]))
+    
+        class Validator:
+            async def validate(self, *args, **kwargs):
+                return ValidationReport(passed=True)
+    
+        healer = SelfHealingRetry(generator, Validator() if validated else None)
+        corrected = await healer.retry_until_valid(SQR(raw_text="orders"), "SELECT broken", "syntax")
+>       assert corrected.finish_reason == "stop" and corrected.generation_source == "model_response"
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'SQLCandidate' object has no attribute 'finish_reason'
+
+tests\test_llm\test_candidate_provenance.py:117: AttributeError
+________ test_protocols_preserve_actual_candidate_evidence[False-json] ________
+
+connected_query = <starlette.testclient.TestClient object at 0x000002BBF819BB90>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002BBF83E2E40>
+protocol = 'json', prepared = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("prepared", [False, True])
+    async def test_protocols_preserve_actual_candidate_evidence(connected_query, monkeypatch, protocol, prepared):
+        class Router(LiteLLMRouter):
+            async def complete(self, *args, **kwargs):
+                assert not prepared, "prepared SQL must not call LLM"
+                return completion("stop", "SELECT id FROM orders ORDER BY id")
+    
+        monkeypatch.setattr(query, "get_default_router", lambda: Router(RouterConfig(), mock_mode=True))
+        question = "���ݿ��ж����ű�" if prepared else "find all orders"
+        if protocol == "mcp":
+            result = await contracts.mcp_query(nl_text=question, db_id="contract")
+        else:
+            path = "/api/v1/query" + ("/stream" if protocol == "sse" else "")
+            http = connected_query.post(path, json={
+                "nl_text": question, "database": "contract", "execute": True, "num_candidates": 1,
+            })
+            assert http.status_code == 200
+            result = next(v for e, v in contracts.stream_events(http) if e == "done") if protocol == "sse" else http.json()
+        assert result["status"] == "completed", result
+        candidate = result["candidates"][0]
+>       assert candidate["generation_source"] == ("prepared" if prepared else "model_response")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'generation_source'
+
+tests\test_llm\test_candidate_provenance.py:142: KeyError
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.683 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.683 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+________ test_protocols_preserve_actual_candidate_evidence[False-sse] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x000002BBF8A79A00>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002BBF83E26C0>
+protocol = 'sse', prepared = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("prepared", [False, True])
+    async def test_protocols_preserve_actual_candidate_evidence(connected_query, monkeypatch, protocol, prepared):
+        class Router(LiteLLMRouter):
+            async def complete(self, *args, **kwargs):
+                assert not prepared, "prepared SQL must not call LLM"
+                return completion("stop", "SELECT id FROM orders ORDER BY id")
+    
+        monkeypatch.setattr(query, "get_default_router", lambda: Router(RouterConfig(), mock_mode=True))
+        question = "���ݿ��ж����ű�" if prepared else "find all orders"
+        if protocol == "mcp":
+            result = await contracts.mcp_query(nl_text=question, db_id="contract")
+        else:
+            path = "/api/v1/query" + ("/stream" if protocol == "sse" else "")
+            http = connected_query.post(path, json={
+                "nl_text": question, "database": "contract", "execute": True, "num_candidates": 1,
+            })
+            assert http.status_code == 200
+            result = next(v for e, v in contracts.stream_events(http) if e == "done") if protocol == "sse" else http.json()
+        assert result["status"] == "completed", result
+        candidate = result["candidates"][0]
+>       assert candidate["generation_source"] == ("prepared" if prepared else "model_response")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'generation_source'
+
+tests\test_llm\test_candidate_provenance.py:142: KeyError
+________ test_protocols_preserve_actual_candidate_evidence[False-mcp] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x000002BBE94D81D0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002BBF83E3B60>
+protocol = 'mcp', prepared = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("prepared", [False, True])
+    async def test_protocols_preserve_actual_candidate_evidence(connected_query, monkeypatch, protocol, prepared):
+        class Router(LiteLLMRouter):
+            async def complete(self, *args, **kwargs):
+                assert not prepared, "prepared SQL must not call LLM"
+                return completion("stop", "SELECT id FROM orders ORDER BY id")
+    
+        monkeypatch.setattr(query, "get_default_router", lambda: Router(RouterConfig(), mock_mode=True))
+        question = "���ݿ��ж����ű�" if prepared else "find all orders"
+        if protocol == "mcp":
+            result = await contracts.mcp_query(nl_text=question, db_id="contract")
+        else:
+            path = "/api/v1/query" + ("/stream" if protocol == "sse" else "")
+            http = connected_query.post(path, json={
+                "nl_text": question, "database": "contract", "execute": True, "num_candidates": 1,
+            })
+            assert http.status_code == 200
+            result = next(v for e, v in contracts.stream_events(http) if e == "done") if protocol == "sse" else http.json()
+        assert result["status"] == "completed", result
+>       candidate = result["candidates"][0]
+                    ^^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'candidates'
+
+tests\test_llm\test_candidate_provenance.py:141: KeyError
+________ test_protocols_preserve_actual_candidate_evidence[True-json] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x000002BC047D3830>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002BBE94A4230>
+protocol = 'json', prepared = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("prepared", [False, True])
+    async def test_protocols_preserve_actual_candidate_evidence(connected_query, monkeypatch, protocol, prepared):
+        class Router(LiteLLMRouter):
+            async def complete(self, *args, **kwargs):
+                assert not prepared, "prepared SQL must not call LLM"
+                return completion("stop", "SELECT id FROM orders ORDER BY id")
+    
+        monkeypatch.setattr(query, "get_default_router", lambda: Router(RouterConfig(), mock_mode=True))
+        question = "���ݿ��ж����ű�" if prepared else "find all orders"
+        if protocol == "mcp":
+            result = await contracts.mcp_query(nl_text=question, db_id="contract")
+        else:
+            path = "/api/v1/query" + ("/stream" if protocol == "sse" else "")
+            http = connected_query.post(path, json={
+                "nl_text": question, "database": "contract", "execute": True, "num_candidates": 1,
+            })
+            assert http.status_code == 200
+            result = next(v for e, v in contracts.stream_events(http) if e == "done") if protocol == "sse" else http.json()
+>       assert result["status"] == "completed", result
+E       AssertionError: {'query_id': 'q_05a85396169e', 'session_id': 's_c864cd806d3d4616', 'status': 'failed', 'plan_id': 'request_query', ...}
+E       assert 'failed' == 'completed'
+E         
+E         - completed
+E         + failed
+
+tests\test_llm\test_candidate_provenance.py:140: AssertionError
+_________ test_protocols_preserve_actual_candidate_evidence[True-sse] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x000002BC048FEAE0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002BC048AA420>
+protocol = 'sse', prepared = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("prepared", [False, True])
+    async def test_protocols_preserve_actual_candidate_evidence(connected_query, monkeypatch, protocol, prepared):
+        class Router(LiteLLMRouter):
+            async def complete(self, *args, **kwargs):
+                assert not prepared, "prepared SQL must not call LLM"
+                return completion("stop", "SELECT id FROM orders ORDER BY id")
+    
+        monkeypatch.setattr(query, "get_default_router", lambda: Router(RouterConfig(), mock_mode=True))
+        question = "���ݿ��ж����ű�" if prepared else "find all orders"
+        if protocol == "mcp":
+            result = await contracts.mcp_query(nl_text=question, db_id="contract")
+        else:
+            path = "/api/v1/query" + ("/stream" if protocol == "sse" else "")
+            http = connected_query.post(path, json={
+                "nl_text": question, "database": "contract", "execute": True, "num_candidates": 1,
+            })
+            assert http.status_code == 200
+            result = next(v for e, v in contracts.stream_events(http) if e == "done") if protocol == "sse" else http.json()
+>       assert result["status"] == "completed", result
+E       AssertionError: {'query_id': 'q_ab86a3641998', 'session_id': 's_349004a4cd9a4d95', 'status': 'failed', 'plan_id': 'request_query', ...}
+E       assert 'failed' == 'completed'
+E         
+E         - completed
+E         + failed
+
+tests\test_llm\test_candidate_provenance.py:140: AssertionError
+_________ test_protocols_preserve_actual_candidate_evidence[True-mcp] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x000002BC048A9A00>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002BC047E0290>
+protocol = 'mcp', prepared = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("prepared", [False, True])
+    async def test_protocols_preserve_actual_candidate_evidence(connected_query, monkeypatch, protocol, prepared):
+        class Router(LiteLLMRouter):
+            async def complete(self, *args, **kwargs):
+                assert not prepared, "prepared SQL must not call LLM"
+                return completion("stop", "SELECT id FROM orders ORDER BY id")
+    
+        monkeypatch.setattr(query, "get_default_router", lambda: Router(RouterConfig(), mock_mode=True))
+        question = "���ݿ��ж����ű�" if prepared else "find all orders"
+        if protocol == "mcp":
+            result = await contracts.mcp_query(nl_text=question, db_id="contract")
+        else:
+            path = "/api/v1/query" + ("/stream" if protocol == "sse" else "")
+            http = connected_query.post(path, json={
+                "nl_text": question, "database": "contract", "execute": True, "num_candidates": 1,
+            })
+            assert http.status_code == 200
+            result = next(v for e, v in contracts.stream_events(http) if e == "done") if protocol == "sse" else http.json()
+>       assert result["status"] == "completed", result
+E       AssertionError: {'status': 'failed', 'query_id': 'q_63d0e26b804d', 'session_id': 's_69d5e6e1879542df', 'plan_id': 'request_query', ...}
+E       assert 'failed' == 'completed'
+E         
+E         - completed
+E         + failed
+
+tests\test_llm\test_candidate_provenance.py:140: AssertionError
+_________ test_export_rejects_prepared_and_invalid_origins[prepared] __________
+
+source = 'prepared'
+
+    @pytest.mark.parametrize("source", ["prepared", "invalid-source", 123])
+    def test_export_rejects_prepared_and_invalid_origins(source):
+        item = response()
+        item["candidates"][1].update(generation_source=source, finish_reason="stop")
+>       with pytest.raises(ValueError, match="source|prepared"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_llm\test_candidate_provenance.py:151: Failed
+______ test_export_rejects_prepared_and_invalid_origins[invalid-source] _______
+
+source = 'invalid-source'
+
+    @pytest.mark.parametrize("source", ["prepared", "invalid-source", 123])
+    def test_export_rejects_prepared_and_invalid_origins(source):
+        item = response()
+        item["candidates"][1].update(generation_source=source, finish_reason="stop")
+>       with pytest.raises(ValueError, match="source|prepared"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_llm\test_candidate_provenance.py:151: Failed
+____________ test_export_rejects_prepared_and_invalid_origins[123] ____________
+
+source = 123
+
+    @pytest.mark.parametrize("source", ["prepared", "invalid-source", 123])
+    def test_export_rejects_prepared_and_invalid_origins(source):
+        item = response()
+        item["candidates"][1].update(generation_source=source, finish_reason="stop")
+>       with pytest.raises(ValueError, match="source|prepared"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_llm\test_candidate_provenance.py:151: Failed
+____ test_export_reads_selected_candidate_not_request_or_siblings[unknown] ____
+
+source = 'unknown'
+
+    @pytest.mark.parametrize("source", ["unknown", "stream_text", "model_response"])
+    def test_export_reads_selected_candidate_not_request_or_siblings(source):
+        item = response()
+        item["candidates"][0].update(generation_source="prepared", finish_reason="stop")
+        item["candidates"][1].update(generation_source=source, finish_reason="stop")
+        row = build(responses=[item])[0]
+>       assert row["finish_reason"] == ("stop" if source == "model_response" else None)
+E       AssertionError: assert 'stop' == None
+
+tests\test_llm\test_candidate_provenance.py:161: AssertionError
+__ test_export_reads_selected_candidate_not_request_or_siblings[stream_text] __
+
+source = 'stream_text'
+
+    @pytest.mark.parametrize("source", ["unknown", "stream_text", "model_response"])
+    def test_export_reads_selected_candidate_not_request_or_siblings(source):
+        item = response()
+        item["candidates"][0].update(generation_source="prepared", finish_reason="stop")
+        item["candidates"][1].update(generation_source=source, finish_reason="stop")
+        row = build(responses=[item])[0]
+>       assert row["finish_reason"] == ("stop" if source == "model_response" else None)
+E       AssertionError: assert 'stop' == None
+
+tests\test_llm\test_candidate_provenance.py:161: AssertionError
+_____ test_runtime_candidate_exports_stop_without_borrowing_request_usage _____
+
+    async def test_runtime_candidate_exports_stop_without_borrowing_request_usage():
+        candidate = (await SQLGenerator(ScriptedRouter([completion()])).generate(SQR(raw_text="orders")))[0]
+        item = response()
+        selected = asdict(candidate)
+        selected.update(id="b", db_id="db2", dialect="sqlite")
+        item["candidates"] = [selected]
+        item["llm_usage"] = None
+        row = build(data=dataset(), responses=[item], bindings=[binding()])[0]
+>       assert row["finish_reason"] == "stop"
+E       AssertionError: assert None == 'stop'
+
+tests\test_llm\test_candidate_provenance.py:188: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_candidate_provenance.py::test_alternatives_share_only_their_own_response_evidence[False-temperature]
+FAILED tests/test_llm/test_candidate_provenance.py::test_alternatives_share_only_their_own_response_evidence[False-multi_perspective]
+FAILED tests/test_llm/test_candidate_provenance.py::test_alternatives_share_only_their_own_response_evidence[True-temperature]
+FAILED tests/test_llm/test_candidate_provenance.py::test_alternatives_share_only_their_own_response_evidence[True-multi_perspective]
+FAILED tests/test_llm/test_candidate_provenance.py::test_interleaved_generations_do_not_share_completion_evidence
+FAILED tests/test_llm/test_candidate_provenance.py::test_legacy_candidate_and_dto_do_not_invent_completion
+FAILED tests/test_llm/test_candidate_provenance.py::test_prepared_branch_copies_and_clears_model_completion
+FAILED tests/test_llm/test_candidate_provenance.py::test_text_stream_does_not_invent_terminal_evidence[False]
+FAILED tests/test_llm/test_candidate_provenance.py::test_text_stream_does_not_invent_terminal_evidence[True]
+FAILED tests/test_llm/test_candidate_provenance.py::test_healing_preserves_corrected_candidate_evidence[False]
+FAILED tests/test_llm/test_candidate_provenance.py::test_healing_preserves_corrected_candidate_evidence[True]
+FAILED tests/test_llm/test_candidate_provenance.py::test_protocols_preserve_actual_candidate_evidence[False-json]
+FAILED tests/test_llm/test_candidate_provenance.py::test_protocols_preserve_actual_candidate_evidence[False-sse]
+FAILED tests/test_llm/test_candidate_provenance.py::test_protocols_preserve_actual_candidate_evidence[False-mcp]
+FAILED tests/test_llm/test_candidate_provenance.py::test_protocols_preserve_actual_candidate_evidence[True-json]
+FAILED tests/test_llm/test_candidate_provenance.py::test_protocols_preserve_actual_candidate_evidence[True-sse]
+FAILED tests/test_llm/test_candidate_provenance.py::test_protocols_preserve_actual_candidate_evidence[True-mcp]
+FAILED tests/test_llm/test_candidate_provenance.py::test_export_rejects_prepared_and_invalid_origins[prepared]
+FAILED tests/test_llm/test_candidate_provenance.py::test_export_rejects_prepared_and_invalid_origins[invalid-source]
+FAILED tests/test_llm/test_candidate_provenance.py::test_export_rejects_prepared_and_invalid_origins[123]
+FAILED tests/test_llm/test_candidate_provenance.py::test_export_reads_selected_candidate_not_request_or_siblings[unknown]
+FAILED tests/test_llm/test_candidate_provenance.py::test_export_reads_selected_candidate_not_request_or_siblings[stream_text]
+FAILED tests/test_llm/test_candidate_provenance.py::test_runtime_candidate_exports_stop_without_borrowing_request_usage
+23 failed, 7 passed in 26.02s

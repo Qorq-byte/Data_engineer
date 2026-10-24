@@ -11,6 +11,8 @@ Phase 2 implementation:
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 from app.core.prompt_builder import PromptBuilder
 from app.core.sql_generator import SQLGenerator, _split_alternatives
 from app.llm.protocols import CompletionRouter
@@ -118,6 +120,10 @@ class GenerateSQLNode(AgenticNode):
 
         prepared = input.config.get("prepared_candidates")
         if prepared is not None:
+            prepared = [
+                replace(candidate, generation_source="prepared", finish_reason=None)
+                for candidate in prepared
+            ]
             primary = prepared[0] if prepared else None
             return NodeOutput(
                 result={
@@ -174,6 +180,7 @@ class GenerateSQLNode(AgenticNode):
                                 dialect=dialect or "ansi",
                                 model=model or self.router.config.default_model,
                                 database_name=database_name,
+                                generation_source="stream_text",
                             )
                         )
                 else:
@@ -185,6 +192,7 @@ class GenerateSQLNode(AgenticNode):
                         dialect=dialect or "ansi",
                         model=model or self.router.config.default_model,
                         database_name=database_name,
+                        generation_source="stream_text",
                     )
                     candidates = [candidate]
             else:

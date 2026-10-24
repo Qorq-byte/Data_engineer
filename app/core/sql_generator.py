@@ -15,10 +15,10 @@ import re
 import time
 import uuid
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, Literal
 
 from app.core.prompt_builder import PromptBuilder
-from app.llm.completion import IncompleteCompletionError, check_completion
+from app.llm.completion import IncompleteCompletionError, check_completion, response_field
 from app.llm.protocols import CompletionRouter
 from app.models.domain import DomainConfig
 from app.models.query import SQR, QueryPair, SQLCandidate
@@ -204,7 +204,6 @@ class SQLGenerator:
 
         # Parse choices into candidates
         candidates: list[SQLCandidate] = []
-        actual_model = model or self.router.config.default_model
         idx = 0
         rejected: list[IncompleteCompletionError] = []
         for resp in responses_raw:
@@ -222,8 +221,9 @@ class SQLGenerator:
                 continue
             if content is None:
                 continue
-            if isinstance(resp, dict) and isinstance(resp.get("model"), str):
-                actual_model = resp["model"]
+            finish_reason, actual_model = _response_metadata(
+                resp, model or self.router.config.default_model,
+            )
 
             # ── Parse multi-SQL response ──────────────────────────
             # When multi_table_hint is active, the LLM may return several
@@ -241,6 +241,8 @@ class SQLGenerator:
                             generation_mode=mode,
                             dialect=dialect or "ansi",
                             model=str(actual_model),
+                            generation_source="model_response",
+                            finish_reason=finish_reason,
                             latency_ms=latency / effective_n,
                             database_name=database_name,
                         )
@@ -257,6 +259,8 @@ class SQLGenerator:
                         generation_mode=mode,
                         dialect=dialect or "ansi",
                         model=str(actual_model),
+                        generation_source="model_response",
+                        finish_reason=finish_reason,
                         latency_ms=latency / effective_n,
                         database_name=database_name,
                     )
@@ -331,6 +335,10 @@ class SQLGenerator:
             if content is None:
                 continue
 
+            finish_reason, actual_model = _response_metadata(
+                resp, model or self.router.config.default_model,
+            )
+
             # ── Parse multi-SQL response ──────────────────────────
             alternatives = _split_alternatives(content)
             if len(alternatives) > 1:
@@ -344,7 +352,9 @@ class SQLGenerator:
                             generation_mode=mode,
                             reasoning=perspectives[i] if i < len(perspectives) else "",
                             dialect=dialect or "ansi",
-                            model=model or self.router.config.default_model,
+                            model=actual_model,
+                            generation_source="model_response",
+                            finish_reason=finish_reason,
                             latency_ms=total_latency / n if n > 0 else total_latency,
                             database_name=database_name,
                         )
@@ -359,7 +369,9 @@ class SQLGenerator:
                         generation_mode=mode,
                         reasoning=perspectives[i] if i < len(perspectives) else "",
                         dialect=dialect or "ansi",
-                        model=model or self.router.config.default_model,
+                        model=actual_model,
+                        generation_source="model_response",
+                        finish_reason=finish_reason,
                         latency_ms=total_latency / n if n > 0 else total_latency,
                         database_name=database_name,
                     )
@@ -375,6 +387,19 @@ class SQLGenerator:
 
 
 # ── Helpers ────────────────────────────────────────────────────────────
+
+
+def _response_metadata(
+    response: object, requested_model: str,
+) -> tuple[Literal["stop"] | None, str]:
+    """Read only this validated response; a missing marker remains unknown."""
+    choices = response_field(response, "choices")
+    reason: Literal["stop"] | None = (
+        "stop" if response_field(choices[0], "finish_reason") == "stop" else None
+    )
+    actual_model = response_field(response, "model")
+    model = actual_model if isinstance(actual_model, str) and actual_model else requested_model
+    return reason, model
 
 
 def _completion_text(response: object) -> str | None:

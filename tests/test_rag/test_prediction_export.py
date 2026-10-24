@@ -338,6 +338,8 @@ async def test_real_query_audit_export_and_sqlite_evaluation(
         json={"nl_text": question, "database": "contract", "execute": True, "num_candidates": 1},
     ).json()
     assert r["llm_audit"]["status"] == "persisted"
+    assert r["candidates"][0]["generation_source"] == "model_response"
+    assert r["candidates"][0]["finish_reason"] == "stop"
     rows = build(
         data=data,
         responses=[r],
@@ -355,6 +357,9 @@ async def test_real_query_audit_export_and_sqlite_evaluation(
     sql = report["sql_model_metrics"]
     assert sql["case_count"] == 4 and sql["prediction_count"] == 1
     assert sql["result_correct_count"] == 1
+    assert rows[0]["finish_reason"] == "stop"
+    assert rows[0]["provenance"]["completion_source"] == "candidate_fields"
+    assert sql["completion_counts"]["stop"] == 1
     assert sql["reported_cost_usd"]["total"] is None
     assert rows[0]["provenance"]["llm_usage"]["known_prompt_tokens"] == 4
 

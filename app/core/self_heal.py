@@ -15,7 +15,7 @@ Phase 3+: LLM-based error reasoning (ReflectionNode).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from app.models.query import SQR, SQLCandidate, ValidationReport
@@ -161,7 +161,8 @@ class SelfHealingRetry:
                         "errors": current_errors, "result": "no_candidates",
                     })
                     continue
-                corrected_sql = candidates[0].sql_text
+                corrected_candidate: SQLCandidate = candidates[0]
+                corrected_sql = corrected_candidate.sql_text
             else:
                 # No generator available — can't retry
                 self._history.append({
@@ -180,7 +181,8 @@ class SelfHealingRetry:
                         "round": round_num, "sql": corrected_sql,
                         "errors": [], "result": "passed",
                     })
-                    return SQLCandidate(
+                    return replace(
+                        corrected_candidate,
                         id=f"heal_{round_num}",
                         sql_text=corrected_sql,
                         confidence=max(0.7 - round_num * 0.1, 0.3),
@@ -203,7 +205,8 @@ class SelfHealingRetry:
                     "round": round_num, "sql": corrected_sql,
                     "errors": [], "result": "accepted_no_validator",
                 })
-                return SQLCandidate(
+                return replace(
+                    corrected_candidate,
                     id=f"heal_{round_num}",
                     sql_text=corrected_sql,
                     confidence=0.7,

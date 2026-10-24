@@ -4,7 +4,7 @@
 
 ## 输入、选择与运行
 
-responses.json是标准QueryResponse对象列表（即JSON查询响应或SSE done的JSON数据，即使一条也包在列表中）。不是原始SSE文本，不接受原始SDK choices或MCP精简投影来推断候选。审计库没有SQL，无法替代responses文件。
+responses.json是标准QueryResponse对象列表（即JSON查询响应或SSE done的JSON数据，即使一条也包在列表中）。不是原始SSE文本，不接受原始SDK choices或MCP工具投影来推断完整响应。阶段33虽为MCP增加候选来源投影，导出契约仍要求标准QueryResponse，含有question的案例必须核对nl_text。审计库没有SQL，无法替代responses文件。
 
 bindings.json显式绑定案例集中的id、响应query_id、candidate_id和db_id，例如：
 
@@ -33,7 +33,9 @@ python -m scripts.evaluate_quality --dataset tests/fixtures/retrieval_eval.json 
 
 provenance标记case/query/candidate/db、方言、question_match、completion_source、完整dataset/案例集/输入responses/输入bindings的规范JSON哈希，以及请求范围llm_calls/llm_usage和审计匹配状态。输入哈希不是原始文件字节哈希：空白/字典键顺序/BOM不影响规范JSON，数组顺序影响身份。输出行哈希覆盖整行（除自身），用于复现和意外改动检测。
 
-候选明确提供finish_reason时保留stop/length；未知原因或非空refusal/tools/function_call转换为固定other，不导出拒绝正文/工具参数。缺候选结束元数据为null和unavailable，不从请求attempt的stop/length推断：失败尝试可能是重试或其他候选。当前在线CandidateResult未暴露逐候选结束元数据，因此其正常存档常为legacy_unknown；workflow completed并不替代模型结束证明。现有评测器保留legacy兼容，完成状态单列显示。
+阶段33在线候选增加generation_source和finish_reason：非流式model_response只保存所用响应的stop/null，同响应alternatives共享该次字段；prepared为系统预制SQL，导出明确拒绝；stream_text为纯文本流，unknown为旧构造/未归属，后两者即使写入stop也不升级完成证明。无效generation_source拒绝；缺该字段的旧文件保持兼容。自愈保留实际修正候选来源，不能从原候选继承完成状态。这些来源表示代码路径，不证明真实模型调用或输入真实性。
+
+所选候选明确提供finish_reason时保留stop/length（上述来源限制仍适用）；未知原因或非空refusal/tools/function_call转换为固定other，不导出拒绝正文/工具参数。stream_text/unknown不能隐藏显式length/refusal/tools。缺候选结束元数据为null和unavailable，不从请求attempt的stop/length推断：失败尝试可能是重试或其他候选。workflow completed不能替代模型结束证明。现有评测器保留legacy兼容，完成状态单列显示。request-prediction-v1行结构不变，responses_sha256覆盖候选新增字段，completion_source仍为candidate_fields/unavailable。
 
 请求用量包含所有重试/候选/目标库，usage_scope固定entire_query_including_retries_candidates_and_targets。同query只允许归属一个case，不能重复分摊。缺整个usage或预算字段保留null，不补0；有效usage必须内部一致，缺测/SDK来源与合法0沿用第29—31阶段契约。provider/model可被既有allowlist脱敏。
 

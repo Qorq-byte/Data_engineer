@@ -40,3 +40,5 @@ latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受
 
 
 阶段32新增显式离线[预测导出](prediction-export.md)。新export_version行消费前验证行/案例集哈希与来源格式，完整evaluate额外核验dataset哈希；旧普通列表保持原语义。缺候选finish仍legacy_unknown，请求用量只作来源元数据，生成latency/费用不从策略均摊或部分token猜测。
+
+阶段33标准响应候选保留生成来源及该响应stop/null；导出所选model_response候选可以进入stop计数，prepared拒绝作为模型预测，stream_text/unknown仍legacy_unknown。原缺来源的文件兼容，不根据请求usage或workflow成功补stop；既有阶段32固定烟测样例及其哈希不变。

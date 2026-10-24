@@ -1,5 +1,7 @@
 # 实施进度
 
+- 阶段33候选级生成来源与完成信息本地完成，新增33项；全量3767通过/1平台跳过，SDK对象→审计→导出→评测stop断言单独通过。JSON/SSE/MCP保留候选证据，MCP候选排除execution保留顶层100行限制；导出拒绝预制SQL，纯文本流/未知来源不补stop。strict门禁/182前端/构建/Ruff通过，类型178无新增；代码推送与精确SHA CI待核验，见[阶段33](stage-33.md)。
+
 - 初始：main@118f9d6；origin可读，GitHub CLI已登录Qorq-byte；独立工作树.verify_tmp_optimization、分支codex/mvp-hardening已创建。
 - 原有未提交的pyproject.toml修改未带入分支；上一轮评估文档复制到本分支保存依据。
 - 阶段1已提交并推送：24c396fcf0bc4e788604d0991ca76a386e18558b；远程SHA核对一致，全量2893 passed。阶段2开始，阶段3–5待开始。每阶段验证记录放在同目录stage-N.md。

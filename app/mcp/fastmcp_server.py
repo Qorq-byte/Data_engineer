@@ -144,6 +144,9 @@ def _register_nl_query(mcp: Any) -> None:
                 "llm_usage": response.llm_usage,
                 "llm_audit": response.llm_audit,
                 "sql": response.primary_sql or "",
+                "candidates": [
+                    candidate.model_dump(exclude={"execution"}) for candidate in response.candidates
+                ],
                 "columns": execution.get("columns", []),
                 "rows": execution.get("rows", [])[:100],
                 "row_count": min(execution.get("row_count", 0), 100),
