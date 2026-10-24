@@ -28,4 +28,6 @@ payload v2新增摘要版本和列表，SQLite表及user_version仍1，混合v1/
 
 Harness固定节点顺序、权限、预算/重试、只读SQL及SSE工作流事件方式保持。真实模型质量评测、费用估算、签名/防篡改审计及多租户隔离后续独立规划。
 
-本地验收已完成；代码推送及最终文档提交的精确SHA CI结果随后补记。
+代码[d4257ae](https://github.com/Qorq-byte/Data_engineer/commit/d4257ae5c96ffe0dd1fba046443f45e2924cf32b)已普通推送codex/candidate-audit-binding。[Actions40110451829](https://github.com/Qorq-byte/Data_engineer/actions/runs/40110451829)成功，headSha精确匹配，见[结构化证据](results/stage-35-ci.json)和[Linux测试摘要](results/stage-35-ci-tests.txt)。干净环境 **3840通过、2警告，62.74秒**，本地跳过的平台项在Linux实际执行；182前端契约/完整构建、Ruff和原strict门禁及新增摘要模块strict全部通过。
+
+本次补记验收文档另行提交推送并核验最终CI，不以代码CI代替最终提交验收。原工作区用户改动和main保持原状，不强推、不自动合并。
