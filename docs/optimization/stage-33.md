@@ -26,4 +26,6 @@ Harness固定节点顺序、权限、预算、重试和取消释放机制均未�
 
 ## 交付
 
-本地全量已完成；代码及最终文档提交的精确SHA CI结果随后补记。主工作区及main保持原状。
+代码[908ebce](https://github.com/Qorq-byte/Data_engineer/commit/908ebce15875a0fa289de2cb94f3457a6057bb18)已普通推送codex/candidate-completion-provenance。[Actions40090996783](https://github.com/Qorq-byte/Data_engineer/actions/runs/40090996783)成功，headSha精确匹配，见[结构化证据](results/stage-33-ci.json)和[Linux测试摘要](results/stage-33-ci-tests.txt)。干净环境 **3768通过、2警告，63.51秒**；本地跳过的平台项在Linux实际执行。182前端契约、完整构建、Ruff及所有严格类型门禁均通过。
+
+本次补记验收文档另行提交推送并核验最终CI；不以代码CI代替最终提交验收。主工作区原有改动及main保持原状，不强推、不自动合并。
