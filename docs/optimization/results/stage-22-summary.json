@@ -1,0 +1,14 @@
+{
+  "before_errors": 194,
+  "after_errors": 188,
+  "after_files": 42,
+  "new_errors": 0,
+  "removed_errors": 6,
+  "pytest_passed": 3342,
+  "pytest_skipped": 1,
+  "new_python_tests": 38,
+  "new_frontend_contract_scenarios": 34,
+  "total_frontend_contract_scenarios": 83,
+  "core_files": 35,
+  "mypy_full_exit_code": 1
+}

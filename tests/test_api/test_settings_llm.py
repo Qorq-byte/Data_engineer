@@ -135,7 +135,7 @@ class TestLLMSettingsSwitch:
             "/api/v1/settings/llm",
             json={"routing_strategy": "not-a-strategy"},
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
 
 class TestQueryModelOverride:

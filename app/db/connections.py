@@ -6,6 +6,7 @@ Phase 1 implements: SQLite, DuckDB, PostgreSQL, MySQL.
 
 import asyncio
 import inspect
+from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -201,6 +202,52 @@ class ConnectionFactory:
     def list_all(cls) -> list[ConnectionInfo]:
         """List all active connections."""
         return list(cls._infos.values())
+
+    @classmethod
+    def describe_capabilities(cls) -> dict[str, Any]:
+        """Report connector implementation and registry counts without connecting.
+
+        Module discovery is not importability, server reachability or health.
+        Keep credentials and connection identifiers out of this aggregate view.
+        """
+        from importlib.util import find_spec
+
+        implementations = {
+            DatabaseType.SQLITE: ("sqlite3", "native_single_connection"),
+            DatabaseType.DUCKDB: ("duckdb", "native_single_connection"),
+            DatabaseType.POSTGRESQL: ("asyncpg", "async_single_connection"),
+            DatabaseType.MYSQL: ("aiomysql", "pool_acquired_connection"),
+        }
+        counts = dict.fromkeys(DatabaseType, 0)
+        for db_id in list(cls._connections):
+            info = cls._infos.get(db_id)
+            if info is not None and info.db_type in counts:
+                counts[info.db_type] += 1
+        connectors = []
+        for db_type in DatabaseType:
+            implementation = implementations.get(db_type)
+            module, management = implementation or (None, "not_implemented")
+            discoverable = None
+            if module is not None:
+                with suppress(ImportError, ValueError, AttributeError):
+                    discoverable = find_spec(module) is not None
+            connectors.append(
+                {
+                    "type": db_type.value,
+                    "implemented": implementation is not None,
+                    "driver_module": module,
+                    "module_discoverable": discoverable,
+                    "management": management,
+                    "registered_connections": counts[db_type],
+                }
+            )
+        return {
+            "connectors": connectors,
+            "connection_pool_size": None,
+            "connection_timeout_s": None,
+            "scope": "current process ConnectionFactory registry; not connection health",
+            "configuration_source": "connector implementation and driver defaults",
+        }
 
     @classmethod
     async def aclose(cls, db_id: str) -> None:

@@ -10,13 +10,16 @@ Phase 2 MVP includes:
   - Mock provider support for testing without API keys
 """
 
-from app.llm.router import (
-    CostRecord,
-    CostTracker,
-    LiteLLMRouter,
-    ProviderConfig,
-    RouterConfig,
-)
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.llm.router import (
+        CostRecord,
+        CostTracker,
+        LiteLLMRouter,
+        ProviderConfig,
+        RouterConfig,
+    )
 
 __all__ = [
     "CostRecord",
@@ -25,3 +28,14 @@ __all__ = [
     "ProviderConfig",
     "RouterConfig",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """Pure completion checks must not initialize the optional SDK or its cost map."""
+    if name not in __all__:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    from app.llm import router
+
+    value = getattr(router, name)
+    globals()[name] = value
+    return value

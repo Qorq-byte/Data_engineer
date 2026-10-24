@@ -1,0 +1,131 @@
+{
+  "environment": "gstack /browse; real FastAPI on 127.0.0.1:8021; temporary SQLite/LanceDB/FTS5; synthetic admin; lifespan off; mock embedding",
+  "test_csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'",
+  "test_policy_not_production_configuration": true,
+  "scenarios": [
+    "landing canvas and local fonts",
+    "login local fonts and empty form validation",
+    "signup invitation fields after switch",
+    "authenticated workspace and source selection",
+    "RAG current scoped maintenance with real fixture",
+    "local avatar loaded",
+    "375px no overflow and keyboard rebuild-to-clear",
+    "scoped rebuild POST200 plus confirmed success feedback"
+  ],
+  "landing": {
+    "title": "NL2SQL — 数据工程智能体",
+    "heading": "NL2SQL",
+    "canvas": true,
+    "scripts": [
+      "http://127.0.0.1:8021/assets/landing_page-4SBKO6PI.js"
+    ],
+    "fonts": "loaded",
+    "resources": [
+      "http://127.0.0.1:8021/assets/utilities-55ea2f6ef44060c2.css",
+      "http://127.0.0.1:8021/assets/landing_page-XEFSCQJX.css",
+      "http://127.0.0.1:8021/assets/landing_page-4SBKO6PI.js",
+      "http://127.0.0.1:8021/assets/barlow-latin-700-normal-5OFOGNFS.woff2",
+      "http://127.0.0.1:8021/assets/jetbrains-mono-latin-400-normal-3OOWLGQ2.woff2",
+      "http://127.0.0.1:8021/assets/barlow-latin-400-normal-NENW7MY5.woff2",
+      "http://127.0.0.1:8021/assets/barlow-latin-900-normal-LEYOJTHL.woff2"
+    ]
+  },
+  "login": {
+    "title": "NL2SQL — Log in / Sign up",
+    "inputs": 7,
+    "form": true,
+    "font": "Archivo, \"PingFang SC\", \"Microsoft YaHei\", sans-serif",
+    "resources": [
+      "http://127.0.0.1:8021/assets/utilities-55ea2f6ef44060c2.css",
+      "http://127.0.0.1:8021/assets/form-JRN3XVDV.js",
+      "http://127.0.0.1:8021/assets/form-BTROHFFV.css",
+      "http://127.0.0.1:8021/assets/archivo-latin-500-normal-XF7B2NIS.woff2",
+      "http://127.0.0.1:8021/assets/archivo-latin-700-normal-WQ7U2ON6.woff2",
+      "http://127.0.0.1:8021/assets/archivo-latin-800-normal-AUQHHN5R.woff2",
+      "http://127.0.0.1:8021/assets/archivo-latin-400-normal-ZHCBTBXV.woff2"
+    ],
+    "external": []
+  },
+  "workspace": {
+    "title": "NL2SQL — 智能数据工程工作台",
+    "rootChildren": 2,
+    "avatar": "http://127.0.0.1:8021/assets/default-avatar.svg",
+    "hasScopedMaintenance": true,
+    "hasFixture": true,
+    "external": [],
+    "resources": [
+      "http://127.0.0.1:8021/assets/utilities-55ea2f6ef44060c2.css",
+      "http://127.0.0.1:8021/assets/workspace-RD7HIF2G.css",
+      "http://127.0.0.1:8021/assets/workspace-NEFKZAVP.js",
+      "http://127.0.0.1:8021/assets/barlow-latin-400-normal-NENW7MY5.woff2",
+      "http://127.0.0.1:8021/assets/barlow-latin-500-normal-XG5KS5C2.woff2",
+      "http://127.0.0.1:8021/assets/barlow-latin-600-normal-APFZWJSU.woff2",
+      "http://127.0.0.1:8021/assets/default-avatar.svg",
+      "http://127.0.0.1:8021/health",
+      "http://127.0.0.1:8021/health/ready",
+      "http://127.0.0.1:8021/api/v1/databases",
+      "http://127.0.0.1:8021/api/v1/settings/available-models",
+      "http://127.0.0.1:8021/health",
+      "http://127.0.0.1:8021/api/v1/settings/llm",
+      "http://127.0.0.1:8021/api/v1/settings/harness",
+      "http://127.0.0.1:8021/api/v1/settings/database",
+      "http://127.0.0.1:8021/api/v1/settings/available-models",
+      "http://127.0.0.1:8021/api/v1/settings/rag",
+      "http://127.0.0.1:8021/api/v1/learning/rag/stats",
+      "http://127.0.0.1:8021/api/v1/learning/rag/status",
+      "http://127.0.0.1:8021/api/v1/databases"
+    ]
+  },
+  "mobile": {
+    "viewport": 375,
+    "documentWidth": 375,
+    "bodyWidth": 375,
+    "hasScopedMaintenance": true,
+    "buttons": [
+      {
+        "label": "打开菜单",
+        "left": 331,
+        "right": 359
+      },
+      {
+        "label": "重建 build-fixture 的 Schema 索引",
+        "left": 43,
+        "right": 129
+      },
+      {
+        "label": "清理 build-fixture 的 Schema 索引",
+        "left": 137,
+        "right": 249
+      }
+    ]
+  },
+  "keyboard": {
+    "activeLabel": "清理 build-fixture 的 Schema 索引",
+    "avatars": [
+      {
+        "src": "http://127.0.0.1:8021/assets/default-avatar.svg",
+        "loaded": true
+      }
+    ],
+    "external": []
+  },
+  "rebuild": {
+    "rebuildConfirmed": true,
+    "message": [
+      "build-fixture 的 Schema 索引已重建。"
+    ],
+    "external": []
+  },
+  "signup_snapshot": "observed invitation, username, email, password and confirm fields",
+  "login_validation": {
+    "invalid": 2,
+    "text": "返回首页\nLog in\nSign up\nLog in\n请输入邮箱地址\nLet’s go!\nSign up\n\n仅限管理员邀请注册；业务访问还需管理员授权账号。\n\nLet’s go!",
+    "location": "/login"
+  },
+  "external_page_resource_requests": 0,
+  "limits": [
+    "No real MySQL registration/login tested",
+    "No production CSP added",
+    "No semantic retrieval or performance conclusion"
+  ]
+}

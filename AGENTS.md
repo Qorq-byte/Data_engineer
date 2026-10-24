@@ -9,6 +9,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 pip install -e ".[dev]"
 
 # 启动应用
+npm ci --ignore-scripts && npm run build:frontend # Node22+，构建本地页面/资源
 python main.py                        # FastAPI 默认 :8001；lifespan 统一初始化/关闭，APP_PORT 可覆盖
 
 # 测试
@@ -20,6 +21,8 @@ pytest -k "test_execute"              # 按关键字筛选测试
 ruff check .                          # lint（行宽 100，py312，规则 E/F/I/N/W/UP/B/C4/SIM）
 mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py            # strict 核心CI门禁（默认追踪导入）
 mypy app/                             # 全仓严格诊断，仍有已知债务
+npm run check:frontend                 # 页面编译与实际函数契约
+npm run check:frontend:build           # 本地资源/可重复构建/编译失败保留旧产物
 ```
 
 ## 架构

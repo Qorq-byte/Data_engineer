@@ -1,0 +1,38 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+___________________ test_unwired_harness_write_is_rejected ____________________
+
+client = <starlette.testclient.TestClient object at 0x000001A996D8E510>
+
+    def test_unwired_harness_write_is_rejected(client):
+        before = copy.deepcopy(api_settings._settings_store)
+        response = client.put("/api/v1/settings/harness", json={"read_only": False})
+>       assert response.status_code == 409
+E       assert 200 == 409
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_api\test_harness_settings.py:24: AssertionError
+_____________ test_status_uses_actual_policy_not_stored_settings ______________
+
+client = <starlette.testclient.TestClient object at 0x000001A997026FD0>
+
+    def test_status_uses_actual_policy_not_stored_settings(client):
+        api_settings._settings_store["harness"].update(read_only=False, max_llm_calls=99)
+        response = client.get("/api/v1/settings/harness")
+        assert response.status_code == 200
+        data = response.json()
+>       assert data["mode"] == "read_only"
+               ^^^^^^^^^^^^
+E       KeyError: 'mode'
+
+tests\test_api\test_harness_settings.py:33: KeyError
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\python\data_engineer\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_api/test_harness_settings.py::test_unwired_harness_write_is_rejected
+FAILED tests/test_api/test_harness_settings.py::test_status_uses_actual_policy_not_stored_settings
+2 failed, 1 warning in 17.62s

@@ -1,0 +1,200 @@
+{
+  "scenarios_passed": 7,
+  "environment": "gstack /browse; local FastAPI :8023; temporary config/SQLite; lifespan off; synthetic auth; QA-only CSP/modes",
+  "scenarios": {
+    "normal": {
+      "values": {
+        "read_only": "始终启用",
+        "max_llm_calls": "10",
+        "max_result_rows": "1000",
+        "statement_timeout_ms": "30000",
+        "query_timeout_s": "120",
+        "session_ttl_s": "3600",
+        "max_retries": "0"
+      },
+      "buttons": [
+        "重新读取约束"
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "notice": "约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。",
+      "scope": "固定流程（request_query）：parse_nl → schema_linking → generate_sql → validate_sql → execute_sql；由 WorkflowRunner 执行，最多 5 次节点尝试。适用范围：JSON/SSE 查询与复用 submit_query 的 MCP nl_query。候选数由每次请求 num_candidates 指定，MCP 当前请求 1 个；没有已接通的全局候选数保存项。直接 SQL 执行复用只读检查及 Settings 行数/语句上限，不使用此工作流的 LLM/重试预算或查询总时限。环境配置通常需重启，计划与 agent.yml 按既有加载器重读；更改前请按运维文档核对来源。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "rejection": {
+      "status": 409,
+      "data": {
+        "detail": {
+          "code": "HARNESS_SETTINGS_READ_ONLY",
+          "message": "Harness 约束仅支持读取；请按实际来源修改部署配置，旧设置表不生效。"
+        }
+      }
+    },
+    "missing": {
+      "values": {
+        "read_only": "—",
+        "max_llm_calls": "—",
+        "max_result_rows": "—",
+        "statement_timeout_ms": "—",
+        "query_timeout_s": "—",
+        "session_ttl_s": "—",
+        "max_retries": "—"
+      },
+      "buttons": [
+        "重新读取约束"
+      ],
+      "alerts": [
+        "无法读取实际 Harness 约束，当前状态未知。请检查配置后重新读取。"
+      ],
+      "inputs": 0,
+      "notice": "约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。",
+      "scope": "—",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "recovered": {
+      "values": {
+        "read_only": "始终启用",
+        "max_llm_calls": "10",
+        "max_result_rows": "1000",
+        "statement_timeout_ms": "30000",
+        "query_timeout_s": "120",
+        "session_ttl_s": "3600",
+        "max_retries": "0"
+      },
+      "buttons": [
+        "重新读取约束"
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "notice": "约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。",
+      "scope": "固定流程（request_query）：parse_nl → schema_linking → generate_sql → validate_sql → execute_sql；由 WorkflowRunner 执行，最多 5 次节点尝试。适用范围：JSON/SSE 查询与复用 submit_query 的 MCP nl_query。候选数由每次请求 num_candidates 指定，MCP 当前请求 1 个；没有已接通的全局候选数保存项。直接 SQL 执行复用只读检查及 Settings 行数/语句上限，不使用此工作流的 LLM/重试预算或查询总时限。环境配置通常需重启，计划与 agent.yml 按既有加载器重读；更改前请按运维文档核对来源。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "malformed": {
+      "values": {
+        "read_only": "—",
+        "max_llm_calls": "—",
+        "max_result_rows": "—",
+        "statement_timeout_ms": "—",
+        "query_timeout_s": "—",
+        "session_ttl_s": "—",
+        "max_retries": "—"
+      },
+      "buttons": [
+        "重新读取约束"
+      ],
+      "alerts": [
+        "无法读取实际 Harness 约束，当前状态未知。请检查配置后重新读取。"
+      ],
+      "inputs": 0,
+      "notice": "约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。",
+      "scope": "—",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "caps": {
+      "values": {
+        "read_only": "始终启用",
+        "max_llm_calls": "10",
+        "max_result_rows": "7",
+        "statement_timeout_ms": "1700",
+        "query_timeout_s": "9.5",
+        "session_ttl_s": "81",
+        "max_retries": "0"
+      },
+      "buttons": [
+        "重新读取约束"
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "notice": "约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。",
+      "scope": "固定流程（request_query）：parse_nl → schema_linking → generate_sql → validate_sql → execute_sql；由 WorkflowRunner 执行，最多 5 次节点尝试。适用范围：JSON/SSE 查询与复用 submit_query 的 MCP nl_query。候选数由每次请求 num_candidates 指定，MCP 当前请求 1 个；没有已接通的全局候选数保存项。直接 SQL 执行复用只读检查及 Settings 行数/语句上限，不使用此工作流的 LLM/重试预算或查询总时限。环境配置通常需重启，计划与 agent.yml 按既有加载器重读；更改前请按运维文档核对来源。",
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "mobile": {
+      "values": {
+        "read_only": "始终启用",
+        "max_llm_calls": "10",
+        "max_result_rows": "7",
+        "statement_timeout_ms": "1700",
+        "query_timeout_s": "9.5",
+        "session_ttl_s": "81",
+        "max_retries": "0"
+      },
+      "buttons": [
+        "重新读取约束"
+      ],
+      "alerts": [],
+      "inputs": 0,
+      "notice": "约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。",
+      "scope": "固定流程（request_query）：parse_nl → schema_linking → generate_sql → validate_sql → execute_sql；由 WorkflowRunner 执行，最多 5 次节点尝试。适用范围：JSON/SSE 查询与复用 submit_query 的 MCP nl_query。候选数由每次请求 num_candidates 指定，MCP 当前请求 1 个；没有已接通的全局候选数保存项。直接 SQL 执行复用只读检查及 Settings 行数/语句上限，不使用此工作流的 LLM/重试预算或查询总时限。环境配置通常需重启，计划与 agent.yml 按既有加载器重读；更改前请按运维文档核对来源。",
+      "widths": {
+        "viewport": 375,
+        "document": 375,
+        "body": 375
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    }
+  },
+  "final_state": {
+    "counts": {
+      "GET /workspace": 2,
+      "GET /assets/utilities-c1830221bfa5aabd.css": 1,
+      "GET /assets/workspace-RD7HIF2G.css": 1,
+      "GET /assets/workspace-ULLJE5BX.js": 1,
+      "GET /assets/default-avatar.svg": 1,
+      "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 1,
+      "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 1,
+      "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 1,
+      "GET /health": 3,
+      "GET /health/ready": 2,
+      "GET /api/v1/databases": 2,
+      "GET /api/v1/settings/available-models": 3,
+      "GET /api/v1/settings/llm": 1,
+      "GET /api/v1/settings/database": 1,
+      "GET /api/v1/settings/rag": 1,
+      "GET /api/v1/settings/harness": 5,
+      "GET /qa/state": 6,
+      "PUT /api/v1/settings/harness": 4,
+      "POST /qa/mode/missing": 1,
+      "POST /qa/mode/normal": 1,
+      "POST /qa/mode/malformed": 1,
+      "POST /qa/mode/caps": 1
+    },
+    "legacy_harness": {
+      "read_only": false,
+      "max_llm_calls": 99
+    }
+  },
+  "limits": "No real MySQL/provider/multiworker/load/semantic-quality measurement; initial interrupted attempts excluded; manual PUTs repeated to obtain non-sensitive output"
+}

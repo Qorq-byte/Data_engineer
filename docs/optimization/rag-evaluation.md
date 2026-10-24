@@ -1,5 +1,7 @@
 # RAG 更新与质量评测
 
+阶段28离线预测接口已补完成状态、生成失败、reported遥测校验/覆盖率/分位及输入哈希；现行字段和示例以[SQL评测契约](sql-evaluation.md)为准。缺失预测分母仍为全部题目，真实SQL模型质量仍未实测。
+
 ## 已接通的范围
 
 固定查询计划的 schema_linking 节点现在注入 SchemaRetriever，检索始终携带 db_id；GenerateSQLNode 优先使用 linked_schema。源数据库 Schema 仍用于最终校验，不能用检索缺失的 Schema 断言 SQL 合法。领域业务规则传给 ValidateSQLNode；没有将 LLM 授权为流程控制器。
@@ -26,7 +28,7 @@ Schema 刷新响应增加 rag_indexed 与 warnings：Schema 内省成功不能�
 
 当前评测仅测真实 FTS5 BM25，K=3：Recall@3=1，Precision@3≈0.381，MRR@3=1，NDCG@3=1。Precision 以固定 K 为分母，少于 K 条也计空位，相关文档通常只有 1–2 个。数据与实现共同构成很小的可重跑起点，不能推广为系统召回率或与原实现做定量提升比较。单次平均检索耗时记录在 JSON 中，未预热/未压测，不能据此给出吞吐结论；没有 embedding/LLM 调用，调用成本为 0。
 
-真实模型 SQL 指标目前为 null。准备预测文件 `[ {"id":"sql1","sql":"...","latency_ms":123,"cost_usd":0.001}, ... ]` 后，运行 `python -m scripts.evaluate_quality --predictions predictions.json --output result.json`。缺失预测按失败计算；重复/未知 ID 拒绝。执行器只接收只读 AST，SQLite query_only、2 秒进度超时、1000 行上限；分别报告执行成功率和结果正确率。结果比较保留重复行，对注明 ordered 的查询比较顺序；其他查询按多重集比较。生成时延/费用是输入记录，执行时延为本机实测；必须保存模型版本、prompt、usage 原始记录才能形成可信成本基线。浮点容差、日期/时区、其他数据库方言仍待业务评测扩展。
+真实模型 SQL 指标目前未测。准备预测文件 `[ {"id":"sql1","sql":"...","finish_reason":"stop","latency_ms":123,"cost_usd":0.001}, ... ]` 后，运行 `python -m scripts.evaluate_quality --predictions predictions.json --output result.json`。缺失预测按失败计算；重复/未知 ID 拒绝。执行器只接收只读 AST，SQLite query_only、2 秒进度超时、1000 行上限；分别报告执行成功率和结果正确率。结果比较保留重复行，对注明 ordered 的查询比较顺序；其他查询按多重集比较。生成时延/费用是输入记录；执行尝试时延本机实测（包含只读检查，排除gold/比较，未尝试为null），不是端到端性能。必须保存模型版本、prompt、usage 原始记录才能形成可信成本基线。浮点容差、日期/时区、其他数据库方言仍待业务评测扩展。
 
 ## 真实质量评测前置条件
 
@@ -85,3 +87,13 @@ Schema 按 db_id 完整替换在 embedding/来源校验后保存两边原始记�
 管理员可用 `POST /api/v1/learning/rag/schema/{db_id}/clear` 清除单库Schema索引，已断开遗留库也适用；成功返回两后端真实删除数，仅失效该库缓存/隔离，其他库与文档指标不改。需重建时再显式schema refresh并核对rag_indexed=true。重复清理0/0合法；后续新刷新可建索引，清理不是永久禁用。操作与完整刷新共享同库顺序，并复用原始记录补偿。
 
 503及restored结果需明确处理，不能将已补偿当作删除成功；没有引擎时不自动删文件。旧全量clear拒绝定向参数/未知scope防止误清全部，维护窗口语义仍保留。阶段19验证包含真实持久双后端、权限、故障、并发和重启，是功能一致性验证，不是语义/性能基线。具体步骤与限制见[阶段19报告](stage-19.md)。
+
+## 阶段20：工作台状态与单库维护
+
+系统设置→RAG检索现显示当前待刷新/恢复失败以及连接状态，已断开遗留库可单独清理，连接库可重建。状态读取失败显示未知并禁用维护，恢复读取后由管理员显式操作；清理后的新刷新仍能建索引。已上传文档/指标不因单库清理删除；全量维护折叠并保留明确确认。
+
+本轮37个新实际页面函数场景和11个gstack浏览器场景验证接口消费/隔离/保留，使用真实临时索引和mock embedding；注入的读取/provider失败单独记录。不新增Recall/Precision/MRR/NDCG或模型答案正确率结论。详情见[阶段20报告](stage-20.md)。
+
+## 阶段22：权重真实生效验证
+
+阶段22以真实LanceDB/FTS5和可控正交向量制造dense/sparse排名冲突，alpha=0与1分别选出预期不同文档；另验证三类在途检索在embedding等待期间保留旧融合器。这些是参数接线/隔离回归，不是语义Recall@K、Precision、MRR/NDCG或SQL结果正确率。评测真正的权重收益仍需相同标注集、模型/索引版本及调用Top-K，记录两组权重、召回/排序指标、延迟与成本，再做成对比较。当前没有统一阈值、Top-K覆盖或在线模型切换；实际provider/model/dimension和运行权重可从设置接口读取，不能用旧保存字段给评测环境贴标签。详见[阶段22报告](stage-22.md)。

@@ -32,6 +32,7 @@ from app.knowledge.retrieval.lancedb_store import LanceDBStore
 from app.knowledge.retrieval.metric_rag import MetricRAG
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
 from app.knowledge.retrieval.schema_rag import SchemaMetadataRAG
+from app.models.rag_settings import FusionWeights
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,37 @@ def get_metric_rag() -> MetricRAG:
 def get_document_store() -> DocumentStore:
     """Return the DocumentStore singleton."""
     return get_rag_engine().document_store
+
+
+def apply_fusion_weights(weights: FusionWeights) -> bool:
+    """Publish together on the serving loop; active searches retain their old reference."""
+    if _engine is None:
+        return False
+    fusion = RRFFusion(k=60, alpha=weights.vector_weight)
+    _engine.schema_rag.set_fusion(fusion)
+    _engine.metric_rag.set_fusion(fusion)
+    _engine.document_store.set_fusion(fusion)
+    return True
+
+
+def get_runtime_settings() -> dict[str, Any]:
+    """Actual instances, not desired settings or a model/storage health probe."""
+    if _engine is None:
+        return {"available": False, "weights": None, "embedding": None}
+    provider = _engine.embedding_generator.provider
+    return {
+        "available": True,
+        "weights": {
+            "schema": FusionWeights(_engine.schema_rag.rrf_alpha).as_dict(),
+            "metrics": FusionWeights(_engine.metric_rag.rrf_alpha).as_dict(),
+            "documents": FusionWeights(_engine.document_store.rrf_alpha).as_dict(),
+        },
+        "embedding": {
+            "provider": type(provider).__name__,
+            "model": provider.model_name,
+            "dimension": provider.dimension,
+        },
+    }
 
 
 def get_index_refresher() -> Any:
@@ -181,7 +213,7 @@ async def initialize_rag_engine() -> _RAGEngine:
     global _engine
     from app.db.runtime import gate
 
-    async with gate(("rag-engine-initialize",)):
+    async with gate(("rag-engine-initialize",)), gate(("rag-settings",)):
         if _engine is None:
             candidate = await _build_rag_engine()
             _engine = candidate
@@ -207,7 +239,11 @@ async def _build_rag_engine() -> _RAGEngine:
 
     try:
         # ── RRF fusion with configured weights ─────────────────────────────
-        alpha = float(rag_settings.get("vector_weight", 0.7))
+        try:
+            alpha = FusionWeights(rag_settings.get("vector_weight", 0.7)).vector_weight
+        except ValueError:
+            logger.warning("Invalid legacy RAG fusion weight; using the safe default")
+            alpha = FusionWeights().vector_weight
         rrf = RRFFusion(k=60, alpha=alpha)
 
         # ── Three RAG applications ─────────────────────────────────────────

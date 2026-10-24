@@ -1,0 +1,12 @@
+{
+  "baseline": "stage-20-after.jsonl at 708c8dc",
+  "before_errors": 197,
+  "after_errors": 194,
+  "after_files": 42,
+  "new_errors": 0,
+  "removed_errors": 3,
+  "core_files": 34,
+  "pytest_passed": 3304,
+  "pytest_skipped": 1,
+  "mypy_full_exit_code": 1
+}

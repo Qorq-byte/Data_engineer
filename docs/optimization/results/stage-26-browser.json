@@ -1,0 +1,354 @@
+{
+  "scenarios_passed": 12,
+  "environment": "gstack /browse; FastAPI127.0.0.1:8026; temporary SQLite; mock router; no live model; synthetic auth; QA-only modes/CSP",
+  "scenarios": {
+    "normal": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：4096 · 运行上限：4096。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "4096",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "edited": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：4096 · 运行上限：4096。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "64",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "persisted": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：64 · 运行上限：64。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "64",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": true,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "drift": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：29 · 运行上限：64。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "29",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "legacy": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：29 · 运行上限：64。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "29",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "unsupported": {
+      "status": 422,
+      "data": {
+        "detail": {
+          "code": "LLM_SETTINGS_INVALID",
+          "message": "Invalid LLM settings request."
+        }
+      }
+    },
+    "volatile": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：13 · 运行上限：13。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "13",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": true,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "bad-write": {
+      "alerts": [
+        "写入结果未确认，当前配置状态未知。请先重新读取，再决定是否保存；不会自动重试。"
+      ],
+      "fieldVisible": false,
+      "policy": null,
+      "editValue": null,
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "read-failure": {
+      "alerts": [
+        "LLM 配置读取失败，当前状态未知。请重新读取；不会自动重试写入。"
+      ],
+      "fieldVisible": false,
+      "policy": null,
+      "editValue": null,
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "recovered": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：29 · 运行上限：13。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "29",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "restored": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：29 · 运行上限：29。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "29",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 1440,
+        "document": 1440,
+        "body": 1440
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    },
+    "mobile": {
+      "alerts": [],
+      "fieldVisible": true,
+      "policy": "单次输出 token 上限已配置：29 · 运行上限：29。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。",
+      "editValue": "29",
+      "strategySelect": false,
+      "temperatureSlider": 0,
+      "persisted": false,
+      "memoryOnly": false,
+      "widths": {
+        "viewport": 375,
+        "document": 375,
+        "body": 375
+      },
+      "controlsWithinViewport": true,
+      "externalResources": 0
+    }
+  },
+  "final_state": {
+    "counts": {
+      "GET /workspace": 2,
+      "GET /assets/utilities-a20cc1240d4419f7.css": 1,
+      "GET /assets/workspace-RD7HIF2G.css": 1,
+      "GET /assets/workspace-ZQFKXNCG.js": 1,
+      "GET /assets/default-avatar.svg": 1,
+      "GET /assets/barlow-latin-400-normal-NENW7MY5.woff2": 1,
+      "GET /assets/barlow-latin-600-normal-APFZWJSU.woff2": 1,
+      "GET /assets/barlow-latin-500-normal-XG5KS5C2.woff2": 1,
+      "GET /health": 3,
+      "GET /api/v1/databases": 2,
+      "GET /health/ready": 2,
+      "GET /api/v1/settings/available-models": 3,
+      "GET /api/v1/settings/rag": 1,
+      "GET /api/v1/settings/harness": 1,
+      "GET /api/v1/settings/database": 1,
+      "GET /api/v1/settings/llm": 6,
+      "PUT /api/v1/settings/llm": 4,
+      "POST /qa/mode/drift": 1,
+      "POST /qa/mode/legacy": 1,
+      "POST /qa/mode/volatile": 1,
+      "POST /qa/mode/bad_write": 1,
+      "POST /qa/mode/read_failure": 1,
+      "POST /qa/mode/normal": 1,
+      "POST /qa/mode/restore": 1,
+      "GET /qa/state": 1
+    },
+    "write_fields": [
+      [
+        "default_model",
+        "fallback_model",
+        "max_tokens",
+        "providers"
+      ],
+      [
+        "max_tokens",
+        "temperature"
+      ],
+      [
+        "default_model",
+        "fallback_model",
+        "max_tokens",
+        "providers"
+      ],
+      [
+        "default_model",
+        "fallback_model",
+        "max_tokens",
+        "providers"
+      ]
+    ],
+    "configuration": {
+      "status": "ok",
+      "configuration_source": "database",
+      "default_model": "deepseek-v4-flash",
+      "fallback_model": "",
+      "max_tokens": 29,
+      "providers": {
+        "openai": {
+          "enabled": true,
+          "models": [
+            "gpt-4.1",
+            "gpt-4.1-mini",
+            "gpt-4o"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "anthropic": {
+          "enabled": true,
+          "models": [
+            "claude-sonnet-4",
+            "claude-haiku-4.5"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "deepseek": {
+          "enabled": true,
+          "models": [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "google": {
+          "enabled": true,
+          "models": [
+            "gemini-2.0-flash",
+            "gemini-2.5-pro"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "qwen": {
+          "enabled": false,
+          "models": [
+            "qwen-max",
+            "qwen-plus"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        },
+        "groq": {
+          "enabled": false,
+          "models": [
+            "llama-3.1-70b",
+            "mixtral-8x7b"
+          ],
+          "api_key_configured": false,
+          "base_url": null
+        }
+      },
+      "runtime": {
+        "available": true,
+        "active_model": "deepseek-v4-flash",
+        "mock_mode": true,
+        "max_output_tokens": 29
+      },
+      "routing_policy": "primary_then_fallback",
+      "temperature_policy": "caller_supplied",
+      "editable_fields": [
+        "default_model",
+        "fallback_model",
+        "max_tokens",
+        "providers"
+      ],
+      "unsupported_fields": [
+        "routing_strategy",
+        "temperature"
+      ],
+      "legacy_ignored_fields": [
+        "routing_strategy",
+        "temperature"
+      ]
+    },
+    "encrypted_keys": {
+      "openai": false,
+      "anthropic": false,
+      "deepseek": false,
+      "google": false,
+      "qwen": false,
+      "groq": false
+    },
+    "plaintext_present": false
+  }
+}

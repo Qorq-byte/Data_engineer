@@ -62,9 +62,15 @@ class BudgetedRouter:
             is not LiteLLMRouter.complete_stream
         ):
             reserve_llm_call()
-        async for chunk in self._router.complete_stream(
+        stream = self._router.complete_stream(
             messages, model=model, temperature=temperature, **kwargs
-        ):
-            if not isinstance(chunk, str):
-                raise TypeError("Streaming model response chunks must be strings")
-            yield chunk
+        )
+        try:
+            async for chunk in stream:
+                if not isinstance(chunk, str):
+                    raise TypeError("Streaming model response chunks must be strings")
+                yield chunk
+        finally:
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()

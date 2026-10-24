@@ -1,0 +1,44 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_______________ test_length_sql_prefix_never_becomes_candidate ________________
+
+    async def test_length_sql_prefix_never_becomes_candidate():
+        generator = SQLGenerator(ScriptedRouter([completion("length")]))
+>       with pytest.raises(RuntimeError, match="output limit"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests\test_llm\test_completion_finish.py:39: Failed
+_____ test_stream_cannot_accept_length_or_missing_terminal_marker[length] _____
+
+end = 'length'
+
+    @pytest.mark.parametrize("end", ["length", None])
+    async def test_stream_cannot_accept_length_or_missing_terminal_marker(end):
+        items = [chunk("SELECT id FROM orders")]
+        if end:
+            items.append(chunk(reason=end))
+>       with pytest.raises(RuntimeError, match="output limit|completion marker"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests\test_llm\test_completion_finish.py:48: Failed
+______ test_stream_cannot_accept_length_or_missing_terminal_marker[None] ______
+
+end = None
+
+    @pytest.mark.parametrize("end", ["length", None])
+    async def test_stream_cannot_accept_length_or_missing_terminal_marker(end):
+        items = [chunk("SELECT id FROM orders")]
+        if end:
+            items.append(chunk(reason=end))
+>       with pytest.raises(RuntimeError, match="output limit|completion marker"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE RuntimeError
+
+tests\test_llm\test_completion_finish.py:48: Failed
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_completion_finish.py::test_length_sql_prefix_never_becomes_candidate
+FAILED tests/test_llm/test_completion_finish.py::test_stream_cannot_accept_length_or_missing_terminal_marker[length]
+FAILED tests/test_llm/test_completion_finish.py::test_stream_cannot_accept_length_or_missing_terminal_marker[None]
+3 failed in 4.30s

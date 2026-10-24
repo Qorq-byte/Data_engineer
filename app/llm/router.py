@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from app.llm.completion import IncompleteCompletionError, check_completion, response_field
+
 # ── LiteLLM integration (optional — graceful degradation) ────────────
 try:
     import litellm
@@ -79,6 +81,7 @@ class RouterConfig:
     max_concurrency: int = 4
     retry_backoff_seconds: float = 0.1
     cooldown_seconds: float = 5
+    max_output_tokens: int | None = None
 
 
 # ── Cost models ────────────────────────────────────────────────────────
@@ -377,8 +380,12 @@ class LiteLLMRouter:
         gen = await self._route_with_fallback(
             messages, model, temperature, 1, stream=True, **kwargs
         )
-        async for chunk in gen:
-            yield chunk
+        try:
+            async for chunk in gen:
+                yield chunk
+        finally:
+            if hasattr(gen, "aclose"):
+                await gen.aclose()
 
     def provider_healthy(self, provider_name: str) -> bool | None:
         """Check whether *provider_name* is currently considered healthy.
@@ -413,6 +420,8 @@ class LiteLLMRouter:
         Returns the first successful response or raises the last error.
         """
         from app.llm.budget import reserve_llm_call
+
+        kwargs = self._completion_options(kwargs)
 
         # Mock mode: skip provider resolution entirely
         if self.mock_mode:
@@ -481,6 +490,41 @@ class LiteLLMRouter:
 
         # All providers exhausted
         raise last_error or RuntimeError(f"All providers exhausted for model '{model}'")
+
+    def _completion_options(self, options: dict[str, Any]) -> dict[str, Any]:
+        """Bound supported output options before budgeting or transport.
+
+        This is an output request parameter, not a total query/cost budget.
+        Provider acceptance and actual output usage require live evaluation.
+        """
+        result = dict(options)
+        aliases = ("max_tokens", "max_completion_tokens")
+        cap = self.config.max_output_tokens
+        if cap is not None and (type(cap) is not int or not 1 <= cap <= 32768):
+            raise ValueError("Invalid configured output token limit")
+        extra = result.get("extra_body")
+        if isinstance(extra, dict) and any(key in extra for key in (*aliases, "max_new_tokens")):
+            raise ValueError("Output token overrides in extra_body are not supported")
+        if "max_new_tokens" in result:
+            raise ValueError("Use max_tokens or max_completion_tokens")
+        present = []
+        for key in aliases:
+            if result.get(key) is None:
+                result.pop(key, None)
+            else:
+                value = result[key]
+                if type(value) is not int or value <= 0:
+                    raise ValueError("Output token limit must be a positive integer")
+                present.append(key)
+        if len(present) > 1:
+            raise ValueError("Use only one output token limit parameter")
+        if cap is not None:
+            if present:
+                key = present[0]
+                result[key] = min(result[key], cap)
+            else:
+                result["max_tokens"] = cap
+        return result
 
     async def _wait_rate(self, provider_name: str, rpm: int) -> None:
         if rpm <= 0:
@@ -635,6 +679,7 @@ class LiteLLMRouter:
         if provider.base_url:
             call_kwargs["api_base"] = provider.base_url
         call_kwargs.update(kwargs)
+        call_kwargs = self._completion_options(call_kwargs)
         call_kwargs["num_retries"] = 0
 
         try:
@@ -683,10 +728,35 @@ class LiteLLMRouter:
 
     @staticmethod
     async def _stream_to_async_gen(response: Any) -> AsyncIterator[str]:
-        """Convert a litellm streaming response to an async generator of text chunks."""
-        async for chunk in response:
-            if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        """Yield provisional text, requiring a normal terminal marker before success."""
+        finished = False
+        try:
+            async for chunk in response:
+                choices = response_field(chunk, "choices")
+                if not choices:  # usage-only chunks are allowed, including after stop
+                    continue
+                choice = choices[0]
+                check_completion(choice)
+                content = response_field(response_field(choice, "delta"), "content")
+                reason = response_field(choice, "finish_reason")
+                if content is not None and not isinstance(content, str):
+                    raise IncompleteCompletionError("Model stream contained non-text output.")
+                if finished and (content or reason is not None):
+                    raise IncompleteCompletionError(
+                        "Model stream continued after its completion marker; SQL discarded."
+                    )
+                if content:
+                    yield content
+                if reason == "stop":
+                    finished = True
+            if not finished:
+                raise IncompleteCompletionError(
+                    "Model stream ended without a completion marker; SQL discarded."
+                )
+        finally:
+            if hasattr(response, "aclose"):
+                with contextlib.suppress(Exception):
+                    await response.aclose()
 
     async def _mock_call(
         self,

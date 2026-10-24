@@ -1,0 +1,42 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+_______________ test_length_prediction_cannot_score_as_correct ________________
+
+    def test_length_prediction_cannot_score_as_correct():
+        result = evaluate_sql(CASES, [{"id": "one", "sql": "SELECT 1", "finish_reason": "length"}])
+>       assert result["result_correct_rate"] == 0
+E       assert 1 == 0
+
+tests\test_rag\test_prediction_accounting.py:12: AssertionError
+______________ test_missing_prediction_has_no_execution_latency _______________
+
+    def test_missing_prediction_has_no_execution_latency():
+        result = evaluate_sql(CASES, [])
+>       assert result["details"][0]["execution_latency_ms"] is None
+E       assert 0.0010000003385357559 is None
+
+tests\test_rag\test_prediction_accounting.py:18: AssertionError
+_____________________ test_invalid_reported_cost_rejected _____________________
+
+    def test_invalid_reported_cost_rejected():
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_rag\test_prediction_accounting.py:22: Failed
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\jieba\_compat.py:18
+  D:\python\data_engineer\.venv\Lib\site-packages\jieba\_compat.py:18: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    import pkg_resources
+
+..\..\..\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146
+  D:\Users\anaconda\Lib\site-packages\pkg_resources\__init__.py:3146: DeprecationWarning: Deprecated call to `pkg_resources.declare_namespace('sphinxcontrib')`.
+  Implementing implicit namespace packages (as specified in PEP 420) is preferred to `pkg_resources.declare_namespace`. See https://setuptools.pypa.io/en/latest/references/keywords.html#keyword-namespace-packages
+    declare_namespace(pkg)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_prediction_accounting.py::test_length_prediction_cannot_score_as_correct
+FAILED tests/test_rag/test_prediction_accounting.py::test_missing_prediction_has_no_execution_latency
+FAILED tests/test_rag/test_prediction_accounting.py::test_invalid_reported_cost_rejected
+3 failed, 2 warnings in 1.99s

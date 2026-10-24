@@ -209,6 +209,10 @@ class MetricRAG:
     def embedding_dimension(self) -> int:
         return self._embedding.dimension
 
+    def set_fusion(self, fusion: RRFFusion) -> None:
+        """Publish a new immutable-per-search fusion reference, without touching indexes."""
+        self._rrf = fusion
+
     @property
     def rrf_alpha(self) -> float:
         return self._rrf.alpha
@@ -307,6 +311,7 @@ class MetricRAG:
         Returns:
             List of :class:`MetricSearchResult`, sorted by RRF score (best first).
         """
+        fusion = self._rrf  # Keep one configuration across embedding awaits.
         # 1. Generate query embedding
         query_vec = await self._embedding.embed_single(query)
 
@@ -347,7 +352,7 @@ class MetricRAG:
             sparse_results.append(unpacked)
 
         # 4. RRF fusion
-        fused = self._rrf.fuse(dense_results, sparse_results, top_k=top_k)
+        fused = fusion.fuse(dense_results, sparse_results, top_k=top_k)
 
         # 5. Convert to MetricSearchResult
         results = [_row_to_metric_result(r) for r in fused]

@@ -1,0 +1,90 @@
+{
+  "scenarios": [
+    "real persistent orphan and connected-source status; bulk maintenance collapsed",
+    "native confirm cancellation makes zero clear requests",
+    "one real targeted clear; source 3 rows and other namespaces preserved; no bulk POST",
+    "native SQLite DELETE denial: fixed failure feedback, recovery-failed row, one POST only",
+    "explicit clear retry succeeds; source still connected with 3 rows",
+    "real Schema refresh rebuild succeeds after scoped clear",
+    "injected embedding failure: HTTP200 rag_indexed=false is shown as incomplete, not success",
+    "injected read failure: unknown counts, explicit error, maintenance disabled, read retry enabled",
+    "375x812: no horizontal overflow, long ID wraps, controls within viewport, Tab reaches targeted clear",
+    "native FTS denial during disconnect: successful close and incomplete index cleanup shown separately",
+    "after disconnect, explicit orphan clear removes only retained Schema entries"
+  ],
+  "baseline": {
+    "counts": {
+      "GET /workspace": 8,
+      "GET /health": 12,
+      "GET /health/ready": 8,
+      "GET /api/v1/databases": 13,
+      "GET /api/v1/settings/available-models": 12,
+      "GET /api/v1/settings/llm": 4,
+      "GET /api/v1/settings/harness": 4,
+      "GET /api/v1/settings/database": 4,
+      "GET /api/v1/settings/rag": 4,
+      "GET /api/v1/learning/rag/stats": 4,
+      "GET /api/v1/learning/rag/status": 4,
+      "GET /qa/state": 4,
+      "POST /api/v1/databases/connect": 3,
+      "DELETE /api/v1/databases/sqlite_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name__20261022195702": 1,
+      "DELETE /api/v1/databases/sqlite_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name__20261022195952": 1
+    },
+    "source_rows": 3,
+    "schema_owners": [
+      "live-fixture",
+      "orphan-fixture"
+    ],
+    "documents": {
+      "lancedb_count": 1,
+      "bm25_count": 1
+    },
+    "metrics": {
+      "lancedb_count": 10,
+      "bm25_count": 10
+    }
+  },
+  "longId": "sqlite_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name__20261022200256",
+  "final": {
+    "counts": {
+      "GET /workspace": 8,
+      "GET /health": 13,
+      "GET /health/ready": 8,
+      "GET /api/v1/databases": 25,
+      "GET /api/v1/settings/available-models": 13,
+      "GET /api/v1/settings/llm": 5,
+      "GET /api/v1/settings/harness": 5,
+      "GET /api/v1/settings/database": 5,
+      "GET /api/v1/settings/rag": 5,
+      "GET /api/v1/learning/rag/stats": 14,
+      "GET /api/v1/learning/rag/status": 14,
+      "GET /qa/state": 9,
+      "POST /api/v1/databases/connect": 3,
+      "DELETE /api/v1/databases/sqlite_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name__20261022195702": 1,
+      "DELETE /api/v1/databases/sqlite_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name_long_database_name__20261022195952": 1,
+      "POST /api/v1/learning/rag/schema/orphan-fixture/clear": 1,
+      "POST /qa/mode/delete_denial": 2,
+      "POST /api/v1/learning/rag/schema/live-fixture/clear": 3,
+      "POST /qa/mode/none": 3,
+      "POST /api/v1/schema/live-fixture/refresh": 3,
+      "POST /qa/mode/embedding_failure": 1,
+      "POST /qa/mode/read_failure": 1,
+      "DELETE /api/v1/databases/live-fixture": 1
+    },
+    "source_rows": null,
+    "schema_owners": [],
+    "documents": {
+      "lancedb_count": 1,
+      "bm25_count": 1
+    },
+    "metrics": {
+      "lancedb_count": 10,
+      "bm25_count": 10
+    }
+  },
+  "mobile": {
+    "viewport": 375,
+    "documentWidth": 375,
+    "bodyWidth": 375
+  }
+}

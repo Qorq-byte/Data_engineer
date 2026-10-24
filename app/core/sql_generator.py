@@ -18,6 +18,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from app.core.prompt_builder import PromptBuilder
+from app.llm.completion import IncompleteCompletionError, check_completion
 from app.llm.protocols import CompletionRouter
 from app.models.domain import DomainConfig
 from app.models.query import SQR, QueryPair, SQLCandidate
@@ -71,6 +72,7 @@ class SQLGenerator:
         error_context: str | None = None,
         multi_table_hint: dict[str, Any] | None = None,
         database_name: str = "",
+        warnings: list[str] | None = None,
     ) -> list[SQLCandidate]:
         """Generate one or more SQL candidates.
 
@@ -89,6 +91,7 @@ class SQLGenerator:
             error_context: Optional error info for L4 self-heal retries.
             multi_table_hint: Optional schema-linking hint listing tables
                               that independently contain matching columns.
+            warnings: Optional request-local list receiving discarded completion diagnostics.
 
         Returns:
             A list of ``SQLCandidate`` instances, ordered by confidence
@@ -98,12 +101,12 @@ class SQLGenerator:
             return await self._multi_perspective(
                 sqr, schema, domain, history, similar_pairs,
                 num_candidates, model, dialect, rag_context,
-                error_context, multi_table_hint, database_name,
+                error_context, multi_table_hint, database_name, warnings,
             )
         return await self._temperature_sampling(
             sqr, schema, domain, history, similar_pairs,
             num_candidates, model, dialect, rag_context,
-            error_context, multi_table_hint, database_name,
+            error_context, multi_table_hint, database_name, warnings,
         )
 
     async def generate_stream(
@@ -122,8 +125,8 @@ class SQLGenerator:
     ) -> AsyncIterator[str]:
         """Stream SQL generation token-by-token.
 
-        Yields text chunks as the LLM generates them.  The caller is
-        responsible for reassembling the full SQL.
+        Yields provisional text chunks. The caller must consume the stream
+        successfully before interpreting the accumulated text as a SQL candidate.
         """
         prompt = self.prompt_builder.build(
             sqr, schema=schema, domain=domain,
@@ -133,12 +136,18 @@ class SQLGenerator:
             multi_table_hint=multi_table_hint,
             database_name=database_name,
         )
-        async for chunk in self.router.complete_stream(
+        stream = self.router.complete_stream(
             messages=[{"role": "user", "content": prompt}],
             model=model,
             temperature=0.3,
-        ):
-            yield chunk
+        )
+        try:
+            async for chunk in stream:
+                yield chunk
+        finally:
+            close = getattr(stream, "aclose", None)
+            if close is not None:
+                await close()
 
     # ------------------------------------------------------------------
     # Strategies
@@ -158,6 +167,7 @@ class SQLGenerator:
         error_context: str | None = None,
         multi_table_hint: dict[str, Any] | None = None,
         database_name: str = "",
+        warnings: list[str] | None = None,
     ) -> list[SQLCandidate]:
         """Strategy A: single call with variable temperature or n > 1.
 
@@ -196,13 +206,20 @@ class SQLGenerator:
         candidates: list[SQLCandidate] = []
         actual_model = model or self.router.config.default_model
         idx = 0
+        rejected: list[IncompleteCompletionError] = []
         for resp in responses_raw:
             if isinstance(resp, Exception):
+                if isinstance(resp, IncompleteCompletionError):
+                    rejected.append(resp)
                 continue
 
             if isinstance(resp, asyncio.CancelledError):
                 raise resp
-            content = _completion_text(resp)
+            try:
+                content = _completion_text(resp)
+            except IncompleteCompletionError as exc:
+                rejected.append(exc)
+                continue
             if content is None:
                 continue
             if isinstance(resp, dict) and isinstance(resp.get("model"), str):
@@ -247,7 +264,11 @@ class SQLGenerator:
             idx += 1
 
         if not candidates or not any(c.sql_text.strip() for c in candidates):
+            if rejected:
+                raise rejected[0]
             raise RuntimeError("All SQL generation attempts failed or returned empty output")
+        if warnings is not None:
+            warnings.extend(f"Discarded incomplete SQL response: {error}" for error in rejected)
         return [c for c in candidates if c.sql_text.strip()]
 
     async def _multi_perspective(
@@ -264,6 +285,7 @@ class SQLGenerator:
         error_context: str | None = None,
         multi_table_hint: dict[str, Any] | None = None,
         database_name: str = "",
+        warnings: list[str] | None = None,
     ) -> list[SQLCandidate]:
         """Strategy B: N independent calls with distinct perspectives."""
         base_prompt = self.prompt_builder.build(
@@ -292,13 +314,20 @@ class SQLGenerator:
         total_latency = (time.perf_counter() - t0) * 1000
 
         candidates: list[SQLCandidate] = []
+        rejected: list[IncompleteCompletionError] = []
         for i, resp in enumerate(responses):
             if isinstance(resp, Exception):
+                if isinstance(resp, IncompleteCompletionError):
+                    rejected.append(resp)
                 continue
 
             if isinstance(resp, asyncio.CancelledError):
                 raise resp
-            content = _completion_text(resp)
+            try:
+                content = _completion_text(resp)
+            except IncompleteCompletionError as exc:
+                rejected.append(exc)
+                continue
             if content is None:
                 continue
 
@@ -337,7 +366,11 @@ class SQLGenerator:
                 )
 
         if not candidates or not any(c.sql_text.strip() for c in candidates):
+            if rejected:
+                raise rejected[0]
             raise RuntimeError("All SQL generation attempts failed or returned empty output")
+        if warnings is not None:
+            warnings.extend(f"Discarded incomplete SQL response: {error}" for error in rejected)
         return [c for c in candidates if c.sql_text.strip()]
 
 
@@ -353,6 +386,7 @@ def _completion_text(response: object) -> str | None:
     if not isinstance(choices, list) or not choices:
         return None
     first = choices[0]
+    check_completion(first)
     message = first.get("message") if isinstance(first, dict) else getattr(first, "message", None)
     content = (
         message.get("content") if isinstance(message, dict) else getattr(message, "content", None)

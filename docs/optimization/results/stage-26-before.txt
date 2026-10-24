@@ -1,0 +1,47 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+____________________ test_saved_output_cap_reaches_router _____________________
+
+    def test_saved_output_cap_reaches_router():
+        router = build_router_from_settings({"max_tokens": 27, "providers": {}})
+>       assert getattr(router.config, "max_output_tokens", None) == 27
+E       AssertionError: assert None == 27
+E        +  where None = getattr(RouterConfig(providers={}, default_model='mock', fallback_chain=[], max_retries=1, timeout_seconds=30.0, max_concurrency=4, retry_backoff_seconds=0.1, cooldown_seconds=5.0), 'max_output_tokens', None)
+E        +    where RouterConfig(providers={}, default_model='mock', fallback_chain=[], max_retries=1, timeout_seconds=30.0, max_concurrency=4, retry_backoff_seconds=0.1, cooldown_seconds=5.0) = <app.llm.router.LiteLLMRouter object at 0x00000274A3391E80>.config
+
+tests\test_llm\test_token_policy.py:12: AssertionError
+______________ test_unsupported_policy_writes_rejected[payload0] ______________
+
+payload = {'temperature': 0.8}
+
+    @pytest.mark.parametrize("payload", [{"temperature": 0.8}, {"routing_strategy": "cost_first"}])
+    def test_unsupported_policy_writes_rejected(payload):
+        response = authenticated_client(create_app()).put("/api/v1/settings/llm", json=payload)
+>       assert response.status_code == 422
+E       assert 200 == 422
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_llm\test_token_policy.py:18: AssertionError
+______________ test_unsupported_policy_writes_rejected[payload1] ______________
+
+payload = {'routing_strategy': 'cost_first'}
+
+    @pytest.mark.parametrize("payload", [{"temperature": 0.8}, {"routing_strategy": "cost_first"}])
+    def test_unsupported_policy_writes_rejected(payload):
+        response = authenticated_client(create_app()).put("/api/v1/settings/llm", json=payload)
+>       assert response.status_code == 422
+E       assert 200 == 422
+E        +  where 200 = <Response [200 OK]>.status_code
+
+tests\test_llm\test_token_policy.py:18: AssertionError
+============================== warnings summary ===============================
+..\.venv\Lib\site-packages\starlette\testclient.py:53
+  D:\python\data_engineer\.venv\Lib\site-packages\starlette\testclient.py:53: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    _PortalFactoryType = Callable[[], AbstractContextManager[anyio.abc.BlockingPortal]]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_token_policy.py::test_saved_output_cap_reaches_router
+FAILED tests/test_llm/test_token_policy.py::test_unsupported_policy_writes_rejected[payload0]
+FAILED tests/test_llm/test_token_policy.py::test_unsupported_policy_writes_rejected[payload1]
+3 failed, 1 warning in 6.86s

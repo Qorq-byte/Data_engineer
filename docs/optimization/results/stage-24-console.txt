@@ -1,0 +1,8 @@
+--- BEGIN UNTRUSTED EXTERNAL CONTENT (source: http://127.0.0.1:8024/workspace) ---
+[2026-10-23T08:11:59.825Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-23T08:11:59.826Z] [error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[2026-10-23T08:11:59.826Z] [error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[2026-10-23T08:11:59.970Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-23T08:12:26.159Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-23T08:12:53.353Z] [error] Failed to load resource: the server responded with a status of 409 (Conflict)
+--- END UNTRUSTED EXTERNAL CONTENT ---

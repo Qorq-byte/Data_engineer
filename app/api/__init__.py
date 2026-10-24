@@ -151,23 +151,11 @@ def create_app() -> FastAPI:
 
     from pathlib import Path
 
-    _frontend = Path(__file__).parent.parent.parent / "frontend_design"
     _data = Path(__file__).parent.parent.parent / "data"
 
-    # Landing page → /
-    @app.get("/", include_in_schema=False)
-    async def landing_page():
-        return FileResponse(str(_frontend / "landing_page.html"))
+    from app.api.frontend import register_frontend
 
-    # Login / Register → /login
-    @app.get("/login", include_in_schema=False)
-    async def login_page():
-        return FileResponse(str(_frontend / "form.html"))
-
-    # Workspace → /workspace
-    @app.get("/workspace", include_in_schema=False)
-    async def workspace_page():
-        return FileResponse(str(_frontend / "workspace.html"))
+    register_frontend(app)
 
     # Avatar static files → /avatars/{filename}
     @app.get("/avatars/{filename}", include_in_schema=False)

@@ -20,6 +20,8 @@ jobs:
       - run: python -m pip install -e '.[dev]'
       - run: npm ci --ignore-scripts
       - run: npm run check:frontend
+      - run: npm run check:frontend:build
       - run: ruff check .
-      - run: mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py
+      - run: mypy scripts/evaluate_quality.py
+      - run: mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py
       - run: pytest

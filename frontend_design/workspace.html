@@ -187,12 +187,6 @@ body { font-family: 'Barlow', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
 <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
 <script>
 window.Motion = window.FramerMotion;
-var _origError = console.error;
-console.error = function() {
-  var m = arguments[0];
-  if (typeof m === 'string' && /Warning:/.test(m)) return;
-  _origError.apply(console, arguments);
-};
 </script>
 
 <script type="text/babel">
@@ -366,7 +360,7 @@ const api = {
   // ── Schema / Databases ──
   databases() { return api._fetch('/api/v1/databases'); },
   schema(dbId) { return api._fetch(`/api/v1/schema/${dbId}`); },
-  schemaRefresh(dbId) { return api._fetch(`/api/v1/schema/${dbId}/refresh`, { method: 'POST' }); },
+  schemaRefresh(dbId) { return api._fetch(`/api/v1/schema/${encodeURIComponent(dbId)}/refresh`, { method: 'POST' }); },
   schemaSearch(dbId, q) { return api._fetch(`/api/v1/schema/${dbId}/search?q=${encodeURIComponent(q)}`); },
   connectDb(body) {
     return api._fetch('/api/v1/databases/connect', {
@@ -518,7 +512,7 @@ const api = {
   },
 
   // ── RAG Settings ──
-  ragSettings() { return api._fetch('/api/v1/settings/rag').catch(() => ({})); },
+  ragSettings() { return api._fetch('/api/v1/settings/rag'); },
   updateRagSettings(body) {
     return api._fetch('/api/v1/settings/rag', {
       method: 'PUT', headers: api._headers(true),
@@ -3512,12 +3506,132 @@ const LearningPanel = () => {
    ════════════════════════════════════════════════════════════════════════════ */
 const BUILTIN_PROVIDERS = ["openai", "anthropic", "deepseek", "google"];
 
+const schemaIndexRows = (status, connections) => {
+  if (!status?.schema_index || !Array.isArray(connections)) return [];
+  const required = new Set(status.schema_index.refresh_required_databases || []);
+  const failed = new Set(status.schema_index.recovery_failed_databases || []);
+  const connected = new Map(connections.map(db => [db.db_id, db]));
+  return [...new Set([...connected.keys(), ...required, ...failed])].sort().map(dbId => ({
+    dbId, name: String(connected.get(dbId)?.alias || connected.get(dbId)?.database_name || dbId),
+    connected: connected.has(dbId),
+    state: failed.has(dbId) ? 'recovery_failed' : required.has(dbId) ? 'refresh_required' : 'unrestricted',
+  }));
+};
+
+const llmConfigurationSnapshot = (value, status = 'ok') => {
+  if (!value || value.status !== status || !['database', 'memory'].includes(value.configuration_source)
+      || typeof value.default_model !== 'string' || typeof value.fallback_model !== 'string'
+      || value.routing_policy !== 'primary_then_fallback' || value.temperature_policy !== 'caller_supplied'
+      || !Array.isArray(value.unsupported_fields) || !['routing_strategy', 'temperature'].every(key => value.unsupported_fields.includes(key))
+      || !Number.isInteger(value.max_tokens) || value.max_tokens <= 0 || value.max_tokens > 32768
+      || !value.providers || Array.isArray(value.providers) || typeof value.providers !== 'object'
+      || typeof value.runtime?.available !== 'boolean') return null;
+  if (value.runtime.available ? typeof value.runtime.active_model !== 'string' || !value.runtime.active_model || typeof value.runtime.mock_mode !== 'boolean'
+      : value.runtime.active_model !== null || value.runtime.mock_mode !== null) return null;
+  const cap = value.runtime.max_output_tokens;
+  if (cap !== null && (!Number.isInteger(cap) || cap < 1 || cap > 32768)) return null;
+  if (!value.runtime.available && cap !== null) return null;
+  const providers = {};
+  for (const [name, cfg] of Object.entries(value.providers)) {
+    if (!cfg || typeof cfg.enabled !== 'boolean' || typeof cfg.api_key_configured !== 'boolean'
+        || !Array.isArray(cfg.models) || !cfg.models.every(model => typeof model === 'string')
+        || (cfg.base_url !== null && typeof cfg.base_url !== 'string')) return null;
+    providers[name] = { enabled: cfg.enabled, api_key_configured: cfg.api_key_configured, models: [...cfg.models], base_url: cfg.base_url };
+  }
+  return { status: value.status, configuration_source: value.configuration_source,
+    default_model: value.default_model, fallback_model: value.fallback_model,
+    routing_policy: value.routing_policy, temperature_policy: value.temperature_policy, unsupported_fields: [...value.unsupported_fields],
+    max_tokens: value.max_tokens, configured_max_tokens: value.max_tokens,
+    runtime: { available: value.runtime.available, active_model: value.runtime.active_model, mock_mode: value.runtime.mock_mode, max_output_tokens: cap }, providers };
+};
+
+const databaseCapabilitiesSnapshot = (value) => {
+  const types = ['sqlite', 'duckdb', 'postgresql', 'mysql', 'snowflake', 'starrocks', 'bigquery', 'redshift', 'clickhouse', 'databricks', 'trino'];
+  if (!value || value.status !== 'ok' || value.mode !== 'read_only'
+      || !Array.isArray(value.editable_fields) || value.editable_fields.length
+      || value.legacy_stored_settings_applied !== false
+      || value.connection_pool_size !== null || value.connection_timeout_s !== null
+      || typeof value.scope !== 'string' || !value.scope.trim()
+      || typeof value.configuration_source !== 'string' || !value.configuration_source.trim()
+      || !Array.isArray(value.connectors) || value.connectors.length !== types.length
+      || new Set(value.connectors.map(row => row?.type)).size !== types.length) return null;
+  for (const row of value.connectors) {
+    if (!row || !types.includes(row.type) || typeof row.implemented !== 'boolean'
+        || !Number.isInteger(row.registered_connections) || row.registered_connections < 0) return null;
+    if (row.implemented) {
+      if (typeof row.driver_module !== 'string' || !row.driver_module.trim()
+          || !['native_single_connection', 'async_single_connection', 'pool_acquired_connection'].includes(row.management)
+          || ![true, false, null].includes(row.module_discoverable)) return null;
+    } else if (row.management !== 'not_implemented' || row.driver_module !== null || row.module_discoverable !== null) return null;
+  }
+  return value;
+};
+
+const harnessPolicySnapshot = (value) => {
+  const text = v => typeof v === 'string' && v.trim().length > 0;
+  if (!value || value.status !== 'ok' || value.mode !== 'read_only'
+      || !Array.isArray(value.editable_fields) || value.editable_fields.length !== 0
+      || value.legacy_stored_settings_applied !== false
+      || !['scope', 'candidate_policy', 'direct_sql_scope', 'snapshot_scope'].every(key => text(value[key]))) return null;
+  const flow = value.workflow;
+  if (!flow || flow.plan_id !== 'request_query' || flow.controller !== 'WorkflowRunner'
+      || !text(flow.source) || !Number.isInteger(flow.max_iterations) || flow.max_iterations < 0
+      || !Array.isArray(flow.node_order) || flow.node_order.length === 0
+      || !flow.node_order.every(node => text(node?.id) && text(node?.node))
+      || new Set(flow.node_order.map(node => node.id)).size !== flow.node_order.length) return null;
+  if (value.limits?.read_only?.value !== true || !text(value.limits.read_only.source)) return null;
+  for (const key of ['max_llm_calls', 'max_retries', 'max_result_rows', 'statement_timeout_ms', 'query_timeout_s', 'session_ttl_s']) {
+    const entry = value.limits[key];
+    const minimum = ['max_llm_calls', 'max_retries'].includes(key) ? 0 : Number.MIN_VALUE;
+    if (!entry || !Number.isFinite(entry.value) || entry.value < minimum || !text(entry.source)
+        || (key !== 'query_timeout_s' && !Number.isInteger(entry.value))) return null;
+  }
+  return value;
+};
+
+const ragConfigurationSnapshot = (value, status = 'ok') => {
+  const validWeights = weights => weights && ['bm25_weight', 'vector_weight'].every(key =>
+    typeof weights[key] === 'number' && Number.isFinite(weights[key]) && weights[key] >= 0 && weights[key] <= 1)
+    && Math.abs(weights.bm25_weight + weights.vector_weight - 1) < 1e-9;
+  if (!value || value.status !== status || !validWeights(value)
+      || !['database', 'memory', 'default'].includes(value.configuration_source)
+      || typeof value.configuration_valid !== 'boolean' || typeof value.runtime?.available !== 'boolean'
+      || typeof value.runtime?.matches_configured !== 'boolean') return null;
+  if (value.runtime.available) {
+    const groups = ['schema', 'metrics', 'documents'];
+    if (!groups.every(key => validWeights(value.runtime.weights?.[key]))
+        || typeof value.runtime.embedding?.provider !== 'string' || !value.runtime.embedding.provider
+        || typeof value.runtime.embedding?.model !== 'string' || !value.runtime.embedding.model
+        || !Number.isInteger(value.runtime.embedding?.dimension) || value.runtime.embedding.dimension <= 0) return null;
+    const matches = value.configuration_valid && groups.every(key =>
+      Math.abs(value.runtime.weights[key].vector_weight - value.vector_weight) < 1e-9);
+    if (matches !== value.runtime.matches_configured) return null;
+  } else if (value.runtime.weights !== null || value.runtime.embedding !== null || value.runtime.matches_configured) return null;
+  return { ...value, configured_weights: { bm25_weight: value.bm25_weight, vector_weight: value.vector_weight } };
+};
+
 const SettingsPanel = ({ userName, onLogout }) => {
   const [health, setHealth] = useState(null);
   const [llmSettings, setLlmSettings] = useState(null);
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmError, setLlmError] = useState(null);
+  const [llmBusy, setLlmBusy] = useState(false);
+  const llmBusyRef = useRef(false);
+  const llmReadSeq = useRef(0);
   const [harnessSettings, setHarnessSettings] = useState(null);
+  const [harnessLoading, setHarnessLoading] = useState(false);
+  const [harnessError, setHarnessError] = useState(null);
+  const harnessReadSeq = useRef(0);
   const [databaseSettings, setDatabaseSettings] = useState(null);
+  const [databaseLoading, setDatabaseLoading] = useState(false);
+  const [databaseError, setDatabaseError] = useState(null);
+  const databaseReadSeq = useRef(0);
   const [ragSettings, setRagSettings] = useState(null);
+  const [ragConfigLoading, setRagConfigLoading] = useState(false);
+  const [ragConfigError, setRagConfigError] = useState(null);
+  const [ragConfigMsg, setRagConfigMsg] = useState(null);
+  const ragConfigReadSeq = useRef(0);
+  const ragConfigBusyRef = useRef(false);
   const [availableModels, setAvailableModels] = useState([]);
   const [activeTab, setActiveTab] = useState("llm");
   const [loading, setLoading] = useState(true);
@@ -3526,9 +3640,19 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [showNewProvider, setShowNewProvider] = useState(false);
   const [newProvider, setNewProvider] = useState({ name: "", api_key: "", models: "", base_url: "" });
   const [providerKeys, setProviderKeys] = useState({}); // provider -> new API key input (never loaded from server)
-  const [togglingProvider, setTogglingProvider] = useState({});
+
   // RAG management state
   const [ragStats, setRagStats] = useState(null);
+  const [ragStatus, setRagStatus] = useState(null);
+  const [ragConnections, setRagConnections] = useState(null);
+  const [ragLoading, setRagLoading] = useState(false);
+  const [ragLoadError, setRagLoadError] = useState(null);
+  const [ragBusy, setRagBusy] = useState(false);
+  const [ragAction, setRagAction] = useState(null);
+  const ragBusyRef = useRef(false);
+  const ragReadSeq = useRef(0);
+  const ragMaintenanceDisabled = ragBusy || ragLoading || !!ragLoadError || !ragStatus || !ragConnections;
+  const ragRows = schemaIndexRows(ragStatus, ragConnections);
   const [rebuilding, setRebuilding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [ragMsg, setRagMsg] = useState(null);
@@ -3538,179 +3662,255 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const [uploadContent, setUploadContent] = useState("");
   const [uploadMsg, setUploadMsg] = useState(null);
 
+  const fetchRagConfig = useCallback(async () => {
+    if (ragConfigBusyRef.current) return;
+    const seq = ++ragConfigReadSeq.current;
+    setRagConfigLoading(true);
+    setRagConfigError(null);
+    setRagConfigMsg(null);
+    try {
+      const snapshot = ragConfigurationSnapshot(await api.ragSettings());
+      if (seq !== ragConfigReadSeq.current) return;
+      if (!snapshot) throw new Error('RAG 配置响应不完整');
+      setRagSettings(snapshot);
+    } catch (error) {
+      if (seq !== ragConfigReadSeq.current) return;
+      setRagSettings(null);
+      setRagConfigError('无法读取 RAG 配置，当前值未知。请重试读取；不会自动重试保存。');
+    } finally {
+      if (seq === ragConfigReadSeq.current) setRagConfigLoading(false);
+    }
+  }, []);
+
+  const fetchLlmConfiguration = useCallback(async () => {
+    if (llmBusyRef.current) return;
+    const seq = ++llmReadSeq.current;
+    setLlmLoading(true);
+    setLlmError(null);
+    setSaveMsg(null);
+    try {
+      const snapshot = llmConfigurationSnapshot(await api._fetch('/api/v1/settings/llm'));
+      if (seq !== llmReadSeq.current) return;
+      if (!snapshot) throw new Error('Invalid LLM settings response');
+      setLlmSettings(snapshot);
+    } catch (error) {
+      if (seq !== llmReadSeq.current) return;
+      setLlmSettings(null);
+      setLlmError('LLM 配置读取失败，当前状态未知。请重新读取；不会自动重试写入。');
+    } finally {
+      if (seq === llmReadSeq.current) setLlmLoading(false);
+    }
+  }, []);
+
+  const fetchDatabaseCapabilities = useCallback(async () => {
+    const seq = ++databaseReadSeq.current;
+    setDatabaseLoading(true);
+    setDatabaseError(null);
+    try {
+      const snapshot = databaseCapabilitiesSnapshot(await api._fetch('/api/v1/settings/database'));
+      if (seq !== databaseReadSeq.current) return;
+      if (!snapshot) throw new Error('数据库连接能力响应不完整');
+      setDatabaseSettings(snapshot);
+    } catch (error) {
+      if (seq !== databaseReadSeq.current) return;
+      setDatabaseSettings(null);
+      setDatabaseError('无法读取数据库连接能力，当前状态未知。请重新读取。');
+    } finally {
+      if (seq === databaseReadSeq.current) setDatabaseLoading(false);
+    }
+  }, []);
+
+  const fetchHarnessPolicy = useCallback(async () => {
+    const seq = ++harnessReadSeq.current;
+    setHarnessLoading(true);
+    setHarnessError(null);
+    try {
+      const snapshot = harnessPolicySnapshot(await api._fetch('/api/v1/settings/harness'));
+      if (seq !== harnessReadSeq.current) return;
+      if (!snapshot) throw new Error('Harness 约束响应不完整');
+      setHarnessSettings(snapshot);
+    } catch (error) {
+      if (seq !== harnessReadSeq.current) return;
+      setHarnessSettings(null);
+      setHarnessError('无法读取实际 Harness 约束，当前状态未知。请检查配置后重新读取。');
+    } finally {
+      if (seq === harnessReadSeq.current) setHarnessLoading(false);
+    }
+  }, []);
+
   const fetchSettings = useCallback(() => {
     setLoading(true);
     Promise.all([
       api.health(),
-      api._fetch('/api/v1/settings/llm').catch(() => null),
-      api._fetch('/api/v1/settings/harness').catch(() => null),
-      api._fetch('/api/v1/settings/database').catch(() => null),
       api._fetch('/api/v1/settings/available-models').catch(() => null),
-      api.ragSettings().catch(() => null),
-    ]).then(([h, llm, harness, db, models, rag]) => {
+      fetchRagConfig(),
+      fetchHarnessPolicy(),
+      fetchDatabaseCapabilities(),
+      fetchLlmConfiguration(),
+    ]).then(([h, models]) => {
       setHealth(h);
-      setLlmSettings(llm);
-      setHarnessSettings(harness);
-      setDatabaseSettings(db);
-      setRagSettings(rag);
       if (models && models.models) setAvailableModels(models.models);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, []);
+  }, [fetchRagConfig, fetchHarnessPolicy, fetchDatabaseCapabilities, fetchLlmConfiguration]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
-  const handleSaveLLM = async () => {
-    setSaving(s => ({ ...s, llm: true }));
+  const commitLlmChange = async (payload, providerName = null) => {
+    if (llmBusyRef.current || llmLoading || llmError || !llmSettings) return false;
+    llmBusyRef.current = true;
+    ++llmReadSeq.current;
+    setLlmLoading(false);
+    setLlmBusy(true);
+    setSaveMsg(null);
     try {
-      // Send newly-entered API keys (backend keeps existing keys when empty)
-      const providers = {};
-      Object.keys(providerKeys).forEach(name => {
-        const k = (providerKeys[name] || "").trim();
-        if (k) providers[name] = { api_key: k };
-      });
-      // Preserve base_url edits for custom providers
-      Object.keys(llmSettings?.providers || {}).forEach(name => {
-        if (BUILTIN_PROVIDERS.includes(name)) return;
-        const cfg = llmSettings.providers[name];
-        providers[name] = { ...(providers[name] || {}), base_url: (cfg.base_url || "").trim() };
-      });
-      const payload = {
-        default_model: llmSettings?.default_model,
-        fallback_model: llmSettings?.fallback_model,
-        routing_strategy: llmSettings?.routing_strategy,
-        temperature: llmSettings?.temperature,
-        max_tokens: llmSettings?.max_tokens,
-      };
-      if (Object.keys(providers).length > 0) payload.providers = providers;
-      const resp = await api._fetch('/api/v1/settings/llm', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify(payload),
-      });
+      const response = providerName === null
+        ? await api._fetch('/api/v1/settings/llm', { method: 'PUT', headers: api._headers(true), body: JSON.stringify(payload) })
+        : await api.deleteProvider(providerName);
+      const snapshot = llmConfigurationSnapshot(response, providerName === null ? 'updated' : 'deleted');
+      if (!snapshot || !['persisted', 'memory_only'].includes(response.persistence) || response.runtime_applied !== true
+          || !snapshot.runtime.available || response.active_model !== snapshot.runtime.active_model
+          || response.mock_mode !== snapshot.runtime.mock_mode || snapshot.runtime.max_output_tokens !== snapshot.max_tokens
+          || (providerName !== null && (response.provider !== providerName || snapshot.providers[providerName]))) throw new Error('Unconfirmed LLM result');
+      if (payload && ['default_model', 'fallback_model', 'max_tokens'].some(key =>
+          payload[key] !== undefined && snapshot[key] !== payload[key])) throw new Error('Mismatched LLM configuration');
+      for (const [name, update] of Object.entries(payload?.providers || {})) {
+        const cfg = snapshot.providers[name];
+        if (!cfg || (update.enabled !== undefined && cfg.enabled !== update.enabled)
+            || (update.models !== undefined && JSON.stringify(cfg.models) !== JSON.stringify(update.models))
+            || (update.base_url !== undefined && update.base_url !== null && cfg.base_url !== (update.base_url.trim() || null))
+            || (update.api_key?.trim() && !cfg.api_key_configured)) throw new Error('Unconfirmed provider change');
+      }
+      setLlmSettings(snapshot);
+      setAvailableModels(Object.entries(snapshot.providers).flatMap(([provider, cfg]) => cfg.enabled
+        ? cfg.models.map(model => ({ model, provider })) : []));
+      setSaveMsg({ type: response.persistence === 'persisted' ? 'ok' : 'warn', text:
+        `${response.persistence === 'persisted' ? 'LLM 配置已持久化并应用' : 'LLM 配置仅在当前进程生效，重启不保留'} · 当前模型: ${response.active_model}${response.mock_mode ? '（mock 模式）' : ''}` });
+      return true;
+    } catch (error) {
+      setLlmSettings(null);
+      setLlmError('写入结果未确认，当前配置状态未知。请先重新读取，再决定是否保存；不会自动重试。');
+      setSaveMsg({ type: 'err', text: 'LLM 操作未确认，请重新读取配置。' });
+      return false;
+    } finally {
       setProviderKeys({});
-      setSaveMsg({ type: "ok", text: `LLM 配置已保存 · 当前模型: ${resp.active_model || llmSettings?.default_model}${resp.mock_mode ? "（mock 模式）" : ""}` });
-      setTimeout(() => setSaveMsg(null), 3000);
-      fetchSettings();
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `保存失败: ${e.message}` });
-    } finally { setSaving(s => ({ ...s, llm: false })); }
+      setNewProvider({ name: '', api_key: '', models: '', base_url: '' });
+      llmBusyRef.current = false;
+      setLlmBusy(false);
+    }
+  };
+
+  const handleSaveLLM = async () => {
+    if (!llmSettings) return;
+    if (!Number.isInteger(llmSettings.max_tokens) || llmSettings.max_tokens < 1 || llmSettings.max_tokens > 32768) { setSaveMsg({ type: 'err', text: '输出上限必须是 1–32768 的整数。' }); return; }
+    const providers = {};
+    for (const [name, key] of Object.entries(providerKeys)) {
+      if (key.trim()) providers[name] = { api_key: key.trim() };
+    }
+    for (const [name, cfg] of Object.entries(llmSettings.providers)) {
+      if (!BUILTIN_PROVIDERS.includes(name)) providers[name] = { ...providers[name], base_url: (cfg.base_url || '').trim() };
+    }
+    await commitLlmChange({ default_model: llmSettings.default_model, fallback_model: llmSettings.fallback_model,
+      max_tokens: llmSettings.max_tokens, providers });
   };
 
   const handleProviderToggle = async (providerName) => {
-    setTogglingProvider(p => ({ ...p, [providerName]: true }));
-    const providers = { ...llmSettings?.providers };
-    if (providers[providerName]) {
-      providers[providerName] = { ...providers[providerName], enabled: !providers[providerName].enabled };
-    }
-    try {
-      await api._fetch('/api/v1/settings/llm', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify({ providers }),
-      });
-      setLlmSettings(s => s ? { ...s, providers } : s);
-      setSaveMsg({ type: "ok", text: `${providerName} 已${providers[providerName]?.enabled ? '启用' : '禁用'}` });
-      setTimeout(() => setSaveMsg(null), 2000);
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `切换失败: ${e.message}` });
-    } finally { setTogglingProvider(p => ({ ...p, [providerName]: false })); }
+    const cfg = llmSettings?.providers[providerName];
+    if (cfg) await commitLlmChange({ providers: { [providerName]: { enabled: !cfg.enabled } } });
   };
 
   const handleAddProvider = async () => {
-    if (!newProvider.name.trim()) { setSaveMsg({ type: "err", text: "请输入提供商名称" }); return; }
-    const providers = { ...llmSettings?.providers };
     const name = newProvider.name.trim().toLowerCase();
-    if (providers[name]) { setSaveMsg({ type: "err", text: "该提供商已存在" }); return; }
-    providers[name] = {
-      enabled: true,
-      models: newProvider.models.split(/[,，]/).map(m => m.trim()).filter(Boolean),
-      api_key_configured: !!newProvider.api_key.trim(),
-      api_key: newProvider.api_key,
-      base_url: newProvider.base_url.trim() || null,
-    };
-    try {
-      await api._fetch('/api/v1/settings/llm', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify({ providers }),
-      });
-      setLlmSettings(s => s ? { ...s, providers } : s);
-      setSaveMsg({ type: "ok", text: `已添加提供商 ${name}` });
-      setTimeout(() => setSaveMsg(null), 3000);
-      setShowNewProvider(false);
-      setNewProvider({ name: "", api_key: "", models: "", base_url: "" });
-      fetchSettings();
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `添加失败: ${e.message}` });
-    }
+    if (!name || llmSettings?.providers[name]) { setSaveMsg({ type: 'err', text: '请输入未使用的提供商名称' }); return; }
+    if (await commitLlmChange({ providers: { [name]: { enabled: true, models: newProvider.models.split(/[,，]/).map(model => model.trim()).filter(Boolean),
+      api_key: newProvider.api_key, base_url: newProvider.base_url.trim() || null } } })) setShowNewProvider(false);
   };
 
   const handleDeleteProvider = async (providerName) => {
-    if (!confirm(`确定要删除提供商 "${providerName}" 吗？`)) return;
-    try {
-      await api.deleteProvider(providerName);
-      setLlmSettings(s => s ? { ...s, providers: { ...s.providers, [providerName]: undefined } } : s);
-      // Remove from providers object
-      setLlmSettings(s => {
-        if (!s) return s;
-        const newProviders = { ...s.providers };
-        delete newProviders[providerName];
-        return { ...s, providers: newProviders };
-      });
-      setSaveMsg({ type: "ok", text: `已删除提供商 ${providerName}` });
-      setTimeout(() => setSaveMsg(null), 2000);
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `删除失败: ${e.message}` });
-    }
-  };
-
-  const handleSaveHarness = async () => {
-    setSaving(s => ({ ...s, harness: true }));
-    try {
-      await api._fetch('/api/v1/settings/harness', {
-        method: 'PUT',
-        headers: api._headers(true),
-        body: JSON.stringify(harnessSettings),
-      });
-      setSaveMsg({ type: "ok", text: "Harness 约束已保存" });
-      setTimeout(() => setSaveMsg(null), 2000);
-    } catch(e) {
-      setSaveMsg({ type: "err", text: `保存失败: ${e.message}` });
-    } finally { setSaving(s => ({ ...s, harness: false })); }
+    if (llmBusyRef.current || !confirm(`确定要删除提供商 "${providerName}" 吗？`)) return;
+    await commitLlmChange(null, providerName);
   };
 
   const handleSaveRag = async () => {
+    if (ragConfigBusyRef.current || ragConfigLoading || ragConfigError || !ragSettings) return;
+    ragConfigBusyRef.current = true;
+    ++ragConfigReadSeq.current;
+    setRagConfigLoading(false); // Superseded GET must not leave maintenance permanently disabled.
     setSaving(s => ({ ...s, rag: true }));
+    setRagConfigMsg(null);
     try {
-      await api.updateRagSettings({
-        bm25_weight: ragSettings?.bm25_weight,
-        vector_weight: ragSettings?.vector_weight,
-        top_k: ragSettings?.top_k,
-        similarity_threshold: ragSettings?.similarity_threshold,
-        embedding_model: ragSettings?.embedding_model,
+      const payload = {
+        bm25_weight: ragSettings.bm25_weight,
+        vector_weight: ragSettings.vector_weight,
+      };
+      const response = await api.updateRagSettings(payload);
+      const snapshot = ragConfigurationSnapshot(response, 'updated');
+      if (!snapshot || !['persisted', 'memory_only'].includes(response.persistence)
+          || typeof response.runtime_applied !== 'boolean'
+          || response.runtime_applied !== response.runtime.available
+          || (response.runtime_applied && !response.runtime.matches_configured)
+          || Math.abs(response.vector_weight - payload.vector_weight) >= 1e-9) {
+        throw new Error('保存结果未确认，请重新读取配置后再决定是否重试');
+      }
+      setRagSettings(snapshot);
+      setRagConfigMsg({
+        type: response.persistence === 'persisted' && response.runtime_applied ? 'ok' : 'warn',
+        text: `${response.persistence === 'persisted' ? '已持久化' : '仅本进程临时配置，重启不保留'}；${response.runtime_applied
+          ? '三个检索融合器已生效，在途检索保留原快照。' : 'RAG 引擎未就绪，尚未应用；初始化后请重新读取运行状态。'}`,
       });
-      setSaveMsg({ type: "ok", text: "RAG 配置已保存" });
-      setTimeout(() => setSaveMsg(null), 2000);
     } catch(e) {
-      setSaveMsg({ type: "err", text: `保存失败: ${e.message}` });
-    } finally { setSaving(s => ({ ...s, rag: false })); }
+      setRagSettings(null);
+      setRagConfigError('保存结果未确认，请先重新读取配置；不会自动重试保存。');
+      setRagConfigMsg({ type: 'err', text: `保存未确认: ${e.message}` });
+    } finally {
+      ragConfigBusyRef.current = false;
+      setSaving(s => ({ ...s, rag: false }));
+    }
   };
 
   // RAG index management handlers
-  const fetchRagStats = useCallback(() => {
-    api._fetch('/api/v1/learning/rag/stats').then(r => setRagStats(r)).catch(() => {});
+  const fetchRagStats = useCallback(async () => {
+    const seq = ++ragReadSeq.current;
+    setRagLoading(true);
+    const results = await Promise.allSettled([
+      Promise.resolve().then(() => api._fetch('/api/v1/learning/rag/stats')),
+      Promise.resolve().then(() => api._fetch('/api/v1/learning/rag/status')),
+      Promise.resolve().then(() => api.databases()),
+    ]);
+    if (seq !== ragReadSeq.current) return;
+    const value = i => results[i].status === 'fulfilled' ? results[i].value : null;
+    const stats = value(0), status = value(1), connections = value(2)?.databases;
+    const count = n => Number.isInteger(n) && n >= 0;
+    const statsOK = stats?.status === 'ok' && ['schema', 'metrics', 'documents'].every(
+      key => count(stats[key]?.lancedb_count) && count(stats[key]?.bm25_count));
+    const owners = list => Array.isArray(list) && list.every(id => typeof id === 'string' && id);
+    const statusOK = ['ok', 'degraded'].includes(status?.status)
+      && ['ready', 'degraded'].includes(status?.schema_index?.status)
+      && owners(status?.schema_index?.refresh_required_databases)
+      && owners(status?.schema_index?.recovery_failed_databases);
+    const connectionsOK = Array.isArray(connections)
+      && connections.every(db => typeof db?.db_id === 'string' && db.db_id);
+    setRagStats(statsOK ? stats : null);
+    setRagStatus(statusOK ? status : null);
+    setRagConnections(connectionsOK ? connections : null);
+    const failed = [!statsOK && '索引数量', !statusOK && '索引状态', !connectionsOK && '数据库连接'].filter(Boolean);
+    setRagLoadError(failed.length ? `无法读取${failed.join('、')}，请重试读取状态；维护操作暂不可用。` : null);
+    setRagLoading(false);
   }, []);
 
   useEffect(() => { if (activeTab === 'rag') fetchRagStats(); }, [activeTab, fetchRagStats]);
 
   const handleRebuildSchemaIndex = async () => {
+    if (ragBusyRef.current || ragLoading || ragLoadError) return;
+    ragBusyRef.current = true;
+    setRagBusy(true);
     setRebuilding(true);
     setRagMsg(null);
     try {
-      const allConns = await api.databases().catch(() => ({ databases: [] }));
-      const dbIds = (allConns.databases || []).map(d => d.db_id).filter(Boolean);
+      const allConns = await api.databases();
+      if (!Array.isArray(allConns?.databases)) throw new Error('无法读取数据库连接状态');
+      const dbIds = allConns.databases.map(d => d.db_id).filter(Boolean);
       if (dbIds.length === 0) {
-        setRagMsg({ type: "err", text: "没有已连接的数据库。请先在“数据库连接”面板连接数据库，然后再重建 Schema 索引。如需清理旧的脏数据，请使用“清空 RAG 索引”按钮。" });
+        setRagMsg({ type: "err", text: "没有已连接的数据库。请先在“数据库连接”面板连接数据库，然后再重建 Schema 索引。遗留库可在下方“Schema 按库维护”中单独清理。" });
         setRebuilding(false);
         return;
       }
@@ -3733,19 +3933,27 @@ const SettingsPanel = ({ userName, onLogout }) => {
       } else {
         setRagMsg({ type: "err", text: `Schema 索引重建: ${successCount} 成功, ${failCount} 失败: ${details.join(', ')}` });
       }
-      fetchRagStats();
     } catch(e) {
       setRagMsg({ type: "err", text: `重建失败: ${e.message}` });
-    } finally { setRebuilding(false); }
+    } finally {
+      await fetchRagStats();
+      setRebuilding(false);
+      ragBusyRef.current = false;
+      setRagBusy(false);
+    }
   };
 
   const handleRefreshRAG = async () => {
+    if (ragBusyRef.current || ragLoading || ragLoadError) return;
+    ragBusyRef.current = true;
+    setRagBusy(true);
     setRagMsg(null);
     try {
-      const allConns = await api.databases().catch(() => ({ databases: [] }));
-      const dbIds = (allConns.databases || []).map(d => d.db_id).filter(Boolean);
+      const allConns = await api.databases();
+      if (!Array.isArray(allConns?.databases)) throw new Error('无法读取数据库连接状态');
+      const dbIds = allConns.databases.map(d => d.db_id).filter(Boolean);
       if (dbIds.length === 0) {
-        setRagMsg({ type: "err", text: "没有已连接的数据库。RAG 索引刷新需要活跃的数据库连接。如需清理旧的脏数据，请使用“清空 RAG 索引”按钮。" });
+        setRagMsg({ type: "err", text: "没有已连接的数据库。RAG 索引刷新需要活跃的数据库连接。遗留库可在下方“Schema 按库维护”中单独清理。" });
         return;
       }
       setRagMsg({ type: "info", text: `正在刷新 ${dbIds.length} 个数据库的 RAG 索引...` });
@@ -3766,17 +3974,21 @@ const SettingsPanel = ({ userName, onLogout }) => {
       } else {
         setRagMsg({ type: "err", text: `RAG 索引刷新: ${successCount} 成功, ${failCount} 失败: ${details.join(', ')}` });
       }
-      fetchRagStats();
     } catch(e) {
       setRagMsg({ type: "err", text: `刷新失败: ${e.message}` });
+    } finally {
+      await fetchRagStats();
+      ragBusyRef.current = false;
+      setRagBusy(false);
     }
   };
 
   const handleClearRAG = async () => {
+    if (ragBusyRef.current || ragLoading || ragLoadError || !ragStats || uploadingDoc) return;
     // Confirm before destructive action
-    const schemaCount = ragStats?.schema?.lancedb_count || 0;
-    const metricsCount = ragStats?.metrics?.lancedb_count || 0;
-    const docsCount = ragStats?.documents?.lancedb_count || 0;
+    const schemaCount = Math.max(ragStats.schema.lancedb_count, ragStats.schema.bm25_count);
+    const metricsCount = Math.max(ragStats.metrics.lancedb_count, ragStats.metrics.bm25_count);
+    const docsCount = Math.max(ragStats.documents.lancedb_count, ragStats.documents.bm25_count);
     const total = schemaCount + metricsCount + docsCount;
     if (total === 0) {
       setRagMsg({ type: "info", text: "RAG 索引为空，无需清空。" });
@@ -3795,6 +4007,8 @@ const SettingsPanel = ({ userName, onLogout }) => {
     )) {
       return;
     }
+    ragBusyRef.current = true;
+    setRagBusy(true);
     setClearing(true);
     setRagMsg({ type: "info", text: "正在清空所有 RAG 索引..." });
     try {
@@ -3813,11 +4027,65 @@ const SettingsPanel = ({ userName, onLogout }) => {
       } else {
         setRagMsg({ type: "err", text: `清空失败: ${r?.message || '未知错误'}` });
       }
-      fetchRagStats();
     } catch(e) {
       setRagMsg({ type: "err", text: `清空失败: ${e.message}` });
     } finally {
+      await fetchRagStats();
       setClearing(false);
+      ragBusyRef.current = false;
+      setRagBusy(false);
+    }
+  };
+
+  const handleSchemaMaintenance = async (dbId, operation) => {
+    if (ragBusyRef.current || ragLoading || ragLoadError) return;
+    const row = schemaIndexRows(ragStatus, ragConnections).find(item => item.dbId === dbId);
+    if (!row || !['clear', 'rebuild'].includes(operation) || (operation === 'rebuild' && !row.connected)) {
+      setRagMsg({ type: 'err', text: '目标状态已不可用，请先重新读取状态；重建需要已连接的数据库。' });
+      return;
+    }
+    if (operation === 'clear' && !window.confirm(
+      `确定清理数据库“${dbId}”的 Schema 索引吗？\n\n仅清理这个库的检索索引，其他库、源数据、指标和上传文档均保留。需要时可在连接后重新构建。`
+    )) return;
+    ragBusyRef.current = true;
+    setRagBusy(true);
+    setRagAction({ dbId, operation });
+    setRagMsg({ type: 'info', text: `${operation === 'clear' ? '正在清理' : '正在重建'} ${dbId} 的 Schema 索引...` });
+    try {
+      if (operation === 'clear') {
+        const result = await api._fetch(`/api/v1/learning/rag/schema/${encodeURIComponent(dbId)}/clear`, { method: 'POST' });
+        const removed = result?.removed;
+        if (result?.status !== 'cleared' || result.scope !== 'schema' || result.db_id !== dbId
+          || !Number.isInteger(removed?.lancedb_count) || removed.lancedb_count < 0
+          || !Number.isInteger(removed?.bm25_count) || removed.bm25_count < 0) {
+          setRagMsg({ type: 'err', text: `${dbId} 的清理结果未确认，请读取状态后再决定是否重试。` });
+        } else {
+          setRagMsg({ type: 'ok', text: `${dbId} 的 Schema 索引已清理（向量 ${removed.lancedb_count} 条，关键词 ${removed.bm25_count} 条）。其他库、源数据和上传文档已保留。` });
+        }
+      } else {
+        const result = await api.schemaRefresh(dbId);
+        setRagMsg(result?.rag_indexed === true
+          ? { type: 'ok', text: `${dbId} 的 Schema 索引已重建。` }
+          : { type: 'err', text: `${dbId} 的索引重建未完成，请检查索引状态后重试。` });
+      }
+    } catch (error) {
+      let text = '操作结果未确认，请先读取状态，再决定是否重试。';
+      if (error.code === 'SCHEMA_INDEX_CLEAR_FAILED') {
+        const restored = error.body?.detail?.restored;
+        text = restored === true ? '清理未完成，旧索引已恢复。请检查存储后重试。'
+          : restored === false ? '清理未完成，该库检索仍受限。修复存储后可重试按库清理。'
+          : '清理未完成，尚无法确认数据状态。请检查存储并重新读取状态。';
+      } else if (error.status === 401 || error.status === 403) {
+        text = '没有维护权限，请使用管理员账户重新登录后读取状态。';
+      } else if (error.code === 'SCHEMA_REFRESH_CONFLICT') {
+        text = '数据库结构或连接已变化，请重新读取状态后再重建。';
+      }
+      setRagMsg({ type: 'err', text });
+    } finally {
+      await fetchRagStats();
+      setRagAction(null);
+      ragBusyRef.current = false;
+      setRagBusy(false);
     }
   };
 
@@ -3863,13 +4131,6 @@ const SettingsPanel = ({ userName, onLogout }) => {
     reader.readAsText(file);
   };
 
-  const dbs = databaseSettings?.dialects_enabled ? Object.entries(databaseSettings.dialects_enabled).map(([k, v]) => ({ name: k, on: v })) : [
-    { name: "PostgreSQL", on: true }, { name: "MySQL", on: true }, { name: "DuckDB", on: true },
-    { name: "SQLite", on: true },     { name: "ClickHouse", on: true }, { name: "Snowflake", on: true },
-    { name: "StarRocks", on: true },  { name: "BigQuery", on: false }, { name: "Redshift", on: false },
-    { name: "Databricks", on: false }, { name: "Trino", on: false },
-  ];
-
   const providers = llmSettings?.providers || {};
 
   return (
@@ -3889,7 +4150,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
       {/* Save notification */}
       {saveMsg && (
         <div className={cn("text-xs px-3 py-2 rounded-lg font-medium",
-          saveMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400")}>
+          saveMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : saveMsg.type === "warn" ? "bg-amber-50 text-amber-700" : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400")}>
           {saveMsg.text}
         </div>
       )}
@@ -3911,12 +4172,18 @@ const SettingsPanel = ({ userName, onLogout }) => {
         <Fragment>
           {activeTab === "llm" && (
             <Fragment>
+              <div className="flex items-center gap-3 flex-wrap" data-llm-configuration>
+                <button className="btn-outline" onClick={fetchLlmConfiguration} disabled={llmBusy || llmLoading}>{llmLoading ? '读取中…' : '重新读取 LLM 配置'}</button>
+                {llmError && <p role="alert" className="text-sm text-red-600">{llmError}</p>}
+                {!llmError && !llmLoading && llmSettings && <p role="status" className="text-xs text-neutral-500">来源：{llmSettings.configuration_source} · 运行模型：{llmSettings.runtime.available ? llmSettings.runtime.active_model : '尚未就绪'}；保存字段不等于全部路由参数均生效。</p>}
+              </div>
+              {llmSettings && !llmError && !llmLoading && <fieldset disabled={llmBusy} className="contents">
               {/* LLM Provider Settings */}
               <Card className="p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">LLM 模型配置</h3>
-                  <button className="btn-dark" onClick={handleSaveLLM} disabled={saving.llm}>
-                    {saving.llm ? "保存中…" : "保存配置"}
+                  <button className="btn-dark" onClick={handleSaveLLM} disabled={llmBusy}>
+                    {llmBusy ? "保存中…" : "保存配置"}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -3947,33 +4214,17 @@ const SettingsPanel = ({ userName, onLogout }) => {
                       )}
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">路由策略</label>
-                    <select className="input-light w-full text-sm py-2"
-                      value={llmSettings?.routing_strategy || "complexity_aware"}
-                      onChange={e => setLlmSettings(s => s ? { ...s, routing_strategy: e.target.value } : s)}>
-                      <option value="complexity_aware">复杂度感知路由</option>
-                      <option value="cost_first">成本优先</option>
-                      <option value="latency_first">延迟优先</option>
-                      <option value="round_robin">轮询</option>
-                    </select>
+                  <div className="text-xs text-neutral-500 leading-relaxed">
+                    <p>路由：固定主模型 → fallback，不支持复杂度、成本、延迟或轮询策略。</p>
+                    <p>温度：由各调用方传入；SQL 生成当前使用 0.3。旧全局温度不生效。</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Temperature: {llmSettings?.temperature ?? 0.3}</label>
-                    <input type="range" min="0" max="2" step="0.1"
-                      className="w-full"
-                      value={llmSettings?.temperature ?? 0.3}
-                      onChange={e => setLlmSettings(s => s ? { ...s, temperature: parseFloat(e.target.value) } : s)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Max Tokens</label>
-                    <input type="number" min="1" max="32768"
-                      className="input-light text-sm"
-                      value={llmSettings?.max_tokens ?? 4096}
-                      onChange={e => setLlmSettings(s => s ? { ...s, max_tokens: parseInt(e.target.value) || 4096 } : s)} />
-                  </div>
+                <div className="mt-4 text-sm" data-output-token-policy>
+                  <label htmlFor="llm-output-limit" className="text-xs font-medium text-neutral-500 block mb-1.5">单次输出 token 上限</label>
+                  <input id="llm-output-limit" type="number" min="1" max="32768" step="1" className="input-light text-sm"
+                    value={llmSettings.max_tokens}
+                    onChange={e => setLlmSettings(s => s ? { ...s, max_tokens: Number(e.target.value) } : s)} />
+                  <p className="text-xs text-neutral-500 leading-relaxed">已配置：{llmSettings.configured_max_tokens} · 运行上限：{!llmSettings.runtime.available ? '尚未就绪' : llmSettings.runtime.max_output_tokens === null ? '未设置统一上限' : llmSettings.runtime.max_output_tokens}。调用方较小值保留，较大值限制到此值；不是整次查询 token/费用预算，mock 输出不证明真实限制。</p>
                 </div>
               </Card>
 
@@ -4042,9 +4293,9 @@ const SettingsPanel = ({ userName, onLogout }) => {
                                 ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-500/20"
                                 : "bg-gray-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500 border-gray-200 dark:border-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-700")}
                             onClick={() => handleProviderToggle(name)}
-                            disabled={togglingProvider[name]}
+                            disabled={llmBusy}
                           >
-                            {togglingProvider[name] ? "…" : cfg.enabled ? "启用中" : "已禁用"}
+                            {llmBusy ? "…" : cfg.enabled ? "启用中" : "已禁用"}
                           </button>
                           <button className="icon-btn !p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="删除提供商"
                             onClick={() => handleDeleteProvider(name)}>
@@ -4074,53 +4325,43 @@ const SettingsPanel = ({ userName, onLogout }) => {
                 </div>
                 <p className="text-[11px] text-neutral-400 mt-2 mb-0">提示:修改 API Key 或接口地址后,点击上方「保存配置」统一保存并立即生效;密钥加密存储,页面不回显明文。</p>
               </Card>
+              </fieldset>}
             </Fragment>
           )}
 
           {activeTab === "harness" && (
             <Fragment>
               <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">
-                    Harness 约束
-                    <span className="text-xs font-normal text-neutral-400 ml-2">LLM 无法绕过</span>
-                  </h3>
-                  <button className="btn-dark" onClick={handleSaveHarness} disabled={saving.harness}>
-                    {saving.harness ? "保存中…" : "保存配置"}
-                  </button>
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">实际 Harness 约束<span className="text-xs font-normal text-neutral-400 ml-2">只读状态</span></h3>
+                  <button className="btn-outline" onClick={fetchHarnessPolicy} disabled={harnessLoading}>{harnessLoading ? "读取中…" : "重新读取约束"}</button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <p className="text-xs text-neutral-500 leading-relaxed" role="status">约束由计划、Runner 和部署配置决定；旧设置表不生效。本页不提供保存或关闭只读。显示当前进程读取时的策略，不代表已运行请求或数据库驱动健康。</p>
+                {harnessError && <p className="text-sm text-red-600" role="alert">{harnessError}</p>}
+                {harnessLoading && <p className="text-xs text-neutral-500" role="status">正在读取约束；下方旧值暂不展示。</p>}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy={harnessLoading}>
                   {[
-                    { label: "只读模式", desc: "禁止 INSERT/UPDATE/DELETE", key: "read_only", type: "toggle" },
-                    { label: "最大 LLM 调用", desc: "每查询上限", key: "max_llm_calls", type: "number", min: 1, max: 100 },
-                    { label: "最大结果行数", desc: "单次查询上限", key: "max_result_rows", type: "number", min: 1, max: 100000 },
-                    { label: "语句超时 (秒)", desc: "SQL 执行超时", key: "query_timeout_s", type: "number", min: 1, max: 300 },
-                    { label: "会话 TTL (秒)", desc: "自动过期", key: "session_ttl_s", type: "number", min: 60, max: 86400 },
-                    { label: "最大重试", desc: "节点级重试", key: "max_retries", type: "number", min: 0, max: 10 },
-                    { label: "最大候选数", desc: "SQL 生成候选", key: "max_candidates", type: "number", min: 1, max: 5 },
+                    { label: "只读 SQL", desc: "执行器始终检查只读；不是可关闭开关", key: "read_only" },
+                    { label: "最大 LLM 调用", desc: "一次查询的所有目标库共享预算", key: "max_llm_calls" },
+                    { label: "最大结果行数", desc: "每次 SQL 执行的上限", key: "max_result_rows" },
+                    { label: "语句超时 (毫秒)", desc: "执行器传递的截止值，实际中断依赖驱动", key: "statement_timeout_ms" },
+                    { label: "查询总时限 (秒)", desc: "JSON/SSE 路径，包含排队与工作流", key: "query_timeout_s" },
+                    { label: "内存会话 TTL (秒)", desc: "按访问/清理触发过期，不代表持久历史删除", key: "session_ttl_s" },
+                    { label: "节点重试上限", desc: "计划与全局预算取较小值，0 表示不重试", key: "max_retries" },
                   ].map(c => (
-                    <div key={c.key} className="p-3 rounded-lg bg-gray-50 dark:bg-neutral-800 flex flex-col gap-1.5">
+                    <div key={c.key} data-harness-limit={c.key} className="p-3 min-w-0 rounded-lg bg-gray-50 dark:bg-neutral-800 flex flex-col gap-1.5">
                       <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">{c.label}</span>
                       <span className="text-xs text-neutral-400">{c.desc}</span>
-                      {c.type === "toggle" ? (
-                        <button
-                          className={cn("mt-1 text-xs px-3 py-1.5 rounded-full border cursor-pointer transition-all font-medium self-start",
-                            harnessSettings?.read_only
-                              ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                              : "bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 border-red-200 dark:border-red-800")}
-                          onClick={() => setHarnessSettings(s => s ? { ...s, read_only: !s.read_only } : s)}
-                        >
-                          {harnessSettings?.read_only ? "只读模式: 开启" : "只读模式: 关闭"}
-                        </button>
-                      ) : (
-                        <input type="number" min={c.min} max={c.max}
-                          className="input-light text-sm mt-1"
-                          value={harnessSettings ? harnessSettings[c.key] ?? "" : ""}
-                          onChange={e => setHarnessSettings(s => s ? { ...s, [c.key]: parseInt(e.target.value) || 0 } : s)} />
-                      )}
+                      <span className="font-mono text-sm mt-1">{!harnessSettings || harnessLoading || harnessError ? "—" : c.key === "read_only" ? "始终启用" : harnessSettings.limits[c.key].value}</span>
+                      {harnessSettings && !harnessLoading && !harnessError && <span className="text-[11px] text-neutral-500 break-words">来源：{harnessSettings.limits[c.key].source}</span>}
                     </div>
                   ))}
                 </div>
+                {harnessSettings && !harnessLoading && !harnessError && <div className="mt-4 text-xs text-neutral-500 leading-relaxed break-words">
+                  <p>固定流程（{harnessSettings.workflow.plan_id}）：{harnessSettings.workflow.node_order.map(node => node.node).join(' → ')}；由 {harnessSettings.workflow.controller} 执行，最多 {harnessSettings.workflow.max_iterations} 次节点尝试。</p>
+                  <p>适用范围：JSON/SSE 查询与复用 submit_query 的 MCP nl_query。候选数由每次请求 num_candidates 指定，MCP 当前请求 1 个；没有已接通的全局候选数保存项。</p>
+                  <p>直接 SQL 执行复用只读检查及 Settings 行数/语句上限，不使用此工作流的 LLM/重试预算或查询总时限。环境配置通常需重启，计划与 agent.yml 按既有加载器重读；更改前请按运维文档核对来源。</p>
+                </div>}
               </Card>
             </Fragment>
           )}
@@ -4128,73 +4369,44 @@ const SettingsPanel = ({ userName, onLogout }) => {
           {activeTab === "rag" && (
             <Fragment>
               <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">
-                    RAG 混合检索配置
-                    <span className="text-xs font-normal text-neutral-400 ml-2">BM25 稀疏 + 向量密集 + RRF 融合</span>
-                  </h3>
-                  <button className="btn-dark" onClick={handleSaveRag} disabled={saving.rag}>
-                    {saving.rag ? "保存中…" : "保存配置"}
-                  </button>
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">RAG 融合权重</h3>
+                  <div className="flex gap-2">
+                    <button className="btn-outline" onClick={fetchRagConfig} disabled={ragConfigLoading || saving.rag}>重新读取配置</button>
+                    <button className="btn-dark" onClick={handleSaveRag} disabled={saving.rag || ragConfigLoading || !!ragConfigError || !ragSettings}>
+                      {saving.rag ? "保存中…" : "保存融合权重"}
+                    </button>
+                  </div>
                 </div>
-
+                <p className="text-xs text-neutral-500 m-0 mb-3">仅调整本进程的检索融合排序，不更换模型、不重建索引。两项权重互补，总和为 1。</p>
+                {ragConfigLoading && <p role="status" className="text-xs text-neutral-500">正在读取配置…</p>}
+                {ragConfigError && <p role="alert" className="text-xs text-red-600 dark:text-red-400">{ragConfigError}</p>}
+                {ragSettings && !ragSettings.configuration_valid && <p role="alert" className="text-xs text-amber-700">旧配置无效，显示默认修复值；保存后才生效。</p>}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">
-                      BM25 权重: {ragSettings?.bm25_weight ?? 0.3}
-                    </label>
-                    <input type="range" min="0" max="1" step="0.05"
-                      className="w-full"
-                      value={ragSettings?.bm25_weight ?? 0.3}
-                      onChange={e => setRagSettings(s => s ? { ...s, bm25_weight: parseFloat(e.target.value) } : s)} />
-                    <div className="flex justify-between text-[10px] text-neutral-400 mt-0.5">
-                      <span>纯向量</span><span>均衡</span><span>纯 BM25</span>
-                    </div>
+                    <label htmlFor="rag-bm25-weight" className="text-xs text-neutral-500 block mb-1.5">正在编辑 · BM25 权重: {ragSettings ? ragSettings.bm25_weight.toFixed(2) : '—'}</label>
+                    <input id="rag-bm25-weight" aria-label="BM25 融合权重" type="range" min="0" max="1" step="0.05" className="w-full"
+                      disabled={!ragSettings || ragConfigLoading || !!ragConfigError || saving.rag} value={ragSettings?.bm25_weight ?? 0}
+                      onChange={e => { const weight = Number(e.target.value); setRagSettings(s => s ? { ...s, bm25_weight: weight, vector_weight: Number((1 - weight).toFixed(12)) } : s); }} />
+                    <div className="flex justify-between text-[10px] text-neutral-400"><span>纯向量</span><span>纯 BM25</span></div>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">
-                      向量权重: {ragSettings?.vector_weight ?? 0.7}
-                    </label>
-                    <input type="range" min="0" max="1" step="0.05"
-                      className="w-full"
-                      value={ragSettings?.vector_weight ?? 0.7}
-                      onChange={e => setRagSettings(s => s ? { ...s, vector_weight: parseFloat(e.target.value) } : s)} />
-                    <div className="flex justify-between text-[10px] text-neutral-400 mt-0.5">
-                      <span>纯 BM25</span><span>均衡</span><span>纯向量</span>
-                    </div>
+                    <label htmlFor="rag-vector-weight" className="text-xs text-neutral-500 block mb-1.5">正在编辑 · 向量权重: {ragSettings ? ragSettings.vector_weight.toFixed(2) : '—'}</label>
+                    <input id="rag-vector-weight" aria-label="向量融合权重" type="range" min="0" max="1" step="0.05" className="w-full"
+                      disabled={!ragSettings || ragConfigLoading || !!ragConfigError || saving.rag} value={ragSettings?.vector_weight ?? 0}
+                      onChange={e => { const weight = Number(e.target.value); setRagSettings(s => s ? { ...s, vector_weight: weight, bm25_weight: Number((1 - weight).toFixed(12)) } : s); }} />
+                    <div className="flex justify-between text-[10px] text-neutral-400"><span>纯 BM25</span><span>纯向量</span></div>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Top-K 结果数</label>
-                    <input type="number" min="1" max="50"
-                      className="input-light text-sm"
-                      value={ragSettings?.top_k ?? 10}
-                      onChange={e => setRagSettings(s => s ? { ...s, top_k: parseInt(e.target.value) || 10 } : s)} />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">
-                      相似度阈值: {ragSettings?.similarity_threshold ?? 0.6}
-                    </label>
-                    <input type="range" min="0" max="1" step="0.05"
-                      className="w-full"
-                      value={ragSettings?.similarity_threshold ?? 0.6}
-                      onChange={e => setRagSettings(s => s ? { ...s, similarity_threshold: parseFloat(e.target.value) } : s)} />
-                    <div className="text-[10px] text-neutral-400 mt-0.5 text-right">{ragSettings?.similarity_threshold ?? 0.6}</div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">Embedding 模型</label>
-                    <select className="input-light w-full text-sm py-2"
-                      value={ragSettings?.embedding_model || "text-embedding-3-small"}
-                      onChange={e => setRagSettings(s => s ? { ...s, embedding_model: e.target.value } : s)}>
-                      <option value="text-embedding-3-small">text-embedding-3-small</option>
-                      <option value="text-embedding-3-large">text-embedding-3-large</option>
-                      <option value="bge-large-zh">BGE-large-zh</option>
-                      <option value="bge-m3">BGE-M3</option>
-                    </select>
-                  </div>
+                <div className="bg-gray-50 dark:bg-neutral-800 rounded-lg p-3 text-xs text-neutral-600 dark:text-neutral-300 space-y-2 break-words">
+                  <div>已配置 · 向量 / BM25: {ragSettings ? `${ragSettings.configured_weights.vector_weight.toFixed(2)} / ${ragSettings.configured_weights.bm25_weight.toFixed(2)}` : '未知'} · 来源: {ragSettings ? ({database:'持久化存储',memory:'进程内存',default:'默认配置'}[ragSettings.configuration_source]) : '未知'}</div>
+                  <div>运行实例: {!ragSettings ? '未知' : !ragSettings.runtime.available ? '未就绪，尚未应用' : ['schema','metrics','documents'].map(key => `${({schema:'Schema',metrics:'指标',documents:'文档'}[key])} ${ragSettings.runtime.weights[key].vector_weight.toFixed(2)} / ${ragSettings.runtime.weights[key].bm25_weight.toFixed(2)}`).join(' · ')}</div>
+                  {ragSettings?.runtime.available && !ragSettings.runtime.matches_configured && <div role="status" className="text-amber-700">已配置值与运行值不一致；重新读取不会自动应用，请确认后显式保存。</div>}
+                  <div>Top-K：由每次检索调用指定，此处不提供全局覆盖。</div>
+                  <div>相似度阈值：当前没有统一的全局过滤器，此处不可设置。</div>
+                  <div>实际 Embedding：{!ragSettings ? '未知' : !ragSettings.runtime.available ? '引擎未就绪' : `${ragSettings.runtime.embedding.provider} · ${ragSettings.runtime.embedding.model} · ${ragSettings.runtime.embedding.dimension} 维`}。模型变更需部署配置与兼容索引重建。</div>
                 </div>
+                {ragConfigMsg && <p role={ragConfigMsg.type === 'err' ? 'alert' : 'status'} aria-live="polite" className={cn('text-xs mt-3 break-words', ragConfigMsg.type === 'err' ? 'text-red-600' : ragConfigMsg.type === 'warn' ? 'text-amber-700' : 'text-emerald-700')}>{ragConfigMsg.text}</p>}
               </Card>
 
               {/* RAG architecture overview */}
@@ -4244,47 +4456,82 @@ const SettingsPanel = ({ userName, onLogout }) => {
 
               {/* RAG index management */}
               <Card className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">
-                    索引管理
-                    <span className="text-xs font-normal text-neutral-400 ml-2">手动刷新与重建</span>
-                  </h3>
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">Schema 按库维护</h3>
+                    <p className="text-xs text-neutral-500 mt-1">先查看当前限制，再清理或重建目标库。其他库、源数据、指标和上传文档会保留。</p>
+                  </div>
+                  <button className="btn-outline text-xs" onClick={fetchRagStats} disabled={ragBusy || ragLoading}>
+                    {ragLoading ? '读取中...' : '重新读取状态'}
+                  </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button className="btn-outline text-xs" onClick={handleRebuildSchemaIndex} disabled={rebuilding || clearing}>
-                    {rebuilding ? "重建中..." : "重建 Schema 索引"}
+                <p className="text-xs text-neutral-500 mb-3">状态仅反映本次运行已知的 Schema 索引限制，不代表索引非空或模型、存储实时健康。</p>
+                {ragLoading && <p role="status" className="text-xs text-neutral-500">正在读取索引状态...</p>}
+                {ragLoadError && <div role="alert" className="mb-3 text-xs p-3 rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">{ragLoadError}</div>}
+                <div className="space-y-2" aria-label="Schema 数据库维护列表" aria-busy={ragLoading}>
+                  {ragRows.map(row => (
+                    <div key={row.dbId} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-neutral-200 dark:border-neutral-700 rounded-lg p-3 min-w-0">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium break-all text-neutral-800 dark:text-neutral-200">{row.name}</div>
+                        <code className="block text-xs text-neutral-500 break-all mt-1">{row.dbId}</code>
+                        <div className="flex flex-wrap items-center gap-2 mt-2 text-xs">
+                          <span className="text-neutral-500">{row.connected ? '已连接' : '已断开连接'}</span>
+                          <span className={cn('px-2 py-0.5 rounded font-medium', row.state === 'recovery_failed'
+                            ? 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300'
+                            : row.state === 'refresh_required' ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
+                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300')}>
+                            {row.state === 'recovery_failed' ? '恢复失败 · 检索受限' : row.state === 'refresh_required' ? '待刷新 · 检索受限' : '未隔离'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 shrink-0">
+                        <button className="btn-outline text-xs" disabled={ragMaintenanceDisabled || !row.connected}
+                          aria-label={`重建 ${row.dbId} 的 Schema 索引`} onClick={() => handleSchemaMaintenance(row.dbId, 'rebuild')}>
+                          {ragAction?.dbId === row.dbId && ragAction.operation === 'rebuild' ? '重建中...' : '重建该库'}
+                        </button>
+                        <button className="btn-outline text-xs text-red-700 dark:text-red-300" disabled={ragMaintenanceDisabled}
+                          aria-label={`清理 ${row.dbId} 的 Schema 索引`} onClick={() => handleSchemaMaintenance(row.dbId, 'clear')}>
+                          {ragAction?.dbId === row.dbId && ragAction.operation === 'clear' ? '清理中...' : '清理该库索引'}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {!ragLoading && !ragLoadError && ragStatus && ragConnections && !ragRows.length && (
+                    <p className="text-xs text-neutral-500 py-3">没有已连接或待处理的数据库。连接数据库后可在这里重建 Schema 索引。</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  <button className="btn-outline text-xs" onClick={handleRebuildSchemaIndex} disabled={ragMaintenanceDisabled}>
+                    {rebuilding ? '重建中...' : '重建所有已连接库的 Schema'}
                   </button>
-                  <button className="btn-outline text-xs" onClick={handleRefreshRAG} disabled={clearing}>
-                    刷新所有 RAG 索引
-                  </button>
-                  <button className="btn-outline text-xs text-red-600 dark:text-red-400 border-red-300 dark:border-red-700 hover:bg-red-50 dark:hover:bg-red-500/10" onClick={handleClearRAG} disabled={clearing || rebuilding}>
-                    {clearing ? "清空中..." : "清空 RAG 索引"}
-                  </button>
+                  <button className="btn-outline text-xs" onClick={handleRefreshRAG} disabled={ragMaintenanceDisabled}>刷新已连接库</button>
                 </div>
                 {ragMsg && (
-                  <div className={cn("mt-3 text-xs px-3 py-2 rounded-lg font-medium",
-                    ragMsg.type === "ok" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                    : ragMsg.type === "info" ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
-                    : "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400")}>
+                  <div role={ragMsg.type === 'err' ? 'alert' : 'status'} aria-live="polite" className={cn('mt-3 text-xs px-3 py-2 rounded-lg font-medium break-words',
+                    ragMsg.type === 'ok' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                      : ragMsg.type === 'info' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400'
+                      : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400')}>
                     {ragMsg.text}
                   </div>
                 )}
-                {ragStats && (
-                  <div className="grid grid-cols-3 gap-3 mt-3 text-xs">
-                    <div className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
-                      <span className="text-neutral-500">Schema</span>
-                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{ragStats.schema?.lancedb_count || 0}</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-xs" aria-label="索引数量快照">
+                  {[['schema', 'Schema'], ['metrics', '指标'], ['documents', '文档']].map(([key, label]) => (
+                    <div key={key} className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
+                      <span className="text-neutral-500">{label} · 向量 / 关键词</span>
+                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">
+                        {ragStats ? `${ragStats[key].lancedb_count} / ${ragStats[key].bm25_count}` : '—'}
+                      </div>
                     </div>
-                    <div className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
-                      <span className="text-neutral-500">Metrics</span>
-                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{ragStats.metrics?.lancedb_count || 0}</div>
-                    </div>
-                    <div className="p-2 rounded bg-gray-50 dark:bg-neutral-800">
-                      <span className="text-neutral-500">Documents</span>
-                      <div className="font-mono font-semibold text-neutral-700 dark:text-neutral-300">{ragStats.documents?.lancedb_count || 0}</div>
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+                <details className="mt-4 border-t border-neutral-200 dark:border-neutral-700 pt-3">
+                  <summary className="text-xs font-medium cursor-pointer text-neutral-600 dark:text-neutral-300">全量索引维护（仅维护窗口使用）</summary>
+                  <p className="text-xs text-neutral-500 my-3">清空全部 Schema、指标和文档索引。上传文档需要重新导入；处理遗留库请优先使用上方按库清理。</p>
+                  <button className="btn-outline text-xs text-red-700 dark:text-red-300" onClick={handleClearRAG}
+                    disabled={ragMaintenanceDisabled || !ragStats || uploadingDoc}>
+                    {clearing ? '清空中...' : '清空全部 RAG 索引'}
+                  </button>
+                </details>
               </Card>
 
               {/* Document upload */}
@@ -4326,29 +4573,25 @@ const SettingsPanel = ({ userName, onLogout }) => {
           )}
 
           {activeTab === "database" && (
-            <Card className="p-5">
-              <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0 mb-3">
-                数据库方言支持
-                <span className="text-xs font-normal text-neutral-400 ml-2">11 种方言</span>
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs">
-                {dbs.map(db => (
-                  <div key={db.name} className="flex items-center gap-1.5 p-2 rounded-lg bg-gray-50 dark:bg-neutral-800">
-                    <span className={cn("w-1.5 h-1.5 rounded-full", db.on ? "bg-emerald-500" : "bg-neutral-300 dark:bg-neutral-600")} />
-                    <span className={cn("font-medium capitalize", db.on ? "text-neutral-600 dark:text-neutral-300" : "text-neutral-400")}>{db.name}</span>
-                  </div>
-                ))}
+            <Card className="p-5" data-database-capabilities>
+              <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0">数据库连接能力<span className="text-xs font-normal text-neutral-400 ml-2">只读状态</span></h3>
+                <button className="btn-outline" onClick={fetchDatabaseCapabilities} disabled={databaseLoading}>{databaseLoading ? "读取中…" : "重新读取连接能力"}</button>
               </div>
-              {databaseSettings && (
-                <div className="grid grid-cols-2 gap-4 mt-4 text-sm">
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">连接池大小</label>
-                    <input type="number" className="input-light" value={databaseSettings.connection_pool_size || 5} disabled />
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">连接超时</label>
-                    <input type="text" className="input-light" value={(databaseSettings.connection_timeout_s || 10) + "s"} disabled />
-                  </div>
+              <p className="text-xs text-neutral-500 leading-relaxed" role="status">连接实现与 SQL 方言支持不同。驱动模块可发现不代表能成功导入、连接或查询；注册数量不是连接健康检查，只反映当前进程。</p>
+              <p className="text-xs text-neutral-500 leading-relaxed">通用池大小与连接超时尚未接通，当前无统一生效值；旧设置表和方言开关不生效，本页不提供保存。连接参数由各驱动实现及默认值决定。</p>
+              {databaseError && <p className="text-sm text-red-600" role="alert">{databaseError}</p>}
+              {databaseLoading && <p className="text-xs text-neutral-500" role="status">正在读取；旧值暂不展示。</p>}
+              {(!databaseSettings || databaseLoading || databaseError) ? <p className="text-sm text-neutral-400">连接能力：—</p> : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" aria-busy={databaseLoading}>
+                  {databaseSettings.connectors.map(db => (
+                    <div key={db.type} data-database-type={db.type} className="p-3 min-w-0 rounded-lg bg-gray-50 dark:bg-neutral-800 text-xs flex flex-col gap-2">
+                      <span className="font-medium text-sm capitalize">{db.type} · {db.implemented ? "连接已实现" : "连接未实现"}</span>
+                      <span>驱动：{!db.implemented ? "不适用" : db.module_discoverable === null ? "发现状态未知" : db.module_discoverable ? "模块可发现" : "模块未发现"}{db.driver_module ? ` (${db.driver_module})` : ''}</span>
+                      <span>{({native_single_connection: '原生单连接', async_single_connection: '异步单连接', pool_acquired_connection: '建池后持有一个连接', not_implemented: '暂不支持建立连接'})[db.management]}</span>
+                      <span className="font-mono">当前注册：{db.registered_connections}</span>
+                    </div>
+                  ))}
                 </div>
               )}
             </Card>
@@ -4358,7 +4601,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
             <Card className="p-5">
               <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 m-0 mb-3">账户</h3>
               <div className="flex items-center gap-4 flex-wrap">
-                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&h=80&fit=crop&crop=face"
+                <img src="/assets/default-avatar.svg"
                      className="h-10 w-10 rounded-full object-cover" alt="Avatar" />
                 <div className="flex-1 min-w-[160px]">
                   <div className="text-sm font-medium text-neutral-900 dark:text-neutral-100">{userName}</div>
@@ -4501,7 +4744,7 @@ const UserSettingsPanel = ({ userName, userAvatar, onLogout, onUserUpdate }) => 
         <div className="flex flex-col items-center gap-4">
           <div className="relative group">
             <img
-              src={previewAvatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&h=120&fit=crop&crop=face"}
+              src={previewAvatar || "/assets/default-avatar.svg"}
               className="h-24 w-24 rounded-full object-cover ring-2 ring-neutral-200 dark:ring-neutral-700"
               alt="头像"
             />
@@ -4689,12 +4932,18 @@ const ConnectPanel = ({ onDbChange }) => {
 
   const handleDisconnect = async (dbId) => {
     try {
-      await api.disconnectDb(dbId);
+      const result = await api.disconnectDb(dbId);
       setExpandedDb(null);
       setDbPreviewData(prev => { const n = {...prev}; delete n[dbId]; return n; });
       refreshList();
       if (onDbChange) onDbChange();
-      notify("已断开数据库连接", 'ok');
+      if (result?.rag_index_cleared !== true || result?.warnings?.length) {
+        const text = '数据库已断开，但索引清理未完成。请到“系统设置 → RAG 检索 → Schema 按库维护”重试清理。';
+        setMsg({ type: 'err', text });
+        notify(text, 'error');
+      } else {
+        notify("已断开数据库连接", 'ok');
+      }
     } catch (e) {
       setMsg({ type: "err", text: e.message || "断开失败" });
       notify(e.message || "断开失败", 'error');
@@ -5066,7 +5315,7 @@ const App = () => {
                 href: "#user",
                 icon: (
                   <img
-                    src={userAvatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face"}
+                    src={userAvatar || "/assets/default-avatar.svg"}
                     className="h-7 w-7 flex-shrink-0 rounded-full object-cover"
                     alt="Avatar"
                   />

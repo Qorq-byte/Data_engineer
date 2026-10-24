@@ -132,6 +132,7 @@ class GenerateSQLNode(AgenticNode):
                 metadata={"status": "success"},
             )
 
+        generation_warnings: list[str] = []
         try:
             if streaming:
                 # Streaming mode — accumulate tokens
@@ -201,6 +202,7 @@ class GenerateSQLNode(AgenticNode):
                     error_context=error_context,
                     multi_table_hint=multi_table_hint,
                     database_name=database_name,
+                    warnings=generation_warnings,
                 )
         except Exception as exc:
             return NodeOutput(
@@ -221,11 +223,13 @@ class GenerateSQLNode(AgenticNode):
                 "candidates_count": len(candidates),
                 "primary_sql": primary.sql_text[:200] if primary and primary.sql_text else None,
                 "confidence": primary.confidence if primary else 0.0,
+                "warnings": generation_warnings,
             },
             context={
                 "candidates": candidates,
                 "primary_sql": primary.sql_text if primary else None,
                 "primary_candidate": primary,
+                "generation_warnings": generation_warnings,
             },
         )
 

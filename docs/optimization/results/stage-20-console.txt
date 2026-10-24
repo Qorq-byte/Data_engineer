@@ -1,0 +1,13 @@
+--- BEGIN UNTRUSTED EXTERNAL CONTENT (source: http://127.0.0.1:8020/workspace) ---
+[2026-10-22T12:02:52.116Z] [warning] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[2026-10-22T12:02:53.105Z] [warning] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/
+[2026-10-22T12:02:54.367Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-22T12:02:54.367Z] [error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[2026-10-22T12:02:54.367Z] [error] Failed to load resource: the server responded with a status of 401 (Unauthorized)
+[2026-10-22T12:02:54.529Z] [warning] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation
+[2026-10-22T12:02:54.595Z] [warning] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/
+[2026-10-22T12:02:55.633Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-22T12:03:44.733Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-22T12:04:37.647Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+[2026-10-22T12:04:37.647Z] [error] Failed to load resource: the server responded with a status of 503 (Service Unavailable)
+--- END UNTRUSTED EXTERNAL CONTENT ---
