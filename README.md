@@ -637,3 +637,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段15为DuckDB保存并核对原生namespace身份、search_path与用户临时对象状态，防止同句柄切库后复用旧来源；绑定EXPLAIN使用原会话。保守main/no-temp范围、DDL与索引限制及实测见[阶段15报告](docs/optimization/stage-15.md)。
 
 阶段16统一Schema/RAG刷新并在索引删除前核对来源；冲突HTTP409、旧索引保留，前端按实际业务字段统计成功。四条写入口、取消/失败和双后端部分写限制见[阶段16报告](docs/optimization/stage-16.md)。check:frontend同时执行实际页面刷新处理函数的12项契约场景。
+
+阶段29新增请求级 `llm_usage`：JSON、SSE done、MCP 共用隔离摘要；逐次尝试、缺测和覆盖率语义见[用量契约](docs/optimization/request-llm-usage.md)，验收见[阶段29报告](docs/optimization/stage-29.md)。不提供费用估算或持久账本。新增模块类型门禁：`mypy app/llm/usage.py`。Windows 本地验证需可用的时区数据库（如 `tzdata`）。

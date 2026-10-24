@@ -16,7 +16,7 @@ JSON QueryResponse、SSE done 和 MCP nl_query 共用 llm_usage 投影。详细�
 
 定向 LLM/协议/缓存/SQL生成回归：363通过，见 [日志](results/stage-29-targeted.txt)。新增28项回归覆盖字典/对象usage、0与非法值、并发交错/上下文重置、重试/fallback、失败usage、预算拒绝、取消/提前关闭、排队取消、流末usage/缺结束标记/截断、有界与摘要副本、三协议真实SQLite、多库多候选和全部生成失败。
 
-前端182函数契约和三页46文件完整构建（重复构建/坏JS保留旧产物）通过，见 [前端](results/stage-29-frontend.txt)/[构建](results/stage-29-build.txt)。页面未改，未重复视觉测试。Ruff、原核心strict36、新模块strict1、评测脚本strict1通过。全仓mypy维持178项，无新增（按 file/code/message 多重集比较），见 [类型摘要](results/stage-29-types-summary.json)。全量 **3606通过、1跳过、1警告，118.21秒**，见 [日志](results/stage-29-pytest.txt)。最终源码的受影响模块363项再次通过（21.42秒）。远程CI结果待推送后补记。
+前端182函数契约和三页46文件完整构建（重复构建/坏JS保留旧产物）通过，见 [前端](results/stage-29-frontend.txt)/[构建](results/stage-29-build.txt)。页面未改，未重复视觉测试。Ruff、原核心strict36、新模块strict1、评测脚本strict1通过。全仓mypy维持178项，无新增（按 file/code/message 多重集比较），见 [类型摘要](results/stage-29-types-summary.json)。全量 **3606通过、1跳过、1警告，118.21秒**，见 [日志](results/stage-29-pytest.txt)。最终源码的受影响模块363项再次通过（21.42秒）。远程Linux干净安装 **3607通过、1警告，49.03秒**，uvloop平台项实际执行；所有前端/Ruff/strict门禁通过。
 
 ## 验证环境与首次失败
 
@@ -25,3 +25,7 @@ JSON QueryResponse、SSE done 和 MCP nl_query 共用 llm_usage 投影。详细�
 首次全量 3466通过/132失败/1跳过。向量缓存失败在未修改基线中复现，错误包含 Windows 缺少时区数据；补 tzdata，并将本机 LanceDB/PyArrow/DuckDB 对齐阶段28版本0.38.0/25.0.1/1.5.5后重跑。另修复一项新采集适配器读取旧测试 Router 缺失 config 的兼容性问题。原始失败日志保留为 stage-29-pytest-initial.txt，不计作验收通过。最终CI使用Linux干净安装验证项目声明依赖。
 
 生产 provider 的 usage 形状/覆盖率、取消后的远端消耗、真实账单、缓存/推理 token 口径和并发性能未测；没有质量或费用提升承诺。178类型存量仍未清零，构建依赖告警不属于本阶段修复范围。
+
+## Git与远程验收
+
+代码提交 [63e2f00](https://github.com/Qorq-byte/Data_engineer/commit/63e2f006f1efc027318a584e9b04052906d5bba6) 已普通推送 codex/request-llm-usage；[Actions40050574778](https://github.com/Qorq-byte/Data_engineer/actions/runs/40050574778) 成功，headSha精确匹配，[结构化证据](results/stage-29-ci.json)。本次仅补记验收文档及运行说明，再提交推送并核验最终CI。不强推、不合并main。
