@@ -30,4 +30,7 @@ Ruff通过；原strict36、评测strict1及边界strict2通过；全仓mypy仍17
 
 ## 交付
 
-阶段计划、响应归一化、来源标识、映射前usage观察、SDK/协议回归和类型门禁已实现。本地全量最终检查已通过；提交推送和精确SHA CI待核验后补记。不强推、不自动合并main。
+阶段计划、响应归一化、来源标识、映射前usage观察、SDK/协议回归和类型门禁已实现。本地全量最终检查及代码精确SHA CI均已通过。不强推、不自动合并main。
+
+
+代码 [7dce3d6](https://github.com/Qorq-byte/Data_engineer/commit/7dce3d64e7d20986cb73b9c1a02c49385eaf0a33) 已普通推送codex/llm-response-boundary；[Actions40068196110](https://github.com/Qorq-byte/Data_engineer/actions/runs/40068196110) 成功，headSha精确匹配，[结构化证据](results/stage-30-ci.json)。Linux干净安装 **3641通过、2警告，50.43秒**，平台项实际执行；前端、Ruff、核心strict36、边界strict2和评测strict1均通过。本次补记证据另行提交推送，并核验最终CI。
