@@ -755,3 +755,48 @@ async def test_failed_generation_keeps_usage_summary(connected_query, monkeypatc
     assert usage["attempt_count"] == result["llm_calls"] > 0
     assert usage["known_prompt_tokens"] == usage["attempt_count"] * 3
     assert all(a["status"] == "incomplete" for a in usage["attempts"])
+
+
+@pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+@pytest.mark.parametrize("reason", ["stop", "length"])
+async def test_real_sdk_objects_through_query_protocols(
+    connected_query, monkeypatch, protocol, reason,
+):
+    import litellm
+
+    from tests.test_llm.test_sdk_boundary import native_router
+    calls = []
+    async def transport(**options):
+        calls.append(options)
+        return litellm.ModelResponse(model="fixture", usage={
+            "prompt_tokens": 4, "completion_tokens": 2, "total_tokens": 6,
+        }, choices=[{"finish_reason": reason, "message": {
+            "role": "assistant", "content": "SELECT id FROM orders ORDER BY id",
+        }}])
+    monkeypatch.setattr(litellm, "acompletion", transport)
+    monkeypatch.setattr(query, "get_default_router", lambda: native_router(max_retries=0))
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+    if protocol == "mcp":
+        result = await mcp_query(nl_text="find all orders", db_id="contract")
+    elif protocol == "sse":
+        result = next(value for event, value in stream_events(
+            connected_query.post("/api/v1/query/stream", json=body)) if event == "done")
+    else:
+        result = connected_query.post("/api/v1/query", json=body).json()
+    usage = result["llm_usage"]
+    assert usage["attempt_count"] == result["llm_calls"] == len(calls) == 1
+    assert usage["known_prompt_tokens"] == 4
+    assert usage["known_completion_tokens"] == 2
+    assert usage["complete"]
+    assert usage["attempts"][0]["usage_basis"] == "sdk_normalized"
+    assert usage["attempts"][0]["status"] == ("completed" if reason == "stop" else "incomplete")
+    assert result["status"] == ("completed" if reason == "stop" else "failed")
+    if reason == "stop":
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[1], [2], [3], [4], [5]]
+    else:
+        if protocol == "mcp":
+            assert result["rows"] == []
+        else:
+            assert result["execution"] is None

@@ -1,0 +1,3 @@
+Built 3 pages, 46 files, 2043810 bytes
+Built 3 pages, 46 files, 2043810 bytes
+[PASS] Three local pages, assets/fonts/licenses, SHA-256 integrity, repeatable build and failed-build preservation

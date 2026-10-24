@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.llm.completion import IncompleteCompletionError, check_completion, response_field
+from app.llm.responses import normalize_completion
 from app.llm.usage import active_usage, current_attempt, observe, observe_response
 
 # ── LiteLLM integration (optional — graceful degradation) ────────────
@@ -734,11 +735,23 @@ class LiteLLMRouter:
         call_kwargs["num_retries"] = 0
 
         try:
+            try:
+                if stream:
+                    response = await litellm.acompletion(stream=True, **call_kwargs)
+                else:
+                    response = await litellm.acompletion(**call_kwargs)
+            except Exception as exc:
+                # Observe before SDK errors are mapped to sanitized router errors.
+                observe_response(exc, usage_basis="sdk_normalized")
+                raise
             if stream:
-                response = await litellm.acompletion(stream=True, **call_kwargs)
+                observe_response(response, usage_basis="sdk_normalized")
                 return self._stream_to_async_gen(response)
-            else:
-                return await litellm.acompletion(**call_kwargs)
+            observe_response(
+                response,
+                usage_basis="response_fields" if isinstance(response, dict) else "sdk_normalized",
+            )
+            return normalize_completion(response)
         except litellm.exceptions.RateLimitError as e:
             raise RateLimitError(f"Rate limited by {provider.provider}") from e
         except litellm.exceptions.Timeout as e:
@@ -783,7 +796,11 @@ class LiteLLMRouter:
         finished = False
         try:
             async for chunk in response:
-                observe_response(chunk)
+                observe_response(
+                    chunk,
+                    usage_basis="sdk_normalized"
+                    if callable(getattr(chunk, "model_dump", None)) else "response_fields",
+                )
                 choices = response_field(chunk, "choices")
                 if not choices:  # usage-only chunks are allowed, including after stop
                     continue
@@ -805,6 +822,9 @@ class LiteLLMRouter:
                 raise IncompleteCompletionError(
                     "Model stream ended without a completion marker; SQL discarded."
                 )
+        except Exception as exc:
+            observe_response(exc)
+            raise
         finally:
             if hasattr(response, "aclose"):
                 with contextlib.suppress(Exception):

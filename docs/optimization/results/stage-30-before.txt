@@ -1,0 +1,678 @@
+FFFFFFFFFFFFFFFFFFFFF                                                    [100%]
+================================== FAILURES ===================================
+_____ test_actual_sdk_response_becomes_dict_without_inventing_usage[None] _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831A851220>
+usage = None
+
+    @pytest.mark.parametrize("usage", [None, {"prompt_tokens": 4, "completion_tokens": 2}])
+    async def test_actual_sdk_response_becomes_dict_without_inventing_usage(monkeypatch, usage):
+        original = sdk_response(usage=usage)
+        assert not isinstance(original, dict)
+        calls = []
+        async def transport(**options):
+            calls.append(options)
+            return original
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        budget = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        t = active_usage.set(collector)
+        b = active_budget.set(budget)
+        try:
+>           result = await BudgetedRouter(native_router(max_retries=0)).complete([])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_sdk_boundary.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\llm\budget.py:55: in complete
+    response = await self._router.complete(
+app\llm\router.py:355: in complete
+    response = await self._route_with_fallback(
+app\llm\router.py:458: in _route_with_fallback
+    response = await self._limited_call(
+app\llm\router.py:562: in _limited_call
+    response = await self._observed_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <app.llm.router.LiteLLMRouter object at 0x0000028315945BE0>
+provider = ProviderConfig(provider='openai', api_key_env='', models=['fixture'], base_url=None, rate_limit_rpm=0, api_key='synthetic')
+model = 'fixture', messages = [], temperature = 0.7, n = 1, stream = False
+kwargs = {}
+
+    async def _observed_call(
+        self,
+        provider: ProviderConfig,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        n: int,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
+        collector = active_usage.get()
+        started = time.perf_counter()
+        with observe(collector, provider.provider, model, "transport_boundary"):
+            async with asyncio.timeout(self.config.timeout_seconds):
+                response = await self._call_provider(
+                    provider, model, messages, temperature, n, stream, **kwargs
+                )
+            record = current_attempt.get()
+            if not stream:
+                observe_response(response)
+                if not isinstance(response, dict):
+>                   raise TypeError("Non-streaming model response must be an object")
+E                   TypeError: Non-streaming model response must be an object
+
+app\llm\router.py:616: TypeError
+____ test_actual_sdk_response_becomes_dict_without_inventing_usage[usage1] ____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE3BD70>
+usage = {'prompt_tokens': 4, 'completion_tokens': 2}
+
+    @pytest.mark.parametrize("usage", [None, {"prompt_tokens": 4, "completion_tokens": 2}])
+    async def test_actual_sdk_response_becomes_dict_without_inventing_usage(monkeypatch, usage):
+        original = sdk_response(usage=usage)
+        assert not isinstance(original, dict)
+        calls = []
+        async def transport(**options):
+            calls.append(options)
+            return original
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        budget = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        t = active_usage.set(collector)
+        b = active_budget.set(budget)
+        try:
+>           result = await BudgetedRouter(native_router(max_retries=0)).complete([])
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_sdk_boundary.py:46: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\llm\budget.py:55: in complete
+    response = await self._router.complete(
+app\llm\router.py:355: in complete
+    response = await self._route_with_fallback(
+app\llm\router.py:458: in _route_with_fallback
+    response = await self._limited_call(
+app\llm\router.py:562: in _limited_call
+    response = await self._observed_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <app.llm.router.LiteLLMRouter object at 0x000002831BE45AF0>
+provider = ProviderConfig(provider='openai', api_key_env='', models=['fixture'], base_url=None, rate_limit_rpm=0, api_key='synthetic')
+model = 'fixture', messages = [], temperature = 0.7, n = 1, stream = False
+kwargs = {}
+
+    async def _observed_call(
+        self,
+        provider: ProviderConfig,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        n: int,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
+        collector = active_usage.get()
+        started = time.perf_counter()
+        with observe(collector, provider.provider, model, "transport_boundary"):
+            async with asyncio.timeout(self.config.timeout_seconds):
+                response = await self._call_provider(
+                    provider, model, messages, temperature, n, stream, **kwargs
+                )
+            record = current_attempt.get()
+            if not stream:
+                observe_response(response)
+                if not isinstance(response, dict):
+>                   raise TypeError("Non-streaming model response must be an object")
+E                   TypeError: Non-streaming model response must be an object
+
+app\llm\router.py:616: TypeError
+_________ test_sdk_completion_markers_reach_sql_guard[stop-message0] __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE3BC50>
+reason = 'stop', message = {}
+
+    @pytest.mark.parametrize("reason,message", [
+        ("stop", {}), ("length", {}), ("content_filter", {}),
+        ("stop", {"refusal": "private refusal"}),
+        ("tool_calls", {"tool_calls": [{"id": "fixture", "type": "function",
+            "function": {"name": "private_tool", "arguments": "private_args"}}]}),
+    ])
+    async def test_sdk_completion_markers_reach_sql_guard(monkeypatch, reason, message):
+        async def transport(**options):
+            return sdk_response(reason, {"prompt_tokens": 3, "completion_tokens": 1}, **message)
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            generator = SQLGenerator(BudgetedRouter(native_router(max_retries=0)))
+            if reason == "stop" and not message:
+>               assert (await generator.generate(SQR(raw_text="orders")))[0].sql_text
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_sdk_boundary.py:75: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\core\sql_generator.py:106: in generate
+    return await self._temperature_sampling(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <app.core.sql_generator.SQLGenerator object at 0x000002831BE3ACC0>
+sqr = SQR(raw_text='orders', language='en', intent=<IntentType.UNKNOWN: 'UNKNOWN'>, entities=[], time_range=None, target_tables=[], target_columns=[], conditions=[], order_by=[], limit=None, ambiguities=[], confidence=0.0)
+schema = None, domain = None, history = None, similar_pairs = None, n = 1
+model = None, dialect = None, rag_context = None, error_context = None
+multi_table_hint = None, database_name = '', warnings = None
+
+    async def _temperature_sampling(
+        self,
+        sqr: SQR,
+        schema: SchemaSnapshot | None,
+        domain: DomainConfig | None,
+        history: list[Any] | None,
+        similar_pairs: list[QueryPair] | None,
+        n: int,
+        model: str | None,
+        dialect: str | None,
+        rag_context: str | None = None,
+        error_context: str | None = None,
+        multi_table_hint: dict[str, Any] | None = None,
+        database_name: str = "",
+        warnings: list[str] | None = None,
+    ) -> list[SQLCandidate]:
+        """Strategy A: single call with variable temperature or n > 1.
+    
+        When *multi_table_hint* has alternatives, the LLM is instructed to
+        return multiple SQLs separated by ``---ALTERNATIVE---``.  Each
+        alternative becomes a separate candidate.
+        """
+        prompt = self.prompt_builder.build(
+            sqr, schema=schema, domain=domain,
+            history=history, similar_pairs=similar_pairs,
+            dialect=dialect, rag_context=rag_context,
+            error_context=error_context,
+            multi_table_hint=multi_table_hint,
+            database_name=database_name,
+        )
+    
+        effective_n = max(1, min(n, 5))
+        t0 = time.perf_counter()
+    
+        # Make n independent calls with n=1 each for provider compatibility
+        # (many providers like DeepSeek don't support n>1)
+        tasks = []
+        for _i in range(effective_n):
+            tasks.append(
+                self.router.complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    model=model,
+                    temperature=0.3,
+                    n=1,
+                )
+            )
+        responses_raw = await asyncio.gather(*tasks, return_exceptions=True)
+        latency = (time.perf_counter() - t0) * 1000
+    
+        # Parse choices into candidates
+        candidates: list[SQLCandidate] = []
+        actual_model = model or self.router.config.default_model
+        idx = 0
+        rejected: list[IncompleteCompletionError] = []
+        for resp in responses_raw:
+            if isinstance(resp, Exception):
+                if isinstance(resp, IncompleteCompletionError):
+                    rejected.append(resp)
+                continue
+    
+            if isinstance(resp, asyncio.CancelledError):
+                raise resp
+            try:
+                content = _completion_text(resp)
+            except IncompleteCompletionError as exc:
+                rejected.append(exc)
+                continue
+            if content is None:
+                continue
+            if isinstance(resp, dict) and isinstance(resp.get("model"), str):
+                actual_model = resp["model"]
+    
+            # ���� Parse multi-SQL response ����������������������������������������������������
+            # When multi_table_hint is active, the LLM may return several
+            # SQLs separated by ---ALTERNATIVE---.  Split them into
+            # independent candidates; the fixed workflow validates/executes only the primary.
+            alternatives = _split_alternatives(content)
+            if len(alternatives) > 1:
+                for j, alt_sql in enumerate(alternatives):
+                    mode = "primary" if (idx == 0 and j == 0) else f"alt_{idx}_{j}"
+                    candidates.append(
+                        SQLCandidate(
+                            id=f"cand_{uuid.uuid4().hex[:8]}",
+                            sql_text=alt_sql,
+                            confidence=max(0.85 - j * 0.12, 0.3),
+                            generation_mode=mode,
+                            dialect=dialect or "ansi",
+                            model=str(actual_model),
+                            latency_ms=latency / effective_n,
+                            database_name=database_name,
+                        )
+                    )
+            else:
+                sql_text = _extract_sql(content)
+                mode = "primary" if idx == 0 else f"alt_{idx}"
+    
+                candidates.append(
+                    SQLCandidate(
+                        id=f"cand_{uuid.uuid4().hex[:8]}",
+                        sql_text=sql_text,
+                        confidence=max(0.85 - idx * 0.1, 0.3),
+                        generation_mode=mode,
+                        dialect=dialect or "ansi",
+                        model=str(actual_model),
+                        latency_ms=latency / effective_n,
+                        database_name=database_name,
+                    )
+                )
+            idx += 1
+    
+        if not candidates or not any(c.sql_text.strip() for c in candidates):
+            if rejected:
+                raise rejected[0]
+>           raise RuntimeError("All SQL generation attempts failed or returned empty output")
+E           RuntimeError: All SQL generation attempts failed or returned empty output
+
+app\core\sql_generator.py:269: RuntimeError
+________ test_sdk_completion_markers_reach_sql_guard[length-message1] _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE47950>
+reason = 'length', message = {}
+
+    @pytest.mark.parametrize("reason,message", [
+        ("stop", {}), ("length", {}), ("content_filter", {}),
+        ("stop", {"refusal": "private refusal"}),
+        ("tool_calls", {"tool_calls": [{"id": "fixture", "type": "function",
+            "function": {"name": "private_tool", "arguments": "private_args"}}]}),
+    ])
+    async def test_sdk_completion_markers_reach_sql_guard(monkeypatch, reason, message):
+        async def transport(**options):
+            return sdk_response(reason, {"prompt_tokens": 3, "completion_tokens": 1}, **message)
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            generator = SQLGenerator(BudgetedRouter(native_router(max_retries=0)))
+            if reason == "stop" and not message:
+                assert (await generator.generate(SQR(raw_text="orders")))[0].sql_text
+            else:
+                with pytest.raises(RuntimeError):
+                    await generator.generate(SQR(raw_text="orders"))
+>           assert collector.records[0].status == ("completed" if reason == "stop" and not message else "incomplete")
+E           AssertionError: assert 'failed' == 'incomplete'
+E             
+E             - incomplete
+E             + failed
+
+tests\test_llm\test_sdk_boundary.py:79: AssertionError
+____ test_sdk_completion_markers_reach_sql_guard[content_filter-message2] _____
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE456A0>
+reason = 'content_filter', message = {}
+
+    @pytest.mark.parametrize("reason,message", [
+        ("stop", {}), ("length", {}), ("content_filter", {}),
+        ("stop", {"refusal": "private refusal"}),
+        ("tool_calls", {"tool_calls": [{"id": "fixture", "type": "function",
+            "function": {"name": "private_tool", "arguments": "private_args"}}]}),
+    ])
+    async def test_sdk_completion_markers_reach_sql_guard(monkeypatch, reason, message):
+        async def transport(**options):
+            return sdk_response(reason, {"prompt_tokens": 3, "completion_tokens": 1}, **message)
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            generator = SQLGenerator(BudgetedRouter(native_router(max_retries=0)))
+            if reason == "stop" and not message:
+                assert (await generator.generate(SQR(raw_text="orders")))[0].sql_text
+            else:
+                with pytest.raises(RuntimeError):
+                    await generator.generate(SQR(raw_text="orders"))
+>           assert collector.records[0].status == ("completed" if reason == "stop" and not message else "incomplete")
+E           AssertionError: assert 'failed' == 'incomplete'
+E             
+E             - incomplete
+E             + failed
+
+tests\test_llm\test_sdk_boundary.py:79: AssertionError
+_________ test_sdk_completion_markers_reach_sql_guard[stop-message3] __________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE45220>
+reason = 'stop', message = {'refusal': 'private refusal'}
+
+    @pytest.mark.parametrize("reason,message", [
+        ("stop", {}), ("length", {}), ("content_filter", {}),
+        ("stop", {"refusal": "private refusal"}),
+        ("tool_calls", {"tool_calls": [{"id": "fixture", "type": "function",
+            "function": {"name": "private_tool", "arguments": "private_args"}}]}),
+    ])
+    async def test_sdk_completion_markers_reach_sql_guard(monkeypatch, reason, message):
+        async def transport(**options):
+            return sdk_response(reason, {"prompt_tokens": 3, "completion_tokens": 1}, **message)
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            generator = SQLGenerator(BudgetedRouter(native_router(max_retries=0)))
+            if reason == "stop" and not message:
+                assert (await generator.generate(SQR(raw_text="orders")))[0].sql_text
+            else:
+                with pytest.raises(RuntimeError):
+                    await generator.generate(SQR(raw_text="orders"))
+>           assert collector.records[0].status == ("completed" if reason == "stop" and not message else "incomplete")
+E           AssertionError: assert 'failed' == 'incomplete'
+E             
+E             - incomplete
+E             + failed
+
+tests\test_llm\test_sdk_boundary.py:79: AssertionError
+______ test_sdk_completion_markers_reach_sql_guard[tool_calls-message4] _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BC90EC0>
+reason = 'tool_calls'
+message = {'tool_calls': [{'id': 'fixture', 'type': 'function', 'function': {'name': 'private_tool', 'arguments': 'private_args'}}]}
+
+    @pytest.mark.parametrize("reason,message", [
+        ("stop", {}), ("length", {}), ("content_filter", {}),
+        ("stop", {"refusal": "private refusal"}),
+        ("tool_calls", {"tool_calls": [{"id": "fixture", "type": "function",
+            "function": {"name": "private_tool", "arguments": "private_args"}}]}),
+    ])
+    async def test_sdk_completion_markers_reach_sql_guard(monkeypatch, reason, message):
+        async def transport(**options):
+            return sdk_response(reason, {"prompt_tokens": 3, "completion_tokens": 1}, **message)
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            generator = SQLGenerator(BudgetedRouter(native_router(max_retries=0)))
+            if reason == "stop" and not message:
+                assert (await generator.generate(SQR(raw_text="orders")))[0].sql_text
+            else:
+                with pytest.raises(RuntimeError):
+                    await generator.generate(SQR(raw_text="orders"))
+>           assert collector.records[0].status == ("completed" if reason == "stop" and not message else "incomplete")
+E           AssertionError: assert 'failed' == 'incomplete'
+E             
+E             - incomplete
+E             + failed
+
+tests\test_llm\test_sdk_boundary.py:79: AssertionError
+_______________ test_sdk_exception_usage_survives_retry_mapping _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE50230>
+
+    async def test_sdk_exception_usage_survives_retry_mapping(monkeypatch):
+        calls = []
+        async def transport(**options):
+            calls.append(options)
+            if len(calls) == 1:
+                error = litellm.InternalServerError(message="private", model="fixture", llm_provider="openai")
+                error.usage = {"prompt_tokens": 5, "completion_tokens": 0}
+                raise error
+            return sdk_response(usage={"prompt_tokens": 2, "completion_tokens": 1})
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+>           await native_router(max_retries=1).complete([])
+
+tests\test_llm\test_sdk_boundary.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\llm\router.py:355: in complete
+    response = await self._route_with_fallback(
+app\llm\router.py:458: in _route_with_fallback
+    response = await self._limited_call(
+app\llm\router.py:562: in _limited_call
+    response = await self._observed_call(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <app.llm.router.LiteLLMRouter object at 0x000002831BE535C0>
+provider = ProviderConfig(provider='openai', api_key_env='', models=['fixture'], base_url=None, rate_limit_rpm=0, api_key='synthetic')
+model = 'fixture', messages = [], temperature = 0.7, n = 1, stream = False
+kwargs = {}
+
+    async def _observed_call(
+        self,
+        provider: ProviderConfig,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        n: int,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
+        collector = active_usage.get()
+        started = time.perf_counter()
+        with observe(collector, provider.provider, model, "transport_boundary"):
+            async with asyncio.timeout(self.config.timeout_seconds):
+                response = await self._call_provider(
+                    provider, model, messages, temperature, n, stream, **kwargs
+                )
+            record = current_attempt.get()
+            if not stream:
+                observe_response(response)
+                if not isinstance(response, dict):
+>                   raise TypeError("Non-streaming model response must be an object")
+E                   TypeError: Non-streaming model response must be an object
+
+app\llm\router.py:616: TypeError
+___________________ test_sdk_stream_tail_usage_and_cleanup ____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE52930>
+
+    async def test_sdk_stream_tail_usage_and_cleanup(monkeypatch):
+        closed = []
+        async def raw():
+            try:
+                yield ModelResponseStream(choices=[{"delta": {"content": "SELECT 1"}}])
+                yield ModelResponseStream(choices=[{"delta": {}, "finish_reason": "stop"}])
+                yield ModelResponseStream(choices=[], usage=Usage(prompt_tokens=4, completion_tokens=2))
+            finally:
+                closed.append(True)
+        async def transport(**options):
+            return raw()
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            assert [x async for x in native_router(max_retries=0).complete_stream([])] == ["SELECT 1"]
+            assert collector.records[0].status == "completed"
+>           assert collector.records[0].usage_basis == "sdk_normalized"
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'Attempt' object has no attribute 'usage_basis'
+
+tests\test_llm\test_sdk_boundary.py:127: AttributeError
+____________________ test_dict_transport_stays_compatible _____________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE50CE0>
+
+    async def test_dict_transport_stays_compatible(monkeypatch):
+        response = {"choices": [], "usage": {"prompt_tokens": 0, "completion_tokens": 2}}
+        async def transport(**options):
+            return response
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            assert await native_router(max_retries=0).complete([]) is response
+>           assert collector.records[0].usage_basis == "response_fields"
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'Attempt' object has no attribute 'usage_basis'
+
+tests\test_llm\test_sdk_boundary.py:143: AttributeError
+______________ test_normalizer_rejects_unstructured_values[None] ______________
+
+response = None
+
+    @pytest.mark.parametrize("response", [None, [], "private", 123, SimpleNamespace()])
+    def test_normalizer_rejects_unstructured_values(response):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:151: ModuleNotFoundError
+___________ test_normalizer_rejects_unstructured_values[response1] ____________
+
+response = []
+
+    @pytest.mark.parametrize("response", [None, [], "private", 123, SimpleNamespace()])
+    def test_normalizer_rejects_unstructured_values(response):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:151: ModuleNotFoundError
+____________ test_normalizer_rejects_unstructured_values[private] _____________
+
+response = 'private'
+
+    @pytest.mark.parametrize("response", [None, [], "private", 123, SimpleNamespace()])
+    def test_normalizer_rejects_unstructured_values(response):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:151: ModuleNotFoundError
+______________ test_normalizer_rejects_unstructured_values[123] _______________
+
+response = 123
+
+    @pytest.mark.parametrize("response", [None, [], "private", 123, SimpleNamespace()])
+    def test_normalizer_rejects_unstructured_values(response):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:151: ModuleNotFoundError
+___________ test_normalizer_rejects_unstructured_values[response4] ____________
+
+response = namespace()
+
+    @pytest.mark.parametrize("response", [None, [], "private", 123, SimpleNamespace()])
+    def test_normalizer_rejects_unstructured_values(response):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:151: ModuleNotFoundError
+____________________ test_serializer_failure_is_safe[None] ____________________
+
+bad_dump = None
+
+    @pytest.mark.parametrize("bad_dump", [None, [], "private", RuntimeError("private")])
+    def test_serializer_failure_is_safe(bad_dump):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:158: ModuleNotFoundError
+_________________ test_serializer_failure_is_safe[bad_dump1] __________________
+
+bad_dump = []
+
+    @pytest.mark.parametrize("bad_dump", [None, [], "private", RuntimeError("private")])
+    def test_serializer_failure_is_safe(bad_dump):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:158: ModuleNotFoundError
+__________________ test_serializer_failure_is_safe[private] ___________________
+
+bad_dump = 'private'
+
+    @pytest.mark.parametrize("bad_dump", [None, [], "private", RuntimeError("private")])
+    def test_serializer_failure_is_safe(bad_dump):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:158: ModuleNotFoundError
+_________________ test_serializer_failure_is_safe[bad_dump3] __________________
+
+bad_dump = RuntimeError('private')
+
+    @pytest.mark.parametrize("bad_dump", [None, [], "private", RuntimeError("private")])
+    def test_serializer_failure_is_safe(bad_dump):
+>       from app.llm.responses import normalize_completion
+E       ModuleNotFoundError: No module named 'app.llm.responses'
+
+tests\test_llm\test_sdk_boundary.py:158: ModuleNotFoundError
+_____________ test_sdk_defaulted_zero_is_identified_as_normalized _____________
+
+    def test_sdk_defaulted_zero_is_identified_as_normalized():
+        # The actual SDK erased original presence; fields_set also contains both counts.
+        usage = Usage(prompt_tokens=4)
+        assert usage.completion_tokens == 0
+        assert "completion_tokens" in usage.model_fields_set
+        response = sdk_response(usage=usage)
+        collector = UsageCollector()
+        from app.llm.usage import observe
+        with observe(collector, "openai", "fixture", "transport_boundary"):
+>           collector.observe(response, usage_basis="sdk_normalized")
+E           TypeError: UsageCollector.observe() got an unexpected keyword argument 'usage_basis'
+
+tests\test_llm\test_sdk_boundary.py:178: TypeError
+_____________ test_sdk_stream_cancel_keeps_provenance_and_closes ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002831BE46420>
+
+    async def test_sdk_stream_cancel_keeps_provenance_and_closes(monkeypatch):
+        entered = asyncio.Event()
+        closed = []
+        async def raw():
+            try:
+                yield ModelResponseStream(choices=[{"delta": {"content": "SELECT "}}])
+                entered.set()
+                await asyncio.Event().wait()
+            finally:
+                closed.append(True)
+        async def transport(**options):
+            return raw()
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        collector = UsageCollector()
+        t = active_usage.set(collector)
+        try:
+            async def consume():
+                return [x async for x in native_router(max_retries=0).complete_stream([])]
+            task = asyncio.create_task(consume())
+            await entered.wait()
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert collector.records[0].status == "cancelled"
+>           assert collector.records[0].usage_basis == "sdk_normalized"
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           AttributeError: 'Attempt' object has no attribute 'usage_basis'
+
+tests\test_llm\test_sdk_boundary.py:206: AttributeError
+============================== warnings summary ===============================
+tests/test_llm/test_sdk_boundary.py::test_actual_sdk_response_becomes_dict_without_inventing_usage[None]
+tests/test_llm/test_sdk_boundary.py::test_sdk_stream_tail_usage_and_cleanup
+  D:\python\data_engineer\.stage29\.check-venv\Lib\site-packages\pydantic\_internal\_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_sdk_boundary.py::test_actual_sdk_response_becomes_dict_without_inventing_usage[None]
+FAILED tests/test_llm/test_sdk_boundary.py::test_actual_sdk_response_becomes_dict_without_inventing_usage[usage1]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_completion_markers_reach_sql_guard[stop-message0]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_completion_markers_reach_sql_guard[length-message1]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_completion_markers_reach_sql_guard[content_filter-message2]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_completion_markers_reach_sql_guard[stop-message3]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_completion_markers_reach_sql_guard[tool_calls-message4]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_exception_usage_survives_retry_mapping
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_stream_tail_usage_and_cleanup
+FAILED tests/test_llm/test_sdk_boundary.py::test_dict_transport_stays_compatible
+FAILED tests/test_llm/test_sdk_boundary.py::test_normalizer_rejects_unstructured_values[None]
+FAILED tests/test_llm/test_sdk_boundary.py::test_normalizer_rejects_unstructured_values[response1]
+FAILED tests/test_llm/test_sdk_boundary.py::test_normalizer_rejects_unstructured_values[private]
+FAILED tests/test_llm/test_sdk_boundary.py::test_normalizer_rejects_unstructured_values[123]
+FAILED tests/test_llm/test_sdk_boundary.py::test_normalizer_rejects_unstructured_values[response4]
+FAILED tests/test_llm/test_sdk_boundary.py::test_serializer_failure_is_safe[None]
+FAILED tests/test_llm/test_sdk_boundary.py::test_serializer_failure_is_safe[bad_dump1]
+FAILED tests/test_llm/test_sdk_boundary.py::test_serializer_failure_is_safe[private]
+FAILED tests/test_llm/test_sdk_boundary.py::test_serializer_failure_is_safe[bad_dump3]
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_defaulted_zero_is_identified_as_normalized
+FAILED tests/test_llm/test_sdk_boundary.py::test_sdk_stream_cancel_keeps_provenance_and_closes
+21 failed, 2 warnings in 6.17s

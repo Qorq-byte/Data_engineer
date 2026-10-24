@@ -102,3 +102,5 @@ max_tokens接入设置生成路由的max_output_tokens，严格整数1–32768�
 
 
 请求级 LLM 用量新增 llm_usage，JSON/SSE done/MCP 共用；详见 [用量契约](request-llm-usage.md)。
+
+阶段30：原生LiteLLM SDK非流式对象在传输边界归一化为现有dict响应；llm_usage.attempts新增usage_basis区分SDK归一化观察值。三协议字段和原错误码保持一致，见[用量契约](request-llm-usage.md)。

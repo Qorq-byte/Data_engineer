@@ -8,9 +8,19 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Literal
 
 from app.llm.completion import response_field
+
+type UsageBasis = Literal["response_fields", "sdk_normalized"]
+
+
+def _usage_field(value: object, name: str) -> Any:
+    """Optional SDK metadata must not replace the completion/error being observed."""
+    try:
+        return response_field(value, name)
+    except Exception:
+        return None
 
 
 @dataclass
@@ -25,6 +35,7 @@ class Attempt:
     completion_tokens: int | None = None
     missing_reason: str | None = "usage_missing"
     finish_status: str = "unknown"
+    usage_basis: UsageBasis = "response_fields"
 
 
 class UsageCollector:
@@ -33,34 +44,37 @@ class UsageCollector:
         self.limit = max(0, min(limit, 1000))
         self.dropped = 0
 
-    def observe(self, response: Any) -> None:
+    def observe(self, response: Any, *, usage_basis: UsageBasis | None = None) -> None:
         record = current_attempt.get()
         if record is None:
             return
-        usage = response_field(response, "usage")
+        if usage_basis is not None:
+            record.usage_basis = usage_basis
+        usage = _usage_field(response, "usage")
         if usage is not None:
             for key in ("prompt_tokens", "completion_tokens"):
-                value = response_field(usage, key)
+                value = _usage_field(usage, key)
                 setattr(record, key, value if type(value) is int and value >= 0 else None)
             record.missing_reason = (
                 None
                 if record.prompt_tokens is not None and record.completion_tokens is not None
                 else "usage_invalid_or_partial"
             )
-        choices = response_field(response, "choices") or []
+        choices = _usage_field(response, "choices")
         if not isinstance(choices, (list, tuple)):
             return
         for choice in choices:
             for name in ("message", "delta"):
-                message = response_field(choice, name)
+                message = _usage_field(choice, name)
                 if any(
-                    response_field(message, key)
-                    for key in ("refusal", "tool_calls", "function_call")
+                    _usage_field(message, key) for key in ("refusal", "tool_calls", "function_call")
                 ):
                     record.finish_status = "other"
-            reason = response_field(choice, "finish_reason")
+            reason = _usage_field(choice, "finish_reason")
             if reason is not None and record.finish_status not in ("length", "other"):
-                record.finish_status = reason if reason in ("stop", "length") else "other"
+                record.finish_status = (
+                    reason if type(reason) is str and reason in ("stop", "length") else "other"
+                )
 
     def summary(self) -> dict[str, Any]:
         missing = sum(r.missing_reason is not None for r in self.records)
@@ -88,10 +102,10 @@ active_usage: ContextVar[UsageCollector | None] = ContextVar("llm_usage", defaul
 current_attempt: ContextVar[Attempt | None] = ContextVar("llm_attempt", default=None)
 
 
-def observe_response(response: Any) -> None:
+def observe_response(response: Any, *, usage_basis: UsageBasis | None = None) -> None:
     collector = active_usage.get()
     if collector is not None:
-        collector.observe(response)
+        collector.observe(response, usage_basis=usage_basis)
 
 
 @contextmanager

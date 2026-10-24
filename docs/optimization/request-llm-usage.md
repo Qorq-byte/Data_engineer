@@ -11,3 +11,8 @@ known_prompt_tokens/known_completion_tokens 只累加已知样本，空样本的
 status 为 pending/completed/incomplete/failed/timeout/cancelled/closed。finish_status 为 stop/length/other/unknown；无元数据保留 unknown，不推断正常终止。流式成功等到完整消费才确定；末尾 usage 可以出现于 stop 后。提前关闭/取消仍关闭上游并释放并发槽。请求被基础设施取消时可能没有可交付响应，不能声称已经持久审计。
 
 旧 CostTracker 仍是路由器级历史近似值（缺 usage/价格可能为零），不作为请求摘要来源；本阶段不新增费用估算、持久化或预测导出。合成传输/SQLite 回归不证明生产账单、负载性能或实际供应商 usage 覆盖率。
+
+
+阶段30新增逐次 `usage_basis`：`response_fields` 表示当前响应提供的字段，`sdk_normalized` 表示经过SDK的观察值。原生非流式SDK对象在供应商边界先采集再转换为dict；SDK异常的直接usage在异常映射前采集；SDK流式chunk在原消费边界标记。字典兼容路径、注入适配器的dict约束和计数预算不变。可选usage属性读取异常按未知处理，不替换实际调用结果/异常。
+
+LiteLLM Usage可能将缺失计数补成0，且fields_set也无法恢复原始存在性。因此sdk_normalized的合法数值（含0）表示SDK观察值，不能证明原始供应商完整报告。complete和usage_coverage仍只描述当前观察字段的完整性，不是原始provider字段完整性或计费覆盖率。完全缺失usage保持null；本阶段不读取原始响应/_hidden_params来推断字段、不自动请求include_usage、不计算费用。
