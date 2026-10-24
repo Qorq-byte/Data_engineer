@@ -1,0 +1,237 @@
+FFFF.F.........FFFFFF.                                                   [100%]
+================================== FAILURES ===================================
+_ test_native_stream_candidate_has_its_own_stop_and_single_attempt[False-False] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013653651010>
+alternatives = False, with_usage = False
+
+    @pytest.mark.parametrize("alternatives", [False, True])
+    @pytest.mark.parametrize("with_usage", [False, True])
+    async def test_native_stream_candidate_has_its_own_stop_and_single_attempt(
+        monkeypatch, alternatives, with_usage,
+    ):
+        text = "SELECT 1\n---ALTERNATIVE---\nSELECT 2" if alternatives else "SELECT 1"
+        items = [delta(text), end()]
+        if with_usage:
+            items.append(ModelResponseStream(choices=[], usage=Usage(
+                prompt_tokens=7, completion_tokens=0,
+            )))
+        calls, closed = transport_fixture(monkeypatch, items)
+        collector = UsageCollector()
+        budget = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        u, b = active_usage.set(collector), active_budget.set(budget)
+        router = native_router(max_retries=0, max_concurrency=1)
+        try:
+            output = await GenerateSQLNode(router=BudgetedRouter(router)).execute(
+                NodeInput("orders", config={"streaming": True}),
+            )
+            assert not output.errors
+            candidates = output.context["candidates"]
+            assert len(candidates) == (2 if alternatives else 1)
+            for candidate in candidates:
+>               assert candidate.generation_source == "model_stream"
+E               AssertionError: assert 'stream_text' == 'model_stream'
+E                 
+E                 - model_stream
+E                 + stream_text
+
+tests\test_llm\test_stream_evidence.py:78: AssertionError
+_ test_native_stream_candidate_has_its_own_stop_and_single_attempt[False-True] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013653653860>
+alternatives = True, with_usage = False
+
+    @pytest.mark.parametrize("alternatives", [False, True])
+    @pytest.mark.parametrize("with_usage", [False, True])
+    async def test_native_stream_candidate_has_its_own_stop_and_single_attempt(
+        monkeypatch, alternatives, with_usage,
+    ):
+        text = "SELECT 1\n---ALTERNATIVE---\nSELECT 2" if alternatives else "SELECT 1"
+        items = [delta(text), end()]
+        if with_usage:
+            items.append(ModelResponseStream(choices=[], usage=Usage(
+                prompt_tokens=7, completion_tokens=0,
+            )))
+        calls, closed = transport_fixture(monkeypatch, items)
+        collector = UsageCollector()
+        budget = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        u, b = active_usage.set(collector), active_budget.set(budget)
+        router = native_router(max_retries=0, max_concurrency=1)
+        try:
+            output = await GenerateSQLNode(router=BudgetedRouter(router)).execute(
+                NodeInput("orders", config={"streaming": True}),
+            )
+            assert not output.errors
+            candidates = output.context["candidates"]
+            assert len(candidates) == (2 if alternatives else 1)
+            for candidate in candidates:
+>               assert candidate.generation_source == "model_stream"
+E               AssertionError: assert 'stream_text' == 'model_stream'
+E                 
+E                 - model_stream
+E                 + stream_text
+
+tests\test_llm\test_stream_evidence.py:78: AssertionError
+_ test_native_stream_candidate_has_its_own_stop_and_single_attempt[True-False] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013653754E30>
+alternatives = False, with_usage = True
+
+    @pytest.mark.parametrize("alternatives", [False, True])
+    @pytest.mark.parametrize("with_usage", [False, True])
+    async def test_native_stream_candidate_has_its_own_stop_and_single_attempt(
+        monkeypatch, alternatives, with_usage,
+    ):
+        text = "SELECT 1\n---ALTERNATIVE---\nSELECT 2" if alternatives else "SELECT 1"
+        items = [delta(text), end()]
+        if with_usage:
+            items.append(ModelResponseStream(choices=[], usage=Usage(
+                prompt_tokens=7, completion_tokens=0,
+            )))
+        calls, closed = transport_fixture(monkeypatch, items)
+        collector = UsageCollector()
+        budget = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        u, b = active_usage.set(collector), active_budget.set(budget)
+        router = native_router(max_retries=0, max_concurrency=1)
+        try:
+            output = await GenerateSQLNode(router=BudgetedRouter(router)).execute(
+                NodeInput("orders", config={"streaming": True}),
+            )
+            assert not output.errors
+            candidates = output.context["candidates"]
+            assert len(candidates) == (2 if alternatives else 1)
+            for candidate in candidates:
+>               assert candidate.generation_source == "model_stream"
+E               AssertionError: assert 'stream_text' == 'model_stream'
+E                 
+E                 - model_stream
+E                 + stream_text
+
+tests\test_llm\test_stream_evidence.py:78: AssertionError
+_ test_native_stream_candidate_has_its_own_stop_and_single_attempt[True-True] _
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013653754590>
+alternatives = True, with_usage = True
+
+    @pytest.mark.parametrize("alternatives", [False, True])
+    @pytest.mark.parametrize("with_usage", [False, True])
+    async def test_native_stream_candidate_has_its_own_stop_and_single_attempt(
+        monkeypatch, alternatives, with_usage,
+    ):
+        text = "SELECT 1\n---ALTERNATIVE---\nSELECT 2" if alternatives else "SELECT 1"
+        items = [delta(text), end()]
+        if with_usage:
+            items.append(ModelResponseStream(choices=[], usage=Usage(
+                prompt_tokens=7, completion_tokens=0,
+            )))
+        calls, closed = transport_fixture(monkeypatch, items)
+        collector = UsageCollector()
+        budget = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        u, b = active_usage.set(collector), active_budget.set(budget)
+        router = native_router(max_retries=0, max_concurrency=1)
+        try:
+            output = await GenerateSQLNode(router=BudgetedRouter(router)).execute(
+                NodeInput("orders", config={"streaming": True}),
+            )
+            assert not output.errors
+            candidates = output.context["candidates"]
+            assert len(candidates) == (2 if alternatives else 1)
+            for candidate in candidates:
+>               assert candidate.generation_source == "model_stream"
+E               AssertionError: assert 'stream_text' == 'model_stream'
+E                 
+E                 - model_stream
+E                 + stream_text
+
+tests\test_llm\test_stream_evidence.py:78: AssertionError
+_____________ test_terminal_event_waits_for_usage_tail_and_close ______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000136537544A0>
+
+    async def test_terminal_event_waits_for_usage_tail_and_close(monkeypatch):
+        tail = asyncio.Event()
+        _, closed = transport_fixture(monkeypatch, [delta("SELECT 1"), end(), tail])
+>       stream = native_router().complete_stream_events([])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'LiteLLMRouter' object has no attribute 'complete_stream_events'
+
+tests\test_llm\test_stream_evidence.py:108: AttributeError
+_________ test_explicit_event_adapter_is_checked_and_closed[missing] __________
+
+bad = 'missing'
+
+    @pytest.mark.parametrize("bad", ["missing", "duplicate", "after", "type", "reason", "source"])
+    async def test_explicit_event_adapter_is_checked_and_closed(bad):
+>       from app.llm.streaming import StreamEvent
+E       ModuleNotFoundError: No module named 'app.llm.streaming'
+
+tests\test_llm\test_stream_evidence.py:180: ModuleNotFoundError
+________ test_explicit_event_adapter_is_checked_and_closed[duplicate] _________
+
+bad = 'duplicate'
+
+    @pytest.mark.parametrize("bad", ["missing", "duplicate", "after", "type", "reason", "source"])
+    async def test_explicit_event_adapter_is_checked_and_closed(bad):
+>       from app.llm.streaming import StreamEvent
+E       ModuleNotFoundError: No module named 'app.llm.streaming'
+
+tests\test_llm\test_stream_evidence.py:180: ModuleNotFoundError
+__________ test_explicit_event_adapter_is_checked_and_closed[after] ___________
+
+bad = 'after'
+
+    @pytest.mark.parametrize("bad", ["missing", "duplicate", "after", "type", "reason", "source"])
+    async def test_explicit_event_adapter_is_checked_and_closed(bad):
+>       from app.llm.streaming import StreamEvent
+E       ModuleNotFoundError: No module named 'app.llm.streaming'
+
+tests\test_llm\test_stream_evidence.py:180: ModuleNotFoundError
+___________ test_explicit_event_adapter_is_checked_and_closed[type] ___________
+
+bad = 'type'
+
+    @pytest.mark.parametrize("bad", ["missing", "duplicate", "after", "type", "reason", "source"])
+    async def test_explicit_event_adapter_is_checked_and_closed(bad):
+>       from app.llm.streaming import StreamEvent
+E       ModuleNotFoundError: No module named 'app.llm.streaming'
+
+tests\test_llm\test_stream_evidence.py:180: ModuleNotFoundError
+__________ test_explicit_event_adapter_is_checked_and_closed[reason] __________
+
+bad = 'reason'
+
+    @pytest.mark.parametrize("bad", ["missing", "duplicate", "after", "type", "reason", "source"])
+    async def test_explicit_event_adapter_is_checked_and_closed(bad):
+>       from app.llm.streaming import StreamEvent
+E       ModuleNotFoundError: No module named 'app.llm.streaming'
+
+tests\test_llm\test_stream_evidence.py:180: ModuleNotFoundError
+__________ test_explicit_event_adapter_is_checked_and_closed[source] __________
+
+bad = 'source'
+
+    @pytest.mark.parametrize("bad", ["missing", "duplicate", "after", "type", "reason", "source"])
+    async def test_explicit_event_adapter_is_checked_and_closed(bad):
+>       from app.llm.streaming import StreamEvent
+E       ModuleNotFoundError: No module named 'app.llm.streaming'
+
+tests\test_llm\test_stream_evidence.py:180: ModuleNotFoundError
+============================== warnings summary ===============================
+tests/test_llm/test_stream_evidence.py::test_native_stream_candidate_has_its_own_stop_and_single_attempt[False-False]
+  D:\python\data_engineer\.stage29\.check-venv\Lib\site-packages\pydantic\_internal\_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_stream_evidence.py::test_native_stream_candidate_has_its_own_stop_and_single_attempt[False-False]
+FAILED tests/test_llm/test_stream_evidence.py::test_native_stream_candidate_has_its_own_stop_and_single_attempt[False-True]
+FAILED tests/test_llm/test_stream_evidence.py::test_native_stream_candidate_has_its_own_stop_and_single_attempt[True-False]
+FAILED tests/test_llm/test_stream_evidence.py::test_native_stream_candidate_has_its_own_stop_and_single_attempt[True-True]
+FAILED tests/test_llm/test_stream_evidence.py::test_terminal_event_waits_for_usage_tail_and_close
+FAILED tests/test_llm/test_stream_evidence.py::test_explicit_event_adapter_is_checked_and_closed[missing]
+FAILED tests/test_llm/test_stream_evidence.py::test_explicit_event_adapter_is_checked_and_closed[duplicate]
+FAILED tests/test_llm/test_stream_evidence.py::test_explicit_event_adapter_is_checked_and_closed[after]
+FAILED tests/test_llm/test_stream_evidence.py::test_explicit_event_adapter_is_checked_and_closed[type]
+FAILED tests/test_llm/test_stream_evidence.py::test_explicit_event_adapter_is_checked_and_closed[reason]
+FAILED tests/test_llm/test_stream_evidence.py::test_explicit_event_adapter_is_checked_and_closed[source]
+11 failed, 11 passed, 1 warning in 6.69s

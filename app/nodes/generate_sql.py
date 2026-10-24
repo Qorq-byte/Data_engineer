@@ -17,6 +17,7 @@ from app.core.prompt_builder import PromptBuilder
 from app.core.sql_generator import SQLGenerator, _split_alternatives
 from app.llm.protocols import CompletionRouter
 from app.llm.router import LiteLLMRouter, RouterConfig
+from app.llm.streaming import StreamEvent, events_for
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
 
@@ -143,8 +144,8 @@ class GenerateSQLNode(AgenticNode):
             if streaming:
                 # Streaming mode — accumulate tokens
                 collected: list[str] = []
-                async for chunk in self.generator.generate_stream(
-                    sqr,
+                stream = events_for(
+                    self.generator, "generate_stream", "generate_stream_events", sqr,
                     schema=schema,
                     domain=domain,
                     history=history,
@@ -155,8 +156,16 @@ class GenerateSQLNode(AgenticNode):
                     error_context=error_context,
                     multi_table_hint=multi_table_hint,
                     database_name=database_name,
-                ):
-                    collected.append(chunk)
+                )
+                evidence = StreamEvent("end")
+                try:
+                    async for event in stream:
+                        if event.kind == "delta":
+                            collected.append(event.text)
+                        else:
+                            evidence = event
+                finally:
+                    await stream.aclose()
 
                 raw_sql = "".join(collected)
                 sql_text = _extract_sql(raw_sql)
@@ -180,7 +189,8 @@ class GenerateSQLNode(AgenticNode):
                                 dialect=dialect or "ansi",
                                 model=model or self.router.config.default_model,
                                 database_name=database_name,
-                                generation_source="stream_text",
+                                generation_source=evidence.generation_source,
+                                finish_reason=evidence.finish_reason,
                             )
                         )
                 else:
@@ -192,7 +202,8 @@ class GenerateSQLNode(AgenticNode):
                         dialect=dialect or "ansi",
                         model=model or self.router.config.default_model,
                         database_name=database_name,
-                        generation_source="stream_text",
+                        generation_source=evidence.generation_source,
+                        finish_reason=evidence.finish_reason,
                     )
                     candidates = [candidate]
             else:

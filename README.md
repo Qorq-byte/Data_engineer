@@ -648,3 +648,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段32新增`python -m scripts.export_predictions`，按显式案例/查询/候选/数据库绑定导出保存的QueryResponse，供既有离线SQL评测器消费。可选只读审计核对，缺生成耗时/费用保留null；不发模型请求、不从审计还原SQL。用法及合成重跑样例见[预测导出契约](docs/optimization/prediction-export.md)。
 
 阶段33在JSON/SSE/MCP候选中保留`generation_source`和`finish_reason`，导出只用所选候选证据，拒绝系统预制SQL。缺完成标记或纯文本流仍未知，不从请求用量猜测。见[阶段33计划](docs/optimization/stage-33-plan.md)及[查询契约](docs/optimization/query-contract.md)。
+
+阶段34新增可选结构化流接口：完整消费并校验原生流后，候选保留`model_stream/stop`；旧文本接口和Mock仍兼容且保留未知。预算/用量不重复计数，取消/超时/非法尾部不产出完成候选。公开SSE仍是工作流事件流。见[流事件契约](docs/optimization/stream-completion.md)。

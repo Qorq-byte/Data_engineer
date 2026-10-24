@@ -21,13 +21,14 @@ import contextlib
 import os
 import time
 from collections import defaultdict, deque
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
 from app.llm.completion import IncompleteCompletionError, check_completion, response_field
 from app.llm.responses import normalize_completion
+from app.llm.streaming import StreamEvent, checked_events
 from app.llm.usage import active_usage, current_attempt, observe, observe_response
 
 # ── LiteLLM integration (optional — graceful degradation) ────────────
@@ -378,16 +379,56 @@ class LiteLLMRouter:
         Yields:
             Text chunks as they arrive from the LLM.
         """
-        model = model or self.config.default_model
-        gen = await self._route_with_fallback(
-            messages, model, temperature, 1, stream=True, **kwargs
-        )
+        stream = checked_events(self.complete_stream_events(
+            messages, model=model, temperature=temperature, **kwargs,
+        ))
         try:
-            async for chunk in gen:
-                yield chunk
+            async for event in stream:
+                if event.kind == "delta":
+                    yield event.text
         finally:
-            if hasattr(gen, "aclose"):
-                await gen.aclose()
+            await stream.aclose()
+
+    async def complete_stream_events(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> AsyncGenerator[StreamEvent, None]:
+        """Expose validated invocation-local evidence; Mock text retains unknown completion."""
+        gen = await self._route_with_fallback(
+            messages, model or self.config.default_model, temperature, 1, stream=True, **kwargs
+        )
+
+        async def events() -> AsyncIterator[StreamEvent]:
+            structured: bool | None = None
+            try:
+                async for chunk in gen:
+                    is_event = isinstance(chunk, StreamEvent)
+                    if structured is not None and structured != is_event:
+                        raise IncompleteCompletionError(
+                            "Model stream mixed event and text formats."
+                        )
+                    structured = is_event
+                    if isinstance(chunk, StreamEvent):
+                        yield chunk
+                    elif isinstance(chunk, str):
+                        yield StreamEvent("delta", text=chunk)
+                    else:
+                        raise IncompleteCompletionError("Invalid model stream output.")
+            finally:
+                if hasattr(gen, "aclose"):
+                    await gen.aclose()
+            if not structured:
+                yield StreamEvent("end")
+
+        stream = checked_events(events())
+        try:
+            async for event in stream:
+                yield event
+        finally:
+            await stream.aclose()
 
     def provider_healthy(self, provider_name: str) -> bool | None:
         """Check whether *provider_name* is currently considered healthy.
@@ -568,7 +609,7 @@ class LiteLLMRouter:
             if not stream:
                 return response
 
-            async def guarded_stream() -> AsyncIterator[str]:
+            async def guarded_stream() -> AsyncIterator[str | StreamEvent]:
                 started = time.perf_counter()
                 success = False
                 try:
@@ -619,7 +660,7 @@ class LiteLLMRouter:
         if record is not None:
             record.status = "pending"
 
-        async def observed_stream() -> AsyncIterator[str]:
+        async def observed_stream() -> AsyncIterator[str | StreamEvent]:
             with observe(
                 collector if record is not None else None,
                 provider.provider,
@@ -746,7 +787,7 @@ class LiteLLMRouter:
                 raise
             if stream:
                 observe_response(response, usage_basis="sdk_normalized")
-                return self._stream_to_async_gen(response)
+                return self._stream_to_events(response)
             observe_response(
                 response,
                 usage_basis="response_fields" if isinstance(response, dict) else "sdk_normalized",
@@ -792,6 +833,17 @@ class LiteLLMRouter:
 
     @staticmethod
     async def _stream_to_async_gen(response: Any) -> AsyncIterator[str]:
+        """Compatibility projection for callers of the original SDK text converter."""
+        stream = LiteLLMRouter._stream_to_events(response)
+        try:
+            async for event in stream:
+                if event.kind == "delta":
+                    yield event.text
+        finally:
+            await stream.aclose()
+
+    @staticmethod
+    async def _stream_to_events(response: Any) -> AsyncGenerator[StreamEvent, None]:
         """Yield provisional text, requiring a normal terminal marker before success."""
         finished = False
         try:
@@ -815,7 +867,7 @@ class LiteLLMRouter:
                         "Model stream continued after its completion marker; SQL discarded."
                     )
                 if content:
-                    yield content
+                    yield StreamEvent("delta", text=content)
                 if reason == "stop":
                     finished = True
             if not finished:
@@ -829,6 +881,7 @@ class LiteLLMRouter:
             if hasattr(response, "aclose"):
                 with contextlib.suppress(Exception):
                     await response.aclose()
+        yield StreamEvent("end", finish_reason="stop", generation_source="model_stream")
 
     async def _mock_call(
         self,

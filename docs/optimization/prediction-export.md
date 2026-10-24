@@ -43,6 +43,8 @@ provenance标记case/query/candidate/db、方言、question_match、completion_s
 
 ## 消费验证、边界和旧格式
 
+阶段34新增model_stream来源：仅候选自身从结构化流保留的stop可进入完成计数，沿用candidate_fields；原生流需完整消费及尾部校验，纯文本流/Mock仍stream_text/null。完整规则见[流事件契约](stream-completion.md)。不从请求usage借用结束状态，不改变v1导出结构或历史样例哈希。
+
 阶段32评测器识别新export_version：核对行哈希、案例集哈希、来源格式和同query重复使用；完整evaluate入口额外核对dataset哈希。改动SQL/状态/来源而未更新哈希、错用案例集等会在预测SQL执行前拒绝；完整dataset不匹配在BM25烟测前拒绝。旧的普通预测列表继续按原契约评测，export_sha256为保留字段，不能只删除版本标识而保留它。
 
 哈希不是安全认证。有意删除所有导出元数据后可作为旧格式输入，或重新计算哈希；系统不能识别这种人为改写。真实供应商结束状态、账单、输入真实性与数据库数据快照都需额外来源。

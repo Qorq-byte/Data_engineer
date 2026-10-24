@@ -271,7 +271,9 @@ class CandidateResult(BaseModel):
     db_id: str = ""
     validation: dict[str, Any] | None = None
     execution: dict[str, Any] | None = None
-    generation_source: Literal["model_response", "prepared", "stream_text", "unknown"] = "unknown"
+    generation_source: Literal[
+        "model_response", "model_stream", "prepared", "stream_text", "unknown"
+    ] = "unknown"
     finish_reason: Literal["stop"] | None = None
 
 

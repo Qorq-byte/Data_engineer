@@ -111,3 +111,5 @@ max_tokens接入设置生成路由的max_output_tokens，严格整数1–32768�
 阶段33：SQLCandidate及JSON/SSE done的candidates新增generation_source（model_response/prepared/stream_text/unknown，默认unknown）和finish_reason（stop/null，默认null）。非流式仅保存该候选所用响应的完成标记；SSE工作流事件通常仍承载非流式生成结果，不因协议名被标成stream_text。纯文本模型流无候选级结构化终止字段时保持stream_text/null。预制候选复制并标记prepared/null，自愈保留实际修正响应证据；请求usage不作为候选完成证明。
 
 MCP nl_query新增只读candidates，复用相同候选字段，排除execution，执行行继续只从顶层返回且最多100行。原sql/rows/错误字段与失败语义保持。预制SQL可能被既有业务Schema校验拒绝，失败响应仍保留其来源；本阶段不改变此校验政策。详情见[阶段33](stage-33.md)和[导出契约](prediction-export.md)。
+
+阶段34候选generation_source新增model_stream，表示已完整消费及校验的结构化流，finish_reason为stop；旧纯文本/Mock仍stream_text/null。JSON/SSE/MCP沿同一DTO保留字段，公开SSE请求和工作流调用方式不变。可选内部事件接口、适配器继承兼容、取消释放规则见[流事件契约](stream-completion.md)。

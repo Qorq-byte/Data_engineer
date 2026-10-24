@@ -1,12 +1,13 @@
 """Request-scoped physical LLM attempt budget; inherited by async child tasks."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextvars import ContextVar
 from typing import Any
 
 from app.harness.constraint import ConstraintEnforcer
 from app.llm.protocols import CompletionRouter
 from app.llm.router import RouterConfig
+from app.llm.streaming import StreamEvent, event_method_for, events_for, text_events
 from app.llm.usage import active_usage, observe, observe_response
 
 active_budget: ContextVar[ConstraintEnforcer | None] = ContextVar("llm_budget", default=None)
@@ -71,7 +72,10 @@ class BudgetedRouter:
         from app.llm.router import LiteLLMRouter
 
         native = (
-            getattr(type(self._router), "complete_stream", None) is LiteLLMRouter.complete_stream
+            getattr(self._router.complete_stream, "__func__", None)
+            is LiteLLMRouter.complete_stream
+            and getattr(getattr(self._router, "complete_stream_events", None), "__func__", None)
+            is LiteLLMRouter.complete_stream_events
         )
         if not native:
             reserve_llm_call()
@@ -96,3 +100,42 @@ class BudgetedRouter:
                 close = getattr(stream, "aclose", None)
                 if close is not None:
                     await close()
+
+    async def complete_stream_events(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float = 0.7,
+        **kwargs: Any,
+    ) -> AsyncGenerator[StreamEvent, None]:
+        from app.llm.router import LiteLLMRouter
+
+        method = event_method_for(self._router, "complete_stream", "complete_stream_events")
+        if method is None:
+            stream = text_events(self.complete_stream(
+                messages, model=model, temperature=temperature, **kwargs,
+            ))
+            try:
+                async for event in stream:
+                    yield event
+            finally:
+                await stream.aclose()
+            return
+        native = (
+            getattr(method, "__func__", None) is LiteLLMRouter.complete_stream_events
+        )
+        if not native:
+            reserve_llm_call()
+        with observe(
+            None if native else active_usage.get(), "adapter",
+            model or self.config.default_model, "adapter_boundary",
+        ):
+            stream = events_for(self._router, "complete_stream", "complete_stream_events", messages,
+                                model=model, temperature=temperature, **kwargs)
+            try:
+                async for event in stream:
+                    if not native and event.kind == "end" and event.finish_reason == "stop":
+                        observe_response({"choices": [{"finish_reason": "stop"}]})
+                    yield event
+            finally:
+                await stream.aclose()

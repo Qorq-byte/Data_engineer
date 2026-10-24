@@ -151,7 +151,7 @@ def _finish(candidate: dict[str, Any] | None) -> tuple[str | None, str]:
         source = candidate["generation_source"]
         if source == "prepared":
             raise ValueError("Prepared SQL is not a model prediction")
-        if source not in ("model_response", "stream_text", "unknown"):
+        if source not in ("model_response", "model_stream", "stream_text", "unknown"):
             raise ValueError("Invalid candidate generation source")
     if candidate is None or not any(
         k in candidate for k in ("finish_reason", "refusal", "tool_calls", "function_call")

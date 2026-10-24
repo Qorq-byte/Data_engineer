@@ -27,3 +27,5 @@ JSON/SSE终态沿用status=failed、primary_sql=null、candidates=[]、execution
 收到输出上限错误后先审查请求和设置，不默认把上限加到最大值。上限是每调用请求参数，非总费用预算。真实provider的结束原因规范化、忽略参数行为、业务结果正确率、成本和并发性能仍需生产等价环境评测；本阶段测试使用真实Router/SQLite与合成传输，不发外部模型请求。
 
 阶段33在通过上述检查后，将所用非流式choice的stop/null与generation_source=model_response保存在各自SQLCandidate。alternatives共享该响应证据，自愈继承修正响应，缺失不补stop。模型文本流仍为stream_text/null；JSON/SSE/MCP投影保留这些字段。预制SQL为prepared/null并被[预测导出](prediction-export.md)拒绝，旧构造为unknown/null。这不改变拒绝/重试/取消释放政策，也不证明真实provider调用。
+
+阶段34通过可选结构化流接口贯通原生终态证据：完整消费含usage尾部并关闭后才交付model_stream/stop；临时文本不能直接变成完成候选。旧文本适配器/Mock仍stream_text/null，公开SSE仍为工作流事件流。新增[流事件契约](stream-completion.md)说明检查与继承兼容；原截断/拒绝门禁、预算和消费失败不重试的政策不变。

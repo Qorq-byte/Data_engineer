@@ -14,12 +14,13 @@ import asyncio
 import re
 import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any, Literal
 
 from app.core.prompt_builder import PromptBuilder
 from app.llm.completion import IncompleteCompletionError, check_completion, response_field
 from app.llm.protocols import CompletionRouter
+from app.llm.streaming import StreamEvent, events_for
 from app.models.domain import DomainConfig
 from app.models.query import SQR, QueryPair, SQLCandidate
 from app.models.schema import SchemaSnapshot
@@ -123,11 +124,34 @@ class SQLGenerator:
         multi_table_hint: dict[str, Any] | None = None,
         database_name: str = "",
     ) -> AsyncIterator[str]:
-        """Stream SQL generation token-by-token.
+        """Stream provisional text while retaining existing caller compatibility."""
+        stream = self.generate_stream_events(
+            sqr, schema=schema, domain=domain, history=history, similar_pairs=similar_pairs,
+            model=model, dialect=dialect, rag_context=rag_context, error_context=error_context,
+            multi_table_hint=multi_table_hint, database_name=database_name,
+        )
+        try:
+            async for event in stream:
+                if event.kind == "delta":
+                    yield event.text
+        finally:
+            await stream.aclose()
 
-        Yields provisional text chunks. The caller must consume the stream
-        successfully before interpreting the accumulated text as a SQL candidate.
-        """
+    async def generate_stream_events(
+        self,
+        sqr: SQR,
+        schema: SchemaSnapshot | None = None,
+        domain: DomainConfig | None = None,
+        history: list[Any] | None = None,
+        similar_pairs: list[QueryPair] | None = None,
+        model: str | None = None,
+        dialect: str | None = None,
+        rag_context: str | None = None,
+        error_context: str | None = None,
+        multi_table_hint: dict[str, Any] | None = None,
+        database_name: str = "",
+    ) -> AsyncGenerator[StreamEvent, None]:
+        """Yield deltas and terminal evidence after complete consumption."""
         prompt = self.prompt_builder.build(
             sqr, schema=schema, domain=domain,
             history=history, similar_pairs=similar_pairs,
@@ -136,7 +160,8 @@ class SQLGenerator:
             multi_table_hint=multi_table_hint,
             database_name=database_name,
         )
-        stream = self.router.complete_stream(
+        stream = events_for(
+            self.router, "complete_stream", "complete_stream_events",
             messages=[{"role": "user", "content": prompt}],
             model=model,
             temperature=0.3,
