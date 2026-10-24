@@ -141,6 +141,7 @@ def _register_nl_query(mcp: Any) -> None:
                 "plan_id": response.plan_id,
                 "workflow_ids": response.workflow_ids,
                 "llm_calls": response.llm_calls,
+                "llm_usage": response.llm_usage,
                 "sql": response.primary_sql or "",
                 "columns": execution.get("columns", []),
                 "rows": execution.get("rows", [])[:100],

@@ -1,0 +1,11 @@
+{
+  "baseline": "00640ac",
+  "request_attempts": {
+    "expected": 1,
+    "actual": 0
+  },
+  "successful_stream_records_before_consumption": {
+    "expected": 0,
+    "actual": 1
+  }
+}

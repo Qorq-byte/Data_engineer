@@ -99,3 +99,6 @@ LLM PUT及提供商DELETE返回完整公开配置、persistence=persisted/memory
 ## 阶段26：LLM输出参数与兼容
 
 max_tokens接入设置生成路由的max_output_tokens，严格整数1–32768，公开配置与实际runtime分开。routing_strategy/temperature/未知字段写入422，整次请求拒绝，旧字段只报告名称/忽略；客户端须停止发送。传输别名/Mock/多候选边界见[llm-token-policy.md](llm-token-policy.md)，原持久化/权限/Harness不变量保持。
+
+
+请求级 LLM 用量新增 llm_usage，JSON/SSE done/MCP 共用；详见 [用量契约](request-llm-usage.md)。

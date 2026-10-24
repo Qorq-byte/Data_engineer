@@ -694,3 +694,64 @@ async def test_scoped_validation_drives_all_three_protocols(
         assert data["execution"] is done["execution"] is None
         assert projected["rows"] == []
         assert projected["error_code"] == "WORKFLOW_FAILED"
+
+
+@pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+async def test_request_usage_summary_contract(connected_query, protocol):
+    body = {"nl_text": "find all orders", "database": "contract", "execute": True,
+            "num_candidates": 1}
+    if protocol == "mcp":
+        result = await mcp_query(nl_text="find all orders", db_id="contract")
+    elif protocol == "sse":
+        result = next(value for event, value in stream_events(
+            connected_query.post("/api/v1/query/stream", json=body)) if event == "done")
+    else:
+        result = connected_query.post("/api/v1/query", json=body).json()
+    assert result["status"] == "completed"
+    usage = result["llm_usage"]
+    assert usage["attempt_count"] == result["llm_calls"] == 1
+    assert usage["missing_usage_count"] == 1
+    assert usage["usage_coverage"] == 0
+    assert usage["attempts"][0]["prompt_tokens"] is None
+    assert usage["attempts"][0]["source"] == "adapter_boundary"
+
+
+async def test_usage_multiple_targets_and_candidates(connected_query, test_sqlite_db, monkeypatch):
+    await ConnectionFactory.create(DatabaseType.SQLITE, {"path": test_sqlite_db}, db_id="second")
+    class UsageRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            return {"usage": {"prompt_tokens": 4, "completion_tokens": 2}, "choices": [
+                {"finish_reason": "stop", "message": {"content": "SELECT id FROM orders"}}
+            ]}
+    monkeypatch.setattr(query, "get_default_router", lambda: UsageRouter(RouterConfig()))
+    try:
+        result = connected_query.post("/api/v1/query", json={
+            "nl_text": "find all orders", "database": "", "num_candidates": 2,
+        }).json()
+        usage = result["llm_usage"]
+        assert usage["attempt_count"] == result["llm_calls"]
+        assert usage["attempt_count"] >= 2
+        assert usage["known_prompt_tokens"] == usage["attempt_count"] * 4
+        assert usage["known_completion_tokens"] == usage["attempt_count"] * 2
+        assert usage["complete"]
+        assert {c["db_id"] for c in result["candidates"]} == {"contract", "second"}
+    finally:
+        ConnectionFactory.close("second")
+
+
+async def test_failed_generation_keeps_usage_summary(connected_query, monkeypatch):
+    class TruncatedRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            return {"usage": {"prompt_tokens": 3, "completion_tokens": 2}, "choices": [
+                {"finish_reason": "length", "message": {"content": "SELECT id FROM orders"}}
+            ]}
+    monkeypatch.setattr(query, "get_default_router", lambda: TruncatedRouter(RouterConfig()))
+    result = connected_query.post("/api/v1/query", json={
+        "nl_text": "find all orders", "database": "contract", "num_candidates": 1,
+    }).json()
+    assert result["status"] == "failed"
+    assert not result["candidates"]
+    usage = result["llm_usage"]
+    assert usage["attempt_count"] == result["llm_calls"] > 0
+    assert usage["known_prompt_tokens"] == usage["attempt_count"] * 3
+    assert all(a["status"] == "incomplete" for a in usage["attempts"])

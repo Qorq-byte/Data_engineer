@@ -18,6 +18,7 @@ from app.harness.runner import WorkflowRunner
 from app.llm.budget import BudgetedRouter, active_budget
 from app.llm.factory import get_default_router
 from app.llm.protocols import CompletionRouter
+from app.llm.usage import UsageCollector, active_usage
 from app.models.schema import SchemaSnapshot
 from app.models.workflow import WorkflowPlan
 from app.nodes.execute_sql import ExecuteSQLNode
@@ -196,6 +197,8 @@ async def _run_query(
             "stages": ["parse", "retrieve", "generate", "validate", "execute"],
         },
     )
+    collector = UsageCollector()
+    usage_token = active_usage.set(collector)
     budget_token = active_budget.set(limits)
     try:
         targets: list[tuple[str, tuple[SchemaSnapshot | None, str, str]]] = [
@@ -354,6 +357,7 @@ async def _run_query(
             all_candidates.extend(candidates)
     finally:
         active_budget.reset(budget_token)
+        active_usage.reset(usage_token)
     if body.execute and not schemas:
         errors.append("No connected database is available for execution")
     status = (
@@ -369,6 +373,7 @@ async def _run_query(
         "plan_id": "request_query",
         "workflow_ids": traces,
         "llm_calls": limits.llm_calls_used,
+        "llm_usage": collector.summary(),
         "nl_text": body.nl_text,
         "language": sqr.language if sqr else "",
         "intent": sqr.intent.value if sqr else "UNKNOWN",

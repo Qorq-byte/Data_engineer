@@ -280,6 +280,7 @@ class QueryResponse(BaseModel):
     plan_id: str = "request_query"
     workflow_ids: list[str] = []
     llm_calls: int = 0
+    llm_usage: dict[str, Any] = Field(default_factory=dict)
     nl_text: str
     language: str = ""
     intent: str = ""

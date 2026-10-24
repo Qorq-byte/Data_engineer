@@ -27,6 +27,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from app.llm.completion import IncompleteCompletionError, check_completion, response_field
+from app.llm.usage import active_usage, current_attempt, observe, observe_response
 
 # ── LiteLLM integration (optional — graceful degradation) ────────────
 try:
@@ -419,23 +420,21 @@ class LiteLLMRouter:
 
         Returns the first successful response or raises the last error.
         """
-        from app.llm.budget import reserve_llm_call
-
         kwargs = self._completion_options(kwargs)
 
         # Mock mode: skip provider resolution entirely
         if self.mock_mode:
             t0 = time.perf_counter()
-            reserve_llm_call()
             dummy = ProviderConfig(provider="mock", api_key_env="")
-            response = await self._mock_call(dummy, model, messages, n, stream)
+            response = await self._limited_call(dummy, model, messages, temperature, n, stream)
             latency = (time.perf_counter() - t0) * 1000
-            self.cost_tracker.record(
-                provider="mock",
-                model=model,
-                latency_ms=latency,
-                response=response if not stream else None,
-            )
+            if not stream:
+                self.cost_tracker.record(
+                    provider="mock",
+                    model=model,
+                    latency_ms=latency,
+                    response=response if not stream else None,
+                )
             return response
 
         chain = self._get_provider_chain(model)
@@ -463,12 +462,13 @@ class LiteLLMRouter:
                     self._provider_status[provider_name] = True
                     self._retry_after.pop(provider_name, None)
                     self._call_counter[provider_name] += 1
-                    self.cost_tracker.record(
-                        provider=provider_name,
-                        model=provider_model,
-                        latency_ms=latency,
-                        response=response if not stream else None,
-                    )
+                    if not stream:
+                        self.cost_tracker.record(
+                            provider=provider_name,
+                            model=provider_model,
+                            latency_ms=latency,
+                            response=response if not stream else None,
+                        )
                     return response
                 except _RetryableError as exc:
                     last_error = exc
@@ -559,11 +559,8 @@ class LiteLLMRouter:
 
             reserve_llm_call()
             try:
-                response = await asyncio.wait_for(
-                    self._call_provider(
-                        provider, model, messages, temperature, n, stream, **kwargs
-                    ),
-                    self.config.timeout_seconds,
+                response = await self._observed_call(
+                    provider, model, messages, temperature, n, stream, **kwargs
                 )
             except TimeoutError as exc:
                 raise ProviderTimeoutError("Provider deadline exceeded") from exc
@@ -571,11 +568,19 @@ class LiteLLMRouter:
                 return response
 
             async def guarded_stream() -> AsyncIterator[str]:
+                started = time.perf_counter()
+                success = False
                 try:
-                    async with asyncio.timeout(self.config.timeout_seconds):
-                        async for chunk in response:
-                            yield chunk
+                    async for chunk in response:
+                        yield chunk
+                    success = True
                 finally:
+                    self.cost_tracker.record(
+                        provider=provider.provider,
+                        model=model,
+                        success=success,
+                        latency_ms=(time.perf_counter() - started) * 1000,
+                    )
                     semaphore.release()
                     if hasattr(response, "aclose"):
                         with contextlib.suppress(Exception):
@@ -586,6 +591,52 @@ class LiteLLMRouter:
         finally:
             if not handed_to_stream:
                 semaphore.release()
+
+    async def _observed_call(
+        self,
+        provider: ProviderConfig,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        n: int,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
+        collector = active_usage.get()
+        started = time.perf_counter()
+        with observe(collector, provider.provider, model, "transport_boundary"):
+            async with asyncio.timeout(self.config.timeout_seconds):
+                response = await self._call_provider(
+                    provider, model, messages, temperature, n, stream, **kwargs
+                )
+            record = current_attempt.get()
+            if not stream:
+                observe_response(response)
+                if not isinstance(response, dict):
+                    raise TypeError("Non-streaming model response must be an object")
+                return response
+        if record is not None:
+            record.status = "pending"
+
+        async def observed_stream() -> AsyncIterator[str]:
+            with observe(
+                collector if record is not None else None,
+                provider.provider,
+                model,
+                "transport_boundary",
+                existing=record,
+                started=started,
+            ):
+                try:
+                    async with asyncio.timeout(self.config.timeout_seconds):
+                        async for chunk in response:
+                            yield chunk
+                finally:
+                    if hasattr(response, "aclose"):
+                        with contextlib.suppress(Exception):
+                            await response.aclose()
+
+        return observed_stream()
 
     def _get_provider_chain(self, model: str) -> list[tuple[str, str]]:
         """Build the fallback chain for *model*.
@@ -732,6 +783,7 @@ class LiteLLMRouter:
         finished = False
         try:
             async for chunk in response:
+                observe_response(chunk)
                 choices = response_field(chunk, "choices")
                 if not choices:  # usage-only chunks are allowed, including after stop
                     continue
