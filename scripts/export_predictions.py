@@ -114,6 +114,7 @@ def main() -> None:
     parser.add_argument("--bindings", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--audit-db", type=Path)
+    parser.add_argument("--require-candidate-audit", action="store_true")
     args = parser.parse_args()
     try:
         inputs = [args.dataset, args.responses, args.bindings]
@@ -126,6 +127,7 @@ def main() -> None:
             read_json(args.responses),
             read_json(args.bindings),
             audit_lookup=lookup,
+            require_candidate_audit=args.require_candidate_audit,
         )
         _write_atomic(args.output, rows)
     except (OSError, ValueError, TypeError, sqlite3.Error):

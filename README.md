@@ -650,3 +650,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段33在JSON/SSE/MCP候选中保留`generation_source`和`finish_reason`，导出只用所选候选证据，拒绝系统预制SQL。缺完成标记或纯文本流仍未知，不从请求用量猜测。见[阶段33计划](docs/optimization/stage-33-plan.md)及[查询契约](docs/optimization/query-contract.md)。
 
 阶段34新增可选结构化流接口：完整消费并校验原生流后，候选保留`model_stream/stop`；旧文本接口和Mock仍兼容且保留未知。预算/用量不重复计数，取消/超时/非法尾部不产出完成候选。公开SSE仍是工作流事件流。见[流事件契约](docs/optimization/stream-completion.md)。
+
+阶段35新增默认关闭的`LLM_AUDIT_CANDIDATE_DIGESTS`：审计启用后可保存候选摘要以核对SQL与完成信息；不存SQL原文，摘要不是加密或签名。导出可用`--require-candidate-audit`强制成功SQL绑定，旧v1兼容。见[候选摘要绑定契约](docs/optimization/candidate-audit-binding.md)。

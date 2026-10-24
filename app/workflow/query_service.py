@@ -122,11 +122,14 @@ async def run_query(
         if not body.session_id:
             body.session_id = f"s_{uuid.uuid4().hex[:16]}"
         async with gate(("session", body.session_id)):
-            audit = QueryAuditState()
+            audit = QueryAuditState(
+                capture_candidate_digests=settings.llm_audit_candidate_digests,
+            )
             if settings.llm_audit_path.strip():
                 audit.store = UsageAuditStore(
                     settings.llm_audit_path, settings.llm_audit_max_records
                 )
+            result: dict[str, Any] | None = None
             try:
                 result = await _run_query(body, emit, llm_router=llm_router, audit=audit)
                 status = result.get("status")
@@ -138,7 +141,11 @@ async def run_query(
                 audit.outcome = "cancelled"
                 raise
             finally:
-                persistence = await finish_audit(audit, body.session_id)
+                persistence = await finish_audit(
+                    audit, body.session_id,
+                    result.get("candidates") if result is not None else None,
+                )
+            assert result is not None
             result["llm_audit"] = {"status": persistence, "query_id": audit.query_id}
             if persistence == "failed":
                 result.setdefault("warnings", []).append("LLM usage audit was not persisted")

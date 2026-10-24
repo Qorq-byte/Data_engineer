@@ -7,6 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from app.audit.candidates import candidate_digests
 from app.audit.store import UsageAuditRecord, UsageAuditStore, audit_io
 from app.llm.usage import UsageCollector
 
@@ -21,9 +22,10 @@ class QueryAuditState:
     outcome: str = "error"
     started_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     store: UsageAuditStore | None = None
+    capture_candidate_digests: bool = False
 
 
-async def finish_audit(state: QueryAuditState, session_id: str) -> str:
+async def finish_audit(state: QueryAuditState, session_id: str, candidates: object = None) -> str:
     if state.store is None:
         return "disabled"
     try:
@@ -34,6 +36,10 @@ async def finish_audit(state: QueryAuditState, session_id: str) -> str:
             llm_calls=state.llm_calls,
             usage=state.collector.summary(),
             started_at=state.started_at,
+            candidate_digests=(
+                candidate_digests(state.query_id, candidates if candidates is not None else [])
+                if state.capture_candidate_digests else None
+            ),
         )
         store = state.store
         await audit_io(lambda: store.write(record))

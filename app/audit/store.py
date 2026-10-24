@@ -15,6 +15,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from app.audit.candidates import (
+    CANDIDATE_DIGEST_VERSION,
+    audit_candidate_digests,
+    checked_digests,
+)
+
 _QUERY_ID = re.compile(r"q_[0-9a-f]{12}")
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}")
 _OUTCOMES = {"completed", "failed", "cancelled", "error"}
@@ -34,6 +40,7 @@ class UsageAuditRecord:
     usage: dict[str, Any]
     started_at: str = field(default_factory=_utc_now)
     finished_at: str = field(default_factory=_utc_now)
+    candidate_digests: list[str] | None = None
 
 
 def _name(value: object) -> str:
@@ -122,9 +129,15 @@ def _encode(record: UsageAuditRecord) -> str:
         raise ValueError("Invalid audit identity or outcome")
     if _token(record.llm_calls) is None:
         raise ValueError("Invalid audit budget count")
+    candidate_fields = (
+        {"candidate_digest_version": CANDIDATE_DIGEST_VERSION,
+         "candidate_digests": checked_digests(record.candidate_digests)}
+        if record.candidate_digests is not None else {}
+    )
     payload = json.dumps(
         {
-            "schema_version": 1,
+            "schema_version": 2 if record.candidate_digests is not None else 1,
+            **candidate_fields,
             "query_id": record.query_id,
             "session_ref": hashlib.sha256(record.session_id.encode("utf-8")).hexdigest(),
             "outcome": record.outcome,
@@ -210,10 +223,13 @@ class UsageAuditStore:
         payload: object = json.loads(row[0])
         if (
             not isinstance(payload, dict)
-            or payload.get("schema_version") != 1
+            or type(payload.get("schema_version")) is not int
+            or payload.get("schema_version") not in (1, 2)
             or payload.get("query_id") != query_id
         ):
             raise ValueError("Invalid stored audit snapshot")
+        if payload["schema_version"] == 2:
+            audit_candidate_digests(payload)
         return payload
 
 

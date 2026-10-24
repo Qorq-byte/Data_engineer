@@ -1,4 +1,4 @@
-# 离线预测记录导出（阶段32）
+# 离线预测记录导出（阶段32—35）
 
 工具只读操作者提供的文件；不调用模型、重新运行在线工作流或执行候选SQL。可选audit-db仅执行审计库的只读元数据查询。输出包含选定SQL，可能含业务信息，需由操作者选择私有目录并控制访问；不要把真实输出随代码公开上传。本阶段的仓库样例和证据全部是合成功能数据。
 
@@ -28,6 +28,8 @@ python -m scripts.evaluate_quality --dataset tests/fixtures/retrieval_eval.json 
 审计v1没有SQL或其摘要，因此metadata_match不能认证SQL：操作者修改response候选SQL后，审计元数据仍可能匹配。sql_binding固定caller_supplied_not_verified_by_audit；哈希也不是签名，不能证明输入未被人为伪造。
 
 ## 输出与遥测
+
+阶段35可选[候选摘要审计绑定](candidate-audit-binding.md)：启用后生成payload v2审计，导出成功候选必须匹配其摘要；--require-candidate-audit可要求成功行一定具备v2绑定且必须指定audit-db。绑定成功输出request-prediction-v2，provenance新增candidate_sha256/generation_source/candidate_finish_reason，audit_match=candidate_match、sql_binding=candidate_digest_matched；消费者重建摘要和完成语义后再接受。弱等级/失败行仍v1，不降级掩盖v2不匹配；旧格式及下述v1契约继续兼容。摘要核对不是签名或真实性认证，不从审计恢复SQL。
 
 输出是兼容原评测器的预测列表，每条含id/sql/status/finish_reason/latency_ms/cost_usd，以及export_version=request-prediction-v1、provenance和export_sha256。只导出选定SQL和allowlist元数据，不复制自然语言问题、错误正文、结果行、数据库文件名、密钥或工具参数。失败SQL为null。
 

@@ -8,9 +8,11 @@ import re
 from collections.abc import Callable
 from typing import Any
 
+from app.audit.candidates import audit_candidate_digests, candidate_digest
 from app.audit.store import usage_snapshot
 
 EXPORT_VERSION = "request-prediction-v1"
+BOUND_EXPORT_VERSION = "request-prediction-v2"
 _QUERY_ID = re.compile(r"q_[0-9a-f]{12}")
 _MAX_ITEMS = 10000
 _ROW_KEYS = {
@@ -53,6 +55,9 @@ _PROVENANCE_KEYS = {
     "sql_binding",
 }
 _HASH = re.compile(r"[0-9a-f]{64}")
+_BOUND_PROVENANCE_KEYS = _PROVENANCE_KEYS | {
+    "candidate_sha256", "generation_source", "candidate_finish_reason",
+}
 
 
 def fingerprint(value: object) -> str:
@@ -173,7 +178,12 @@ def export_predictions(
     bindings: object,
     *,
     audit_lookup: Callable[[str], dict[str, Any] | None] | None = None,
+    require_candidate_audit: bool = False,
 ) -> list[dict[str, Any]]:
+    if type(require_candidate_audit) is not bool or (
+        require_candidate_audit and audit_lookup is None
+    ):
+        raise ValueError("Candidate audit requirement needs an audit lookup")
     cases = _cases(dataset)
     sources = _objects(responses)
     selections = _objects(bindings, nonempty=True)
@@ -236,12 +246,13 @@ def export_predictions(
         )
         calls, observed = _calls(source.get("llm_calls")), _checked_usage(source.get("llm_usage"))
         audit_match, audit_hash = "not_requested", None
+        bound_digest = None
         if audit_lookup is not None:
             record = audit_lookup(query_id)
             if (
                 not isinstance(record, dict)
                 or type(record.get("schema_version")) is not int
-                or record["schema_version"] != 1
+                or record["schema_version"] not in (1, 2)
             ):
                 raise ValueError("Requested audit record is unavailable")
             if (
@@ -257,7 +268,23 @@ def export_predictions(
             ):
                 raise ValueError("Audit metadata mismatch")
             audit_match, audit_hash = "metadata_match", fingerprint(record)
-        reason, completion_source = _finish(candidate)
+            digests = audit_candidate_digests(record) if record["schema_version"] == 2 else None
+            if status == "completed" and candidate is not None:
+                if digests is not None:
+                    bound_digest = candidate_digest(query_id, candidate)
+                    if bound_digest not in digests:
+                        raise ValueError("Audit candidate binding mismatch")
+                    audit_match = "candidate_match"
+                elif require_candidate_audit:
+                    raise ValueError("Candidate audit binding requires a v2 snapshot")
+        finish_candidate = candidate
+        if bound_digest is not None and candidate is not None:
+            finish_candidate = {
+                **candidate,
+                "generation_source": candidate.get("generation_source", "unknown"),
+                "finish_reason": candidate.get("finish_reason"),
+            }
+        reason, completion_source = _finish(finish_candidate)
         provenance = {
             **hashes,
             "query_id": query_id,
@@ -271,8 +298,17 @@ def export_predictions(
             "audit_match": audit_match,
             "audit_sha256": audit_hash,
             "usage_scope": "entire_query_including_retries_candidates_and_targets",
-            "sql_binding": "caller_supplied_not_verified_by_audit",
+            "sql_binding": (
+                "candidate_digest_matched" if bound_digest is not None
+                else "caller_supplied_not_verified_by_audit"
+            ),
         }
+        if bound_digest is not None and candidate is not None:
+            provenance.update(
+                candidate_sha256=bound_digest,
+                generation_source=candidate.get("generation_source", "unknown"),
+                candidate_finish_reason=candidate.get("finish_reason"),
+            )
         row = {
             "id": case_id,
             "sql": sql,
@@ -280,7 +316,7 @@ def export_predictions(
             "finish_reason": reason,
             "latency_ms": None,
             "cost_usd": None,
-            "export_version": EXPORT_VERSION,
+            "export_version": BOUND_EXPORT_VERSION if bound_digest is not None else EXPORT_VERSION,
             "provenance": provenance,
         }
         row["export_sha256"] = fingerprint(row)
@@ -310,10 +346,14 @@ def validate_exported_predictions(
             if "export_sha256" in row:
                 raise ValueError("Prediction export version is missing")
             continue
-        if row.get("export_version") != EXPORT_VERSION or set(row) != _ROW_KEYS:
+        version = row.get("export_version")
+        if version not in (EXPORT_VERSION, BOUND_EXPORT_VERSION) or set(row) != _ROW_KEYS:
             raise ValueError("Unsupported prediction export shape or version")
         provenance = row.get("provenance")
-        if not isinstance(provenance, dict) or set(provenance) != _PROVENANCE_KEYS:
+        expected_keys = (
+            _BOUND_PROVENANCE_KEYS if version == BOUND_EXPORT_VERSION else _PROVENANCE_KEYS
+        )
+        if not isinstance(provenance, dict) or set(provenance) != expected_keys:
             raise ValueError("Invalid prediction export provenance")
         for key in ("dataset_sha256", "cases_sha256", "responses_sha256", "bindings_sha256"):
             if not isinstance(provenance[key], str) or not _HASH.fullmatch(provenance[key]):
@@ -351,7 +391,10 @@ def validate_exported_predictions(
         calls = _calls(provenance.get("llm_calls"))
         if (
             provenance["usage_scope"] != "entire_query_including_retries_candidates_and_targets"
-            or provenance["sql_binding"] != "caller_supplied_not_verified_by_audit"
+            or provenance["sql_binding"] != (
+                "candidate_digest_matched" if version == BOUND_EXPORT_VERSION
+                else "caller_supplied_not_verified_by_audit"
+            )
         ):
             raise ValueError("Unsupported prediction export scope")
         if provenance["question_match"] not in ("not_available", "exact_match") or provenance[
@@ -360,10 +403,25 @@ def validate_exported_predictions(
             raise ValueError("Invalid prediction export completion provenance")
         if provenance["completion_source"] == "unavailable" and row["finish_reason"] is not None:
             raise ValueError("Unknown candidate completion cannot imply a finish reason")
+        if version == BOUND_EXPORT_VERSION:
+            if row["status"] != "completed" or provenance["audit_match"] != "candidate_match":
+                raise ValueError("Candidate-bound export requires a completed audited prediction")
+            candidate = {
+                "id": provenance["candidate_id"], "db_id": provenance["db_id"],
+                "dialect": provenance["dialect"], "sql_text": row["sql"],
+                "generation_source": provenance["generation_source"],
+                "finish_reason": provenance["candidate_finish_reason"],
+            }
+            if provenance["candidate_sha256"] != candidate_digest(query_id, candidate):
+                raise ValueError("Exported candidate binding mismatch")
+            if _finish(candidate) != (row["finish_reason"], provenance["completion_source"]):
+                raise ValueError("Exported candidate completion mismatch")
         if provenance["audit_match"] == "not_requested":
             if provenance["audit_sha256"] is not None:
                 raise ValueError("Unrequested audit cannot have verification metadata")
-        elif provenance["audit_match"] == "metadata_match":
+        elif provenance["audit_match"] in ("metadata_match", "candidate_match"):
+            if provenance["audit_match"] == "candidate_match" and version != BOUND_EXPORT_VERSION:
+                raise ValueError("Candidate match requires a v2 prediction export")
             digest = provenance["audit_sha256"]
             if (
                 not isinstance(digest, str)

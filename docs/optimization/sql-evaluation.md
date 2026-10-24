@@ -44,3 +44,5 @@ latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受
 阶段33标准响应候选保留生成来源及该响应stop/null；导出所选model_response候选可以进入stop计数，prepared拒绝作为模型预测，stream_text/unknown仍legacy_unknown。原缺来源的文件兼容，不根据请求usage或workflow成功补stop；既有阶段32固定烟测样例及其哈希不变。
 
 阶段34所选model_stream候选可采用其自身stop进入完成计数；该证据由可选结构化流在完整消费及尾部校验后提供。旧文本流/Mock仍未知，费用/生成耗时不从事件推断；见[流事件契约](stream-completion.md)。
+
+阶段35兼容消费request-prediction-v2候选摘要绑定行，核对候选摘要及完成语义后沿原规则评测；失败行无SQL，全部案例分母不变。v1与普通平铺预测兼容，原固定烟测哈希不变。候选摘要不证明SQL语义或数据快照，见[绑定契约](candidate-audit-binding.md)。
