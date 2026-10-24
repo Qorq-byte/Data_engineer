@@ -108,3 +108,5 @@
 - 阶段30：SDK非流式响应归一化、异常映射前usage保留及usage_basis来源标识已实现；最终24c3577普通推送codex/llm-response-boundary，Actions40068421584精确SHA成功。Linux3641通过；178项类型债务无新增。SDK补零限制/未测生产边界详见[阶段30](stage-30.md)，不合并main。
 
 - 阶段31：可选本机SQLite用量持久审计、请求收尾/取消隔离、三协议落盘状态和管理员只读API已实现。代码1b4566d，Linux路径断言修正2cc417c，Actions40073192813精确SHA成功，Linux3681通过（46.23秒）。新增40项；本地3680通过/1平台跳过，178项类型债务无新增。详见[阶段31](stage-31.md)和[审计契约](usage-audit.md)，LLM_AUDIT_PATH默认空/关闭；补记文档再提交并核验最终CI，不合并main。
+
+- 阶段32：显式案例/查询/候选/库绑定的离线预测导出、只读审计元数据匹配、来源哈希/版本校验和旧评测器兼容已实现。代码06b3d2c普通推送codex/sql-prediction-export，Actions40087973387精确SHA成功；Linux3735通过（61.50秒），新增54项，本地3734通过/1平台跳过。strict门禁/182前端/构建/Ruff通过，全仓178无新增。详见[阶段32](stage-32.md)及[导出契约](prediction-export.md)；不验证SQL真实性或真实费用，不合并main，补记文档后再核验最终CI。

@@ -34,4 +34,8 @@ Ruff、核心strict36、LLM边界strict2、审计strict2、评测strict1和新�
 
 真实provider输出、逐候选完成来源、源库快照与SQL真实性、原始usage/账单、多方言业务质量和生产负载未验收；MCP精简投影不具备足够候选信息，不自动补全。原子替换不承诺断电/强杀后的磁盘持久性。费用估算和真实模型评测继续独立规划。
 
-本地最终检查已通过，提交推送与精确SHA CI待补记；不强推、不合并main。
+本地最终检查和代码精确SHA CI均已通过；不强推、不合并main。
+
+## Git与远程验收
+
+代码 [06b3d2c](https://github.com/Qorq-byte/Data_engineer/commit/06b3d2cf5d573f3e911c8a5ccbf95f4c82ba6395) 已普通推送codex/sql-prediction-export；[Actions40087973387](https://github.com/Qorq-byte/Data_engineer/actions/runs/40087973387) 成功，headSha精确匹配，[结构化证据](results/stage-32-ci.json)。Linux干净安装 **3735通过、2警告，61.50秒**，平台项实际执行；182前端契约/完整构建、Ruff、strict36/LLM2/审计2/评测1/新增导出2均通过。本次补记文档另行提交推送并核验最终CI，不强推、不合并main。
