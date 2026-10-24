@@ -346,8 +346,10 @@ async def test_thread_cleanup_survives_repeated_cancellation():
 async def test_protocol_persistence_status_is_truthful(
     connected_query, tmp_path, monkeypatch, protocol, persistence
 ):
+    private_dir = tmp_path / "audit-private-only"
+    private_dir.mkdir()
     monkeypatch.setattr(
-        settings, "llm_audit_path", "" if persistence == "disabled" else str(tmp_path)
+        settings, "llm_audit_path", "" if persistence == "disabled" else str(private_dir)
     )
     body = {"nl_text": "find orders", "database": "contract", "execute": True, "num_candidates": 1}
     if protocol == "mcp":
@@ -365,7 +367,8 @@ async def test_protocol_persistence_status_is_truthful(
     assert response["status"] == "completed"
     assert response["llm_audit"]["status"] == persistence
     assert response["llm_audit"]["query_id"] == response["query_id"]
-    assert str(tmp_path) not in str(response)
+    # Source database_name may legitimately contain tmp_path; only the audit path is private.
+    assert str(private_dir) not in str(response)
 
 
 async def test_concurrent_request_audits_keep_their_own_tokens(audit_path):
