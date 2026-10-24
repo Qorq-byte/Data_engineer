@@ -22,7 +22,7 @@ Harness固定YAML/节点生命周期、模型选择、预算、重试、SQL只�
 
 前端182函数契约及三页46文件完整构建/重复构建/故意坏JS保留旧产物通过；无页面改动不重复视觉测试。Windows asyncio socketpair仍需沙箱外验证；复用已验收Python3.12环境及本地npm锁文件缓存，无生产模型/外部数据库请求。conftest强制审计默认关闭，专用用例只配置临时文件，避免继承宿主审计路径。
 
-最终定向 **362通过、2警告，18.41秒**，[日志](results/stage-31-targeted.txt)；最终全量 **3680通过、1跳过、2警告，109.57秒**，[日志](results/stage-31-pytest.txt)，包含全部40项新增回归。提交推送与精确SHA CI核验待补记。
+最终定向 **362通过、2警告，18.41秒**，[日志](results/stage-31-targeted.txt)；最终全量 **3680通过、1跳过、2警告，109.57秒**，[日志](results/stage-31-pytest.txt)，包含全部40项新增回归。独立分支已提交推送，代码精确SHA CI通过，详见下方远程验收。
 
 ## 限制与后续
 
@@ -31,3 +31,7 @@ Harness固定YAML/节点生命周期、模型选择、预算、重试、SQL只�
 锁等待0.2秒不含线程排队，也不能中断挂起文件系统；取消会等待worker收尾，不能承诺严格响应截止。崩溃/强制退出/磁盘满或文件丢失可缺审计，无持久重试队列。completed表示workflow已完成，不等于客户端已收到；SDK归一化usage仍不能证明原始供应商字段完整或账单真实。多进程并发写、多机共享、生产负载/磁盘故障未测；费用估算、预测导出继续独立后续。
 
 远程首轮Actions40072883286：4失败/3677通过，四项均为JSON/SSE路径脱敏断言过宽；Linux源库database_name包含合法SQLite文件路径，测试误把源库与审计库共同父目录当成审计路径。改为独立audit-private-only目录精确验证其不泄露，未改查询响应或放宽审计字段约束。首次CI日志保留stage-31-ci-initial-failure.txt，修正后重新核验。
+
+## Git与远程验收
+
+代码1b4566d与测试跨平台修正 [2cc417c](https://github.com/Qorq-byte/Data_engineer/commit/2cc417c708fc1e886550f3c1dac93b48fec50e81) 均普通推送codex/llm-usage-audit；[Actions40073192813](https://github.com/Qorq-byte/Data_engineer/actions/runs/40073192813) 成功，headSha精确匹配，[结构化证据](results/stage-31-ci.json)。Linux干净安装 **3681通过、2警告，46.23秒**，平台项实际执行；前端182契约/完整构建、Ruff、原strict36、LLM边界strict2、审计strict2和评测strict1均通过。修正目录后的本地40项审计回归也通过（10.45秒），见stage-31-audit-final.txt。本次补记文档独立提交推送并核验最终CI；不强推、不自动合并main。

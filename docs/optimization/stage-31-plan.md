@@ -27,3 +27,5 @@ JSON/SSE done/MCP新增llm_audit状态persisted/disabled/failed，查询执行�
 进一步边界调整：现有app.storage包初始化会主动导入MySQL backend。SQLite审计改为独立app/audit/store.py，避免纯审计依赖外部驱动与该包存量类型错误；不改MySQL导出或关闭检查。最终strict2为app/audit/store.py和app/workflow/query_audit.py。
 
 审查补充：快照构造异常纳入审计失败隔离；HTTP截止测试按实际进入provider次数验证，不强制在截止前产生调用。测试conftest默认关闭审计，专用用例只启用tmp_path文件，避免继承宿主审计路径。
+
+实施完成：本地及代码精确SHA CI均通过，完整边界、调整、失败证据和验收见[阶段31报告](stage-31.md)。

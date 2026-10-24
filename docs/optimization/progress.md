@@ -106,3 +106,5 @@
 
 - 阶段29：请求级LLM用量/完成状态、并发隔离、三协议只读摘要已实现；最终e82406a普通推送codex/request-llm-usage，Actions40050851190精确SHA成功。Linux3607通过；全仓178项类型债务无新增。详见[阶段29](stage-29.md)，不合并main。
 - 阶段30：SDK非流式响应归一化、异常映射前usage保留及usage_basis来源标识已实现；最终24c3577普通推送codex/llm-response-boundary，Actions40068421584精确SHA成功。Linux3641通过；178项类型债务无新增。SDK补零限制/未测生产边界详见[阶段30](stage-30.md)，不合并main。
+
+- 阶段31：可选本机SQLite用量持久审计、请求收尾/取消隔离、三协议落盘状态和管理员只读API已实现。代码1b4566d，Linux路径断言修正2cc417c，Actions40073192813精确SHA成功，Linux3681通过（46.23秒）。新增40项；本地3680通过/1平台跳过，178项类型债务无新增。详见[阶段31](stage-31.md)和[审计契约](usage-audit.md)，LLM_AUDIT_PATH默认空/关闭；补记文档再提交并核验最终CI，不合并main。
