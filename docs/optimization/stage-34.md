@@ -26,4 +26,6 @@ SQLCandidate/DTO新增允许model_stream，JSON/SSE/MCP沿既有候选投影保�
 
 来源只表示代码路径及所观察字段，不认证真实provider、操作者文件、SQL语义、账单或生产并发性能。外部SDK关闭沿原有best-effort流程，调用方须完整消费或aclose，不跨任务共享迭代器。原始文本流仍未知；公开SSE无新的token流线路。SQL摘要审计绑定、真实模型评测与费用估算后续独立规划。
 
-本地验收完成，代码与最终文档提交的精确SHA CI随后补记；主工作区原改动和main保持原状。
+代码[b7c4d54](https://github.com/Qorq-byte/Data_engineer/commit/b7c4d5498a85714f33cb9fce43c88f54c1827ad8)已普通推送codex/stream-completion-evidence。[Actions40097746926](https://github.com/Qorq-byte/Data_engineer/actions/runs/40097746926)成功，headSha精确匹配，见[结构化证据](results/stage-34-ci.json)和[Linux测试摘要](results/stage-34-ci-tests.txt)。干净环境 **3797通过、2警告，40.00秒**；本地跳过的平台项在Linux实际执行。182前端契约、完整构建、Ruff和原strict门禁及新增流模块strict全部通过。
+
+本次补记验收文档另行提交推送并核验最终CI，不以代码CI代替最终提交验收。主工作区原改动和main保持原状，不强推、不自动合并。

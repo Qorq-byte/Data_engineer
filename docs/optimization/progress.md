@@ -1,6 +1,6 @@
 # 实施进度
 
-- 阶段34流式候选完成证据本地完成，新增29项；全量3796通过/1平台跳过。结构化流完整消费及尾部校验后保留model_stream/stop，旧文本/Mock仍未知；预算/attempt不双计，取消/超时/提前关闭/非法尾部释放唯一并发槽，显式导出接入。原strict36+7及新增流模块strict通过，182前端/构建/Ruff通过，类型178无新增。代码推送及精确SHA CI待核验，见[阶段34](stage-34.md)。
+- 阶段34流式候选完成证据完成，新增29项；本地3796通过/1平台跳过，代码b7c4d54已普通推送codex/stream-completion-evidence，Actions40097746926精确SHA成功，Linux3797通过（40.00秒）。结构化流完整消费及尾部校验后保留model_stream/stop，旧文本/Mock仍未知；预算/attempt不双计，取消/超时/提前关闭/非法尾部释放唯一并发槽，显式导出接入。strict36+7及新增流模块strict、182前端/构建/Ruff通过，类型178无新增。见[阶段34](stage-34.md)；验收文档提交另核验最终CI，不合并main。
 
 - 阶段33候选级生成来源与完成信息完成，新增33项；本地3767通过/1平台跳过，代码908ebce已普通推送codex/candidate-completion-provenance，Actions40090996783精确SHA成功，Linux3768通过（63.51秒）。SDK对象→审计→导出→评测stop断言通过；JSON/SSE/MCP保留候选证据，MCP候选排除execution保持顶层100行限制。导出拒绝预制SQL，纯文本流/未知来源不补stop；strict门禁/182前端/构建/Ruff通过，类型178无新增。见[阶段33](stage-33.md)，本次验收文档提交另核验最终CI；不合并main。
 
