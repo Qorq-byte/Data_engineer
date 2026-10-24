@@ -11,6 +11,8 @@ import pytest
 # Keep the suite hermetic: never let real API keys (.env / environment)
 # cause tests to hit live LLM endpoints — the router factory honors this.
 os.environ["LLM_MOCK_MODE"] = "1"
+# Audit tests explicitly enable temporary files; never write a host-configured audit DB.
+os.environ["LLM_AUDIT_PATH"] = ""
 os.environ["JWT_SECRET"] = "unit-test-signing-secret-never-used-outside-tests-2026"
 
 # Ensure app is importable

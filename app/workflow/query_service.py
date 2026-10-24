@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from dataclasses import asdict
@@ -9,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from app.audit.store import UsageAuditStore
 from app.db.query_targets import resolve_query_targets
 from app.harness.config_loader import ConfigLoader
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
@@ -18,7 +20,7 @@ from app.harness.runner import WorkflowRunner
 from app.llm.budget import BudgetedRouter, active_budget
 from app.llm.factory import get_default_router
 from app.llm.protocols import CompletionRouter
-from app.llm.usage import UsageCollector, active_usage
+from app.llm.usage import active_usage
 from app.models.schema import SchemaSnapshot
 from app.models.workflow import WorkflowPlan
 from app.nodes.execute_sql import ExecuteSQLNode
@@ -28,6 +30,7 @@ from app.nodes.registry import NodeRegistry
 from app.nodes.schema_linking import SchemaLinkingNode
 from app.nodes.validate_sql import ValidateSQLNode
 from app.workflow.contracts import QueryCapacityError, QueryEventHandler, QueryEventName, QueryInput
+from app.workflow.query_audit import QueryAuditState, finish_audit
 
 _ROOT = Path(__file__).resolve().parents[1]
 _CONFIG_LOADER = ConfigLoader(str(_ROOT / "config/agent.yml"))
@@ -119,7 +122,27 @@ async def run_query(
         if not body.session_id:
             body.session_id = f"s_{uuid.uuid4().hex[:16]}"
         async with gate(("session", body.session_id)):
-            return await _run_query(body, emit, llm_router=llm_router)
+            audit = QueryAuditState()
+            if settings.llm_audit_path.strip():
+                audit.store = UsageAuditStore(
+                    settings.llm_audit_path, settings.llm_audit_max_records
+                )
+            try:
+                result = await _run_query(body, emit, llm_router=llm_router, audit=audit)
+                status = result.get("status")
+                audit.outcome = (
+                    status if isinstance(status, str) and status in ("completed", "failed")
+                    else "error"
+                )
+            except asyncio.CancelledError:
+                audit.outcome = "cancelled"
+                raise
+            finally:
+                persistence = await finish_audit(audit, body.session_id)
+            result["llm_audit"] = {"status": persistence, "query_id": audit.query_id}
+            if persistence == "failed":
+                result.setdefault("warnings", []).append("LLM usage audit was not persisted")
+            return result
 
 
 async def _run_query(
@@ -127,6 +150,7 @@ async def _run_query(
     emit: QueryEventHandler | None = None,
     *,
     llm_router: CompletionRouter | None = None,
+    audit: QueryAuditState,
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
@@ -135,7 +159,7 @@ async def _run_query(
     from app.storage.mysql_store import get_store
 
     started = time.perf_counter()
-    query_id = f"q_{uuid.uuid4().hex[:12]}"
+    query_id = audit.query_id
     session_id = body.session_id or f"s_{uuid.uuid4().hex[:16]}"
     warnings: list[str] = []
     errors: list[str] = []
@@ -197,7 +221,7 @@ async def _run_query(
             "stages": ["parse", "retrieve", "generate", "validate", "execute"],
         },
     )
-    collector = UsageCollector()
+    collector = audit.collector
     usage_token = active_usage.set(collector)
     budget_token = active_budget.set(limits)
     try:
@@ -356,6 +380,7 @@ async def _run_query(
                     execution = context["last_execution"]
             all_candidates.extend(candidates)
     finally:
+        audit.llm_calls = limits.llm_calls_used
         active_budget.reset(budget_token)
         active_usage.reset(usage_token)
     if body.execute and not schemas:

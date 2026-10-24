@@ -16,3 +16,6 @@ status 为 pending/completed/incomplete/failed/timeout/cancelled/closed。finish
 阶段30新增逐次 `usage_basis`：`response_fields` 表示当前响应提供的字段，`sdk_normalized` 表示经过SDK的观察值。原生非流式SDK对象在供应商边界先采集再转换为dict；SDK异常的直接usage在异常映射前采集；SDK流式chunk在原消费边界标记。字典兼容路径、注入适配器的dict约束和计数预算不变。可选usage属性读取异常按未知处理，不替换实际调用结果/异常。
 
 LiteLLM Usage可能将缺失计数补成0，且fields_set也无法恢复原始存在性。因此sdk_normalized的合法数值（含0）表示SDK观察值，不能证明原始供应商完整报告。complete和usage_coverage仍只描述当前观察字段的完整性，不是原始provider字段完整性或计费覆盖率。完全缺失usage保持null；本阶段不读取原始响应/_hidden_params来推断字段、不自动请求include_usage、不计算费用。
+
+
+阶段31增加可选本机持久审计及llm_audit状态，详见[审计契约](usage-audit.md)。LLM_AUDIT_PATH为空时仍只返回内存用量；persisted与complete是不同维度。

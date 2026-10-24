@@ -641,3 +641,6 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段29新增请求级 `llm_usage`：JSON、SSE done、MCP 共用隔离摘要；逐次尝试、缺测和覆盖率语义见[用量契约](docs/optimization/request-llm-usage.md)，验收见[阶段29报告](docs/optimization/stage-29.md)。不提供费用估算或持久账本。新增模块类型门禁：`mypy app/llm/usage.py`。Windows 本地验证需可用的时区数据库（如 `tzdata`）。
 
 阶段30修复原生LiteLLM SDK对象响应兼容，异常映射前保留可用usage，逐次usage_basis区分SDK归一化来源（SDK可能补零，不能据此证明原始报告完整）。检查命令：`mypy app/llm/usage.py app/llm/responses.py`；详见[阶段30报告](docs/optimization/stage-30.md)及[计划](docs/optimization/stage-30-plan.md)。
+
+阶段31新增可选本机用量审计：默认关闭，设置`LLM_AUDIT_PATH=data/llm_usage.sqlite3`后重启启用；`LLM_AUDIT_MAX_RECORDS=1000`控制逻辑保留条数。检查响应`llm_audit.status`，管理员通过`GET /api/v1/usage-audits/{query_id}`读取，详见[审计契约](docs/optimization/usage-audit.md)。不保存问题/SQL，取消/写失败和SDK缺测限制仍适用；新strict门禁`mypy app/audit/store.py app/workflow/query_audit.py`。
+[阶段31报告](docs/optimization/stage-31.md)记录真实SQLite验证、取消/审计失败处理及已知边界。
