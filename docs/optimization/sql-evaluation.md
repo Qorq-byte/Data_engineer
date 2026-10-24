@@ -37,3 +37,6 @@ latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受
 离线导入不加载Router/LiteLLM；app.llm公共五个Router/配置/成本导出改按需加载，实际使用它们时才保留原SDK行为。无需通过设置环境变量掩盖导入副作用。SQLite连接初始化失败也在finally关闭。
 
 `tests/fixtures/sql_prediction_accounting.json`是6题固定功能集，不含真实模型输出。重跑`pytest tests/test_rag/test_prediction_accounting.py -q`可验证预期计数、分母和覆盖率；阶段28保存同输入哈希、阶段27固定SHA重放与当前输出的[功能对照](results/stage-28-accounting.json)，旧执行4/6、正确3/6改为执行2/6、正确1/6，是拒绝错误计分，不是模型退化或质量提升。保留原7查询/8文档BM25烟测，未运行真实模型/dense/reranker、真实标注或压测。
+
+
+阶段32新增显式离线[预测导出](prediction-export.md)。新export_version行消费前验证行/案例集哈希与来源格式，完整evaluate额外核验dataset哈希；旧普通列表保持原语义。缺候选finish仍legacy_unknown，请求用量只作来源元数据，生成latency/费用不从策略均摊或部分token猜测。

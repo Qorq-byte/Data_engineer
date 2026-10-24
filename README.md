@@ -644,3 +644,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 
 阶段31新增可选本机用量审计：默认关闭，设置`LLM_AUDIT_PATH=data/llm_usage.sqlite3`后重启启用；`LLM_AUDIT_MAX_RECORDS=1000`控制逻辑保留条数。检查响应`llm_audit.status`，管理员通过`GET /api/v1/usage-audits/{query_id}`读取，详见[审计契约](docs/optimization/usage-audit.md)。不保存问题/SQL，取消/写失败和SDK缺测限制仍适用；新strict门禁`mypy app/audit/store.py app/workflow/query_audit.py`。
 [阶段31报告](docs/optimization/stage-31.md)记录真实SQLite验证、取消/审计失败处理及已知边界。
+
+阶段32新增`python -m scripts.export_predictions`，按显式案例/查询/候选/数据库绑定导出保存的QueryResponse，供既有离线SQL评测器消费。可选只读审计核对，缺生成耗时/费用保留null；不发模型请求、不从审计还原SQL。用法及合成重跑样例见[预测导出契约](docs/optimization/prediction-export.md)。

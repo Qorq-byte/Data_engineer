@@ -1,0 +1,209 @@
+{
+  "dataset": "synthetic-smoke-v1",
+  "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a",
+  "python": "3.12.13",
+  "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set",
+  "k": 3,
+  "query_count": 7,
+  "document_count": 8,
+  "retrieval": {
+    "recall_at_k": 1.0,
+    "precision_at_k": 0.38095238095238093,
+    "mrr_at_k": 1.0,
+    "ndcg_at_k": 1.0,
+    "latency_ms": 0.14027143437747977
+  },
+  "details": [
+    {
+      "id": "q1",
+      "retrieved": [
+        "users"
+      ],
+      "latency_ms": 0.3853000089293346,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q2",
+      "retrieved": [
+        "products"
+      ],
+      "latency_ms": 0.10699999984353781,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q3",
+      "retrieved": [
+        "refunds",
+        "orders"
+      ],
+      "latency_ms": 0.14650000957772136,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.6666666666666666,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q4",
+      "retrieved": [
+        "orders"
+      ],
+      "latency_ms": 0.05800000508315861,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q5",
+      "retrieved": [
+        "joins",
+        "users",
+        "orders"
+      ],
+      "latency_ms": 0.13270000636111945,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q6",
+      "retrieved": [
+        "payroll"
+      ],
+      "latency_ms": 0.0746000005165115,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    },
+    {
+      "id": "q7",
+      "retrieved": [
+        "audit"
+      ],
+      "latency_ms": 0.07780001033097506,
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.3333333333333333,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 1.0
+    }
+  ],
+  "embedding_or_llm_cost_usd": 0,
+  "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.",
+  "sql_model_metrics": {
+    "report_version": "sql-evaluation-v2",
+    "cases_sha256": "c2ec007f19a2b6ceb993236002942bd6217b90049adcb3fe531ed7305d3069b2",
+    "predictions_sha256": "3a3b12662c3d27ebddddee556c805504bba5ddf9adb6f52ae532763b7182d4f8",
+    "sqlite_fixture_sha256": "0ff8fb23352acc7241fd65e275b9f1932529b41dea3fb43a8d7dd9096eef1c54",
+    "limits": {
+      "timeout_seconds": 2,
+      "max_rows": 1000,
+      "dialect": "sqlite"
+    },
+    "case_count": 4,
+    "prediction_count": 2,
+    "execution_success_count": 1,
+    "result_correct_count": 1,
+    "execution_success_rate": 0.25,
+    "result_correct_rate": 0.25,
+    "error_counts": {
+      "GENERATION_FAILED": 1,
+      "MISSING_PREDICTION": 2
+    },
+    "completion_counts": {
+      "legacy_unknown": 1,
+      "generation_failed": 1,
+      "missing": 2
+    },
+    "reported_generation_latency_ms": {
+      "sample_count": 0,
+      "case_count": 4,
+      "coverage": 0.0,
+      "complete": false,
+      "mean": null,
+      "p50": null,
+      "p95": null,
+      "p99": null,
+      "percentile_method": "nearest_rank"
+    },
+    "reported_cost_usd": {
+      "sample_count": 0,
+      "case_count": 4,
+      "coverage": 0.0,
+      "complete": false,
+      "total": null,
+      "mean": null
+    },
+    "execution_attempt_latency_ms": {
+      "sample_count": 1,
+      "case_count": 4,
+      "coverage": 0.25,
+      "complete": false,
+      "mean": 0.24199999461416155,
+      "p50": 0.24199999461416155,
+      "p95": 0.24199999461416155,
+      "p99": 0.24199999461416155,
+      "percentile_method": "nearest_rank"
+    },
+    "measurement_scope": {
+      "rates": "All cases, including missing and failed predictions",
+      "generation_and_cost": "External reports, including failed predictions; not measured",
+      "execution": "Local policy+SQLite fetch attempt; excludes gold and result comparison",
+      "completion": "Missing finish_reason remains legacy_unknown, not confirmed complete"
+    },
+    "details": [
+      {
+        "id": "sql1",
+        "execution_success": true,
+        "result_correct": true,
+        "error": "",
+        "error_code": null,
+        "completion_status": "legacy_unknown",
+        "execution_latency_ms": 0.24199999461416155,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "sql2",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "Prediction reports generation failure",
+        "error_code": "GENERATION_FAILED",
+        "completion_status": "generation_failed",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "sql3",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "No prediction supplied",
+        "error_code": "MISSING_PREDICTION",
+        "completion_status": "missing",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      },
+      {
+        "id": "sql4",
+        "execution_success": false,
+        "result_correct": false,
+        "error": "No prediction supplied",
+        "error_code": "MISSING_PREDICTION",
+        "completion_status": "missing",
+        "execution_latency_ms": null,
+        "reported_generation_latency_ms": null,
+        "reported_cost_usd": null
+      }
+    ]
+  },
+  "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."
+}

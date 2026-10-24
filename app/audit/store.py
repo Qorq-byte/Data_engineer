@@ -48,7 +48,8 @@ def _token(value: object) -> int | None:
     return value if type(value) is int and value >= 0 else None
 
 
-def _usage(value: dict[str, Any]) -> dict[str, Any]:
+def usage_snapshot(value: dict[str, Any]) -> dict[str, Any]:
+    """Project bounded metadata fields and recompute partial totals without writing storage."""
     raw = value.get("attempts", [])
     if not isinstance(raw, list) or len(raw) > 1000:
         raise ValueError("Invalid audit attempts")
@@ -130,7 +131,7 @@ def _encode(record: UsageAuditRecord) -> str:
             "llm_calls": record.llm_calls,
             "started_at": record.started_at,
             "finished_at": record.finished_at,
-            "usage": _usage(record.usage),
+            "usage": usage_snapshot(record.usage),
         },
         ensure_ascii=False,
         sort_keys=True,

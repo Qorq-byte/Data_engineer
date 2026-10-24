@@ -1,0 +1,13 @@
+[
+  {
+    "id": "sql1",
+    "query_id": "q_000000000001",
+    "candidate_id": "selected",
+    "db_id": "fixture_sqlite"
+  },
+  {
+    "id": "sql2",
+    "query_id": "q_000000000002",
+    "db_id": "fixture_sqlite"
+  }
+]

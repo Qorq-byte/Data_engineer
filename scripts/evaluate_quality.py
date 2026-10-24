@@ -20,6 +20,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from app.evaluation.predictions import validate_exported_predictions
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.llm.completion import IncompleteCompletionError, check_completion
 from app.security.sql_policy import require_read_query
@@ -42,6 +43,8 @@ def ranking_metrics(retrieved: list[str], relevant: set[str], k: int) -> dict[st
 def evaluate(
     dataset: dict[str, Any], k: int, predictions: list[dict[str, Any]] | None,
 ) -> dict[str, Any]:
+    if predictions is not None:
+        validate_exported_predictions(dataset["sql_cases"], predictions, dataset=dataset)
     bm25 = BM25Index()
     rows = []
     try:
@@ -168,6 +171,7 @@ def _validate_predictions(
     by_id = {prediction["id"]: prediction for prediction in predictions}
     if len(ids) != len(cases) or len(by_id) != len(predictions) or set(by_id) - ids:
         raise ValueError("Duplicate case/prediction or unknown prediction IDs")
+    validate_exported_predictions(cases, predictions)
     return by_id
 
 
