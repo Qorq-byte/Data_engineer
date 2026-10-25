@@ -30,4 +30,6 @@ flat-token-prices-v1只支持USD，两类每百万token单价为受限非负固�
 
 报告billing_verified=false，价格来自操作者、用量来自所观察审计，不证明原始provider字段完整、实际计费或真实业务质量。哈希不是签名；复杂价格、真实模型质量及账单对账、签名/防篡改审计后续独立规划。原Harness/权限/只读和请求用量语义保持。
 
-本地验收完成，代码推送及最终文档提交的精确SHA CI随后补记。
+代码[3f2e750](https://github.com/Qorq-byte/Data_engineer/commit/3f2e7504ffc92e51bc4b69f47eee96452ea05726)已普通推送codex/offline-usage-estimates。[Actions40183422942](https://github.com/Qorq-byte/Data_engineer/actions/runs/40183422942)成功，headSha精确匹配，见[结构化证据](results/stage-36-ci.json)和[Linux测试摘要](results/stage-36-ci-tests.txt)。干净环境 **3890通过、2警告，61.79秒**，本地跳过的平台项在Linux实际执行；182前端契约/完整构建、Ruff、原strict门禁及新增3文件strict全部通过。
+
+本次补记验收文档另行提交推送并核验最终CI，不以代码CI代替最终提交验收。原工作区用户改动及main保持原状，不强推、不自动合并。
