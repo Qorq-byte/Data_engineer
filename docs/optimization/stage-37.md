@@ -30,4 +30,6 @@ Harness节点顺序、权限、预算/重试、只读SQL、JSON/SSE/MCP和费用
 
 真实模型、业务标签、账单/复杂价格、签名审计及同集对比后续独立规划。浅克隆可能缺历史Git对象，不承诺自动补全或替换基线。
 
-本地验收完成，代码推送及最终文档提交的精确SHA CI结果随后补记。
+代码[6e9c9d7](https://github.com/Qorq-byte/Data_engineer/commit/6e9c9d76692d3ef93533ee0d26b910246ff01f30)已普通推送codex/evaluation-artifact-boundaries。[Actions40186528849](https://github.com/Qorq-byte/Data_engineer/actions/runs/40186528849)成功，headSha精确匹配，见[结构化证据](results/stage-37-ci.json)和[Linux测试摘要](results/stage-37-ci-tests.txt)。干净环境 **3945通过、2警告，65.15秒**，本地跳过的平台项在Linux实际执行；182前端契约/完整构建、Ruff、原strict门禁、新预检模块及两个脚本入口检查均通过。
+
+本次补记验收文档另行提交推送并核验最终CI，不以代码CI代替最终提交验收。原工作区用户改动及main保持原状，不强推、不自动合并。
