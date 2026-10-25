@@ -658,3 +658,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段37统一三个离线评测CLI的严格JSON、输入路径保护和原子报告写入，预检先于索引/节点评测；SQL验证支持显式`--dataset`。输入/IO错误统一退出2，stdout只给计数/哈希，详细报告格式不变。见[评测文件边界](docs/optimization/evaluation-artifact-boundaries.md)。
 
 阶段38新增 `python -m scripts.run_model_evaluation`：默认显式prepare生成无凭据清单，execute须匹配SHA并使用新运行目录；固定4题公开合成SQLite、每题1次、禁重试/fallback，走正式Harness及v2候选审计绑定。费用未知不补0，结果只表示合成冒烟；用法与边界见[受控模型验收](docs/optimization/controlled-model-evaluation.md)。
+
+阶段39新增独立的合成SQL输出契约v2：4个明确问题、base/edge/empty三组SQLite、手写标签与gold交叉自检；同一预测在三库检查列名/列序、结果及最外层排序，完整4题分母。离线入口 `python -m scripts.evaluate_sql_contracts`；受控模型准备可显式 `--profile synthetic-sqlite-model-v2`，仍最多4次调用，费用未知。旧v1及历史分数保持，两个版本不能直接比较。详见[SQL输出契约](docs/optimization/sql-output-contracts.md)。

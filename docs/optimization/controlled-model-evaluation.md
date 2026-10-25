@@ -29,3 +29,5 @@ python -m scripts.run_model_evaluation --execute --manifest data/stage38-manifes
 此阶段未完成：业务标注集、真实embedding/语义检索、PG/MySQL集成、生产容量、复杂价格/真实账单校准、模型版本冻结、多进程强隔离及签名审计。该CLI的隔离依赖独立受控进程和本机可信代码，清单不是对恶意操作者的沙箱。
 
 公开阶段清单是该次运行记录，不是可跨平台直接重放的授权：Python/SDK版本或源文件字节（含换行格式）变化都会要求重新prepare。模型别名内容仍可能变化，不能只靠清单保证供应商端可复现。
+
+阶段39增加显式 `--profile synthetic-sqlite-model-v2`，使用独立题意/Schema/三组本地数据和输出契约；默认仍为本页v1。v2同样只生成4次，不将三组本地检查计为12次模型调用。准备会先核验独立手写标签，详情见[SQL输出契约](sql-output-contracts.md)。

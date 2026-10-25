@@ -23,9 +23,10 @@ from typing import Any
 from app.evaluation.artifacts import protect_inputs, read_json, write_atomic
 from app.evaluation.inputs import evaluation_summary, quality_dataset, sql_cases, text
 from app.evaluation.predictions import validate_exported_predictions
+from app.evaluation.sqlite_query import EvaluationQueryError as EvaluationQueryError
+from app.evaluation.sqlite_query import execute_rows
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.llm.completion import IncompleteCompletionError, check_completion
-from app.security.sql_policy import require_read_query
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -104,12 +105,6 @@ def evaluate(
     return result
 
 
-class EvaluationQueryError(RuntimeError):
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-
-
 def _fingerprint(value: object) -> str:
     try:
         encoded = json.dumps(
@@ -184,24 +179,7 @@ def _validate_predictions(
 def _execute_evaluation_query(
     conn: sqlite3.Connection, sql: str, timeout_seconds: float, max_rows: int
 ) -> list[tuple[Any, ...]]:
-    try:
-        require_read_query(sql, "sqlite")
-    except ValueError as exc:
-        raise EvaluationQueryError("SQL_POLICY_REJECTED", str(exc)) from exc
-    deadline = time.monotonic() + timeout_seconds
-    conn.set_progress_handler(lambda: int(time.monotonic() >= deadline), 100)
-    try:
-        rows = conn.execute(sql).fetchmany(max_rows + 1)
-        if time.monotonic() >= deadline:
-            raise EvaluationQueryError("SQL_TIMEOUT", "SQL evaluation deadline exceeded")
-        if len(rows) > max_rows:
-            raise EvaluationQueryError("SQL_RESULT_LIMIT", "Result exceeds evaluation row limit")
-        return rows
-    except sqlite3.Error as exc:
-        code = "SQL_TIMEOUT" if time.monotonic() >= deadline else "SQL_EXECUTION_ERROR"
-        raise EvaluationQueryError(code, str(exc)) from exc
-    finally:
-        conn.set_progress_handler(None, 0)
+    return execute_rows(conn, sql, timeout_seconds, max_rows)
 
 
 def evaluate_sql(

@@ -13,10 +13,11 @@ from typing import Any
 
 from app.evaluation.artifacts import protect_inputs, read_json, write_atomic
 from app.evaluation.model_batch import (
-    DATASET,
-    FIXTURE,
+    PROFILES,
+    V1_PROFILE,
     manifest_digest,
     prepare,
+    profile_inputs,
     run_directory,
     validate,
 )
@@ -30,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--manifest", required=True, type=Path)
     parser.add_argument("--run-name")
     parser.add_argument("--model", default="deepseek-v4-flash")
+    parser.add_argument("--profile", choices=PROFILES)
     parser.add_argument("--confirm-manifest-sha256", default="")
     parser.add_argument("--env-file", type=Path)
     args = parser.parse_args(argv)
@@ -37,14 +39,17 @@ def main(argv: list[str] | None = None) -> int:
     directory: Path | None = None
     try:
         if args.prepare:
-            manifest = prepare(args.run_name or "synthetic-smoke", model=args.model)
-            protect_inputs(args.manifest, [DATASET, FIXTURE])
+            manifest = prepare(args.run_name or "synthetic-smoke", model=args.model,
+                               profile=args.profile or V1_PROFILE)
+            protect_inputs(args.manifest, profile_inputs(manifest["profile"]))
             if args.manifest.resolve().is_relative_to(run_directory(manifest).resolve()):
                 raise ValueError("Manifest must be outside the disposable run directory")
             write_atomic(args.manifest, manifest)
             print(f"Prepared four-case batch; manifest_sha256={manifest_digest(manifest)}")
             return 0
         manifest = validate(read_json(args.manifest), args.confirm_manifest_sha256)
+        if args.profile is not None and args.profile != manifest["profile"]:
+            raise ValueError("Execution profile does not match manifest")
         # Read one selected credential only. Never load the host .env into the application.
         from dotenv import dotenv_values
 

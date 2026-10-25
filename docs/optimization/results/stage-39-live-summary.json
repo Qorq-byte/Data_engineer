@@ -1,0 +1,61 @@
+{
+  "profile": "synthetic-sqlite-model-v2",
+  "manifest_sha256": "5e11339c44b4afc1893d101cfddb266dab01a60944c7698b39f15bcadb4fb96a",
+  "model": "deepseek-v4-flash",
+  "limits": {
+    "max_calls": 4,
+    "calls_per_case": 1,
+    "n": 1,
+    "message_bytes": 32768,
+    "max_output_tokens": 1024,
+    "request_seconds": 30,
+    "case_seconds": 45,
+    "batch_seconds": 180,
+    "max_retries": 0
+  },
+  "physical_calls_reserved": 4,
+  "actual_cost_usd": null,
+  "status": "finished",
+  "measurement_scope": "Synthetic public fixture only; not business accuracy or billing evidence",
+  "case_status_counts": {
+    "completed": 4
+  },
+  "evaluation": {
+    "report_version": "sql-contract-evaluation-v1",
+    "suite_sha256": "30e3007c1bb3569afd2fc3ee67e805568bc907c59001450661484cc6abc7b45a",
+    "fixture_sha256": {
+      "base": "7520694551af33d9c3ffee047466416825470b8d506f0548822421e409eb7289",
+      "edge": "5bf91827224d611685b65e3bc955cef27977dfcd1903dc616c7aaf44df965efe",
+      "empty": "eb573968a9c5838fa80eae9534e673486f939cc92a9af9b0c5a3948127be523b"
+    },
+    "gold_self_check_count": 12,
+    "case_count": 4,
+    "prediction_count": 4,
+    "check_count": 12,
+    "execution_success_count": 12,
+    "contract_match_count": 12,
+    "robust_match_count": 4,
+    "robust_match_rate": 1.0,
+    "error_counts": {},
+    "actual_cost_usd": null,
+    "measurement_scope": "Four predictions, three local datasets; not twelve model calls. Not comparable to v1 scores or a business accuracy estimate."
+  },
+  "audit_match_counts": {
+    "candidate_match": 4
+  },
+  "request_llm_calls": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "observed_attempt_count": 4,
+  "usage_basis_counts": {
+    "sdk_normalized": 4
+  },
+  "known_prompt_tokens": 2764,
+  "known_completion_tokens": 474,
+  "missing_usage_count": 0,
+  "usage_scope": "Four requests counted once; scenario reuse does not duplicate tokens or cost",
+  "comparison_scope": "A different version from v1; no same-task improvement or business accuracy claim"
+}

@@ -11,8 +11,14 @@ from pathlib import Path
 from typing import Any
 
 from app.audit.store import UsageAuditStore
-from app.evaluation.artifacts import read_json, write_atomic
-from app.evaluation.model_batch import DATASET, FIXTURE, LIMITS, manifest_digest
+from app.evaluation.artifacts import write_atomic
+from app.evaluation.model_batch import (
+    LIMITS,
+    V2_PROFILE,
+    manifest_digest,
+    profile_dataset,
+    profile_fixture,
+)
 from app.evaluation.predictions import export_predictions
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
 from app.llm.budget import active_call_guard, active_call_limits
@@ -56,6 +62,7 @@ async def run_batch(manifest: dict[str, Any], api_key: str, directory: Path) -> 
     from app.workflow.query_service import run_query
     from scripts.evaluate_quality import evaluate_sql
 
+    dataset = profile_dataset(manifest["profile"])
     if ConnectionFactory.list_all():
         raise ValueError("Evaluation requires a fresh process without database connections")
     audit_path = directory / "usage.sqlite3"
@@ -92,7 +99,7 @@ async def run_batch(manifest: dict[str, Any], api_key: str, directory: Path) -> 
     try:
         conn = await ConnectionFactory.create(DatabaseType.SQLITE,
             {"path": str(directory / "fixture.sqlite3")}, db_id)
-        conn.executescript(FIXTURE.read_text(encoding="utf-8"))
+        conn.executescript(profile_fixture(manifest["profile"]))
         conn.execute("PRAGMA query_only=ON")
         for case in manifest["cases"]:
             state = {"id": case["id"], "status": "unattempted"}
@@ -135,14 +142,16 @@ async def run_batch(manifest: dict[str, Any], api_key: str, directory: Path) -> 
             finally:
                 active_call_limits.reset(token)
                 checkpoint()
-        dataset = read_json(DATASET)
-        if not isinstance(dataset, dict):
-            raise ValueError("Synthetic dataset must be an object")
         store = UsageAuditStore(str(audit_path))
         predictions = export_predictions(dataset, responses, bindings,
             audit_lookup=store.read, require_candidate_audit=True) if bindings else []
         write_atomic(directory / "predictions.json", predictions)
-        report["evaluation"] = evaluate_sql(dataset["sql_cases"], predictions)
+        if manifest["profile"] == V2_PROFILE:
+            from app.evaluation.contract_suite import evaluate_suite
+
+            report["evaluation"] = evaluate_suite(dataset, predictions)
+        else:
+            report["evaluation"] = evaluate_sql(dataset["sql_cases"], predictions)
         report["status"] = "finished"
     finally:
         active_call_guard.reset(guard_token)
