@@ -1,0 +1,68 @@
+{
+  "profile": "synthetic-sqlite-model-v1",
+  "manifest_sha256": "42b9a4410a0268129dbde6b430dbb1099a2bf704de760ecc30153ab413e1d1dd",
+  "model": "deepseek-v4-flash",
+  "limits": {
+    "max_calls": 4,
+    "calls_per_case": 1,
+    "n": 1,
+    "message_bytes": 32768,
+    "max_output_tokens": 1024,
+    "request_seconds": 30,
+    "case_seconds": 45,
+    "batch_seconds": 180,
+    "max_retries": 0
+  },
+  "physical_calls_reserved": 4,
+  "actual_cost_usd": null,
+  "status": "finished",
+  "measurement_scope": "Synthetic public fixture only; not business accuracy or billing evidence",
+  "case_status_counts": {
+    "completed": 4
+  },
+  "evaluation": {
+    "case_count": 4,
+    "prediction_count": 4,
+    "execution_success_count": 4,
+    "result_correct_count": 2,
+    "execution_success_rate": 1,
+    "result_correct_rate": 0.5,
+    "error_counts": {
+      "RESULT_MISMATCH": 2
+    },
+    "completion_counts": {
+      "stop": 4
+    },
+    "reported_cost_usd": {
+      "sample_count": 0,
+      "case_count": 4,
+      "coverage": 0.0,
+      "complete": false,
+      "total": null,
+      "mean": null
+    }
+  },
+  "audit_match_counts": {
+    "candidate_match": 4
+  },
+  "request_llm_calls": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "observed_attempt_count": 4,
+  "usage_basis_counts": {
+    "sdk_normalized": 4
+  },
+  "known_prompt_tokens": 3100,
+  "known_completion_tokens": 1159,
+  "missing_usage_count": 0,
+  "first_startup_attempt": {
+    "manifest_sha256": "a0cb5518b3c0c0ba2a34191bd537161815d09c3b1891859adbfb128dfcdc7bfb",
+    "status": "startup_failed",
+    "reason_code": "WINDOWS_USER_ENV_MISSING",
+    "provider_calls": 0,
+    "directory_retained": true
+  }
+}

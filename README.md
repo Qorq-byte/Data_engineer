@@ -656,3 +656,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段36新增`python -m scripts.estimate_usage_cost`：只读明确选择的审计请求，使用操作者提供的平坦价格表生成独立估算报告。无默认真实价格、不联网，缺测不补0，合法0保留；不回填预测cost_usd或改在线响应。参数、范围与合成样例见[用量估算契约](docs/optimization/usage-cost-estimates.md)。
 
 阶段37统一三个离线评测CLI的严格JSON、输入路径保护和原子报告写入，预检先于索引/节点评测；SQL验证支持显式`--dataset`。输入/IO错误统一退出2，stdout只给计数/哈希，详细报告格式不变。见[评测文件边界](docs/optimization/evaluation-artifact-boundaries.md)。
+
+阶段38新增 `python -m scripts.run_model_evaluation`：默认显式prepare生成无凭据清单，execute须匹配SHA并使用新运行目录；固定4题公开合成SQLite、每题1次、禁重试/fallback，走正式Harness及v2候选审计绑定。费用未知不补0，结果只表示合成冒烟；用法与边界见[受控模型验收](docs/optimization/controlled-model-evaluation.md)。

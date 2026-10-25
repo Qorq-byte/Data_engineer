@@ -1,0 +1,16 @@
+
+=================================== ERRORS ====================================
+_________ ERROR collecting tests/test_evaluation/test_model_batch.py __________
+ImportError while importing test module 'D:\python\data_engineer\.stage38\tests\test_evaluation\test_model_batch.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\importlib\__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_evaluation\test_model_batch.py:8: in <module>
+    from app.evaluation.model_batch import manifest_digest, prepare, validate
+E   ModuleNotFoundError: No module named 'app.evaluation.model_batch'
+=========================== short test summary info ===========================
+ERROR tests/test_evaluation/test_model_batch.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.47s

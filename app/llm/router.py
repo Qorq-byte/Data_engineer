@@ -597,8 +597,11 @@ class LiteLLMRouter:
         await semaphore.acquire()
         handed_to_stream = False
         try:
-            from app.llm.budget import reserve_llm_call
+            from app.llm.budget import active_call_guard, reserve_llm_call
 
+            guard = active_call_guard.get()
+            if guard is not None:
+                guard(provider, model, messages, n, self.config.max_output_tokens, stream, kwargs)
             reserve_llm_call()
             try:
                 response = await self._observed_call(

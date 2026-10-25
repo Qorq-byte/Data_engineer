@@ -1,6 +1,6 @@
 """Request-scoped physical LLM attempt budget; inherited by async child tasks."""
 
-from collections.abc import AsyncGenerator, AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator, Callable
 from contextvars import ContextVar
 from typing import Any
 
@@ -11,13 +11,24 @@ from app.llm.streaming import StreamEvent, event_method_for, events_for, text_ev
 from app.llm.usage import active_usage, observe, observe_response
 
 active_budget: ContextVar[ConstraintEnforcer | None] = ContextVar("llm_budget", default=None)
+active_call_limits: ContextVar[tuple[ConstraintEnforcer, ...]] = ContextVar(
+    "llm_caller_limits", default=(),
+)
+# Optional caller policy, evaluated before reservation and transport. No global policy change.
+active_call_guard: ContextVar[Callable[..., None] | None] = ContextVar(
+    "llm_caller_guard", default=None,
+)
 
 
 def reserve_llm_call() -> None:
-    budget = active_budget.get()
-    if budget is not None:
-        if not budget.can_call_llm():
-            raise RuntimeError("LLM call budget exhausted")
+    query = active_budget.get()
+    budgets = list(dict.fromkeys(
+        (() if query is None else (query,)) + active_call_limits.get()
+    ))
+    # No await between checking all scopes and reserving: rejection consumes none.
+    if any(not budget.can_call_llm() for budget in budgets):
+        raise RuntimeError("LLM call budget exhausted")
+    for budget in budgets:
         budget.record_llm_call()
 
 
