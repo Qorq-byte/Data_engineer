@@ -14,6 +14,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from app.evaluation.artifacts import protect_inputs, read_json, write_atomic
+from app.evaluation.inputs import evaluation_summary, schema_linking_dataset
 from app.knowledge.retrieval.schema_rag import SchemaSearchResult
 from app.knowledge.schema_retriever import SchemaRetriever
 from app.models.schema import ColumnSchema, ForeignKey, SchemaSnapshot, TableSchema
@@ -57,6 +59,7 @@ class FixtureSearch:
 
 
 async def evaluate(dataset: dict[str, Any]) -> dict[str, Any]:
+    dataset = schema_linking_dataset(dataset)
     schema = build_schema(dataset)
     rows = []
     for case in dataset["cases"]:
@@ -104,10 +107,14 @@ def main() -> None:
                         default=ROOT / "tests/fixtures/schema_linking_eval.json")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = asyncio.run(evaluate(json.loads(args.dataset.read_text(encoding="utf-8"))))
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({k: v for k, v in result.items() if k != "details"}, ensure_ascii=False))
+    try:
+        protect_inputs(args.output, [args.dataset])
+        dataset = schema_linking_dataset(read_json(args.dataset))
+        result = asyncio.run(evaluate(dataset))
+        write_atomic(args.output, result, prefix=".evaluation-report-")
+    except (OSError, ValueError, TypeError, KeyError):
+        parser.exit(2, "Schema linking evaluation failed; check input contracts and file access.\n")
+    print(json.dumps(evaluation_summary(result), ensure_ascii=False))
     raise SystemExit(0 if result["passed"] == result["case_count"] else 1)
 
 

@@ -654,3 +654,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段35新增默认关闭的`LLM_AUDIT_CANDIDATE_DIGESTS`：审计启用后可保存候选摘要以核对SQL与完成信息；不存SQL原文，摘要不是加密或签名。导出可用`--require-candidate-audit`强制成功SQL绑定，旧v1兼容。见[候选摘要绑定契约](docs/optimization/candidate-audit-binding.md)。
 
 阶段36新增`python -m scripts.estimate_usage_cost`：只读明确选择的审计请求，使用操作者提供的平坦价格表生成独立估算报告。无默认真实价格、不联网，缺测不补0，合法0保留；不回填预测cost_usd或改在线响应。参数、范围与合成样例见[用量估算契约](docs/optimization/usage-cost-estimates.md)。
+
+阶段37统一三个离线评测CLI的严格JSON、输入路径保护和原子报告写入，预检先于索引/节点评测；SQL验证支持显式`--dataset`。输入/IO错误统一退出2，stdout只给计数/哈希，详细报告格式不变。见[评测文件边界](docs/optimization/evaluation-artifact-boundaries.md)。

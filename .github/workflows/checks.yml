@@ -29,5 +29,7 @@ jobs:
       - run: mypy app/audit/store.py app/workflow/query_audit.py
       - run: mypy app/audit/candidates.py
       - run: mypy app/evaluation/artifacts.py app/evaluation/usage_costs.py scripts/estimate_usage_cost.py
+      - run: mypy app/evaluation/inputs.py
+      - run: mypy --follow-imports=silent scripts/evaluate_schema_linking.py scripts/evaluate_sql_validation.py
       - run: mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py
       - run: pytest

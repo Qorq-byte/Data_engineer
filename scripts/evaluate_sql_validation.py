@@ -17,6 +17,8 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
+from app.evaluation.artifacts import protect_inputs, read_json, write_atomic
+from app.evaluation.inputs import evaluation_summary, sql_validation_dataset
 from app.models.schema import ColumnSchema, SchemaSnapshot, TableSchema
 from scripts.evaluate_quality import EvaluationQueryError, _execute_evaluation_query
 
@@ -40,12 +42,13 @@ def fixture_schema(conn: sqlite3.Connection) -> SchemaSnapshot:
 async def evaluate(dataset: dict[str, Any]) -> dict[str, Any]:
     from app.core.sql_validator import SQLValidator
 
+    dataset = sql_validation_dataset(dataset)
     conn = sqlite3.connect(":memory:")
-    conn.executescript((ROOT / "tests/fixtures/test_schema.sql").read_text(encoding="utf-8"))
-    schema = fixture_schema(conn)
-    conn.execute("PRAGMA query_only=ON")
     rows = []
     try:
+        conn.executescript((ROOT / "tests/fixtures/test_schema.sql").read_text(encoding="utf-8"))
+        schema = fixture_schema(conn)
+        conn.execute("PRAGMA query_only=ON")
         for case in dataset["cases"]:
             report = await SQLValidator(dialect="sqlite").validate(case["sql"], schema=schema)
             try:
@@ -83,27 +86,30 @@ async def evaluate(dataset: dict[str, Any]) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--dataset", type=Path,
+                        default=ROOT / "tests/fixtures/sql_validation_eval.json")
     parser.add_argument("--baseline-stage10", action="store_true")
     args = parser.parse_args()
-    if args.baseline_stage10:
-        name = "app.core.sql_validator"
-        source = subprocess.check_output(
-            ["git", "show", f"{BASELINE_REF}:app/core/sql_validator.py"],
-            cwd=ROOT, encoding="utf-8",
-        )
-        spec = importlib.util.spec_from_loader(name, loader=None)
-        if spec is None:
-            raise RuntimeError("Cannot load baseline validator")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[name] = module
-        exec(compile(source, f"{BASELINE_REF}:sql_validator.py", "exec"), module.__dict__)
-    dataset = json.loads(
-        (ROOT / "tests/fixtures/sql_validation_eval.json").read_text(encoding="utf-8")
-    )
-    result = asyncio.run(evaluate(dataset))
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({k: v for k, v in result.items() if k != "details"}, ensure_ascii=False))
+    try:
+        protect_inputs(args.output, [args.dataset, ROOT / "tests/fixtures/test_schema.sql"])
+        dataset = sql_validation_dataset(read_json(args.dataset))
+        if args.baseline_stage10:
+            name = "app.core.sql_validator"
+            source = subprocess.check_output(
+                ["git", "show", f"{BASELINE_REF}:app/core/sql_validator.py"],
+                cwd=ROOT, encoding="utf-8",
+            )
+            spec = importlib.util.spec_from_loader(name, loader=None)
+            if spec is None:
+                raise RuntimeError("Cannot load baseline validator")
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[name] = module
+            exec(compile(source, f"{BASELINE_REF}:sql_validator.py", "exec"), module.__dict__)
+        result = asyncio.run(evaluate(dataset))
+        write_atomic(args.output, result, prefix=".evaluation-report-")
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error, subprocess.CalledProcessError):
+        parser.exit(2, "SQL validation evaluation failed; check input contracts and file access.\n")
+    print(json.dumps(evaluation_summary(result), ensure_ascii=False))
     raise SystemExit(0 if args.baseline_stage10 or result["passed"] == result["case_count"] else 1)
 
 

@@ -1,0 +1,16 @@
+app\nodes\schema_linking.py:609: error: Incompatible types in assignment (expression has type "list[tuple[str, str, float]]", variable has type "list[tuple[str, float]]")  [assignment]
+app\nodes\schema_linking.py:612: error: Need more than 2 values to unpack (3 expected)  [misc]
+app\nodes\schema_linking.py:618: error: Tuple index out of range  [misc]
+app\core\sql_validator.py:79: error: Missing type arguments for generic type "list"  [type-arg]
+app\core\sql_validator.py:427: error: Incompatible types in assignment (expression has type "ColumnSchema | None", variable has type "ColumnSchema")  [assignment]
+app\core\sql_validator.py:522: error: Argument 1 to "_has_star_projection" of "SQLValidator" has incompatible type "Expr"; expected "Expression"  [arg-type]
+app\knowledge\retrieval\embedding.py:30: error: Cannot assign to a type  [misc]
+app\knowledge\retrieval\embedding.py:30: note: Error code "misc" not covered by "type: ignore[assignment]" comment
+app\knowledge\retrieval\embedding.py:193: error: Cannot find implementation or library stub for module named "sentence_transformers"  [import-not-found]
+app\knowledge\retrieval\embedding.py:193: note: See https://mypy.readthedocs.io/en/stable/running_mypy.html#missing-imports
+app\knowledge\retrieval\embedding.py:251: error: Item "None" of "str | None" has no attribute "rstrip"  [union-attr]
+app\knowledge\retrieval\lancedb_store.py:32: error: Skipping analyzing "pyarrow": module is installed, but missing library stubs or py.typed marker  [import-untyped]
+app\knowledge\retrieval\lancedb_store.py:370: error: Returning Any from function declared to return "list[dict[str, Any]]"  [no-any-return]
+app\knowledge\retrieval\lancedb_store.py:386: error: Returning Any from function declared to return "int"  [no-any-return]
+app\knowledge\retrieval\lancedb_store.py:391: error: Returning Any from function declared to return "int"  [no-any-return]
+Found 13 errors in 4 files (checked 2 source files)

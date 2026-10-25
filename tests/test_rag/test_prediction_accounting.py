@@ -252,6 +252,7 @@ def test_cli_round_trip_and_invalid_input_preserves_previous_report(tmp_path, mo
     assert report["sql_model_metrics"]["reported_cost_usd"]["total"] == 0.1
     before = output.read_bytes()
     predictions.write_text('[{"id":"sql1","cost_usd":NaN}]')
-    with pytest.raises(ValueError):
+    with pytest.raises(SystemExit) as invalid:
         module.main()
+    assert invalid.value.code == 2
     assert output.read_bytes() == before

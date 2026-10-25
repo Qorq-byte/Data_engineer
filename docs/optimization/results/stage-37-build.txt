@@ -1,0 +1,11 @@
+npm notice run check:frontend:build
+npm notice run node scripts/check-frontend-build.cjs
+Built 3 pages, 46 files, 2043810 bytes
+Built 3 pages, 46 files, 2043810 bytes
+X [ERROR] Expected identifier but found "="
+
+    workspace.jsx:17:6:
+      17 │ const = ;
+         ╵       ^
+
+[PASS] Three local pages, assets/fonts/licenses, SHA-256 integrity, repeatable build and failed-build preservation

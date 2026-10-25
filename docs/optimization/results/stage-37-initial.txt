@@ -1,0 +1,1766 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                              [100%]
+================================== FAILURES ===================================
+_____________ test_output_must_not_replace_dataset[same-quality] ______________
+
+kind = 'quality', alias = 'same'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1DAD86CF0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("alias", ["same", "hardlink"])
+    def test_output_must_not_replace_dataset(kind, alias, tmp_path, monkeypatch):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        if alias == "same":
+            output = source
+        else:
+            output.unlink()
+            os.link(source, output)
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1DAD86CF0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d0/repo/tests/fixtures/retrieval_eval.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:54: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "synthetic-smoke-v1", "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.22228572301433555}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": null, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.364 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.364 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+__________ test_output_must_not_replace_dataset[same-schema_linking] __________
+
+kind = 'schema_linking', alias = 'same'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1DB362BA0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("alias", ["same", "hardlink"])
+    def test_output_must_not_replace_dataset(kind, alias, tmp_path, monkeypatch):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        if alias == "same":
+            output = source
+        else:
+            output.unlink()
+            os.link(source, output)
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1DB362BA0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d1/repo/tests/fixtures/schema_linking_eval.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:54: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+__________ test_output_must_not_replace_dataset[same-sql_validation] __________
+
+kind = 'sql_validation', alias = 'same'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D06E9EE0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("alias", ["same", "hardlink"])
+    def test_output_must_not_replace_dataset(kind, alias, tmp_path, monkeypatch):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        if alias == "same":
+            output = source
+        else:
+            output.unlink()
+            os.link(source, output)
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D06E9EE0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d2/repo/tests/fixtures/sql_validation_eval.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:54: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "sql-validation-boundary-v1", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+___________ test_output_must_not_replace_dataset[hardlink-quality] ____________
+
+kind = 'quality', alias = 'hardlink'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D06EA540>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("alias", ["same", "hardlink"])
+    def test_output_must_not_replace_dataset(kind, alias, tmp_path, monkeypatch):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        if alias == "same":
+            output = source
+        else:
+            output.unlink()
+            os.link(source, output)
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D06EA540>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d3/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:54: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "synthetic-smoke-v1", "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.11912856799816447}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": null, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+________ test_output_must_not_replace_dataset[hardlink-schema_linking] ________
+
+kind = 'schema_linking', alias = 'hardlink'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07984A0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("alias", ["same", "hardlink"])
+    def test_output_must_not_replace_dataset(kind, alias, tmp_path, monkeypatch):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        if alias == "same":
+            output = source
+        else:
+            output.unlink()
+            os.link(source, output)
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07984A0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d4/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:54: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+________ test_output_must_not_replace_dataset[hardlink-sql_validation] ________
+
+kind = 'sql_validation', alias = 'hardlink'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731B80>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("alias", ["same", "hardlink"])
+    def test_output_must_not_replace_dataset(kind, alias, tmp_path, monkeypatch):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        if alias == "same":
+            output = source
+        else:
+            output.unlink()
+            os.link(source, output)
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731B80>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_output_must_not_replace_d5/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:54: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "sql-validation-boundary-v1", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+____________ test_atomic_replace_failure_preserves_report[quality] ____________
+
+kind = 'quality'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_atomic_replace_failure_pr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0798AA0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D07982C0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    def test_atomic_replace_failure_preserves_report(kind, tmp_path, monkeypatch, capsys):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        before = source.read_bytes()
+    
+        def denied(*args):
+            raise PermissionError("private storage location")
+    
+        monkeypatch.setattr(artifacts.os, "replace", denied)
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0798AA0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_atomic_replace_failure_pr0/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:67: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "synthetic-smoke-v1", "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.09911428787745535}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": null, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+________ test_atomic_replace_failure_preserves_report[schema_linking] _________
+
+kind = 'schema_linking'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_atomic_replace_failure_pr1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D06EA7E0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D06EA150>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    def test_atomic_replace_failure_preserves_report(kind, tmp_path, monkeypatch, capsys):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        before = source.read_bytes()
+    
+        def denied(*args):
+            raise PermissionError("private storage location")
+    
+        monkeypatch.setattr(artifacts.os, "replace", denied)
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D06EA7E0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_atomic_replace_failure_pr1/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:67: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+________ test_atomic_replace_failure_preserves_report[sql_validation] _________
+
+kind = 'sql_validation'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_atomic_replace_failure_pr2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0733650>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D07310D0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    def test_atomic_replace_failure_preserves_report(kind, tmp_path, monkeypatch, capsys):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        before = source.read_bytes()
+    
+        def denied(*args):
+            raise PermissionError("private storage location")
+    
+        monkeypatch.setattr(artifacts.os, "replace", denied)
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0733650>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_atomic_replace_failure_pr2/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:67: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "sql-validation-boundary-v1", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[duplicate-quality] _
+
+kind = 'quality', invalid = 'duplicate'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0798FE0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D079AAB0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0798FE0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_0/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "private replacement", "dataset_sha256": "9d673b347a68e1f18ae1a2212d58a20c8ef44fcfd9f999dc49c78cb0f42a3516", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.1259428557075028}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": null, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[duplicate-schema_linking] _
+
+kind = 'schema_linking', invalid = 'duplicate'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07338C0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0730B30>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07338C0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_1/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "private replacement", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "5c030afc142abefc2bd5a8bd13fbfa3c1d14175ec5df0d8226b3ab5ac103f749", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[duplicate-sql_validation] _
+
+kind = 'sql_validation', invalid = 'duplicate'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0733D70>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D07326F0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0733D70>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_2/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "private replacement", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "df2e9a746125c8930eac90a1d92ae0de30cef73e8bc4b9af37163c7270158af0", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[nonfinite-quality] _
+
+value = {'version': 'synthetic-smoke-v1', 'documents': [{'id': 'orders', 'domain': 'commerce', 'text': '订单 orders 销售 sales 金额 ...ion': '没有商品属于的类别 unknown 的商品', 'gold_sql': "SELECT id FROM products WHERE category='unknown'", 'ordered': False}], ...}
+
+    def _fingerprint(value: object) -> str:
+        try:
+>           encoded = json.dumps(
+                value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")
+
+scripts\evaluate_quality.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\json\__init__.py:238: in dumps
+    **kw).encode(obj)
+          ^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\json\encoder.py:200: in encode
+    chunks = self.iterencode(o, _one_shot=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = <json.encoder.JSONEncoder object at 0x000001D1D07313D0>
+o = {'version': 'synthetic-smoke-v1', 'documents': [{'id': 'orders', 'domain': 'commerce', 'text': '订单 orders 销售 sales 金额 ...ion': '没有商品属于的类别 unknown 的商品', 'gold_sql': "SELECT id FROM products WHERE category='unknown'", 'ordered': False}], ...}
+_one_shot = True
+
+    def iterencode(self, o, _one_shot=False):
+        """Encode the given object and yield each string
+        representation as available.
+    
+        For example::
+    
+            for chunk in JSONEncoder().iterencode(bigobject):
+                mysocket.write(chunk)
+    
+        """
+        if self.check_circular:
+            markers = {}
+        else:
+            markers = None
+        if self.ensure_ascii:
+            _encoder = encode_basestring_ascii
+        else:
+            _encoder = encode_basestring
+    
+        def floatstr(o, allow_nan=self.allow_nan,
+                _repr=float.__repr__, _inf=INFINITY, _neginf=-INFINITY):
+            # Check for specials.  Note that this type of test is processor
+            # and/or platform-specific, so do tests which don't depend on the
+            # internals.
+    
+            if o != o:
+                text = 'NaN'
+            elif o == _inf:
+                text = 'Infinity'
+            elif o == _neginf:
+                text = '-Infinity'
+            else:
+                return _repr(o)
+    
+            if not allow_nan:
+                raise ValueError(
+                    "Out of range float values are not JSON compliant: " +
+                    repr(o))
+    
+            return text
+    
+    
+        if (_one_shot and c_make_encoder is not None
+                and self.indent is None):
+            _iterencode = c_make_encoder(
+                markers, self.default, _encoder, self.indent,
+                self.key_separator, self.item_separator, self.sort_keys,
+                self.skipkeys, self.allow_nan)
+        else:
+            _iterencode = _make_iterencode(
+                markers, self.default, _encoder, self.indent, floatstr,
+                self.key_separator, self.item_separator, self.sort_keys,
+                self.skipkeys, _one_shot)
+>       return _iterencode(o, 0)
+               ^^^^^^^^^^^^^^^^^
+E       ValueError: Out of range float values are not JSON compliant: nan
+
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\json\encoder.py:258: ValueError
+
+The above exception was the direct cause of the following exception:
+
+kind = 'quality', invalid = 'nonfinite'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731790>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0732C30>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_quality.py:332: in main
+    result = evaluate(json.loads(args.dataset.read_text(encoding="utf-8")), args.k, predictions)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts\evaluate_quality.py:76: in evaluate
+    "dataset_sha256": _fingerprint(dataset),
+                      ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+value = {'version': 'synthetic-smoke-v1', 'documents': [{'id': 'orders', 'domain': 'commerce', 'text': '订单 orders 销售 sales 金额 ...ion': '没有商品属于的类别 unknown 的商品', 'gold_sql': "SELECT id FROM products WHERE category='unknown'", 'ordered': False}], ...}
+
+    def _fingerprint(value: object) -> str:
+        try:
+            encoded = json.dumps(
+                value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False,
+            ).encode("utf-8")
+        except (TypeError, ValueError) as exc:
+>           raise ValueError("Evaluation input must be JSON-compatible with finite numbers") from exc
+E           ValueError: Evaluation input must be JSON-compatible with finite numbers
+
+scripts\evaluate_quality.py:111: ValueError
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[nonfinite-schema_linking] _
+
+kind = 'schema_linking', invalid = 'nonfinite'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731DF0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0798980>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731DF0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_4/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "23b7682ddd3b89f4bb4908ae76bf260d34cedb044a14a1617875dd0b5ab08e97", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[nonfinite-sql_validation] _
+
+kind = 'sql_validation', invalid = 'nonfinite'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071B110>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D071B710>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071B110>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_5/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "sql-validation-boundary-v1", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "f194907d1d1d130a30fa7515fc23382a6a46d3534cfacaf6b359c61427c6f147", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[deep-quality] __
+
+kind = 'quality', invalid = 'deep'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_6')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731B20>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0733590>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731B20>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_6/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "synthetic-smoke-v1", "dataset_sha256": "c21ce118c62174db3f7901b54ffd126adc574ed117badad7a0f655835a5d266a", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.13219999631733767}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": null, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[deep-schema_linking] _
+
+kind = 'schema_linking', invalid = 'deep'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_7')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07331A0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D06EA4B0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07331A0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_7/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "bc59c59780a5aa92f1a36a76f664192b0c13ef9eff64151ae6475a6063aa61e5", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[deep-sql_validation] _
+
+kind = 'sql_validation', invalid = 'deep'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_8')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0718CE0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0718950>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0718CE0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_8/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "sql-validation-boundary-v1", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "feaecd1d7b6a61956c863c13d64ffb61f2cb780bdb1241c8ebb9fa2aeb83d855", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[large-quality] _
+
+kind = 'quality', invalid = 'large'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_9')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0719160>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0718080>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0719160>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_9/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "synthetic-smoke-v1", "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.10427143258441772}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": null, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[large-schema_linking] _
+
+kind = 'schema_linking', invalid = 'large'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_10')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071A540>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D071ADE0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_schema_linking' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_schema_linking.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071A540>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_10/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "schema-linking-boundary-v1", "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality", "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c", "case_count": 12, "passed": 12, "llm_or_embedding_calls": 0, "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[large-sql_validation] _
+
+kind = 'sql_validation', invalid = 'large'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_11')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731220>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0730F50>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_sql_validation' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_sql_validation.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0731220>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_11/report.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:92: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "sql-validation-boundary-v1", "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run", "python": "3.12.13", "sqlglot": "30.18.0", "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9", "case_count": 18, "passed": 18, "model_accuracy": null, "llm_or_embedding_calls": 0}
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[shape-quality] _
+
+kind = 'quality', invalid = 'shape'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_12')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0732090>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0732900>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_quality.py:332: in main
+    result = evaluate(json.loads(args.dataset.read_text(encoding="utf-8")), args.k, predictions)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+dataset = {'version': 'private shape'}, k = 3, predictions = None
+
+    def evaluate(
+        dataset: dict[str, Any], k: int, predictions: list[dict[str, Any]] | None,
+    ) -> dict[str, Any]:
+        if predictions is not None:
+            validate_exported_predictions(dataset["sql_cases"], predictions, dataset=dataset)
+        bm25 = BM25Index()
+        rows = []
+        try:
+            bm25.index(
+                "quality",
+                [
+                    {"doc_id": doc["id"], "text": doc["text"], "metadata": {"domain": doc["domain"]}}
+>                   for doc in dataset["documents"]
+                               ^^^^^^^^^^^^^^^^^^^^
+                ],
+            )
+E           KeyError: 'documents'
+
+scripts\evaluate_quality.py:55: KeyError
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[shape-schema_linking] _
+
+kind = 'schema_linking', invalid = 'shape'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_13')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0732270>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0798950>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_schema_linking.py:107: in main
+    result = asyncio.run(evaluate(json.loads(args.dataset.read_text(encoding="utf-8"))))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+scripts\evaluate_schema_linking.py:60: in evaluate
+    schema = build_schema(dataset)
+             ^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+dataset = {'version': 'private shape'}
+
+    def build_schema(dataset: dict[str, Any]) -> SchemaSnapshot:
+        return SchemaSnapshot(
+            database_type="sqlite",
+            database_name="fixture",
+            tables={
+                name: TableSchema(
+                    name=name,
+                    columns=[ColumnSchema(name=col, type="TEXT") for col in spec["columns"]],
+                    foreign_keys=[
+                        ForeignKey(f"fk_{name}_{i}", column, target, ref_column)
+                        for i, (column, target, ref_column) in enumerate(spec["references"])
+                    ],
+                )
+>               for name, spec in dataset["tables"].items()
+                                  ^^^^^^^^^^^^^^^^^
+            },
+        )
+E       KeyError: 'tables'
+
+scripts\evaluate_schema_linking.py:39: KeyError
+_ test_invalid_dataset_is_fixed_error_and_preserves_old_report[shape-sql_validation] _
+
+kind = 'sql_validation', invalid = 'shape'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_invalid_dataset_is_fixed_14')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D07199D0>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D0718BC0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    @pytest.mark.parametrize("invalid", ["duplicate", "nonfinite", "deep", "large", "shape"])
+    def test_invalid_dataset_is_fixed_error_and_preserves_old_report(
+        kind, invalid, tmp_path, monkeypatch, capsys,
+    ):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        raw = source.read_text(encoding="utf-8").rstrip()
+        if invalid == "duplicate":
+            raw = raw[:-1] + ',"version":"private replacement"}'
+        elif invalid == "nonfinite":
+            raw = raw[:-1] + ',"private":NaN}'
+        elif invalid == "deep":
+            raw = raw[:-1] + ',"extra":' + '[' * 65 + '0' + ']' * 65 + '}'
+        elif invalid == "large":
+            raw += " " * (16 * 1024 * 1024 + 1)
+        else:
+            raw = '{"version":"private shape"}'
+        source.write_text(raw, encoding="utf-8")
+        before = source.read_bytes()
+>       assert invoke(module, monkeypatch, output) == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:92: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_sql_validation.py:103: in main
+    result = asyncio.run(evaluate(dataset))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py:195: in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\runners.py:118: in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\base_events.py:691: in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+dataset = {'version': 'private shape'}
+
+    async def evaluate(dataset: dict[str, Any]) -> dict[str, Any]:
+        from app.core.sql_validator import SQLValidator
+    
+        conn = sqlite3.connect(":memory:")
+        conn.executescript((ROOT / "tests/fixtures/test_schema.sql").read_text(encoding="utf-8"))
+        schema = fixture_schema(conn)
+        conn.execute("PRAGMA query_only=ON")
+        rows = []
+        try:
+>           for case in dataset["cases"]:
+                        ^^^^^^^^^^^^^^^^
+E           KeyError: 'cases'
+
+scripts\evaluate_sql_validation.py:49: KeyError
+_____________ test_bom_default_smoke_and_stdout_summary[quality] ______________
+
+kind = 'quality'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_bom_default_smoke_and_std0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08EEC00>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D08EEDE0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    def test_bom_default_smoke_and_stdout_summary(kind, tmp_path, monkeypatch, capsys):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        source.write_bytes(b"\xef\xbb\xbf" + source.read_bytes())
+>       assert invoke(module, monkeypatch, output) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_quality.py:332: in main
+    result = evaluate(json.loads(args.dataset.read_text(encoding="utf-8")), args.k, predictions)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+s = '\ufeff{\n  "version": "synthetic-smoke-v1",\n  "documents": [\n    {"id": "orders", "domain": "commerce", "text": "订单..."没有商品属于的类别 unknown 的商品", "gold_sql": "SELECT id FROM products WHERE category=\'unknown\'", "ordered": false}\n  ]\n}\n'
+cls = None, object_hook = None, parse_float = None, parse_int = None
+parse_constant = None, object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+>               raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+E               json.decoder.JSONDecodeError: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)
+
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\json\__init__.py:335: JSONDecodeError
+__________ test_bom_default_smoke_and_stdout_summary[schema_linking] __________
+
+kind = 'schema_linking'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_bom_default_smoke_and_std1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071BE00>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D071B110>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    def test_bom_default_smoke_and_stdout_summary(kind, tmp_path, monkeypatch, capsys):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        source.write_bytes(b"\xef\xbb\xbf" + source.read_bytes())
+>       assert invoke(module, monkeypatch, output) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_schema_linking.py:107: in main
+    result = asyncio.run(evaluate(json.loads(args.dataset.read_text(encoding="utf-8"))))
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+s = '\ufeff{\n  "version": "schema-linking-boundary-v1",\n  "scope": "synthetic functional contract cases; injected RAG bo...",\n          "column_name": null\n        }\n      ],\n      "expected": [\n        "audit"\n      ]\n    }\n  ]\n}\n'
+cls = None, object_hook = None, parse_float = None, parse_int = None
+parse_constant = None, object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+>               raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+E               json.decoder.JSONDecodeError: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)
+
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\json\__init__.py:335: JSONDecodeError
+__________ test_bom_default_smoke_and_stdout_summary[sql_validation] __________
+
+kind = 'sql_validation'
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_bom_default_smoke_and_std2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0730980>
+capsys = <_pytest.capture.CaptureFixture object at 0x000001D1D07336E0>
+
+    @pytest.mark.parametrize("kind", KINDS)
+    def test_bom_default_smoke_and_stdout_summary(kind, tmp_path, monkeypatch, capsys):
+        module, source, output = setup_cli(kind, tmp_path, monkeypatch)
+        source.write_bytes(b"\xef\xbb\xbf" + source.read_bytes())
+>       assert invoke(module, monkeypatch, output) == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_sql_validation.py:100: in main
+    dataset = json.loads(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+s = '\ufeff{\n  "version": "sql-validation-boundary-v1",\n  "scope": "synthetic SQL validation decisions against real SQLi..."id": "multiple",\n      "sql": "SELECT 1; SELECT 2",\n      "expected": false,\n      "policy": true\n    }\n  ]\n}\n'
+cls = None, object_hook = None, parse_float = None, parse_int = None
+parse_constant = None, object_pairs_hook = None, kw = {}
+
+    def loads(s, *, cls=None, object_hook=None, parse_float=None,
+            parse_int=None, parse_constant=None, object_pairs_hook=None, **kw):
+        """Deserialize ``s`` (a ``str``, ``bytes`` or ``bytearray`` instance
+        containing a JSON document) to a Python object.
+    
+        ``object_hook`` is an optional function that will be called with the
+        result of any object literal decode (a ``dict``). The return value of
+        ``object_hook`` will be used instead of the ``dict``. This feature
+        can be used to implement custom decoders (e.g. JSON-RPC class hinting).
+    
+        ``object_pairs_hook`` is an optional function that will be called with the
+        result of any object literal decoded with an ordered list of pairs.  The
+        return value of ``object_pairs_hook`` will be used instead of the ``dict``.
+        This feature can be used to implement custom decoders.  If ``object_hook``
+        is also defined, the ``object_pairs_hook`` takes priority.
+    
+        ``parse_float``, if specified, will be called with the string
+        of every JSON float to be decoded. By default this is equivalent to
+        float(num_str). This can be used to use another datatype or parser
+        for JSON floats (e.g. decimal.Decimal).
+    
+        ``parse_int``, if specified, will be called with the string
+        of every JSON int to be decoded. By default this is equivalent to
+        int(num_str). This can be used to use another datatype or parser
+        for JSON integers (e.g. float).
+    
+        ``parse_constant``, if specified, will be called with one of the
+        following strings: -Infinity, Infinity, NaN.
+        This can be used to raise an exception if invalid JSON numbers
+        are encountered.
+    
+        To use a custom ``JSONDecoder`` subclass, specify it with the ``cls``
+        kwarg; otherwise ``JSONDecoder`` is used.
+        """
+        if isinstance(s, str):
+            if s.startswith('\ufeff'):
+>               raise JSONDecodeError("Unexpected UTF-8 BOM (decode using utf-8-sig)",
+                                      s, 0)
+E               json.decoder.JSONDecodeError: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)
+
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\json\__init__.py:335: JSONDecodeError
+____________ test_quality_preflight_happens_before_bm25[documents] ____________
+
+invalid = 'documents'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08EF110>
+
+    @pytest.mark.parametrize("invalid", ["documents", "queries", "empty", "domain", "k", "telemetry"])
+    def test_quality_preflight_happens_before_bm25(invalid, monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        dataset = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        k, predictions = 3, None
+        if invalid == "documents":
+            dataset["documents"].append(dict(dataset["documents"][0]))
+        elif invalid == "queries":
+            dataset["queries"].append(dict(dataset["queries"][0]))
+        elif invalid == "empty":
+            dataset["queries"] = []
+        elif invalid == "domain":
+            dataset["queries"][0]["domain"] = []
+        elif invalid == "k":
+            k = True
+        else:
+            predictions = [{"id": "sql1", "cost_usd": -1}]
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validation")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+        with pytest.raises(ValueError):
+>           module.evaluate(dataset, k, predictions)
+
+tests\test_rag\test_evaluation_boundaries.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_quality.py:48: in evaluate
+    bm25 = BM25Index()
+           ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def forbidden():
+>       raise AssertionError("BM25 started before validation")
+E       AssertionError: BM25 started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:133: AssertionError
+_____________ test_quality_preflight_happens_before_bm25[queries] _____________
+
+invalid = 'queries'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08EC860>
+
+    @pytest.mark.parametrize("invalid", ["documents", "queries", "empty", "domain", "k", "telemetry"])
+    def test_quality_preflight_happens_before_bm25(invalid, monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        dataset = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        k, predictions = 3, None
+        if invalid == "documents":
+            dataset["documents"].append(dict(dataset["documents"][0]))
+        elif invalid == "queries":
+            dataset["queries"].append(dict(dataset["queries"][0]))
+        elif invalid == "empty":
+            dataset["queries"] = []
+        elif invalid == "domain":
+            dataset["queries"][0]["domain"] = []
+        elif invalid == "k":
+            k = True
+        else:
+            predictions = [{"id": "sql1", "cost_usd": -1}]
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validation")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+        with pytest.raises(ValueError):
+>           module.evaluate(dataset, k, predictions)
+
+tests\test_rag\test_evaluation_boundaries.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_quality.py:48: in evaluate
+    bm25 = BM25Index()
+           ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def forbidden():
+>       raise AssertionError("BM25 started before validation")
+E       AssertionError: BM25 started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:133: AssertionError
+______________ test_quality_preflight_happens_before_bm25[empty] ______________
+
+invalid = 'empty'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0852480>
+
+    @pytest.mark.parametrize("invalid", ["documents", "queries", "empty", "domain", "k", "telemetry"])
+    def test_quality_preflight_happens_before_bm25(invalid, monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        dataset = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        k, predictions = 3, None
+        if invalid == "documents":
+            dataset["documents"].append(dict(dataset["documents"][0]))
+        elif invalid == "queries":
+            dataset["queries"].append(dict(dataset["queries"][0]))
+        elif invalid == "empty":
+            dataset["queries"] = []
+        elif invalid == "domain":
+            dataset["queries"][0]["domain"] = []
+        elif invalid == "k":
+            k = True
+        else:
+            predictions = [{"id": "sql1", "cost_usd": -1}]
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validation")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+        with pytest.raises(ValueError):
+>           module.evaluate(dataset, k, predictions)
+
+tests\test_rag\test_evaluation_boundaries.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_quality.py:48: in evaluate
+    bm25 = BM25Index()
+           ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def forbidden():
+>       raise AssertionError("BM25 started before validation")
+E       AssertionError: BM25 started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:133: AssertionError
+_____________ test_quality_preflight_happens_before_bm25[domain] ______________
+
+invalid = 'domain'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08EDD30>
+
+    @pytest.mark.parametrize("invalid", ["documents", "queries", "empty", "domain", "k", "telemetry"])
+    def test_quality_preflight_happens_before_bm25(invalid, monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        dataset = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        k, predictions = 3, None
+        if invalid == "documents":
+            dataset["documents"].append(dict(dataset["documents"][0]))
+        elif invalid == "queries":
+            dataset["queries"].append(dict(dataset["queries"][0]))
+        elif invalid == "empty":
+            dataset["queries"] = []
+        elif invalid == "domain":
+            dataset["queries"][0]["domain"] = []
+        elif invalid == "k":
+            k = True
+        else:
+            predictions = [{"id": "sql1", "cost_usd": -1}]
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validation")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+        with pytest.raises(ValueError):
+>           module.evaluate(dataset, k, predictions)
+
+tests\test_rag\test_evaluation_boundaries.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_quality.py:48: in evaluate
+    bm25 = BM25Index()
+           ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def forbidden():
+>       raise AssertionError("BM25 started before validation")
+E       AssertionError: BM25 started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:133: AssertionError
+________________ test_quality_preflight_happens_before_bm25[k] ________________
+
+invalid = 'k'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08ED0D0>
+
+    @pytest.mark.parametrize("invalid", ["documents", "queries", "empty", "domain", "k", "telemetry"])
+    def test_quality_preflight_happens_before_bm25(invalid, monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        dataset = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        k, predictions = 3, None
+        if invalid == "documents":
+            dataset["documents"].append(dict(dataset["documents"][0]))
+        elif invalid == "queries":
+            dataset["queries"].append(dict(dataset["queries"][0]))
+        elif invalid == "empty":
+            dataset["queries"] = []
+        elif invalid == "domain":
+            dataset["queries"][0]["domain"] = []
+        elif invalid == "k":
+            k = True
+        else:
+            predictions = [{"id": "sql1", "cost_usd": -1}]
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validation")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+        with pytest.raises(ValueError):
+>           module.evaluate(dataset, k, predictions)
+
+tests\test_rag\test_evaluation_boundaries.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_quality.py:48: in evaluate
+    bm25 = BM25Index()
+           ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def forbidden():
+>       raise AssertionError("BM25 started before validation")
+E       AssertionError: BM25 started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:133: AssertionError
+____________ test_quality_preflight_happens_before_bm25[telemetry] ____________
+
+invalid = 'telemetry'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071A300>
+
+    @pytest.mark.parametrize("invalid", ["documents", "queries", "empty", "domain", "k", "telemetry"])
+    def test_quality_preflight_happens_before_bm25(invalid, monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        dataset = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        k, predictions = 3, None
+        if invalid == "documents":
+            dataset["documents"].append(dict(dataset["documents"][0]))
+        elif invalid == "queries":
+            dataset["queries"].append(dict(dataset["queries"][0]))
+        elif invalid == "empty":
+            dataset["queries"] = []
+        elif invalid == "domain":
+            dataset["queries"][0]["domain"] = []
+        elif invalid == "k":
+            k = True
+        else:
+            predictions = [{"id": "sql1", "cost_usd": -1}]
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validation")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+        with pytest.raises(ValueError):
+>           module.evaluate(dataset, k, predictions)
+
+tests\test_rag\test_evaluation_boundaries.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_quality.py:48: in evaluate
+    bm25 = BM25Index()
+           ^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def forbidden():
+>       raise AssertionError("BM25 started before validation")
+E       AssertionError: BM25 started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:133: AssertionError
+________________ test_schema_preflight_happens_before_node[id] ________________
+
+invalid = 'id'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0853290>
+
+    @pytest.mark.parametrize("invalid", ["id", "flag", "columns", "hit"])
+    async def test_schema_preflight_happens_before_node(invalid, monkeypatch):
+        from scripts import evaluate_schema_linking as module
+    
+        data = json.loads((ROOT / "tests/fixtures/schema_linking_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        elif invalid == "flag":
+            data["cases"][0]["fk_expand"] = "false"
+        elif invalid == "columns":
+            table = next(iter(data["tables"].values()))
+            table["columns"].append(table["columns"][0])
+        else:
+            data["cases"][0]["hits"][0]["unexpected"] = True
+    
+        def forbidden(*args):
+            raise AssertionError("Node started before validation")
+    
+        monkeypatch.setattr(module, "SchemaLinkingNode", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_schema_linking.py:64: in evaluate
+    output = await SchemaLinkingNode(retriever).execute(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (<app.knowledge.schema_retriever.SchemaRetriever object at 0x000001D1D08517C0>,)
+
+    def forbidden(*args):
+>       raise AssertionError("Node started before validation")
+E       AssertionError: Node started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:156: AssertionError
+_______________ test_schema_preflight_happens_before_node[flag] _______________
+
+invalid = 'flag'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08535F0>
+
+    @pytest.mark.parametrize("invalid", ["id", "flag", "columns", "hit"])
+    async def test_schema_preflight_happens_before_node(invalid, monkeypatch):
+        from scripts import evaluate_schema_linking as module
+    
+        data = json.loads((ROOT / "tests/fixtures/schema_linking_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        elif invalid == "flag":
+            data["cases"][0]["fk_expand"] = "false"
+        elif invalid == "columns":
+            table = next(iter(data["tables"].values()))
+            table["columns"].append(table["columns"][0])
+        else:
+            data["cases"][0]["hits"][0]["unexpected"] = True
+    
+        def forbidden(*args):
+            raise AssertionError("Node started before validation")
+    
+        monkeypatch.setattr(module, "SchemaLinkingNode", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_schema_linking.py:64: in evaluate
+    output = await SchemaLinkingNode(retriever).execute(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (<app.knowledge.schema_retriever.SchemaRetriever object at 0x000001D1D0868860>,)
+
+    def forbidden(*args):
+>       raise AssertionError("Node started before validation")
+E       AssertionError: Node started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:156: AssertionError
+_____________ test_schema_preflight_happens_before_node[columns] ______________
+
+invalid = 'columns'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08692B0>
+
+    @pytest.mark.parametrize("invalid", ["id", "flag", "columns", "hit"])
+    async def test_schema_preflight_happens_before_node(invalid, monkeypatch):
+        from scripts import evaluate_schema_linking as module
+    
+        data = json.loads((ROOT / "tests/fixtures/schema_linking_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        elif invalid == "flag":
+            data["cases"][0]["fk_expand"] = "false"
+        elif invalid == "columns":
+            table = next(iter(data["tables"].values()))
+            table["columns"].append(table["columns"][0])
+        else:
+            data["cases"][0]["hits"][0]["unexpected"] = True
+    
+        def forbidden(*args):
+            raise AssertionError("Node started before validation")
+    
+        monkeypatch.setattr(module, "SchemaLinkingNode", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_schema_linking.py:64: in evaluate
+    output = await SchemaLinkingNode(retriever).execute(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (<app.knowledge.schema_retriever.SchemaRetriever object at 0x000001D1D086B980>,)
+
+    def forbidden(*args):
+>       raise AssertionError("Node started before validation")
+E       AssertionError: Node started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:156: AssertionError
+_______________ test_schema_preflight_happens_before_node[hit] ________________
+
+invalid = 'hit'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0869820>
+
+    @pytest.mark.parametrize("invalid", ["id", "flag", "columns", "hit"])
+    async def test_schema_preflight_happens_before_node(invalid, monkeypatch):
+        from scripts import evaluate_schema_linking as module
+    
+        data = json.loads((ROOT / "tests/fixtures/schema_linking_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        elif invalid == "flag":
+            data["cases"][0]["fk_expand"] = "false"
+        elif invalid == "columns":
+            table = next(iter(data["tables"].values()))
+            table["columns"].append(table["columns"][0])
+        else:
+            data["cases"][0]["hits"][0]["unexpected"] = True
+    
+        def forbidden(*args):
+            raise AssertionError("Node started before validation")
+    
+        monkeypatch.setattr(module, "SchemaLinkingNode", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_schema_linking.py:64: in evaluate
+    output = await SchemaLinkingNode(retriever).execute(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (<app.knowledge.schema_retriever.SchemaRetriever object at 0x000001D1D0853920>,)
+
+    def forbidden(*args):
+>       raise AssertionError("Node started before validation")
+E       AssertionError: Node started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:156: AssertionError
+______ test_sql_validator_preflight_happens_before_fixture_database[id] _______
+
+invalid = 'id'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0850EF0>
+
+    @pytest.mark.parametrize("invalid", ["id", "expected", "policy"])
+    async def test_sql_validator_preflight_happens_before_fixture_database(invalid, monkeypatch):
+        from scripts import evaluate_sql_validation as module
+    
+        data = json.loads((ROOT / "tests/fixtures/sql_validation_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        else:
+            data["cases"][0][invalid] = "private invalid bool"
+    
+        def forbidden(*args):
+            raise AssertionError("Database started before validation")
+    
+        monkeypatch.setattr(module.sqlite3, "connect", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:178: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_sql_validation.py:43: in evaluate
+    conn = sqlite3.connect(":memory:")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (':memory:',)
+
+    def forbidden(*args):
+>       raise AssertionError("Database started before validation")
+E       AssertionError: Database started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:174: AssertionError
+___ test_sql_validator_preflight_happens_before_fixture_database[expected] ____
+
+invalid = 'expected'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D0851760>
+
+    @pytest.mark.parametrize("invalid", ["id", "expected", "policy"])
+    async def test_sql_validator_preflight_happens_before_fixture_database(invalid, monkeypatch):
+        from scripts import evaluate_sql_validation as module
+    
+        data = json.loads((ROOT / "tests/fixtures/sql_validation_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        else:
+            data["cases"][0][invalid] = "private invalid bool"
+    
+        def forbidden(*args):
+            raise AssertionError("Database started before validation")
+    
+        monkeypatch.setattr(module.sqlite3, "connect", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:178: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_sql_validation.py:43: in evaluate
+    conn = sqlite3.connect(":memory:")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (':memory:',)
+
+    def forbidden(*args):
+>       raise AssertionError("Database started before validation")
+E       AssertionError: Database started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:174: AssertionError
+____ test_sql_validator_preflight_happens_before_fixture_database[policy] _____
+
+invalid = 'policy'
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D071AB70>
+
+    @pytest.mark.parametrize("invalid", ["id", "expected", "policy"])
+    async def test_sql_validator_preflight_happens_before_fixture_database(invalid, monkeypatch):
+        from scripts import evaluate_sql_validation as module
+    
+        data = json.loads((ROOT / "tests/fixtures/sql_validation_eval.json").read_text(encoding="utf-8"))
+        if invalid == "id":
+            data["cases"].append(dict(data["cases"][0]))
+        else:
+            data["cases"][0][invalid] = "private invalid bool"
+    
+        def forbidden(*args):
+            raise AssertionError("Database started before validation")
+    
+        monkeypatch.setattr(module.sqlite3, "connect", forbidden)
+        with pytest.raises(ValueError):
+>           await module.evaluate(data)
+
+tests\test_rag\test_evaluation_boundaries.py:178: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+scripts\evaluate_sql_validation.py:43: in evaluate
+    conn = sqlite3.connect(":memory:")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (':memory:',)
+
+    def forbidden(*args):
+>       raise AssertionError("Database started before validation")
+E       AssertionError: Database started before validation
+
+tests\test_rag\test_evaluation_boundaries.py:174: AssertionError
+_______ test_fixture_connection_closes_when_schema_initialization_fails _______
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08ED460>
+
+    async def test_fixture_connection_closes_when_schema_initialization_fails(monkeypatch):
+        from scripts import evaluate_sql_validation as module
+    
+        data = json.loads((ROOT / "tests/fixtures/sql_validation_eval.json").read_text(encoding="utf-8"))
+        connections = []
+        original = sqlite3.connect
+    
+        def connect(*args, **kwargs):
+            conn = original(*args, **kwargs)
+            connections.append(conn)
+            return conn
+    
+        def fail(*args):
+            raise ValueError("synthetic init failure")
+    
+        monkeypatch.setattr(module.sqlite3, "connect", connect)
+        monkeypatch.setattr(module, "fixture_schema", fail)
+        with pytest.raises(ValueError, match="init failure"):
+            await module.evaluate(data)
+        assert len(connections) == 1
+>       with pytest.raises(sqlite3.ProgrammingError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ProgrammingError
+
+tests\test_rag\test_evaluation_boundaries.py:201: Failed
+_______________ test_baseline_loading_is_after_file_protection ________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_baseline_loading_is_after0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D08EEEA0>
+
+    def test_baseline_loading_is_after_file_protection(tmp_path, monkeypatch):
+        module, source, _ = setup_cli("sql_validation", tmp_path, monkeypatch)
+    
+        def forbidden(*args, **kwargs):
+            raise AssertionError("Baseline loaded before output protection")
+    
+        monkeypatch.setattr(module.subprocess, "check_output", forbidden)
+>       assert invoke(module, monkeypatch, source, "--baseline-stage10") == 2
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_evaluation_boundaries.py:212: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_evaluation_boundaries.py:38: in invoke
+    module.main()
+scripts\evaluate_sql_validation.py:90: in main
+    source = subprocess.check_output(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+args = (['git', 'show', '044f1705e737a0ee8d35a4c739c4ab2b24e91d49:app/core/sql_validator.py'],)
+kwargs = {'cwd': WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_baseline_loading_is_after0/repo'), 'encoding': 'utf-8'}
+
+    def forbidden(*args, **kwargs):
+>       raise AssertionError("Baseline loaded before output protection")
+E       AssertionError: Baseline loaded before output protection
+
+tests\test_rag\test_evaluation_boundaries.py:209: AssertionError
+___________________ test_prediction_input_is_also_protected ___________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_prediction_input_is_also_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D087BCB0>
+
+    def test_prediction_input_is_also_protected(tmp_path, monkeypatch):
+        module, _, _ = setup_cli("quality", tmp_path, monkeypatch)
+        predictions = tmp_path / "predictions.json"
+        predictions.write_text("[]", encoding="utf-8")
+>       assert invoke(module, monkeypatch, predictions, "--predictions", predictions) == 2
+E       AssertionError: assert 0 == 2
+E        +  where 0 = invoke(<module 'scripts.evaluate_quality' from 'D:\\python\\data_engineer\\.stage37\\scripts\\evaluate_quality.py'>, <_pytest.monkeypatch.MonkeyPatch object at 0x000001D1D087BCB0>, WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_prediction_input_is_also_0/predictions.json'), '--predictions', WindowsPath('D:/python/data_engineer/.stage37/.pytest-initial/test_prediction_input_is_also_0/predictions.json'))
+
+tests\test_rag\test_evaluation_boundaries.py:219: AssertionError
+---------------------------- Captured stdout call -----------------------------
+{"dataset": "synthetic-smoke-v1", "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a", "python": "3.12.13", "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set", "k": 3, "query_count": 7, "document_count": 8, "retrieval": {"recall_at_k": 1.0, "precision_at_k": 0.38095238095238093, "mrr_at_k": 1.0, "ndcg_at_k": 1.0, "latency_ms": 0.13534285660300935}, "embedding_or_llm_cost_usd": 0, "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.", "sql_model_metrics": {"report_version": "sql-evaluation-v2", "cases_sha256": "c2ec007f19a2b6ceb993236002942bd6217b90049adcb3fe531ed7305d3069b2", "predictions_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945", "sqlite_fixture_sha256": "0ff8fb23352acc7241fd65e275b9f1932529b41dea3fb43a8d7dd9096eef1c54", "limits": {"timeout_seconds": 2, "max_rows": 1000, "dialect": "sqlite"}, "case_count": 4, "prediction_count": 0, "execution_success_count": 0, "result_correct_count": 0, "execution_success_rate": 0, "result_correct_rate": 0, "error_counts": {"MISSING_PREDICTION": 4}, "completion_counts": {"missing": 4}, "reported_generation_latency_ms": {"sample_count": 0, "case_count": 4, "coverage": 0.0, "complete": false, "mean": null, "p50": null, "p95": null, "p99": null, "percentile_method": "nearest_rank"}, "reported_cost_usd": {"sample_count": 0, "case_count": 4, "coverage": 0.0, "complete": false, "total": null, "mean": null}, "execution_attempt_latency_ms": {"sample_count": 0, "case_count": 4, "coverage": 0.0, "complete": false, "mean": null, "p50": null, "p95": null, "p99": null, "percentile_method": "nearest_rank"}, "measurement_scope": {"rates": "All cases, including missing and failed predictions", "generation_and_cost": "External reports, including failed predictions; not measured", "execution": "Local policy+SQLite fetch attempt; excludes gold and result comparison", "completion": "Missing finish_reason remains legacy_unknown, not confirmed complete"}, "details": [{"id": "sql1", "execution_success": false, "result_correct": false, "error": "No prediction supplied", "error_code": "MISSING_PREDICTION", "completion_status": "missing", "execution_latency_ms": null, "reported_generation_latency_ms": null, "reported_cost_usd": null}, {"id": "sql2", "execution_success": false, "result_correct": false, "error": "No prediction supplied", "error_code": "MISSING_PREDICTION", "completion_status": "missing", "execution_latency_ms": null, "reported_generation_latency_ms": null, "reported_cost_usd": null}, {"id": "sql3", "execution_success": false, "result_correct": false, "error": "No prediction supplied", "error_code": "MISSING_PREDICTION", "completion_status": "missing", "execution_latency_ms": null, "reported_generation_latency_ms": null, "reported_cost_usd": null}, {"id": "sql4", "execution_success": false, "result_correct": false, "error": "No prediction supplied", "error_code": "MISSING_PREDICTION", "completion_status": "missing", "execution_latency_ms": null, "reported_generation_latency_ms": null, "reported_cost_usd": null}]}, "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."}
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_output_must_not_replace_dataset[same-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_output_must_not_replace_dataset[same-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_output_must_not_replace_dataset[same-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_output_must_not_replace_dataset[hardlink-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_output_must_not_replace_dataset[hardlink-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_output_must_not_replace_dataset[hardlink-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_atomic_replace_failure_preserves_report[quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_atomic_replace_failure_preserves_report[schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_atomic_replace_failure_preserves_report[sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[duplicate-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[duplicate-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[duplicate-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[nonfinite-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[nonfinite-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[nonfinite-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[deep-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[deep-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[deep-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[large-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[large-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[large-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[shape-quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[shape-schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_invalid_dataset_is_fixed_error_and_preserves_old_report[shape-sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_bom_default_smoke_and_stdout_summary[quality]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_bom_default_smoke_and_stdout_summary[schema_linking]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_bom_default_smoke_and_stdout_summary[sql_validation]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_quality_preflight_happens_before_bm25[documents]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_quality_preflight_happens_before_bm25[queries]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_quality_preflight_happens_before_bm25[empty]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_quality_preflight_happens_before_bm25[domain]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_quality_preflight_happens_before_bm25[k]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_quality_preflight_happens_before_bm25[telemetry]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_schema_preflight_happens_before_node[id]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_schema_preflight_happens_before_node[flag]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_schema_preflight_happens_before_node[columns]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_schema_preflight_happens_before_node[hit]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_sql_validator_preflight_happens_before_fixture_database[id]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_sql_validator_preflight_happens_before_fixture_database[expected]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_sql_validator_preflight_happens_before_fixture_database[policy]
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_fixture_connection_closes_when_schema_initialization_fails
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_baseline_loading_is_after_file_protection
+FAILED tests/test_rag/test_evaluation_boundaries.py::test_prediction_input_is_also_protected
+43 failed in 6.92s

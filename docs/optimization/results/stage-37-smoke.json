@@ -1,0 +1,46 @@
+{
+  "baseline_commit": "3325dda48ec34b804e8aa8ead88aee6eac9bdc80",
+  "comparison_scope": "All report fields except measured latency values; attempt sample counts retained",
+  "entries": [
+    {
+      "entry": "quality",
+      "semantic_report_unchanged": true,
+      "semantic_report_sha256": "43579aa4ccab3067a4143b0778ee06fa579df8784b6252478b5251ef56c4df43",
+      "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a",
+      "case_count": 4,
+      "passed": null,
+      "result_correct_count": 1,
+      "prediction_count": 2
+    },
+    {
+      "entry": "schema_linking",
+      "semantic_report_unchanged": true,
+      "semantic_report_sha256": "eeabdf0e1569ca680cb3d4b5882dc42de1bec6ed6ca6e92fb4a81756c6ce2917",
+      "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c",
+      "case_count": 12,
+      "passed": 12,
+      "result_correct_count": null,
+      "prediction_count": null
+    },
+    {
+      "entry": "sql_validation",
+      "semantic_report_unchanged": true,
+      "semantic_report_sha256": "eedcb3539c0982704257c6db464d02809f997e04660a64c9c423e7f153e6f952",
+      "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9",
+      "case_count": 18,
+      "passed": 18,
+      "result_correct_count": null,
+      "prediction_count": null
+    },
+    {
+      "entry": "sql_validation_baseline",
+      "semantic_report_unchanged": true,
+      "semantic_report_sha256": "b7948816a8bc14c3c075d4da24aa18a69ed3a3ab3f1f3d3540c36c29b6d961d3",
+      "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9",
+      "case_count": 18,
+      "passed": 7,
+      "result_correct_count": null,
+      "prediction_count": null
+    }
+  ]
+}

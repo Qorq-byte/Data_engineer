@@ -20,6 +20,8 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
+from app.evaluation.artifacts import protect_inputs, read_json, write_atomic
+from app.evaluation.inputs import evaluation_summary, quality_dataset, sql_cases, text
 from app.evaluation.predictions import validate_exported_predictions
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.llm.completion import IncompleteCompletionError, check_completion
@@ -43,8 +45,14 @@ def ranking_metrics(retrieved: list[str], relevant: set[str], k: int) -> dict[st
 def evaluate(
     dataset: dict[str, Any], k: int, predictions: list[dict[str, Any]] | None,
 ) -> dict[str, Any]:
-    if predictions is not None:
+    if (predictions is not None and isinstance(dataset, dict)
+            and isinstance(dataset.get("sql_cases"), list)):
         validate_exported_predictions(dataset["sql_cases"], predictions, dataset=dataset)
+    dataset = quality_dataset(dataset, k)
+    if predictions is not None:
+        _validate_predictions(dataset.get("sql_cases", []), predictions)
+        _reported_cost_total(predictions)
+        _fingerprint(predictions)
     bm25 = BM25Index()
     rows = []
     try:
@@ -151,18 +159,16 @@ def _reported_cost_total(predictions: list[dict[str, Any]]) -> float | None:
 def _validate_predictions(
     cases: list[dict[str, Any]], predictions: list[dict[str, Any]],
 ) -> dict[str, dict[str, Any]]:
-    if not isinstance(cases, list) or not cases or not isinstance(predictions, list):
+    sql_cases(cases)
+    if not isinstance(predictions, list) or len(predictions) > 10000:
         raise ValueError("Non-empty cases and a predictions list are required")
-    for case in cases:
-        if (not isinstance(case, dict) or not isinstance(case.get("id"), str)
-                or not case["id"].strip() or not isinstance(case.get("gold_sql"), str)
-                or not case["gold_sql"].strip()
-                or ("ordered" in case and not isinstance(case["ordered"], bool))):
-            raise ValueError("Cases require non-empty string id/gold_sql and boolean ordered")
     for prediction in predictions:
         if (not isinstance(prediction, dict) or not isinstance(prediction.get("id"), str)
                 or not prediction["id"].strip()):
             raise ValueError("Predictions require a non-empty string id")
+        text(prediction["id"], 512)
+        if isinstance(prediction.get("sql"), str):
+            text(prediction["sql"], empty=True, allow_nul=True)
         if "status" in prediction and prediction["status"] not in ("completed", "failed"):
             raise ValueError("Prediction status must be completed or failed")
         for key in ("latency_ms", "cost_usd"):
@@ -324,20 +330,20 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--k", type=int, default=3)
     args = parser.parse_args()
-    if args.k < 1:
-        parser.error("k must be positive")
-    predictions = (
-        json.loads(args.predictions.read_text(encoding="utf-8")) if args.predictions else None
-    )
-    result = evaluate(json.loads(args.dataset.read_text(encoding="utf-8")), args.k, predictions)
-    serialized = json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(serialized, encoding="utf-8")
-    print(
-        json.dumps(
-            {key: value for key, value in result.items() if key != "details"}, ensure_ascii=False
-        )
-    )
+    try:
+        inputs = [args.dataset, ROOT / "tests/fixtures/test_schema.sql"]
+        if args.predictions is not None:
+            inputs.append(args.predictions)
+        protect_inputs(args.output, inputs)
+        predictions = read_json(args.predictions) if args.predictions is not None else None
+        if predictions is not None and not isinstance(predictions, list):
+            raise ValueError("Predictions must be a list")
+        dataset = quality_dataset(read_json(args.dataset), args.k)
+        result = evaluate(dataset, args.k, predictions)
+        write_atomic(args.output, result, prefix=".evaluation-report-")
+    except (OSError, ValueError, TypeError, KeyError, sqlite3.Error):
+        parser.exit(2, "Quality evaluation failed; check input contracts and file access.\n")
+    print(json.dumps(evaluation_summary(result), ensure_ascii=False))
 
 
 if __name__ == "__main__":
