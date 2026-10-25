@@ -1,0 +1,81 @@
+[
+  {
+    "query_id": "q_000000000001",
+    "session_id": "synthetic-fixture-session",
+    "outcome": "completed",
+    "llm_calls": 2,
+    "usage": {
+      "attempt_count": 2,
+      "attempts": [
+        {
+          "attempt": 1,
+          "provider": "openai",
+          "model": "fixture",
+          "source": "transport_boundary",
+          "status": "completed",
+          "latency_ms": 10.0,
+          "prompt_tokens": 3,
+          "completion_tokens": 2,
+          "missing_reason": null,
+          "finish_status": "unknown",
+          "usage_basis": "sdk_normalized"
+        },
+        {
+          "attempt": 2,
+          "provider": "openai",
+          "model": "fixture",
+          "source": "transport_boundary",
+          "status": "completed",
+          "latency_ms": 10.0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "missing_reason": "usage_missing",
+          "finish_status": "unknown",
+          "usage_basis": "response_fields"
+        }
+      ],
+      "known_prompt_tokens": 3,
+      "known_completion_tokens": 2,
+      "missing_usage_count": 1,
+      "usage_coverage": 0.5,
+      "complete": false,
+      "dropped_attempts": 0
+    },
+    "started_at": "2026-10-25T00:00:00+00:00",
+    "finished_at": "2026-10-25T00:00:01+00:00",
+    "candidate_digests": null
+  },
+  {
+    "query_id": "q_000000000002",
+    "session_id": "synthetic-fixture-session",
+    "outcome": "completed",
+    "llm_calls": 1,
+    "usage": {
+      "attempt_count": 1,
+      "attempts": [
+        {
+          "attempt": 1,
+          "provider": "openai",
+          "model": "fixture",
+          "source": "transport_boundary",
+          "status": "completed",
+          "latency_ms": 10.0,
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "missing_reason": null,
+          "finish_status": "unknown",
+          "usage_basis": "sdk_normalized"
+        }
+      ],
+      "known_prompt_tokens": 0,
+      "known_completion_tokens": 0,
+      "missing_usage_count": 0,
+      "usage_coverage": 1.0,
+      "complete": true,
+      "dropped_attempts": 0
+    },
+    "started_at": "2026-10-25T00:00:00+00:00",
+    "finished_at": "2026-10-25T00:00:01+00:00",
+    "candidate_digests": []
+  }
+]

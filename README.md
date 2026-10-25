@@ -652,3 +652,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段34新增可选结构化流接口：完整消费并校验原生流后，候选保留`model_stream/stop`；旧文本接口和Mock仍兼容且保留未知。预算/用量不重复计数，取消/超时/非法尾部不产出完成候选。公开SSE仍是工作流事件流。见[流事件契约](docs/optimization/stream-completion.md)。
 
 阶段35新增默认关闭的`LLM_AUDIT_CANDIDATE_DIGESTS`：审计启用后可保存候选摘要以核对SQL与完成信息；不存SQL原文，摘要不是加密或签名。导出可用`--require-candidate-audit`强制成功SQL绑定，旧v1兼容。见[候选摘要绑定契约](docs/optimization/candidate-audit-binding.md)。
+
+阶段36新增`python -m scripts.estimate_usage_cost`：只读明确选择的审计请求，使用操作者提供的平坦价格表生成独立估算报告。无默认真实价格、不联网，缺测不补0，合法0保留；不回填预测cost_usd或改在线响应。参数、范围与合成样例见[用量估算契约](docs/optimization/usage-cost-estimates.md)。

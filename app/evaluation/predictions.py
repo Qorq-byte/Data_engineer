@@ -9,7 +9,7 @@ from collections.abc import Callable
 from typing import Any
 
 from app.audit.candidates import audit_candidate_digests, candidate_digest
-from app.audit.store import usage_snapshot
+from app.audit.store import validated_usage
 
 EXPORT_VERSION = "request-prediction-v1"
 BOUND_EXPORT_VERSION = "request-prediction-v2"
@@ -25,15 +25,6 @@ _ROW_KEYS = {
     "export_version",
     "provenance",
     "export_sha256",
-}
-_SUMMARY_KEYS = {
-    "attempt_count",
-    "known_prompt_tokens",
-    "known_completion_tokens",
-    "missing_usage_count",
-    "usage_coverage",
-    "complete",
-    "dropped_attempts",
 }
 
 _PROVENANCE_KEYS = {
@@ -121,26 +112,6 @@ def _cases(dataset: object) -> list[dict[str, Any]]:
         ids.add(case_id)
     return cases
 
-
-def _checked_usage(value: object) -> dict[str, Any] | None:
-    if value is None:
-        return None
-    if not isinstance(value, dict):
-        raise ValueError("Invalid export usage")
-    try:
-        result = usage_snapshot(value)
-        for key in _SUMMARY_KEYS:
-            if fingerprint(value.get(key)) != fingerprint(result[key]):
-                raise ValueError("Inconsistent export usage summary")
-        for original, normalized in zip(value["attempts"], result["attempts"], strict=True):
-            for key in normalized:
-                if key not in ("model", "provider") and fingerprint(
-                    original.get(key)
-                ) != fingerprint(normalized[key]):
-                    raise ValueError("Invalid export attempt fields")
-        return result
-    except (TypeError, KeyError, OverflowError):
-        raise ValueError("Invalid export usage") from None
 
 
 def _calls(value: object) -> int | None:
@@ -244,7 +215,7 @@ def export_predictions(
             if status == "completed" and candidate is not None
             else None
         )
-        calls, observed = _calls(source.get("llm_calls")), _checked_usage(source.get("llm_usage"))
+        calls, observed = _calls(source.get("llm_calls")), validated_usage(source.get("llm_usage"))
         audit_match, audit_hash = "not_requested", None
         bound_digest = None
         if audit_lookup is not None:
@@ -262,7 +233,7 @@ def export_predictions(
                 or observed is None
             ):
                 raise ValueError("Audit metadata mismatch")
-            audit_usage = _checked_usage(record.get("usage"))
+            audit_usage = validated_usage(record.get("usage"))
             if _calls(record.get("llm_calls")) != calls or fingerprint(audit_usage) != fingerprint(
                 observed
             ):
@@ -387,7 +358,7 @@ def validate_exported_predictions(
         elif row.get("sql") is not None:
             raise ValueError("Failed export cannot contain SQL")
         _text(provenance.get("db_id"), empty=True)
-        observed = _checked_usage(provenance.get("llm_usage"))
+        observed = validated_usage(provenance.get("llm_usage"))
         calls = _calls(provenance.get("llm_calls"))
         if (
             provenance["usage_scope"] != "entire_query_including_retries_candidates_and_targets"

@@ -19,3 +19,5 @@ LiteLLM Usage可能将缺失计数补成0，且fields_set也无法恢复原始�
 
 
 阶段31增加可选本机持久审计及llm_audit状态，详见[审计契约](usage-audit.md)。LLM_AUDIT_PATH为空时仍只返回内存用量；persisted与complete是不同维度。
+
+阶段36新增独立[离线估算](usage-cost-estimates.md)，只使用显式审计记录和操作者平坦价格表，不使用旧CostTracker或改变在线llm_usage。部分和不当总额、未知不补0，SDK归一化来源继续保留；预测费用仍null。

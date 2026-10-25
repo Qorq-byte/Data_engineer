@@ -1,0 +1,101 @@
+{
+  "report_version": "usage-cost-estimate-v1",
+  "currency": "USD",
+  "estimate_scope": "flat_prompt_completion_tokens_entire_query",
+  "billing_verified": false,
+  "price_book": {
+    "label": "synthetic-fixture-only",
+    "as_of": "2026-10-25",
+    "sha256": "7ffd53c7db396b0f3f52e31c42ee4b80a9f6ec089cd5ce8d34612e0fb28828a5"
+  },
+  "queries": [
+    {
+      "query_id": "q_000000000001",
+      "outcome": "completed",
+      "audit_schema_version": 1,
+      "audit_sha256": "266e570a22b7f87d2a4f5d8a2db7d80bfd3ca61a24c3865b03907fad1486f844",
+      "llm_calls": 2,
+      "attempt_count": 2,
+      "dropped_attempts": 0,
+      "priced_attempt_count": 1,
+      "priced_attempt_coverage": 0.5,
+      "known_subtotal_usd": "0.000007",
+      "estimated_total_usd": null,
+      "unavailable_reasons": [
+        "unpriced_attempts"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "provider": "openai",
+          "model": "fixture",
+          "status": "completed",
+          "source": "transport_boundary",
+          "usage_basis": "sdk_normalized",
+          "prompt_tokens": 3,
+          "completion_tokens": 2,
+          "prompt_usd_per_million": "1",
+          "completion_usd_per_million": "2",
+          "estimated_usd": "0.000007",
+          "unavailable_reasons": []
+        },
+        {
+          "attempt": 2,
+          "provider": "openai",
+          "model": "fixture",
+          "status": "completed",
+          "source": "transport_boundary",
+          "usage_basis": "response_fields",
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "prompt_usd_per_million": "1",
+          "completion_usd_per_million": "2",
+          "estimated_usd": null,
+          "unavailable_reasons": [
+            "usage_missing"
+          ]
+        }
+      ]
+    },
+    {
+      "query_id": "q_000000000002",
+      "outcome": "completed",
+      "audit_schema_version": 2,
+      "audit_sha256": "b37bb28d741357f22b6c5ff69cdfae5b62ca5f61912a4dfaf4adcdc5de57e3db",
+      "llm_calls": 1,
+      "attempt_count": 1,
+      "dropped_attempts": 0,
+      "priced_attempt_count": 1,
+      "priced_attempt_coverage": 1.0,
+      "known_subtotal_usd": "0",
+      "estimated_total_usd": "0",
+      "unavailable_reasons": [],
+      "attempts": [
+        {
+          "attempt": 1,
+          "provider": "openai",
+          "model": "fixture",
+          "status": "completed",
+          "source": "transport_boundary",
+          "usage_basis": "sdk_normalized",
+          "prompt_tokens": 0,
+          "completion_tokens": 0,
+          "prompt_usd_per_million": "1",
+          "completion_usd_per_million": "2",
+          "estimated_usd": "0",
+          "unavailable_reasons": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "query_count": 2,
+    "attempt_count": 3,
+    "dropped_attempts": 0,
+    "priced_attempt_count": 2,
+    "priced_attempt_coverage": 0.6666666666666666,
+    "known_subtotal_usd": "0.000007",
+    "estimated_total_usd": null
+  },
+  "report_sha256": "5670d9cc3ba4c7d962c79ecc3f37a0a4b7abfcf85b00d614981cf6b2633bc7f1"
+}

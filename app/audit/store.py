@@ -124,6 +124,44 @@ def usage_snapshot(value: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+
+_SUMMARY_KEYS = {
+    "attempt_count",
+    "known_prompt_tokens",
+    "known_completion_tokens",
+    "missing_usage_count",
+    "usage_coverage",
+    "complete",
+    "dropped_attempts",
+}
+
+
+def _usage_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, allow_nan=False)
+
+
+def validated_usage(value: object) -> dict[str, Any] | None:
+    """Check snapshot consistency without upgrading missing or SDK-normalized observations."""
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError("Invalid audit usage")
+    try:
+        result = usage_snapshot(value)
+        for key in _SUMMARY_KEYS:
+            if _usage_json(value.get(key)) != _usage_json(result[key]):
+                raise ValueError("Inconsistent audit usage summary")
+        for original, normalized in zip(value["attempts"], result["attempts"], strict=True):
+            for key in normalized:
+                if key not in ("model", "provider") and _usage_json(
+                    original.get(key)
+                ) != _usage_json(normalized[key]):
+                    raise ValueError("Invalid audit attempt fields")
+        return result
+    except (TypeError, KeyError, OverflowError, RecursionError):
+        raise ValueError("Invalid audit usage") from None
+
+
 def _encode(record: UsageAuditRecord) -> str:
     if not _QUERY_ID.fullmatch(record.query_id) or record.outcome not in _OUTCOMES:
         raise ValueError("Invalid audit identity or outcome")

@@ -32,3 +32,5 @@ SQLite锁等待设置0.2秒，写入与保留删除同一事务，失败回滚�
 阶段32提供可选只读审计核对的[离线预测导出](prediction-export.md)；必须另外提供保存的QueryResponse SQL和显式案例绑定，metadata_match不能认证SQL。审计schema及默认关闭策略未改。
 
 阶段35新增可选LLM_AUDIT_CANDIDATE_DIGESTS=false，开启后记录payload v2的候选摘要列表；表结构及SQLite user_version仍1，新旧payload可共存，关闭保持v1。摘要可被枚举猜测，不是加密或签名，不存SQL/库名原文。正常返回的最终候选才绑定；取消/error为空列表不代表未生成SQL。摘要失败只报告审计failed，取消及资源收尾政策不变。新版导出核对及旧二进制回退边界见[候选摘要绑定](candidate-audit-binding.md)。
+
+阶段36提供独立的[离线请求用量估算](usage-cost-estimates.md)，只读显式query_id和人工平坦价格表，不改变审计schema或写入费用。sdk_normalized数值仍只是SDK观察值，缺记录/矛盾摘要拒绝，缺token/价格总额保持未知；不是实际账单。

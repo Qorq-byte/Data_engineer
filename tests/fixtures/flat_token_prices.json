@@ -1,0 +1,14 @@
+{
+  "version": "flat-token-prices-v1",
+  "currency": "USD",
+  "label": "synthetic-fixture-only",
+  "as_of": "2026-10-25",
+  "prices": [
+    {
+      "provider": "openai",
+      "model": "fixture",
+      "prompt_usd_per_million": "1",
+      "completion_usd_per_million": "2"
+    }
+  ]
+}
