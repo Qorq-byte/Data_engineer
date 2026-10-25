@@ -64,14 +64,14 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000020A85B5CB00>
         isolated_worker, monkeypatch,
     ):
         import litellm
-    
+
         from app.db.connections import ConnectionFactory
         from app.evaluation.model_batch import DATASET
         from app.evaluation.model_runtime import run_batch
-    
+
         dataset = json.loads(DATASET.read_text(encoding="utf-8"))
         calls = []
-    
+
         async def transport(**kwargs):
             calls.append(kwargs)
             assert kwargs["n"] == 1 and kwargs["num_retries"] == 0
@@ -83,7 +83,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000020A85B5CB00>
                 "index": 0, "message": {"role": "assistant", "content": sql},
                 "finish_reason": "stop",
             }], usage={"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120})
-    
+
         monkeypatch.setattr(litellm, "acompletion", transport)
         report = await run_batch(prepare("four"), "synthetic-key", isolated_worker)
         assert report["status"] == "finished"
@@ -100,9 +100,9 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000020A85B5C170>
         isolated_worker, monkeypatch,
     ):
         import litellm
-    
+
         from app.evaluation.model_runtime import run_batch
-    
+
         async def transport(**kwargs):
             raise RuntimeError("PRIVATE-TOKEN-AND-PROVIDER-BODY")
         monkeypatch.setattr(litellm, "acompletion", transport)
@@ -117,18 +117,18 @@ fut = <coroutine object Event.wait at 0x0000020A89A26EA0>, timeout = 10
 
     async def wait_for(fut, timeout):
         """Wait for the single Future or coroutine to complete, with timeout.
-    
+
         Coroutine will be wrapped in Task.
-    
+
         Returns result of the Future or coroutine.  When a timeout occurs,
         it cancels the task and raises TimeoutError.  To avoid the task
         cancellation, wrap it in shield().
-    
+
         If the wait is cancelled, the task is also cancelled.
-    
+
         If the task suppresses the cancellation and returns a value instead,
         that value is returned.
-    
+
         This function is a coroutine.
         """
         # The special case for timeout <= 0 is for the following case:
@@ -148,39 +148,39 @@ fut = <coroutine object Event.wait at 0x0000020A89A26EA0>, timeout = 10
         #         assert False
         #
         # asyncio.run(test_waitfor())
-    
-    
+
+
         if timeout is not None and timeout <= 0:
             fut = ensure_future(fut)
-    
+
             if fut.done():
                 return fut.result()
-    
+
             await _cancel_and_wait(fut)
             try:
                 return fut.result()
             except exceptions.CancelledError as exc:
                 raise TimeoutError from exc
-    
+
         async with timeouts.timeout(timeout):
 >           return await fut
                    ^^^^^^^^^
 
-C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\tasks.py:520: 
+C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\tasks.py:520:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
 self = <asyncio.locks.Event object at 0x0000020A84E6BC80 [unset]>
 
     async def wait(self):
         """Block until the internal flag is true.
-    
+
         If the internal flag is true on entry, return True
         immediately.  Otherwise, block until another coroutine calls
         set() to set the flag to true, then return True.
         """
         if self._value:
             return True
-    
+
         fut = self._get_loop().create_future()
         self._waiters.append(fut)
         try:
@@ -196,12 +196,12 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000020A84E6A330>
 
     async def test_cancellation_closes_transport_and_database(isolated_worker, monkeypatch):
         import litellm
-    
+
         from app.db.connections import ConnectionFactory
         from app.evaluation.model_runtime import run_batch
-    
+
         started, closed = asyncio.Event(), asyncio.Event()
-    
+
         async def transport(**kwargs):
             started.set()
             try:
@@ -212,7 +212,7 @@ monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000020A84E6A330>
         task = asyncio.create_task(run_batch(prepare("cancel"), "synthetic-key", isolated_worker))
 >       await asyncio.wait_for(started.wait(), 10)
 
-D:\python\data_engineer\.stage38\tests\test_evaluation\test_model_batch.py:229: 
+D:\python\data_engineer\.stage38\tests\test_evaluation\test_model_batch.py:229:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 C:\Users\31459\AppData\Roaming\uv\python\cpython-3.12-windows-x86_64-none\Lib\asyncio\tasks.py:519: in wait_for
     async with timeouts.timeout(timeout):
@@ -230,14 +230,14 @@ exc_val = CancelledError(), exc_tb = <traceback object at 0x0000020A87385E80>
         exc_tb: Optional[TracebackType],
     ) -> Optional[bool]:
         assert self._state in (_State.ENTERED, _State.EXPIRING)
-    
+
         if self._timeout_handler is not None:
             self._timeout_handler.cancel()
             self._timeout_handler = None
-    
+
         if self._state is _State.EXPIRING:
             self._state = _State.EXPIRED
-    
+
             if self._task.uncancel() <= self._cancelling and exc_type is exceptions.CancelledError:
                 # Since there are no new cancel requests, we're
                 # handling this.

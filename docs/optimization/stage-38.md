@@ -34,4 +34,6 @@
 
 仍待：题意/输出规范与业务标注、真实embedding/语义质量、PG/MySQL集成、生产并发/大Schema/恢复、真实账单/复杂价格、178项类型债务。隔离依赖可信本机代码和独立进程，无恶意代码沙箱、强杀/服务端计费撤销保证或签名证明。正常finished只表示工具产出报告，不表示SQL全正确。
 
-代码和最终文档将普通推送并逐一核验精确SHA CI，不合并main。
+代码[720d8f8](https://github.com/Qorq-byte/Data_engineer/commit/720d8f880eb8849b0be5fcf2085304283c6c64ce)已普通推送。[Actions40209047055](https://github.com/Qorq-byte/Data_engineer/actions/runs/40209047055)成功，headSha精确一致；[结构化证据](results/stage-38-ci.json)、[Linux摘要](results/stage-38-ci-tests.txt)。干净环境**3975通过、2警告、73.78秒**，本地平台跳过项在Linux执行通过；前端182契约/完整构建、Ruff、原核心strict及新增入口检查均通过。
+
+本次补记验收文档及诊断证据空白清理将另行提交推送，核验最终精确SHA CI，不以代码CI替代文档提交验收。不合并main，原主工作区用户修改保留。
