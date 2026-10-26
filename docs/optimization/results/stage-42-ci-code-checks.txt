@@ -1,0 +1,30 @@
+test	Run npm run check:frontend	2026-10-26T11:45:30.1972824Z [PASS] frontend_design/workspace.html script #1
+test	Run npm run check:frontend	2026-10-26T11:45:30.7728666Z [PASS] frontend_design/workspace.html script #2
+test	Run npm run check:frontend	2026-10-26T11:45:30.8009287Z [PASS] frontend_design/form.html script #1
+test	Run npm run check:frontend	2026-10-26T11:45:30.8338867Z [PASS] frontend_design/landing_page.html script #1
+test	Run npm run check:frontend	2026-10-26T11:45:30.8353158Z [PASS] frontend_design/landing_page.html script #2
+test	Run npm run check:frontend	2026-10-26T11:45:30.8876544Z [PASS] Schema/RAG refresh handlers: 12 contract scenarios
+test	Run npm run check:frontend	2026-10-26T11:45:30.9198491Z [PASS] RAG maintenance: actual status row construction
+test	Run npm run check:frontend	2026-10-26T11:45:30.9424111Z [PASS] RAG maintenance: 37 actual-function contract scenarios
+test	Run npm run check:frontend	2026-10-26T11:45:30.9956883Z [PASS] RAG configuration: 34 actual-function contract scenarios
+test	Run npm run check:frontend	2026-10-26T11:45:31.0306377Z [PASS] Harness policy: 29 actual-function contract scenarios; read-only UI structure
+test	Run npm run check:frontend	2026-10-26T11:45:31.0643997Z [PASS] Database capabilities: 29 actual-function contract scenarios; no fallback controls
+test	Run npm run check:frontend	2026-10-26T11:45:31.1195055Z [PASS] LLM configuration: 41 actual-function contract scenarios
+test	Run npm run check:frontend:build	2026-10-26T11:45:32.7727652Z [PASS] Three local pages, assets/fonts/licenses, SHA-256 integrity, repeatable build and failed-build preservation
+test	Run ruff check .	2026-10-26T11:45:32.8794783Z All checks passed!
+test	Run mypy scripts/evaluate_quality.py	2026-10-26T11:45:59.1030525Z Success: no issues found in 1 source file
+test	Run mypy app/evaluation/acceptance_data.py app/evaluation/acceptance_sql.py app/evaluation/acceptance_retrieval.py app/evaluation/acceptance_suite.py app/evaluation/ranking.py scripts/evaluate_acceptance.py	2026-10-26T11:46:00.3772671Z Success: no issues found in 6 source files
+test	Run mypy app/evaluation/predictions.py scripts/export_predictions.py	2026-10-26T11:46:00.6239808Z Success: no issues found in 2 source files
+test	Run mypy app/llm/streaming.py	2026-10-26T11:46:02.4793276Z Success: no issues found in 1 source file
+test	Run mypy app/llm/usage.py app/llm/responses.py	2026-10-26T11:46:04.3567971Z Success: no issues found in 2 source files
+test	Run mypy app/audit/store.py app/workflow/query_audit.py	2026-10-26T11:46:05.4929538Z Success: no issues found in 2 source files
+test	Run mypy app/audit/candidates.py	2026-10-26T11:46:05.6838074Z Success: no issues found in 1 source file
+test	Run mypy app/evaluation/artifacts.py app/evaluation/usage_costs.py scripts/estimate_usage_cost.py	2026-10-26T11:46:05.9271733Z Success: no issues found in 3 source files
+test	Run mypy app/evaluation/inputs.py	2026-10-26T11:46:06.1390293Z Success: no issues found in 1 source file
+test	Run mypy app/evaluation/model_batch.py	2026-10-26T11:46:07.2432480Z Success: no issues found in 1 source file
+test	Run mypy app/evaluation/sqlite_query.py app/evaluation/contract_suite.py scripts/evaluate_sql_contracts.py	2026-10-26T11:46:08.4291590Z Success: no issues found in 3 source files
+test	Run mypy --follow-imports=silent app/evaluation/model_runtime.py scripts/run_model_evaluation.py	2026-10-26T11:46:36.2017614Z Success: no issues found in 2 source files
+test	Run mypy --follow-imports=silent scripts/evaluate_schema_linking.py scripts/evaluate_sql_validation.py	2026-10-26T11:46:37.8160725Z Success: no issues found in 2 source files
+test	Run mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py	2026-10-26T11:47:04.3217882Z Success: no issues found in 36 source files
+test	Run pytest -m 'not real_database'	2026-10-26T11:48:34.5948759Z ========== 4148 passed, 82 deselected, 2 warnings in 88.79s (0:01:28) ==========
+test	Run mypy scripts/run_real_db_tests.py	2026-10-26T11:48:36.6067143Z Success: no issues found in 1 source file

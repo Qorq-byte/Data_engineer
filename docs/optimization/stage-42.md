@@ -1,6 +1,6 @@
 # 阶段42：扩展并冻结SQL与检索验收集
 
-2026-10-26。承接阶段41最终 `bb316ca`；独立 `codex/expanded-acceptance-set` / `.stage42`，不合并main。[先行计划](stage-42-plan.md)。本地验收完成，待普通提交后的精确SHA双CI；阶段43–48未实施。
+2026-10-26。承接阶段41最终 `bb316ca`；独立 `codex/expanded-acceptance-set` / `.stage42`，不合并main。[先行计划](stage-42-plan.md)。代码提交 `b043af1` 已通过本地及远程精确SHA双CI；本次补记文档提交继续核验最终SHA，阶段43–48未实施。
 
 ## 交付与标签来源
 
@@ -34,10 +34,19 @@ CLI保护全部冻结输入/预测路径及其硬链接，不覆盖输入；JSON
 
 [完整离线](results/stage-42-pytest.txt) **4147通过、1 Windows平台跳过、82真实项明确排除、2既有SDK警告，165.89秒**；之后仅澄清SQL30可观察排序文字，gold/数据/预期行不变，新96项及90次gold/全部反例重新通过。[真实双库](results/stage-42-real-services.pytest.txt) **82通过、0跳过，15.27秒**，PG19/MySQL63；[服务证据](results/stage-42-real-services.json)记录PostgreSQL16.15、MySQL8.4.13、随机环回端口、原资源限制与两个容器removed=true。3项既有进程列表弃用警告未屏蔽；只用专用合成库。
 
-[Ruff](results/stage-42-ruff.txt)、[15组配置内strict含新增模块](results/stage-42-strict.txt)全部通过；[全仓类型比较](results/stage-42-types-summary.json)仍178项，新增0/消除0。[182前端契约](results/stage-42-frontend.txt)、[完整构建](results/stage-42-build.txt)通过，页面未改动，无新增浏览器UI验收。复用阶段41的Python3.12.13环境和已补齐的Windows tzdata；[npm安装](results/stage-42-npm.txt)实测仍有3项moderate构建期依赖告警，本阶段未升级。
+[Ruff](results/stage-42-ruff.txt)、[15组配置内strict含新增模块](results/stage-42-strict.txt)全部通过；[全仓类型比较](results/stage-42-types-summary.json)仍178项，新增0/消除0。[182前端契约](results/stage-42-frontend.txt)、[完整构建](results/stage-42-build.txt)通过，页面未改动，无新增浏览器UI验收。复用阶段41的Python3.12.13环境和已补齐的Windows tzdata；[基线运行时](results/stage-42-runtime.json)登记SQLite3.50.4、jieba0.42.1、sqlglot30.18.0和SQLite FTS5默认rank，避免把源码常量误当实际生效的BM25参数；[npm安装](results/stage-42-npm.txt)实测仍有3项moderate构建期依赖告警，本阶段未升级。
 
 [兼容证据](results/stage-42-compat.json)核对旧v1/v2所有输入规范字节、受控模型代码和4次上限均不变；旧v2完整12检查报告相同。stage32预测身份仍3a3b1266…、stage36费用报告身份仍5670d9cc…；旧quality报告除实测latency外语义相同。费用自哈希比较曾误包含report_sha256字段，修正核对脚本口径后匹配，未修改旧报告。沙箱子进程停滞及诊断脚本默认GBK读取中文的问题只影响本地工具，正式代码显式UTF-8；异常与修正记录在本地工作日志，没有扩大运行权限或费用范围。
 
 ## 后续
 
-本地结果不代替最终GitHub验收：普通提交推送后核验同SHA的MVP及真实数据库工作流，补记文档后再核验最终SHA，不自动合并或发布。阶段43下一步先形成真实embedding的provider/模型版本、精确调用/输入规模/费用资源上限与预检manifest；本次不启动真实调用，也不扩大阶段44受控模型的四次上限。
+代码已通过精确SHA的GitHub双CI，文档补记后再次核验最终SHA，不自动合并或发布。阶段43下一步先形成真实embedding的provider/模型版本、精确调用/输入规模/费用资源上限与预检manifest；本次不启动真实调用，也不扩大阶段44受控模型的四次上限。
+
+
+## 远程代码验收
+
+普通提交 [b043af1a79cd7919226705f52cca1553b0c498b9](https://github.com/Qorq-byte/Data_engineer/commit/b043af1a79cd7919226705f52cca1553b0c498b9) 已推送。[MVP40317311087](https://github.com/Qorq-byte/Data_engineer/actions/runs/40317311087) 与 [真实数据库40317311181](https://github.com/Qorq-byte/Data_engineer/actions/runs/40317311181) 的headSha均为该完整SHA且success；[MVP证据](results/stage-42-ci-code-mvp.json)、[双库证据](results/stage-42-ci-code-databases.json)。
+
+Linux离线 **4148通过、82明确排除、2既有SDK警告，88.79秒**；[摘要](results/stage-42-ci-code-checks.txt)包含新增strict与原完整门禁。真实 **82通过、0跳过、0失败**，PG19/MySQL63；[JUnit投影](results/stage-42-ci-code-services.json)核对PostgreSQL16.15/MySQL8.4.13，[真实摘要](results/stage-42-ci-code-real-tests.txt)。Stop containers成功；没有以本地结果或单项CI绿色代替双CI。
+
+本次报告/路线/证据补记另行普通提交，推送后核验它的最终精确SHA两个工作流。文档不以自身哈希形成无限补记；最终状态以该提交对应Actions及交付消息为准。不合并main，不启动后续真实embedding或模型请求。

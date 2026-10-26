@@ -1,0 +1,13 @@
+{
+  "test_count": 82,
+  "tests_by_service": {
+    "postgresql": 19,
+    "mysql": 63
+  },
+  "versions": {
+    "server_postgresql": "PostgreSQL 16.15 (Debian 16.15-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "server_mysql": "8.4.13"
+  },
+  "failures": 0,
+  "skipped": 0
+}
