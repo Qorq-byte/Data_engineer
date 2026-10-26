@@ -33,3 +33,5 @@
 PG内省限public；跨schema外键、生产search_path/临时对象、估算行数和索引列的简化仍保留。MySQLmax_rows限制返回行，普通游标可能先缓冲完整结果，未证明大查询内存/网络边界。计划分析仍启发式，未承诺完整MySQL计划解释。关闭/取消是客户端资源语义，不证明服务器立即终止；网络分区、进程强杀、生产容量/TLS/高可用未实测。
 
 业务标注/语义质量、真实embedding、生产大Schema/负载恢复、真实账单/复杂价格、178项类型债务留后续。本阶段将普通提交推送，核验同一代码SHA的MVP及真实服务两工作流，再补记文档并核验最终SHA，不合并main。
+
+首次代码0aee8c1的MVP已成功，但真实工作流在作业创建前因配置位置无效而失败，未运行数据库用例。经gstack /browse核对[GitHub官方上下文规则](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability)，job.services动态端口移至测试步骤env（job级env不能用job上下文）。该配置修复单独提交，并重新核验同一修复SHA的两个工作流；不把本地通过或仅MVP绿色当完整远程验收。

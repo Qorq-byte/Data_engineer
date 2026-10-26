@@ -33,8 +33,6 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 30
     env:
       DE_REAL_DB_TESTS: '1'
-      DE_REAL_PG_PORT: ${{ job.services.postgres.ports[5432] }}
-      DE_REAL_MYSQL_PORT: ${{ job.services.mysql.ports[3306] }}
       LLM_MOCK_MODE: '1'
       LITELLM_LOCAL_MODEL_COST_MAP: 'True'
       RAG_EMBEDDING_PROVIDER: mock
@@ -46,6 +44,9 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e '.[dev]'
       - run: pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml
+        env:
+          DE_REAL_PG_PORT: ${{ job.services.postgres.ports[5432] }}
+          DE_REAL_MYSQL_PORT: ${{ job.services.mysql.ports[3306] }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
