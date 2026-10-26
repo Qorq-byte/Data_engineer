@@ -35,3 +35,11 @@ PG内省限public；跨schema外键、生产search_path/临时对象、估算行
 业务标注/语义质量、真实embedding、生产大Schema/负载恢复、真实账单/复杂价格、178项类型债务留后续。本阶段将普通提交推送，核验同一代码SHA的MVP及真实服务两工作流，再补记文档并核验最终SHA，不合并main。
 
 首次代码0aee8c1的MVP已成功，但真实工作流在作业创建前因配置位置无效而失败，未运行数据库用例。经gstack /browse核对[GitHub官方上下文规则](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability)，job.services动态端口移至测试步骤env（job级env不能用job上下文）。该配置修复单独提交，并重新核验同一修复SHA的两个工作流；不把本地通过或仅MVP绿色当完整远程验收。
+
+## 远程验收
+
+主实现0aee8c1及CI修复[776ba85](https://github.com/Qorq-byte/Data_engineer/commit/776ba85c781e02c6ceaedfae72bce404add9bec2)已普通推送。精确修复SHA的[MVP40257733859](https://github.com/Qorq-byte/Data_engineer/actions/runs/40257733859)和[真实服务40257733777](https://github.com/Qorq-byte/Data_engineer/actions/runs/40257733777)均成功，分别见[结构化MVP](results/stage-40-ci-mvp.json)、[真实CI](results/stage-40-ci-databases.json)。
+
+Linux离线 **4037通过、38明确排除、2警告，56.21秒**；被排除的独立真实套件 **38通过、0跳过、3条进程列表弃用警告，7.32秒**。远程JUnit核对PG/MySQL各19项、PostgreSQL16.15/MySQL8.4.13，与本地版本一致，Stop containers步骤成功；[JUnit投影](results/stage-40-ci-services.json)、[真实摘要](results/stage-40-ci-real-tests.txt)、[离线摘要](results/stage-40-ci-tests.txt)。原核心/新增工具strict、Ruff、182前端及完整构建通过，本地平台跳过项在Linux实际执行。
+
+本次补记文档另行提交推送，核验最终精确SHA的两个工作流，不以代码CI代替最终验收。不合并main，原主工作区用户修改保留。

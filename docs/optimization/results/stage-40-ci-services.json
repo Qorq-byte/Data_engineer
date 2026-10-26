@@ -1,0 +1,15 @@
+{
+  "run_id": 40257733777,
+  "head_sha": "776ba85c781e02c6ceaedfae72bce404add9bec2",
+  "test_count": 38,
+  "skipped": 0,
+  "server_versions": {
+    "server_postgresql": "PostgreSQL 16.15 (Debian 16.15-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "server_mysql": "8.4.13"
+  },
+  "tests_by_service": {
+    "postgresql": 19,
+    "mysql": 19
+  },
+  "ci_container_stop_step": true
+}
