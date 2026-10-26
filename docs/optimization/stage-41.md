@@ -1,6 +1,6 @@
 # 阶段 41：MySQL 大结果读取与取消资源边界
 
-2026-10-26。基线 main `fecb7b9`，承接规划 `9069489`；独立分支 `codex/mysql-bounded-results`、工作区 `.stage41`。[先行计划](stage-41-plan.md)。本地功能验收已完成，远程精确 SHA 验收待执行；此时不登记整体阶段完成、不合并 main。
+2026-10-26。基线 main `fecb7b9`，承接规划 `9069489`；独立分支 `codex/mysql-bounded-results`、工作区 `.stage41`。[先行计划](stage-41-plan.md)。代码提交 `dbde250` 的本地及远程双工作流验收已完成；本次补记文档提交仍核验其最终精确SHA，不合并main。
 
 ## 实现与选择
 
@@ -26,7 +26,7 @@ EXPLAIN 使用独立路径，不把结果 LIMIT 套在计划语句上；其计�
 
 ## 完整兼容与环境
 
-[离线全量](results/stage-41-pytest.txt) **4051通过、1 Windows平台跳过、79真实项明确排除、2既有SDK警告，155.12秒**。该轮之后仅补入2项真实EXPLAIN换行组合及对应识别修正，定向Ruff/strict复核通过，最终远程全量核验同一SHA。新增离线安全/语义回归15项；真实数据库另行运行，不能将明确排除项称为离线通过。
+[离线全量](results/stage-41-pytest.txt) **4051通过、1 Windows平台跳过、79真实项明确排除、2既有SDK警告，155.12秒**。该轮之后补入2项真实EXPLAIN换行组合及对应识别修正、1项未缓冲对照探针，定向Ruff/strict复核通过，最终远程全量核验同一SHA。新增离线安全/语义回归15项；真实数据库另行运行，不能将明确排除项称为离线通过。
 
 [Ruff](results/stage-41-ruff.txt)、[配置内14组strict门禁](results/stage-41-strict.txt)通过；新辅助函数也由显式strict复核。全仓mypy仍178项，[按文件/错误码/消息比较](results/stage-41-types-summary.json)新增0、消除0，不能表述为全仓类型通过。[前端](results/stage-41-frontend.txt)仍182项契约；[完整构建](results/stage-41-build.txt)验证3个页面、本地资源/字体/license、哈希、重复构建和编译失败保留旧产物。页面未改动，本阶段未新增浏览器UI验收。
 
@@ -38,4 +38,13 @@ EXPLAIN 使用独立路径，不把结果 LIMIT 套在计划语句上；其计�
 
 上限证明针对普通SELECT的返回/驱动缓冲行数，不是任意宽单元格的字节/RSS上限、服务器扫描/排序/JOIN中间结果上限或即时停止证明。EXPLAIN计划结果独立处理；网络分区、进程强杀、生产容量、多worker、业务准确率和其他数据库版本未据此验收。Harness固定YAML顺序、权限、预算、候选证据和未知费用保持。
 
-下一阶段仅建议先规划42：冻结30条SQL/30条检索标注；本次不实施42–48。远程两工作流精确SHA核验后补记，不自动合并或发布。
+下一阶段仅建议先规划42：冻结30条SQL/30条检索标注；本次不实施42–48。不自动合并或发布。
+
+
+## 远程代码验收与交付
+
+主实现 [dbde250361feb4f45e34115f2de7026d7d60bbf8](https://github.com/Qorq-byte/Data_engineer/commit/dbde250361feb4f45e34115f2de7026d7d60bbf8) 已普通推送。[MVP 40284654003](https://github.com/Qorq-byte/Data_engineer/actions/runs/40284654003) 和 [真实服务 40284653154](https://github.com/Qorq-byte/Data_engineer/actions/runs/40284653154) 同一精确SHA均success；[MVP证据](results/stage-41-ci-code-mvp.json)、[双库证据](results/stage-41-ci-code-databases.json)。
+
+Linux离线 **4052通过、82明确排除、2既有SDK警告，82.48秒**；真实 **82通过、0跳过**，PG19/MySQL63，[JUnit投影](results/stage-41-ci-code-services.json)核对服务器版本、四组缓冲2/2/101/101及SSCursor关闭排空999包。[真实摘要](results/stage-41-ci-code-real-tests.txt)、[完整门禁摘要](results/stage-41-ci-code-checks.txt)。真实作业Stop containers成功；没有把本地通过或仅一个CI绿色当双CI验收。
+
+本次证据/路线补记为普通独立提交，推送后再次检查最终精确SHA的这两个工作流；文档不以自引用提交哈希形成无限补记。最终提交状态可在分支对应Actions及交付消息核对。阶段42–48未开始，下一步先规划42的30条SQL/30条检索标注集。

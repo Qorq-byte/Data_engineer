@@ -1,0 +1,29 @@
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	﻿2026-10-26T07:16:47.8648664Z ##[group]Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8649245Z ^[[36;1mpytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml^[[0m
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8706218Z shell: /usr/bin/bash -e {0}
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8706439Z env:
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8706602Z   DE_REAL_DB_TESTS: 1
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8706790Z   LLM_MOCK_MODE: 1
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8706969Z   LITELLM_LOCAL_MODEL_COST_MAP: True
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8707210Z   RAG_EMBEDDING_PROVIDER: mock
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8707410Z   PYTHONUTF8: 1
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8707637Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8707983Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib/pkgconfig
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8708319Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8708616Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8708902Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8709243Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8709513Z   DE_REAL_PG_PORT: 32768
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8709703Z   DE_REAL_MYSQL_PORT: 32769
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:47.8709886Z ##[endgroup]
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.0029020Z ........................................................................ [ 87%]
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9808925Z ..........                                                               [100%]
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9809835Z =============================== warnings summary ===============================
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9810388Z tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-False-cancel]
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9810891Z tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-True-cancel]
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9811339Z tests/real_db/test_acceptance.py::test_close_waits_for_real_inflight_query[mysql]
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9812396Z   /opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/site-packages/aiomysql/cursors.py:239: Warning: 'INFORMATION_SCHEMA.PROCESSLIST' is deprecated and will be removed in a future release. Please use performance_schema.processlist instead
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9813166Z     await self._query(query)
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9813289Z 
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9813481Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+databases	Run pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml	2026-10-26T07:16:59.9813808Z 82 passed, 3 warnings in 10.45s

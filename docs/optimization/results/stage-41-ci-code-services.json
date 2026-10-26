@@ -1,0 +1,43 @@
+{
+  "test_count": 82,
+  "tests_by_service": {
+    "postgresql": 19,
+    "mysql": 63
+  },
+  "versions": {
+    "server_postgresql": "PostgreSQL 16.15 (Debian 16.15-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "server_mysql": "8.4.13"
+  },
+  "failures": 0,
+  "skipped": 0,
+  "buffer_observations": [
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[1-1000-mysql]",
+      "buffered_rows": "[2]",
+      "fixture_rows": "1000",
+      "max_rows": "1"
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[1-10000-mysql]",
+      "buffered_rows": "[2]",
+      "fixture_rows": "10000",
+      "max_rows": "1"
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[100-1000-mysql]",
+      "buffered_rows": "[101]",
+      "fixture_rows": "1000",
+      "max_rows": "100"
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[100-10000-mysql]",
+      "buffered_rows": "[101]",
+      "fixture_rows": "10000",
+      "max_rows": "100"
+    },
+    {
+      "name": "test_mysql_unbuffered_close_drains_remaining_rows[mysql]",
+      "packets_drained_on_unbuffered_close": "999"
+    }
+  ]
+}
