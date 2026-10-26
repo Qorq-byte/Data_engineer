@@ -68,7 +68,10 @@ def require_read_query(sql: str, dialect: str = "") -> None:
     explain = re.match(r"^\s*EXPLAIN\s+(?:QUERY\s+PLAN\s+)?(?=SELECT\b|WITH\b)", sql, re.I)
     parsed_sql = sql[explain.end() :] if explain else sql
     try:
-        statements = [s for s in sqlglot.parse(parsed_sql, read=dialect or None) if s is not None]
+        # sqlglot represents a comment after the final semicolon as a standalone
+        # Semicolon expression. It contains no executable statement.
+        statements = [s for s in sqlglot.parse(parsed_sql, read=dialect or None)
+                      if s is not None and not isinstance(s, exp.Semicolon)]
     except (sqlglot.errors.SqlglotError, ValueError) as exc:
         raise ValueError("SQL could not be parsed safely") from exc
     if len(statements) != 1 or not isinstance(statements[0], exp.Query):

@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 from app.config.settings import settings
 from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
+from app.db.mysql_query import bounded_mysql_query
 from app.db.sqlite_source import SchemaSourceChangedError, read_scope
 from app.models.query import PlanAnalysis
 from app.models.schema import DuckDBSourceState, SchemaSnapshot
@@ -383,11 +384,14 @@ class ExecuteSQLNode(AgenticNode):
     async def _execute_aiomysql(
         conn: aiomysql.Connection, sql: str, max_rows: int, *, explain: bool = False,
     ) -> ExecutionResult:
-        """Execute SQL on an aiomysql (MySQL) connection."""
+        """Execute a server-capped SELECT, or a separate EXPLAIN, on MySQL."""
+        is_explain = explain or bool(_re.match(r"^\s*EXPLAIN\s", sql, _re.I))
+        if not is_explain:
+            sql = bounded_mysql_query(sql, max_rows + 1)
         cursor = await conn.cursor()
         previous_notes: int | None = None
         try:
-            if explain or sql.lstrip().upper().startswith("EXPLAIN "):
+            if is_explain:
                 # MySQL EXPLAIN emits Note 1003 containing the rewritten SQL. Suppress
                 # notes only on this leased session, never change process-wide warnings.
                 await cursor.execute("SELECT @@SESSION.sql_notes")
@@ -417,7 +421,11 @@ class ExecuteSQLNode(AgenticNode):
                         conn.close()  # Never reuse a session whose settings were not restored.
                         raise
             finally:
-                await cursor.close()
+                try:
+                    await cursor.close()
+                except BaseException:
+                    conn.close()  # An incomplete close must never leave a reusable session.
+                    raise
 
     @staticmethod
     def _execute_generic(conn: CursorConnection, sql: str, max_rows: int) -> ExecutionResult:

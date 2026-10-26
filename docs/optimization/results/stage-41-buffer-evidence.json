@@ -1,0 +1,90 @@
+{
+  "driver": {
+    "aiomysql": "0.3.2",
+    "PyMySQL": "1.2.3",
+    "sqlglot": "30.18.0"
+  },
+  "observation": "len(real aiomysql.Cursor._rows) immediately after _do_get_result; same buffer as MySQLResult.rows",
+  "initial": [
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[1-1000-mysql]",
+      "source_result_rows": 1000,
+      "max_rows": 1,
+      "buffered_rows": [
+        1000
+      ],
+      "failed": true
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[1-10000-mysql]",
+      "source_result_rows": 10000,
+      "max_rows": 1,
+      "buffered_rows": [
+        10000
+      ],
+      "failed": true
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[100-1000-mysql]",
+      "source_result_rows": 1000,
+      "max_rows": 100,
+      "buffered_rows": [
+        1000
+      ],
+      "failed": true
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[100-10000-mysql]",
+      "source_result_rows": 10000,
+      "max_rows": 100,
+      "buffered_rows": [
+        10000
+      ],
+      "failed": true
+    }
+  ],
+  "accepted": [
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[1-1000-mysql]",
+      "source_result_rows": 1000,
+      "max_rows": 1,
+      "buffered_rows": [
+        2
+      ],
+      "failed": false
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[1-10000-mysql]",
+      "source_result_rows": 10000,
+      "max_rows": 1,
+      "buffered_rows": [
+        2
+      ],
+      "failed": false
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[100-1000-mysql]",
+      "source_result_rows": 1000,
+      "max_rows": 100,
+      "buffered_rows": [
+        101
+      ],
+      "failed": false
+    },
+    {
+      "name": "test_mysql_driver_buffer_is_bounded[100-10000-mysql]",
+      "source_result_rows": 10000,
+      "max_rows": 100,
+      "buffered_rows": [
+        101
+      ],
+      "failed": false
+    }
+  ],
+  "unbuffered_control": {
+    "source_result_rows": 1000,
+    "rows_requested": 2,
+    "packets_on_close": 999,
+    "passed": true
+  }
+}

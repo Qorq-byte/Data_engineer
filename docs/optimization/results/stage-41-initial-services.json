@@ -1,0 +1,37 @@
+{
+  "status": "failed",
+  "services": {
+    "postgresql": {
+      "image": "postgres:16",
+      "image_id": "sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97",
+      "container_id": "77b6b617152f590d00e7a79739b3c8b027987a8fc9be6bed60610a800a8b28a0",
+      "port": 56863
+    },
+    "mysql": {
+      "image": "mysql:8.4",
+      "image_id": "sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69",
+      "container_id": "b1476a46d8b3a99d6f0221f693b3ac232bc83995211ad9d3373624881d243e96",
+      "port": 56868
+    }
+  },
+  "cleanup": [
+    {
+      "container_id": "b1476a46d8b3a99d6f0221f693b3ac232bc83995211ad9d3373624881d243e96",
+      "removed": true
+    },
+    {
+      "container_id": "77b6b617152f590d00e7a79739b3c8b027987a8fc9be6bed60610a800a8b28a0",
+      "removed": true
+    }
+  ],
+  "scope": "Disposable synthetic databases; no business or model calls",
+  "pytest_exit_code": 1,
+  "server_versions": {
+    "server_mysql": "8.4.13"
+  },
+  "tests_by_service": {
+    "postgresql": 0,
+    "mysql": 0
+  },
+  "test_count": 15
+}

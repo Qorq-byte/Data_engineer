@@ -1,0 +1,223 @@
+...............................................FFFFFF................... [ 96%]
+...                                                                      [100%]
+================================== FAILURES ===================================
+_______ test_mysql_protocol_result_and_usage_contract[False-json-mysql] _______
+
+service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000002C002781BE0>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002C002781C40>
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and0')
+protocol = 'json', truncated = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+>       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError
+_______ test_mysql_protocol_result_and_usage_contract[False-sse-mysql] ________
+
+service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000002C002782D20>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002C0027832F0>
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and1')
+protocol = 'sse', truncated = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+>       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError
+_______ test_mysql_protocol_result_and_usage_contract[False-mcp-mysql] ________
+
+service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000002C002780170>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002C002781220>
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and2')
+protocol = 'mcp', truncated = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+>       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError
+_______ test_mysql_protocol_result_and_usage_contract[True-json-mysql] ________
+
+service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000002C004B66B40>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002C002782090>
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and3')
+protocol = 'json', truncated = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+>       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError
+________ test_mysql_protocol_result_and_usage_contract[True-sse-mysql] ________
+
+service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000002C004A3B500>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002C004A3B710>
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and4')
+protocol = 'sse', truncated = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+>       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError
+________ test_mysql_protocol_result_and_usage_contract[True-mcp-mysql] ________
+
+service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000002C004A79C10>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000002C004A79E80>
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and5')
+protocol = 'mcp', truncated = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+>       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError
+============================== warnings summary ===============================
+tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-False-cancel]
+tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-True-cancel]
+tests/real_db/test_acceptance.py::test_close_waits_for_real_inflight_query[mysql]
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\aiomysql\cursors.py:239: Warning: 'INFORMATION_SCHEMA.PROCESSLIST' is deprecated and will be removed in a future release. Please use performance_schema.processlist instead
+    await self._query(query)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED ..\..\..\..\tests\real_db\test_mysql_protocols.py::test_mysql_protocol_result_and_usage_contract[False-json-mysql]
+FAILED ..\..\..\..\tests\real_db\test_mysql_protocols.py::test_mysql_protocol_result_and_usage_contract[False-sse-mysql]
+FAILED ..\..\..\..\tests\real_db\test_mysql_protocols.py::test_mysql_protocol_result_and_usage_contract[False-mcp-mysql]
+FAILED ..\..\..\..\tests\real_db\test_mysql_protocols.py::test_mysql_protocol_result_and_usage_contract[True-json-mysql]
+FAILED ..\..\..\..\tests\real_db\test_mysql_protocols.py::test_mysql_protocol_result_and_usage_contract[True-sse-mysql]
+FAILED ..\..\..\..\tests\real_db\test_mysql_protocols.py::test_mysql_protocol_result_and_usage_contract[True-mcp-mysql]
+6 failed, 69 passed, 3 warnings in 22.57s
