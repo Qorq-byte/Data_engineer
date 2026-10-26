@@ -36,4 +36,6 @@
 
 仍待真实业务标注/语义质量、embedding、PG/MySQL实际集成、生产容量/大Schema/故障恢复、真实账单与复杂价格、178项类型债务。可信本机/独立进程限制、源文件换行和软件版本变化需新清单、强杀/取消不保证服务端撤销计费等边界保持。
 
-本阶段将普通提交推送并逐一核验代码与最终文档精确SHA CI，不自动合并main。
+代码[fcd2a2a](https://github.com/Qorq-byte/Data_engineer/commit/fcd2a2a4394d511be418089c2f8f1262ab38b0f8)已普通推送codex/versioned-sql-acceptance。[Actions40229369994](https://github.com/Qorq-byte/Data_engineer/actions/runs/40229369994)成功，headSha精确一致；[结构化证据](results/stage-39-ci.json)、[Linux摘要](results/stage-39-ci-tests.txt)。干净环境**4021通过、2警告，79.50秒**，本地平台跳过项在Linux执行通过；182前端/完整构建、Ruff、所有原门禁和新增模块/入口strict均通过。
+
+本次验收文档另行普通提交推送并核验最终精确SHA CI，不以代码CI替代最终文档提交验收。不自动合并main，原主工作区用户修改保留。
