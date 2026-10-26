@@ -1,0 +1,74 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+____ test_cancelled_reconnect_disposes_unpublished_connection[postgresql] _____
+
+service = Service(kind='postgresql', port=62766)
+connection = ('stage40-postgresql', <asyncpg.connection.Connection object at 0x00000216CAA0A650>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000216CA9D19D0>
+
+    async def test_cancelled_reconnect_disposes_unpublished_connection(service, connection, monkeypatch):
+        from app.db.runtime import lease
+
+        identity, old = connection
+        connected = asyncio.Event()
+        candidates = []
+        original = ConnectionFactory._connect
+
+        async def observed(kind, config):
+            candidate = await original(kind, config)
+            candidates.append(candidate)
+            connected.set()
+            return candidate
+
+        monkeypatch.setattr(ConnectionFactory, "_connect", staticmethod(observed))
+        async with lease(old):
+            task = asyncio.create_task(ConnectionFactory.create(
+                DatabaseType(service.kind), service.config(), identity))
+            try:
+                await asyncio.wait_for(connected.wait(), 3)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+                candidate = candidates[0]
+>               assert candidate.is_closed() if service.kind == "postgresql" else candidate.closed
+E               assert False
+
+tests\real_db\test_acceptance.py:216: AssertionError
+_______ test_cancelled_reconnect_disposes_unpublished_connection[mysql] _______
+
+service = Service(kind='mysql', port=55244)
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x00000216CAEDAF30>)
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000216CAA58830>
+
+    async def test_cancelled_reconnect_disposes_unpublished_connection(service, connection, monkeypatch):
+        from app.db.runtime import lease
+
+        identity, old = connection
+        connected = asyncio.Event()
+        candidates = []
+        original = ConnectionFactory._connect
+
+        async def observed(kind, config):
+            candidate = await original(kind, config)
+            candidates.append(candidate)
+            connected.set()
+            return candidate
+
+        monkeypatch.setattr(ConnectionFactory, "_connect", staticmethod(observed))
+        async with lease(old):
+            task = asyncio.create_task(ConnectionFactory.create(
+                DatabaseType(service.kind), service.config(), identity))
+            try:
+                await asyncio.wait_for(connected.wait(), 3)
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+                candidate = candidates[0]
+>               assert candidate.is_closed() if service.kind == "postgresql" else candidate.closed
+E               assert False
+
+tests\real_db\test_acceptance.py:216: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/real_db/test_acceptance.py::test_cancelled_reconnect_disposes_unpublished_connection[postgresql]
+FAILED tests/real_db/test_acceptance.py::test_cancelled_reconnect_disposes_unpublished_connection[mysql]
+2 failed, 28 deselected in 1.24s

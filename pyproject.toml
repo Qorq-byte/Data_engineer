@@ -88,3 +88,4 @@ mypy_path = "$MYPY_CONFIG_FILE_DIR/typings"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = ["real_database: explicit disposable PostgreSQL/MySQL integration services"]

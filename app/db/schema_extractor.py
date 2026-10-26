@@ -158,13 +158,14 @@ class SchemaExtractor:
                 # Get primary keys
                 pk_rows = await conn.fetch(
                     """
-                    SELECT kcu.column_name
-                    FROM information_schema.table_constraints tc
-                    JOIN information_schema.key_column_usage kcu
-                        ON tc.constraint_name = kcu.constraint_name
-                    WHERE tc.table_schema = 'public'
-                        AND tc.table_name = $1
-                        AND tc.constraint_type = 'PRIMARY KEY'
+                    SELECT a.attname AS column_name
+                    FROM pg_constraint con
+                    JOIN pg_class rel ON rel.oid = con.conrelid
+                    JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+                    JOIN LATERAL unnest(con.conkey) WITH ORDINALITY AS k(attnum, pos) ON true
+                    JOIN pg_attribute a ON a.attrelid = rel.oid AND a.attnum = k.attnum
+                    WHERE ns.nspname = 'public' AND rel.relname = $1 AND con.contype = 'p'
+                    ORDER BY k.pos
                 """,
                     table_name,
                 )
@@ -174,18 +175,21 @@ class SchemaExtractor:
                 fk_rows = await conn.fetch(
                     """
                     SELECT
-                        kcu.column_name,
-                        ccu.table_name AS ref_table,
-                        ccu.column_name AS ref_column,
-                        tc.constraint_name
-                    FROM information_schema.table_constraints tc
-                    JOIN information_schema.key_column_usage kcu
-                        ON tc.constraint_name = kcu.constraint_name
-                    JOIN information_schema.constraint_column_usage ccu
-                        ON tc.constraint_name = ccu.constraint_name
-                    WHERE tc.table_schema = 'public'
-                        AND tc.table_name = $1
-                        AND tc.constraint_type = 'FOREIGN KEY'
+                        a.attname AS column_name,
+                        ref.relname AS ref_table,
+                        ra.attname AS ref_column,
+                        con.conname AS constraint_name
+                    FROM pg_constraint con
+                    JOIN pg_class rel ON rel.oid = con.conrelid
+                    JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+                    JOIN pg_class ref ON ref.oid = con.confrelid
+                    JOIN LATERAL generate_subscripts(con.conkey, 1) AS k(pos) ON true
+                    JOIN pg_attribute a
+                        ON a.attrelid = rel.oid AND a.attnum = con.conkey[k.pos]
+                    JOIN pg_attribute ra
+                        ON ra.attrelid = ref.oid AND ra.attnum = con.confkey[k.pos]
+                    WHERE ns.nspname = 'public' AND rel.relname = $1 AND con.contype = 'f'
+                    ORDER BY con.conname, k.pos
                 """,
                     table_name,
                 )

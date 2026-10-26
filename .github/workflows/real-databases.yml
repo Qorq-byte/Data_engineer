@@ -1,0 +1,54 @@
+name: Real database acceptance
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  databases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: stage40_admin
+          POSTGRES_PASSWORD: stage40-disposable-admin
+          POSTGRES_DB: de_stage40_fixture
+        ports:
+          - 5432/tcp
+        options: >-
+          --memory 768m --cpus 1
+          --health-cmd "pg_isready -h 127.0.0.1 -U stage40_admin -d de_stage40_fixture"
+          --health-interval 5s --health-timeout 3s --health-retries 30
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: stage40-disposable-admin
+          MYSQL_DATABASE: de_stage40_fixture
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306/tcp
+        options: >-
+          --memory 1024m --cpus 1
+          --health-cmd "mysqladmin ping --silent --protocol=tcp -h127.0.0.1 -uroot -pstage40-disposable-admin"
+          --health-interval 5s --health-timeout 3s --health-retries 30
+    env:
+      DE_REAL_DB_TESTS: '1'
+      DE_REAL_PG_PORT: ${{ job.services.postgres.ports[5432] }}
+      DE_REAL_MYSQL_PORT: ${{ job.services.mysql.ports[3306] }}
+      LLM_MOCK_MODE: '1'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+      RAG_EMBEDDING_PROVIDER: mock
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e '.[dev]'
+      - run: pytest tests/real_db -q --strict-markers --junitxml=data/real-databases.junit.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-database-results
+          path: data/real-databases.junit.xml
+          if-no-files-found: error

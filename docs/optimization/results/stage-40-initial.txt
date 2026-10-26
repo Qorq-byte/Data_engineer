@@ -1,0 +1,81 @@
+FFF..F                                                                   [100%]
+================================== FAILURES ===================================
+_______________ test_real_schema_keys_and_namespace[postgresql] _______________
+
+service = Service(kind='postgresql', port=59412)
+connection = ('stage40-postgresql', <asyncpg.connection.Connection object at 0x000001A8532DA650>)
+
+    async def test_real_schema_keys_and_namespace(service, connection):
+        identity, conn = connection
+        schema = await SchemaExtractor.extract(conn, DatabaseType(service.kind), "fixture-alias")
+        assert set(schema.table_names) == {"stage40_marker", "users", "orders"}
+        users, orders = schema.get_table("users"), schema.get_table("orders")
+>       assert users.primary_keys == ["id"]
+E       AssertionError: assert [] == ['id']
+E
+E         Right contains one more item: 'id'
+E         Use -v to get more diff
+
+tests\real_db\test_acceptance.py:29: AssertionError
+_________________ test_empty_result_keeps_columns[postgresql] _________________
+
+connection = ('stage40-postgresql', <asyncpg.connection.Connection object at 0x000001A853464050>)
+
+    async def test_empty_result_keeps_columns(connection):
+        identity, conn = connection
+        output = await ExecuteSQLNode().execute(query(identity, conn, "SELECT id,name FROM users WHERE 1=0"))
+        assert output.metadata["status"] == "success"
+>       assert output.result == {"columns": ["id", "name"], "rows": [], "row_count": 0,
+                                 "truncated": False}
+E       AssertionError: assert {'columns': [...cated': False} == {'columns': [...cated': False}
+E
+E         Omitting 3 identical items, use -vv to show
+E         Differing items:
+E         {'columns': []} != {'columns': ['id', 'name']}
+E         Use -v to get more diff
+
+tests\real_db\test_acceptance.py:43: AssertionError
+_________ test_explain_uses_async_driver_and_returns_plan[postgresql] _________
+
+connection = ('stage40-postgresql', <asyncpg.connection.Connection object at 0x000001A853465250>)
+
+    async def test_explain_uses_async_driver_and_returns_plan(connection):
+        identity, conn = connection
+        plans = []
+
+        class ObservedNode(ExecuteSQLNode):
+            def _parse_explain_output(self, result, existing=None):
+                plans.append(result)
+                return super()._parse_explain_output(result, existing)
+
+        output = await ObservedNode().execute(query(identity, conn, "SELECT id FROM orders", explain=True))
+        assert output.metadata["status"] == "success"
+>       assert plans[0]["row_count"] > 0 and plans[0]["columns"]
+E       assert (0 > 0)
+
+tests\real_db\test_acceptance.py:95: AssertionError
+___________ test_explain_uses_async_driver_and_returns_plan[mysql] ____________
+
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000001A85340EB40>)
+
+    async def test_explain_uses_async_driver_and_returns_plan(connection):
+        identity, conn = connection
+        plans = []
+
+        class ObservedNode(ExecuteSQLNode):
+            def _parse_explain_output(self, result, existing=None):
+                plans.append(result)
+                return super()._parse_explain_output(result, existing)
+
+        output = await ObservedNode().execute(query(identity, conn, "SELECT id FROM orders", explain=True))
+        assert output.metadata["status"] == "success"
+>       assert plans[0]["row_count"] > 0 and plans[0]["columns"]
+E       assert (0 > 0)
+
+tests\real_db\test_acceptance.py:95: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/real_db/test_acceptance.py::test_real_schema_keys_and_namespace[postgresql]
+FAILED tests/real_db/test_acceptance.py::test_empty_result_keeps_columns[postgresql]
+FAILED tests/real_db/test_acceptance.py::test_explain_uses_async_driver_and_returns_plan[postgresql]
+FAILED tests/real_db/test_acceptance.py::test_explain_uses_async_driver_and_returns_plan[mysql]
+4 failed, 2 passed, 20 deselected in 1.69s

@@ -660,3 +660,5 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段38新增 `python -m scripts.run_model_evaluation`：默认显式prepare生成无凭据清单，execute须匹配SHA并使用新运行目录；固定4题公开合成SQLite、每题1次、禁重试/fallback，走正式Harness及v2候选审计绑定。费用未知不补0，结果只表示合成冒烟；用法与边界见[受控模型验收](docs/optimization/controlled-model-evaluation.md)。
 
 阶段39新增独立的合成SQL输出契约v2：4个明确问题、base/edge/empty三组SQLite、手写标签与gold交叉自检；同一预测在三库检查列名/列序、结果及最外层排序，完整4题分母。离线入口 `python -m scripts.evaluate_sql_contracts`；受控模型准备可显式 `--profile synthetic-sqlite-model-v2`，仍最多4次调用，费用未知。旧v1及历史分数保持，两个版本不能直接比较。详见[SQL输出契约](docs/optimization/sql-output-contracts.md)。
+
+阶段40增加真实PostgreSQL16/MySQL8.4验收：`python -m scripts.run_real_db_tests` 使用专用受限临时容器、只读账号和真实驱动，finally核对所有权后清理；普通离线命令 `pytest -m "not real_database"`，独立真实服务CI必须同时通过。修复PG只读角色约束/空结果列、异步EXPLAIN和取消重连候选清理，不调用真实LLM。准备镜像、实测边界见[真实数据库验收](docs/optimization/real-database-acceptance.md)。
