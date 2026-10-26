@@ -1,0 +1,32 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+__________ test_retrieval_labels_must_exist_and_match_scope[unknown] __________
+
+defect = 'unknown'
+
+    @pytest.mark.parametrize("defect", ["unknown", "cross_domain"])
+    def test_retrieval_labels_must_exist_and_match_scope(defect):
+        data = copy.deepcopy(read_json(Path("tests/fixtures/retrieval_eval.json")))
+        data["queries"][0]["relevant"] = ["missing" if defect == "unknown" else "payroll"]
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_evaluation\test_acceptance_v3.py:16: Failed
+_______ test_retrieval_labels_must_exist_and_match_scope[cross_domain] ________
+
+defect = 'cross_domain'
+
+    @pytest.mark.parametrize("defect", ["unknown", "cross_domain"])
+    def test_retrieval_labels_must_exist_and_match_scope(defect):
+        data = copy.deepcopy(read_json(Path("tests/fixtures/retrieval_eval.json")))
+        data["queries"][0]["relevant"] = ["missing" if defect == "unknown" else "payroll"]
+>       with pytest.raises(ValueError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests\test_evaluation\test_acceptance_v3.py:16: Failed
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_acceptance_v3.py::test_retrieval_labels_must_exist_and_match_scope[unknown]
+FAILED tests/test_evaluation/test_acceptance_v3.py::test_retrieval_labels_must_exist_and_match_scope[cross_domain]
+2 failed in 2.91s

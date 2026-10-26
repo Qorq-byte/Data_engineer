@@ -1,0 +1,1 @@
+-- Empty users/products/orders; scalar aggregates explicitly use zero.

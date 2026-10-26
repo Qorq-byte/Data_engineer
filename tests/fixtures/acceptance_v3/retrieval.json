@@ -1,0 +1,1063 @@
+{
+  "version": "synthetic-retrieval-v3",
+  "scope": "Manual synthetic qrels with public dev/holdout; lexical baseline is not semantic or business quality",
+  "documents": [
+    {
+      "id": "a.orders",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "订单 orders 表包含 id user_id product_id amount refund_amount status created_at。amount 原始订单金额，匿名订单 user_id 为NULL。"
+    },
+    {
+      "id": "a.status",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "订单状态 status。已完成精确为 completed，pending待处理，cancelled已取消。completed订单笔数包含匿名订单。"
+    },
+    {
+      "id": "a.join",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "关联规则：订单 orders.user_id 对应用户 users.id，orders.product_id 对应 products.id。INNER JOIN排除匿名用户，LEFT JOIN保留零订单用户。"
+    },
+    {
+      "id": "a.anonymous",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "匿名订单 user_id IS NULL。不属于任何已知用户，但计入全部订单与收入。NOT IN子查询包含NULL会丢失无订单用户，使用NOT EXISTS。"
+    },
+    {
+      "id": "a.time",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "订单 created_at 为UTC文本时间。2026年1月范围从2026-01-01 00:00:00含起点，到2026-02-01 00:00:00不含终点。"
+    },
+    {
+      "id": "a.refunds",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "退款 refund_amount 为每笔订单退款金额，可能全额退款。净额需要amount减refund_amount，不能把全退订单移除后统计笔数。"
+    },
+    {
+      "id": "a.net",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "净收入 net revenue：仅completed订单，求SUM(amount-refund_amount)，空集合返回0，匿名订单也计入。"
+    },
+    {
+      "id": "a.gross",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "销售总额 gross revenue：仅completed订单SUM(amount)，不扣退款 refund_amount。空集合返回0。"
+    },
+    {
+      "id": "a.count",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "订单数量 order_count：统计订单ID，用户LEFT JOIN订单时COUNT(o.id)保留零订单用户；COUNT(*)会误计占位行。"
+    },
+    {
+      "id": "a.ties",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "text": "订单金额排行榜 top orders：amount降序，金额并列时id升序，LIMIT只取确定的前N笔，不能按id降序处理并列。"
+    },
+    {
+      "id": "a.users",
+      "db_id": "shop_a",
+      "domain": "customers",
+      "text": "用户 users：id唯一，name可重复，tier为gold/silver/bronze会员等级。姓名不是用户身份键。"
+    },
+    {
+      "id": "a.email",
+      "db_id": "shop_a",
+      "domain": "customers",
+      "text": "用户邮箱 email 可以为NULL，已提供邮箱使用IS NOT NULL，不能使用<>NULL。"
+    },
+    {
+      "id": "a.names",
+      "db_id": "shop_a",
+      "domain": "customers",
+      "text": "同名用户 duplicate names：Alpha与Zulu各可对应多个id。按name聚合用户数量，按id区分身份。"
+    },
+    {
+      "id": "a.products",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "text": "商品 products 定义：id name category price stock。price为商品单价，订单amount与商品单价不是同一字段。"
+    },
+    {
+      "id": "a.category",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "text": "商品分类 category：小写unknown精确匹配，不等于Unknown、unknownish或NULL。NULL分类独立分组。"
+    },
+    {
+      "id": "a.stock",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "text": "缺货商品库存 stock=0，stock=1是有货。库存与销量不是同一指标。"
+    },
+    {
+      "id": "a.price",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "text": "商品价格 price：严格大于7用>7，不包含恰好7；该字段是商品单价而非订单实收amount。"
+    },
+    {
+      "id": "a.ledger",
+      "db_id": "shop_a",
+      "domain": "finance",
+      "text": "财务退款台账 refund ledger 使用会计入账月份，不等于sales订单UTC created_at月份；不在销售领域自动采用会计规则。"
+    },
+    {
+      "id": "b.orders",
+      "db_id": "shop_b",
+      "domain": "sales",
+      "text": "订单 orders amount sales revenue 订单 orders amount sales revenue。shop_b订单编号与金额为另一个数据库，不能检索为shop_a证据。"
+    },
+    {
+      "id": "b.refunds",
+      "db_id": "shop_b",
+      "domain": "sales",
+      "text": "shop_b refund_amount 退款 net revenue。仅描述shop_b退款口径，不能回答shop_a规则。"
+    },
+    {
+      "id": "b.users",
+      "db_id": "shop_b",
+      "domain": "customers",
+      "text": "shop_b customers users email tier 用户会员，另一数据库的用户资料。"
+    },
+    {
+      "id": "hr.payroll",
+      "db_id": "hr_a",
+      "domain": "hr",
+      "text": "工资 salary employee 员工薪酬 payroll，工资不属于订单销售额。"
+    },
+    {
+      "id": "platform.trace",
+      "db_id": "platform_a",
+      "domain": "platform",
+      "text": "工作流 trace 追踪，固定节点耗时与取消状态审计，不是业务订单数据。"
+    }
+  ],
+  "queries": [
+    {
+      "id": "retrieval01",
+      "query": "orders amount 原始订单字段定义",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "schema",
+        "db_filter"
+      ],
+      "relevant": [
+        "a.orders"
+      ],
+      "relevant_reasons": {
+        "a.orders": "orders文档列出原始amount字段；净收入口径不是字段定义。"
+      },
+      "hard_negatives": [
+        "a.net",
+        "b.orders",
+        "a.ledger"
+      ],
+      "negative_reasons": {
+        "a.net": "同范围但不提供题目所需事实：净收入 net revenue：仅completed订单，求SUM(amount-refund_amount)，空集合返回0，匿名订单也计入。",
+        "b.orders": "过滤范围不符：shop_b/sales",
+        "a.ledger": "过滤范围不符：shop_a/finance"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.net"
+      ]
+    },
+    {
+      "id": "retrieval02",
+      "query": "completed pending cancelled status 精确状态",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "status",
+        "db_filter"
+      ],
+      "relevant": [
+        "a.status"
+      ],
+      "relevant_reasons": {
+        "a.status": "status文档给出三个状态的精确枚举。"
+      },
+      "hard_negatives": [
+        "a.refunds",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.refunds": "同范围但不提供题目所需事实：退款 refund_amount 为每笔订单退款金额，可能全额退款。净额需要amount减refund_amount，不能把全退订单移除后统计笔数。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.refunds"
+      ]
+    },
+    {
+      "id": "retrieval03",
+      "query": "orders user_id users id 关联键",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "holdout",
+      "tags": [
+        "join",
+        "domain_filter"
+      ],
+      "relevant": [
+        "a.join"
+      ],
+      "relevant_reasons": {
+        "a.join": "join文档直接给出用户关联键及连接语义。"
+      },
+      "hard_negatives": [
+        "a.gross",
+        "a.users"
+      ],
+      "negative_reasons": {
+        "a.gross": "同范围但不提供题目所需事实：销售总额 gross revenue：仅completed订单SUM(amount)，不扣退款 refund_amount。空集合返回0。",
+        "a.users": "过滤范围不符：shop_a/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.gross"
+      ]
+    },
+    {
+      "id": "retrieval04",
+      "query": "匿名订单 NULL NOT IN NOT EXISTS",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "null",
+        "negation"
+      ],
+      "relevant": [
+        "a.anonymous"
+      ],
+      "relevant_reasons": {
+        "a.anonymous": "anonymous文档描述NULL用户与NOT IN陷阱。"
+      },
+      "hard_negatives": [
+        "a.ties",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.ties": "同范围但不提供题目所需事实：订单金额排行榜 top orders：amount降序，金额并列时id升序，LIMIT只取确定的前N笔，不能按id降序处理并列。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.ties"
+      ]
+    },
+    {
+      "id": "retrieval05",
+      "query": "created_at 2026年1月 UTC 时间范围",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "time",
+        "boundary",
+        "domain_filter"
+      ],
+      "relevant": [
+        "a.time"
+      ],
+      "relevant_reasons": {
+        "a.time": "time文档定义UTC和月末半开区间。"
+      },
+      "hard_negatives": [
+        "a.gross",
+        "a.ledger"
+      ],
+      "negative_reasons": {
+        "a.gross": "同范围但不提供题目所需事实：销售总额 gross revenue：仅completed订单SUM(amount)，不扣退款 refund_amount。空集合返回0。",
+        "a.ledger": "过滤范围不符：shop_a/finance"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.gross"
+      ]
+    },
+    {
+      "id": "retrieval06",
+      "query": "refund_amount 全额退款 含义",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "holdout",
+      "tags": [
+        "refund",
+        "db_filter"
+      ],
+      "relevant": [
+        "a.refunds"
+      ],
+      "relevant_reasons": {
+        "a.refunds": "refunds文档定义退款与全额退款，不是未扣退款gross。"
+      },
+      "hard_negatives": [
+        "a.gross",
+        "b.refunds"
+      ],
+      "negative_reasons": {
+        "a.gross": "同范围但不提供题目所需事实：销售总额 gross revenue：仅completed订单SUM(amount)，不扣退款 refund_amount。空集合返回0。",
+        "b.refunds": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.gross"
+      ]
+    },
+    {
+      "id": "retrieval07",
+      "query": "净收入 net revenue 扣退款 计算依据",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "multi_relevant",
+        "refund"
+      ],
+      "relevant": [
+        "a.net",
+        "a.refunds"
+      ],
+      "relevant_reasons": {
+        "a.net": "net给出净额公式；refunds定义被减去的退款字段，两者提供计算依据。",
+        "a.refunds": "net给出净额公式；refunds定义被减去的退款字段，两者提供计算依据。"
+      },
+      "hard_negatives": [
+        "a.gross",
+        "a.ledger"
+      ],
+      "negative_reasons": {
+        "a.gross": "同范围但不提供题目所需事实：销售总额 gross revenue：仅completed订单SUM(amount)，不扣退款 refund_amount。空集合返回0。",
+        "a.ledger": "过滤范围不符：shop_a/finance"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.gross"
+      ]
+    },
+    {
+      "id": "retrieval08",
+      "query": "gross revenue 不扣退款 和原始amount字段",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "multi_relevant",
+        "aggregate"
+      ],
+      "relevant": [
+        "a.gross",
+        "a.orders"
+      ],
+      "relevant_reasons": {
+        "a.gross": "gross定义不扣退款口径，orders提供原始amount定义。",
+        "a.orders": "gross定义不扣退款口径，orders提供原始amount定义。"
+      },
+      "hard_negatives": [
+        "a.net",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.net": "同范围但不提供题目所需事实：净收入 net revenue：仅completed订单，求SUM(amount-refund_amount)，空集合返回0，匿名订单也计入。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.net"
+      ]
+    },
+    {
+      "id": "retrieval09",
+      "query": "completed 订单数 COUNT 规则",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "holdout",
+      "tags": [
+        "multi_relevant",
+        "zero"
+      ],
+      "relevant": [
+        "a.count",
+        "a.status"
+      ],
+      "relevant_reasons": {
+        "a.count": "count定义COUNT(o.id)，status定义completed筛选及匿名计数。",
+        "a.status": "count定义COUNT(o.id)，status定义completed筛选及匿名计数。"
+      },
+      "hard_negatives": [
+        "a.ties",
+        "a.users"
+      ],
+      "negative_reasons": {
+        "a.ties": "同范围但不提供题目所需事实：订单金额排行榜 top orders：amount降序，金额并列时id升序，LIMIT只取确定的前N笔，不能按id降序处理并列。",
+        "a.users": "过滤范围不符：shop_a/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.ties"
+      ]
+    },
+    {
+      "id": "retrieval10",
+      "query": "top orders 金额并列 id 排序",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "ordering",
+        "tie"
+      ],
+      "relevant": [
+        "a.ties"
+      ],
+      "relevant_reasons": {
+        "a.ties": "ties文档明确amount降序且id升序。"
+      },
+      "hard_negatives": [
+        "a.count",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.count": "同范围但不提供题目所需事实：订单数量 order_count：统计订单ID，用户LEFT JOIN订单时COUNT(o.id)保留零订单用户；COUNT(*)会误计占位行。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.count"
+      ]
+    },
+    {
+      "id": "retrieval11",
+      "query": "用户 gold silver bronze tier",
+      "db_id": "shop_a",
+      "domain": "customers",
+      "split": "dev",
+      "tags": [
+        "customer",
+        "db_filter"
+      ],
+      "relevant": [
+        "a.users"
+      ],
+      "relevant_reasons": {
+        "a.users": "users给出会员等级枚举，email不描述等级。"
+      },
+      "hard_negatives": [
+        "a.email",
+        "b.users"
+      ],
+      "negative_reasons": {
+        "a.email": "同范围但不提供题目所需事实：用户邮箱 email 可以为NULL，已提供邮箱使用IS NOT NULL，不能使用<>NULL。",
+        "b.users": "过滤范围不符：shop_b/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.email"
+      ]
+    },
+    {
+      "id": "retrieval12",
+      "query": "用户 email NULL 已提供邮箱",
+      "db_id": "shop_a",
+      "domain": "customers",
+      "split": "holdout",
+      "tags": [
+        "null",
+        "customer"
+      ],
+      "relevant": [
+        "a.email"
+      ],
+      "relevant_reasons": {
+        "a.email": "email文档直接定义NULL与IS NOT NULL。"
+      },
+      "hard_negatives": [
+        "a.names",
+        "b.users"
+      ],
+      "negative_reasons": {
+        "a.names": "同范围但不提供题目所需事实：同名用户 duplicate names：Alpha与Zulu各可对应多个id。按name聚合用户数量，按id区分身份。",
+        "b.users": "过滤范围不符：shop_b/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.names"
+      ]
+    },
+    {
+      "id": "retrieval13",
+      "query": "Alpha Zulu 同名用户 name 聚合",
+      "db_id": "shop_a",
+      "domain": "customers",
+      "split": "dev",
+      "tags": [
+        "same_name",
+        "customer"
+      ],
+      "relevant": [
+        "a.names"
+      ],
+      "relevant_reasons": {
+        "a.names": "names文档定义Alpha/Zulu的同名聚合，邮箱不是姓名事实。"
+      },
+      "hard_negatives": [
+        "a.email",
+        "b.users"
+      ],
+      "negative_reasons": {
+        "a.email": "同范围但不提供题目所需事实：用户邮箱 email 可以为NULL，已提供邮箱使用IS NOT NULL，不能使用<>NULL。",
+        "b.users": "过滤范围不符：shop_b/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.email"
+      ]
+    },
+    {
+      "id": "retrieval14",
+      "query": "products price stock 商品字段定义",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "split": "dev",
+      "tags": [
+        "schema",
+        "db_filter"
+      ],
+      "relevant": [
+        "a.products"
+      ],
+      "relevant_reasons": {
+        "a.products": "products给出商品字段结构，category只说明分类匹配。"
+      },
+      "hard_negatives": [
+        "a.category",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.category": "同范围但不提供题目所需事实：商品分类 category：小写unknown精确匹配，不等于Unknown、unknownish或NULL。NULL分类独立分组。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.category"
+      ]
+    },
+    {
+      "id": "retrieval15",
+      "query": "unknown Unknown unknownish category 精确匹配",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "split": "holdout",
+      "tags": [
+        "exact_case",
+        "domain_filter"
+      ],
+      "relevant": [
+        "a.category"
+      ],
+      "relevant_reasons": {
+        "a.category": "category文档区分大小写、近似字符串和NULL。"
+      },
+      "hard_negatives": [
+        "a.stock",
+        "a.users"
+      ],
+      "negative_reasons": {
+        "a.stock": "同范围但不提供题目所需事实：缺货商品库存 stock=0，stock=1是有货。库存与销量不是同一指标。",
+        "a.users": "过滤范围不符：shop_a/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.stock"
+      ]
+    },
+    {
+      "id": "retrieval16",
+      "query": "缺货 库存 stock 零",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "split": "dev",
+      "tags": [
+        "zero",
+        "filter"
+      ],
+      "relevant": [
+        "a.stock"
+      ],
+      "relevant_reasons": {
+        "a.stock": "stock直接说明0与1的业务边界。"
+      },
+      "hard_negatives": [
+        "a.price",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.price": "同范围但不提供题目所需事实：商品价格 price：严格大于7用>7，不包含恰好7；该字段是商品单价而非订单实收amount。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.price"
+      ]
+    },
+    {
+      "id": "retrieval17",
+      "query": "price 严格大于7 商品价格",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "split": "dev",
+      "tags": [
+        "boundary",
+        "domain_filter"
+      ],
+      "relevant": [
+        "a.price"
+      ],
+      "relevant_reasons": {
+        "a.price": "price文档给出严格阈值和价格字段含义。"
+      },
+      "hard_negatives": [
+        "a.stock",
+        "a.gross"
+      ],
+      "negative_reasons": {
+        "a.stock": "同范围但不提供题目所需事实：缺货商品库存 stock=0，stock=1是有货。库存与销量不是同一指标。",
+        "a.gross": "过滤范围不符：shop_a/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.stock"
+      ]
+    },
+    {
+      "id": "retrieval18",
+      "query": "财务退款台账 refund ledger 入账月份",
+      "db_id": "shop_a",
+      "domain": "finance",
+      "split": "holdout",
+      "tags": [
+        "finance",
+        "domain_filter"
+      ],
+      "relevant": [
+        "a.ledger"
+      ],
+      "relevant_reasons": {
+        "a.ledger": "ledger是财务领域唯一描述会计入账月份的文档。"
+      },
+      "hard_negatives": [
+        "a.refunds",
+        "b.refunds"
+      ],
+      "negative_reasons": {
+        "a.refunds": "过滤范围不符：shop_a/sales",
+        "b.refunds": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.refunds"
+      ]
+    },
+    {
+      "id": "retrieval19",
+      "query": "orders amount sales revenue",
+      "db_id": "shop_b",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "db_filter",
+        "same_name"
+      ],
+      "relevant": [
+        "b.orders"
+      ],
+      "relevant_reasons": {
+        "b.orders": "相同orders字段名必须选shop_b文档，a.orders来自别的库。"
+      },
+      "hard_negatives": [
+        "b.refunds",
+        "a.orders"
+      ],
+      "negative_reasons": {
+        "b.refunds": "同范围但不提供题目所需事实：shop_b refund_amount 退款 net revenue。仅描述shop_b退款口径，不能回答shop_a规则。",
+        "a.orders": "过滤范围不符：shop_a/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "b.refunds"
+      ]
+    },
+    {
+      "id": "retrieval20",
+      "query": "refund_amount net revenue 退款",
+      "db_id": "shop_b",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "db_filter",
+        "refund"
+      ],
+      "relevant": [
+        "b.refunds"
+      ],
+      "relevant_reasons": {
+        "b.refunds": "shop_b退款口径仅由b.refunds给出。"
+      },
+      "hard_negatives": [
+        "b.orders",
+        "a.refunds"
+      ],
+      "negative_reasons": {
+        "b.orders": "同范围但不提供题目所需事实：订单 orders amount sales revenue 订单 orders amount sales revenue。shop_b订单编号与金额为另一个数据库，不能检索为shop_a证据。",
+        "a.refunds": "过滤范围不符：shop_a/sales"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "b.orders"
+      ]
+    },
+    {
+      "id": "retrieval21",
+      "query": "customers email tier 用户资料",
+      "db_id": "shop_b",
+      "domain": "customers",
+      "split": "holdout",
+      "tags": [
+        "db_filter",
+        "customer"
+      ],
+      "relevant": [
+        "b.users"
+      ],
+      "relevant_reasons": {
+        "b.users": "题目限定shop_b，不能采用shop_a同名用户字段。"
+      },
+      "hard_negatives": [
+        "a.users",
+        "a.email"
+      ],
+      "negative_reasons": {
+        "a.users": "过滤范围不符：shop_a/customers",
+        "a.email": "过滤范围不符：shop_a/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.users"
+      ]
+    },
+    {
+      "id": "retrieval22",
+      "query": "salary employee payroll 工资",
+      "db_id": "hr_a",
+      "domain": "hr",
+      "split": "dev",
+      "tags": [
+        "domain_filter",
+        "hr"
+      ],
+      "relevant": [
+        "hr.payroll"
+      ],
+      "relevant_reasons": {
+        "hr.payroll": "hr.payroll是员工工资事实，销售额不是工资。"
+      },
+      "hard_negatives": [
+        "a.gross",
+        "platform.trace"
+      ],
+      "negative_reasons": {
+        "a.gross": "过滤范围不符：shop_a/sales",
+        "platform.trace": "过滤范围不符：platform_a/platform"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.gross"
+      ]
+    },
+    {
+      "id": "retrieval23",
+      "query": "工作流 trace 节点 耗时",
+      "db_id": "platform_a",
+      "domain": "platform",
+      "split": "dev",
+      "tags": [
+        "platform",
+        "domain_filter"
+      ],
+      "relevant": [
+        "platform.trace"
+      ],
+      "relevant_reasons": {
+        "platform.trace": "trace文档定义固定工作流的耗时与取消状态。"
+      },
+      "hard_negatives": [
+        "a.orders",
+        "hr.payroll"
+      ],
+      "negative_reasons": {
+        "a.orders": "过滤范围不符：shop_a/sales",
+        "hr.payroll": "过滤范围不符：hr_a/hr"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.orders"
+      ]
+    },
+    {
+      "id": "retrieval24",
+      "query": "订单表字段身份 和 用户连接规则",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "holdout",
+      "tags": [
+        "multi_relevant",
+        "join"
+      ],
+      "relevant": [
+        "a.orders",
+        "a.join"
+      ],
+      "relevant_reasons": {
+        "a.orders": "orders提供表字段，join提供用户关联规则，customer领域文档不在范围内。",
+        "a.join": "orders提供表字段，join提供用户关联规则，customer领域文档不在范围内。"
+      },
+      "hard_negatives": [
+        "a.ties",
+        "a.users"
+      ],
+      "negative_reasons": {
+        "a.ties": "同范围但不提供题目所需事实：订单金额排行榜 top orders：amount降序，金额并列时id升序，LIMIT只取确定的前N笔，不能按id降序处理并列。",
+        "a.users": "过滤范围不符：shop_a/customers"
+      },
+      "answerable": true,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "",
+      "bad_ranking": [
+        "a.ties"
+      ]
+    },
+    {
+      "id": "retrieval25",
+      "query": "salary employee 工资",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "no_answer",
+        "domain_filter"
+      ],
+      "relevant": [],
+      "relevant_reasons": {},
+      "hard_negatives": [
+        "hr.payroll",
+        "a.orders"
+      ],
+      "negative_reasons": {
+        "hr.payroll": "过滤范围不符：hr_a/hr",
+        "a.orders": "同范围但不提供题目所需事实：订单 orders 表包含 id user_id product_id amount refund_amount status created_at。amount 原始订单金额，匿名订单 user_id 为NULL。"
+      },
+      "answerable": false,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "sales范围无员工工资事实；hr命中不应跨域返回。",
+      "bad_ranking": [
+        "hr.payroll"
+      ]
+    },
+    {
+      "id": "retrieval26",
+      "query": "refund ledger 财务入账",
+      "db_id": "shop_a",
+      "domain": "catalog",
+      "split": "dev",
+      "tags": [
+        "no_answer",
+        "domain_filter"
+      ],
+      "relevant": [],
+      "relevant_reasons": {},
+      "hard_negatives": [
+        "a.ledger",
+        "a.stock"
+      ],
+      "negative_reasons": {
+        "a.ledger": "过滤范围不符：shop_a/finance",
+        "a.stock": "同范围但不提供题目所需事实：缺货商品库存 stock=0，stock=1是有货。库存与销量不是同一指标。"
+      },
+      "answerable": false,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "catalog没有财务台账，必须返回无答案。",
+      "bad_ranking": [
+        "a.ledger"
+      ]
+    },
+    {
+      "id": "retrieval27",
+      "query": "库存 warehouse stock",
+      "db_id": "shop_b",
+      "domain": "catalog",
+      "split": "holdout",
+      "tags": [
+        "no_answer",
+        "db_filter"
+      ],
+      "relevant": [],
+      "relevant_reasons": {},
+      "hard_negatives": [
+        "a.stock",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.stock": "过滤范围不符：shop_a/catalog",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": false,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "shop_b/catalog在该冻结语料无文档，不能使用shop_a库存。",
+      "bad_ranking": [
+        "a.stock"
+      ]
+    },
+    {
+      "id": "retrieval28",
+      "query": "customers email 用户资料",
+      "db_id": "shop_b",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "no_answer",
+        "domain_filter"
+      ],
+      "relevant": [],
+      "relevant_reasons": {},
+      "hard_negatives": [
+        "b.users",
+        "a.email"
+      ],
+      "negative_reasons": {
+        "b.users": "过滤范围不符：shop_b/customers",
+        "a.email": "过滤范围不符：shop_a/customers"
+      },
+      "answerable": false,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "用户资料仅在customers领域；sales不能跨域召回。",
+      "bad_ranking": [
+        "b.users"
+      ]
+    },
+    {
+      "id": "retrieval29",
+      "query": "运单物流 shipment tracking",
+      "db_id": "shop_a",
+      "domain": "sales",
+      "split": "dev",
+      "tags": [
+        "no_answer",
+        "missing_topic"
+      ],
+      "relevant": [],
+      "relevant_reasons": {},
+      "hard_negatives": [
+        "a.orders",
+        "b.orders"
+      ],
+      "negative_reasons": {
+        "a.orders": "同范围但不提供题目所需事实：订单 orders 表包含 id user_id product_id amount refund_amount status created_at。amount 原始订单金额，匿名订单 user_id 为NULL。",
+        "b.orders": "过滤范围不符：shop_b/sales"
+      },
+      "answerable": false,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "语料没有物流追踪定义，订单字段文档不构成答案。",
+      "bad_ranking": [
+        "a.orders"
+      ]
+    },
+    {
+      "id": "retrieval30",
+      "query": "工资 salary",
+      "db_id": "hr_a",
+      "domain": "finance",
+      "split": "holdout",
+      "tags": [
+        "no_answer",
+        "domain_filter"
+      ],
+      "relevant": [],
+      "relevant_reasons": {},
+      "hard_negatives": [
+        "hr.payroll",
+        "a.ledger"
+      ],
+      "negative_reasons": {
+        "hr.payroll": "过滤范围不符：hr_a/hr",
+        "a.ledger": "过滤范围不符：shop_a/finance"
+      },
+      "answerable": false,
+      "annotation_source": "manual-document-facts",
+      "no_answer_reason": "hr_a/finance没有文档；hr薪酬事实不能跨领域采用。",
+      "bad_ranking": [
+        "hr.payroll"
+      ]
+    }
+  ]
+}

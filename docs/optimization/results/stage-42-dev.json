@@ -1,0 +1,1399 @@
+{
+  "profile": "synthetic-acceptance-v3",
+  "self_check": {
+    "profile": "synthetic-acceptance-v3",
+    "report_version": "acceptance-self-check-v1",
+    "manifest_sha256": "ed4be1acd589350adf428491ae4db542ee686fd3bd212a3f2f3517dca6b45755",
+    "input_sha256": {
+      "sql.json": "627ee4b026c2a9595b775a6daaeb052c7bc6dd4a3616701fc73a7f769f60aca0",
+      "retrieval.json": "16b299e35c1c6ecff0b07d5dd9528445c6c9dfb901c8961520592c7adb0d32fb",
+      "schema.sql": "c2a29d3cd189333e71c06d3190c7684ac151f32058a9ebf65c3b4648c1c1db2d",
+      "base.sql": "96421afdb7855afbba7bea0eff41c1e9d60b2cf4505bebed9abb65d318221fca",
+      "edge.sql": "f15dc4c27591bfad94029b96dd216bcfb224ec1697d0f77317d1c9d9476df96c",
+      "empty.sql": "899eb708648a0364e69408a5d601b582970e96d41871a69dd86ae8461de91d79"
+    },
+    "raw_input_sha256": {
+      "sql.json": "7b088d18a2e43947992cc150511ed3d2fc1304ad3c59755b2da6d811739c3aec",
+      "retrieval.json": "f10978849ae2ed58d2363b35a8d3d1fc2e57650b0e1dd13d4f16f3e982c352a5",
+      "schema.sql": "c3a348e97c0549846431e3a1c3b98d2d476409896c0dd2411e5c10bf2fa06c56",
+      "base.sql": "91eb0baed2d68d0f55512d9ad4d917ce543878fea1024de3a3f15faa94683b68",
+      "edge.sql": "d4a9e4ffa02b882539174e04de4c162c06d63e11fd76660cf5f1ff076e63adae",
+      "empty.sql": "27ce1df048335c5775229f675e641ca76a08030406f5d7ac23c658a6888e20b6",
+      "manifest.json": "5b4419fde63f4ba9815d85387cb0de64cf930bc807d66d16f8dc77fb0a5214ed"
+    },
+    "sql_dataset_sha256": "5d4fb66244dd745db26a73eacd75f4a9ecf87c4016028814b845283b9122d116",
+    "retrieval_dataset_sha256": "1c1a0a1018ccdae44bf0190be8859d580d883a799512eac42cd72a5df6f442ee",
+    "sql_statistics": {
+      "case_count": 30,
+      "split_counts": {
+        "dev": 20,
+        "holdout": 10
+      },
+      "tags": {
+        "projection": 1,
+        "ordering": 1,
+        "aggregate": 6,
+        "status": 2,
+        "empty": 4,
+        "refund": 3,
+        "join": 7,
+        "zero": 4,
+        "group": 5,
+        "negation": 2,
+        "distinct": 2,
+        "multi_table": 1,
+        "exact_case": 1,
+        "null": 4,
+        "filter": 4,
+        "time": 4,
+        "boundary": 3,
+        "count": 1,
+        "average": 1,
+        "same_name": 2,
+        "bag": 2,
+        "top_k": 1,
+        "tie": 1,
+        "having": 1,
+        "union": 1,
+        "cte": 1,
+        "duplicates": 1
+      },
+      "by_split": {
+        "dev": {
+          "projection": 1,
+          "ordering": 1,
+          "aggregate": 3,
+          "status": 2,
+          "empty": 3,
+          "join": 4,
+          "zero": 2,
+          "group": 4,
+          "negation": 2,
+          "multi_table": 1,
+          "exact_case": 1,
+          "null": 3,
+          "filter": 4,
+          "time": 3,
+          "boundary": 2,
+          "average": 1,
+          "refund": 2,
+          "same_name": 1,
+          "top_k": 1,
+          "tie": 1,
+          "having": 1,
+          "cte": 1
+        },
+        "holdout": {
+          "aggregate": 3,
+          "refund": 1,
+          "empty": 1,
+          "distinct": 2,
+          "join": 3,
+          "null": 1,
+          "time": 1,
+          "boundary": 1,
+          "count": 1,
+          "group": 1,
+          "zero": 2,
+          "same_name": 1,
+          "bag": 2,
+          "union": 1,
+          "duplicates": 1
+        }
+      }
+    },
+    "retrieval_statistics": {
+      "case_count": 30,
+      "split_counts": {
+        "dev": 20,
+        "holdout": 10
+      },
+      "tags": {
+        "schema": 2,
+        "db_filter": 9,
+        "status": 1,
+        "join": 2,
+        "domain_filter": 11,
+        "null": 2,
+        "negation": 1,
+        "time": 1,
+        "boundary": 2,
+        "refund": 3,
+        "multi_relevant": 4,
+        "aggregate": 1,
+        "zero": 2,
+        "ordering": 1,
+        "tie": 1,
+        "customer": 4,
+        "same_name": 2,
+        "exact_case": 1,
+        "filter": 1,
+        "finance": 1,
+        "hr": 1,
+        "platform": 1,
+        "no_answer": 6,
+        "missing_topic": 1
+      },
+      "by_split": {
+        "dev": {
+          "schema": 2,
+          "db_filter": 6,
+          "status": 1,
+          "null": 1,
+          "negation": 1,
+          "time": 1,
+          "boundary": 2,
+          "domain_filter": 7,
+          "multi_relevant": 2,
+          "refund": 2,
+          "aggregate": 1,
+          "ordering": 1,
+          "tie": 1,
+          "customer": 2,
+          "same_name": 2,
+          "zero": 1,
+          "filter": 1,
+          "hr": 1,
+          "platform": 1,
+          "no_answer": 4,
+          "missing_topic": 1
+        },
+        "holdout": {
+          "join": 2,
+          "domain_filter": 4,
+          "refund": 1,
+          "db_filter": 3,
+          "multi_relevant": 2,
+          "zero": 1,
+          "null": 1,
+          "customer": 2,
+          "exact_case": 1,
+          "finance": 1,
+          "no_answer": 2
+        }
+      }
+    },
+    "document_count": 23,
+    "sql": {
+      "gold_check_count": 90,
+      "counterexample_count": 30,
+      "counterexamples_killed": 30,
+      "counterexample_witnesses": {
+        "sql01:0": [
+          "base",
+          "edge"
+        ],
+        "sql02:0": [
+          "base",
+          "edge"
+        ],
+        "sql03:0": [
+          "base",
+          "edge"
+        ],
+        "sql04:0": [
+          "base",
+          "edge"
+        ],
+        "sql05:0": [
+          "base",
+          "edge"
+        ],
+        "sql06:0": [
+          "base",
+          "edge"
+        ],
+        "sql07:0": [
+          "base",
+          "edge"
+        ],
+        "sql08:0": [
+          "base",
+          "edge"
+        ],
+        "sql09:0": [
+          "base",
+          "edge"
+        ],
+        "sql10:0": [
+          "base",
+          "edge"
+        ],
+        "sql11:0": [
+          "base",
+          "edge"
+        ],
+        "sql12:0": [
+          "base",
+          "edge"
+        ],
+        "sql13:0": [
+          "base",
+          "edge"
+        ],
+        "sql14:0": [
+          "base"
+        ],
+        "sql15:0": [
+          "base",
+          "edge"
+        ],
+        "sql16:0": [
+          "base",
+          "edge"
+        ],
+        "sql17:0": [
+          "base",
+          "edge"
+        ],
+        "sql18:0": [
+          "edge"
+        ],
+        "sql19:0": [
+          "base",
+          "edge"
+        ],
+        "sql20:0": [
+          "edge"
+        ],
+        "sql21:0": [
+          "edge"
+        ],
+        "sql22:0": [
+          "edge"
+        ],
+        "sql23:0": [
+          "base",
+          "edge"
+        ],
+        "sql24:0": [
+          "base",
+          "edge"
+        ],
+        "sql25:0": [
+          "edge"
+        ],
+        "sql26:0": [
+          "base",
+          "edge"
+        ],
+        "sql27:0": [
+          "base",
+          "edge"
+        ],
+        "sql28:0": [
+          "base",
+          "edge"
+        ],
+        "sql29:0": [
+          "base",
+          "edge"
+        ],
+        "sql30:0": [
+          "edge"
+        ]
+      },
+      "label_source": "manual fixture facts; SQL execution only checks labels"
+    },
+    "retrieval": {
+      "qrels_checked": 30,
+      "bad_rankings_rejected": 30,
+      "self_check_k": 3,
+      "counterexample_details": [
+        {
+          "id": "retrieval01",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval02",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval03",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval04",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval05",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval06",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval07",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval08",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval09",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval10",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval11",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval12",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval13",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval14",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval15",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval16",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval17",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval18",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval19",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval20",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval21",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval22",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval23",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval24",
+          "error_codes": [],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval25",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval26",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval27",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval28",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval29",
+          "error_codes": [],
+          "recall_at_k": 0,
+          "no_answer_correct": false
+        },
+        {
+          "id": "retrieval30",
+          "error_codes": [
+            "OUT_OF_SCOPE"
+          ],
+          "recall_at_k": 0.0,
+          "no_answer_correct": false
+        }
+      ]
+    },
+    "llm_calls": 0,
+    "embedding_calls": 0,
+    "actual_cost_usd": null,
+    "limitations": "Manual public synthetic dev/holdout consistency, not model accuracy. No private business labels; public holdout is not blind. Checksums detect drift, not authenticity or independent human review."
+  },
+  "sql": {
+    "split": "dev",
+    "case_count": 20,
+    "check_count": 60,
+    "prediction_count": 0,
+    "provided_prediction_count": 0,
+    "robust_match_count": 0,
+    "robust_match_rate": 0.0,
+    "execution_success_count": 0,
+    "contract_match_count": 0,
+    "error_counts": {
+      "MISSING_PREDICTION": 60
+    },
+    "predictions_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "actual_cost_usd": null,
+    "measurement_scope": "Saved predictions on synthetic contracts; not model calls",
+    "details": [
+      {
+        "id": "sql01",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql02",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql04",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql05",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql07",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql08",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql10",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql11",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql13",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql14",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql16",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql17",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql19",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql20",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql22",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql23",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql25",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql26",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql28",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql29",
+        "scenario": "base",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql01",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql02",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql04",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql05",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql07",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql08",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql10",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql11",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql13",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql14",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql16",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql17",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql19",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql20",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql22",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql23",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql25",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql26",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql28",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql29",
+        "scenario": "edge",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql01",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql02",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql04",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql05",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql07",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql08",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql10",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql11",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql13",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql14",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql16",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql17",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql19",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql20",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql22",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql23",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql25",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql26",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql28",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      },
+      {
+        "id": "sql29",
+        "scenario": "empty",
+        "split": "dev",
+        "execution_success": false,
+        "contract_match": false,
+        "error_code": "MISSING_PREDICTION"
+      }
+    ]
+  },
+  "retrieval": {
+    "split": "dev",
+    "k": 3,
+    "query_count": 20,
+    "answerable_count": 16,
+    "no_answer_count": 4,
+    "all_queries_macro": {
+      "recall_at_k": 0.8,
+      "precision_at_k": 0.3,
+      "mrr_at_k": 0.8,
+      "ndcg_at_k": 0.7919720789148188
+    },
+    "answerable_macro": {
+      "recall_at_k": 1.0,
+      "precision_at_k": 0.375,
+      "mrr_at_k": 1.0,
+      "ndcg_at_k": 0.9899650986435234
+    },
+    "no_answer_correct_empty_count": 4,
+    "no_answer_correct_empty_rate": 1.0,
+    "invalid_ranking_count": 0,
+    "error_counts": {},
+    "prediction_count": 20,
+    "provided_prediction_count": 20,
+    "predictions_sha256": "90e1f0456da5f74e799769209bac48acc8e9984930b6b61aa7c9d4bdb3370690",
+    "by_split": {
+      "dev": {
+        "query_count": 20,
+        "answerable_count": 16,
+        "no_answer_count": 4,
+        "all_queries_macro": {
+          "recall_at_k": 0.8,
+          "precision_at_k": 0.3,
+          "mrr_at_k": 0.8,
+          "ndcg_at_k": 0.7919720789148188
+        },
+        "answerable_macro": {
+          "recall_at_k": 1.0,
+          "precision_at_k": 0.375,
+          "mrr_at_k": 1.0,
+          "ndcg_at_k": 0.9899650986435234
+        },
+        "no_answer_correct_empty_count": 4,
+        "no_answer_correct_empty_rate": 1.0,
+        "invalid_ranking_count": 0,
+        "error_counts": {}
+      },
+      "holdout": {
+        "query_count": 0,
+        "answerable_count": 0,
+        "no_answer_count": 0,
+        "all_queries_macro": {
+          "recall_at_k": null,
+          "precision_at_k": null,
+          "mrr_at_k": null,
+          "ndcg_at_k": null
+        },
+        "answerable_macro": {
+          "recall_at_k": null,
+          "precision_at_k": null,
+          "mrr_at_k": null,
+          "ndcg_at_k": null
+        },
+        "no_answer_correct_empty_count": 0,
+        "no_answer_correct_empty_rate": null,
+        "invalid_ranking_count": 0,
+        "error_counts": {}
+      }
+    },
+    "details": [
+      {
+        "id": "retrieval01",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.orders",
+          "a.ties",
+          "a.join"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval02",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.status",
+          "a.gross",
+          "a.net"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval04",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.anonymous",
+          "a.orders",
+          "a.net"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval05",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.time",
+          "a.orders"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval07",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.net",
+          "a.gross",
+          "a.refunds"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.6666666666666666,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 0.9197207891481876
+      },
+      {
+        "id": "retrieval08",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.gross",
+          "a.refunds",
+          "a.orders"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.6666666666666666,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 0.9197207891481876
+      },
+      {
+        "id": "retrieval10",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.ties",
+          "a.orders",
+          "a.join"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval11",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.users",
+          "a.email",
+          "a.names"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval13",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.names",
+          "a.users",
+          "a.email"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval14",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.products",
+          "a.stock",
+          "a.price"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval16",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.stock",
+          "a.products"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval17",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "a.price",
+          "a.products"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval19",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "b.orders",
+          "b.refunds"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval20",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "b.refunds",
+          "b.orders"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval22",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "hr.payroll"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval23",
+        "split": "dev",
+        "answerable": true,
+        "retrieved": [
+          "platform.trace"
+        ],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": false,
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.3333333333333333,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0
+      },
+      {
+        "id": "retrieval25",
+        "split": "dev",
+        "answerable": false,
+        "retrieved": [],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": true,
+        "recall_at_k": 0,
+        "precision_at_k": 0.0,
+        "mrr_at_k": 0,
+        "ndcg_at_k": 0
+      },
+      {
+        "id": "retrieval26",
+        "split": "dev",
+        "answerable": false,
+        "retrieved": [],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": true,
+        "recall_at_k": 0,
+        "precision_at_k": 0.0,
+        "mrr_at_k": 0,
+        "ndcg_at_k": 0
+      },
+      {
+        "id": "retrieval28",
+        "split": "dev",
+        "answerable": false,
+        "retrieved": [],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": true,
+        "recall_at_k": 0,
+        "precision_at_k": 0.0,
+        "mrr_at_k": 0,
+        "ndcg_at_k": 0
+      },
+      {
+        "id": "retrieval29",
+        "split": "dev",
+        "answerable": false,
+        "retrieved": [],
+        "error_codes": [],
+        "ranking_valid": true,
+        "no_answer_correct": true,
+        "recall_at_k": 0,
+        "precision_at_k": 0.0,
+        "mrr_at_k": 0,
+        "ndcg_at_k": 0
+      }
+    ],
+    "metric_policy": "Binary qrels; precision divides by K. Empty qrels rank metrics=0. Missing no-answer predictions are failures. Invalid rankings score0."
+  },
+  "retrieval_mode": "SQLite FTS5 BM25 lexical baseline",
+  "llm_calls": 0,
+  "embedding_calls": 0,
+  "actual_cost_usd": null
+}

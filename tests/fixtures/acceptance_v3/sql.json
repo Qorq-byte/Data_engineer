@@ -1,0 +1,1575 @@
+{
+  "version": "synthetic-acceptance-v3",
+  "scope": "Public synthetic regression labels; not business accuracy or private held-out quality",
+  "fixtures": [
+    "base",
+    "edge",
+    "empty"
+  ],
+  "sql_cases": [
+    {
+      "id": "sql01",
+      "split": "dev",
+      "tags": [
+        "projection",
+        "ordering"
+      ],
+      "question": "返回所有订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM orders ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回所有订单ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            10
+          ],
+          [
+            20
+          ],
+          [
+            30
+          ],
+          [
+            40
+          ],
+          [
+            50
+          ],
+          [
+            60
+          ]
+        ],
+        "edge": [
+          [
+            70
+          ],
+          [
+            80
+          ],
+          [
+            90
+          ],
+          [
+            100
+          ],
+          [
+            110
+          ],
+          [
+            120
+          ],
+          [
+            130
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base订单10至60；edge70至130，插入顺序与ID顺序不同。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM orders ORDER BY id DESC",
+          "reason": "反例故意改变题目要求：base订单10至60；edge70至130，插入顺序与ID顺序不同。"
+        }
+      ]
+    },
+    {
+      "id": "sql02",
+      "split": "dev",
+      "tags": [
+        "aggregate",
+        "status",
+        "empty"
+      ],
+      "question": "统计completed订单amount总额，不扣退款，无匹配返回一行0。 输出列依次为total_amount。单行结果，不要求ORDER BY。",
+      "gold_sql": "SELECT COALESCE(SUM(amount),0) AS total_amount FROM orders WHERE status='completed'",
+      "output_columns": [
+        "total_amount"
+      ],
+      "ordered": true,
+      "requires_order_by": false,
+      "row_semantics": "统计completed订单amount总额，不扣退款，无匹配返回一行0。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            132
+          ]
+        ],
+        "edge": [
+          [
+            35
+          ]
+        ],
+        "empty": [
+          [
+            0
+          ]
+        ]
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base=100+20+7+5=132；edge五笔7=35；cancelled/pending不计。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT COALESCE(SUM(amount),0) AS total_amount FROM orders",
+          "reason": "反例故意改变题目要求：base=100+20+7+5=132；edge五笔7=35；cancelled/pending不计。"
+        }
+      ]
+    },
+    {
+      "id": "sql03",
+      "split": "holdout",
+      "tags": [
+        "aggregate",
+        "refund",
+        "empty"
+      ],
+      "question": "统计completed订单净额amount-refund_amount，无匹配返回一行0。 输出列依次为net_amount。单行结果，不要求ORDER BY。",
+      "gold_sql": "SELECT COALESCE(SUM(amount-refund_amount),0) AS net_amount FROM orders WHERE status='completed'",
+      "output_columns": [
+        "net_amount"
+      ],
+      "ordered": true,
+      "requires_order_by": false,
+      "row_semantics": "统计completed订单净额amount-refund_amount，无匹配返回一行0。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            110
+          ]
+        ],
+        "edge": [
+          [
+            28
+          ]
+        ],
+        "empty": [
+          [
+            0
+          ]
+        ]
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base=85+20+0+5=110；edge=0+7+7+7+7=28。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT COALESCE(SUM(amount),0) AS net_amount FROM orders WHERE status='completed'",
+          "reason": "反例故意改变题目要求：base=85+20+0+5=110；edge=0+7+7+7+7=28。"
+        }
+      ]
+    },
+    {
+      "id": "sql04",
+      "split": "dev",
+      "tags": [
+        "join",
+        "zero",
+        "group"
+      ],
+      "question": "每个用户订单数，包含无订单用户，按user_id升序。 输出列依次为user_id,order_count。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT u.id AS user_id,COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.id",
+      "output_columns": [
+        "user_id",
+        "order_count"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "每个用户订单数，包含无订单用户，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "edge": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            2
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base用户4、edge用户3无订单，LEFT JOIN占位行不能计成1；匿名订单不属于用户。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT u.id AS user_id,COUNT(*) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.id",
+          "reason": "反例故意改变题目要求：base用户4、edge用户3无订单，LEFT JOIN占位行不能计成1；匿名订单不属于用户。"
+        }
+      ]
+    },
+    {
+      "id": "sql05",
+      "split": "dev",
+      "tags": [
+        "negation",
+        "join"
+      ],
+      "question": "返回没有订单的用户ID，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT u.id AS user_id FROM users u LEFT JOIN orders o ON o.user_id=u.id WHERE o.id IS NULL ORDER BY u.id",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回没有订单的用户ID，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            4
+          ]
+        ],
+        "edge": [
+          [
+            3
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base只有用户4、edge只有用户3没有订单。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT u.id AS user_id FROM users u LEFT JOIN orders o ON o.user_id=u.id WHERE o.id IS NOT NULL ORDER BY u.id",
+          "reason": "反例故意改变题目要求：base只有用户4、edge只有用户3没有订单。"
+        }
+      ]
+    },
+    {
+      "id": "sql06",
+      "split": "holdout",
+      "tags": [
+        "distinct",
+        "join"
+      ],
+      "question": "返回有completed订单的已知用户ID，去重，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT DISTINCT user_id FROM orders WHERE status='completed' AND user_id IS NOT NULL ORDER BY user_id",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回有completed订单的已知用户ID，去重，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1
+          ],
+          [
+            3
+          ]
+        ],
+        "edge": [
+          [
+            2
+          ],
+          [
+            4
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base用户1两笔、edge用户2和4各两笔，必须去重并排除匿名订单。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT user_id FROM orders WHERE status='completed' AND user_id IS NOT NULL ORDER BY user_id",
+          "reason": "反例故意改变题目要求：base用户1两笔、edge用户2和4各两笔，必须去重并排除匿名订单。"
+        }
+      ]
+    },
+    {
+      "id": "sql07",
+      "split": "dev",
+      "tags": [
+        "join",
+        "multi_table"
+      ],
+      "question": "返回completed且有已知用户的订单ID、用户姓名、商品名，按order_id升序。 输出列依次为order_id,user_name,product_name。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT o.id AS order_id,u.name AS user_name,p.name AS product_name FROM orders o JOIN users u ON u.id=o.user_id JOIN products p ON p.id=o.product_id WHERE o.status='completed' ORDER BY o.id",
+      "output_columns": [
+        "order_id",
+        "user_name",
+        "product_name"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回completed且有已知用户的订单ID、用户姓名、商品名，按order_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            10,
+            "Ada",
+            "Notebook"
+          ],
+          [
+            20,
+            "Ada",
+            "Pen"
+          ],
+          [
+            50,
+            "Chen",
+            "Tea"
+          ]
+        ],
+        "edge": [
+          [
+            70,
+            "Zulu",
+            "First unknown"
+          ],
+          [
+            90,
+            "Zulu",
+            "First unknown"
+          ],
+          [
+            120,
+            "Alpha",
+            "Second unknown"
+          ],
+          [
+            130,
+            "Alpha",
+            "Second unknown"
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "匿名订单60/110不能INNER JOIN到用户；cancelled/pending不计。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT o.id AS order_id,u.name AS user_name,p.name AS product_name FROM orders o JOIN users u ON u.id=o.user_id JOIN products p ON p.id=o.product_id ORDER BY o.id",
+          "reason": "反例故意改变题目要求：匿名订单60/110不能INNER JOIN到用户；cancelled/pending不计。"
+        }
+      ]
+    },
+    {
+      "id": "sql08",
+      "split": "dev",
+      "tags": [
+        "exact_case",
+        "empty"
+      ],
+      "question": "返回category精确等于小写unknown的商品ID，排除NULL、Unknown及unknownish，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM products WHERE category='unknown' ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回category精确等于小写unknown的商品ID，排除NULL、Unknown及unknownish，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [],
+        "edge": [
+          [
+            4
+          ],
+          [
+            8
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "edge4/8为unknown，6为NULL，7为Unknown，5为unknownish；base无unknown。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM products WHERE category IS NULL ORDER BY id",
+          "reason": "反例故意改变题目要求：edge4/8为unknown，6为NULL，7为Unknown，5为unknownish；base无unknown。"
+        }
+      ]
+    },
+    {
+      "id": "sql09",
+      "split": "holdout",
+      "tags": [
+        "null"
+      ],
+      "question": "返回category为NULL的商品ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM products WHERE category IS NULL ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回category为NULL的商品ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            4
+          ]
+        ],
+        "edge": [
+          [
+            6
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base商品4、edge商品6为NULL；等于NULL不会得到真。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM products WHERE category=NULL ORDER BY id",
+          "reason": "反例故意改变题目要求：base商品4、edge商品6为NULL；等于NULL不会得到真。"
+        }
+      ]
+    },
+    {
+      "id": "sql10",
+      "split": "dev",
+      "tags": [
+        "null",
+        "filter"
+      ],
+      "question": "返回email非NULL的用户ID，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id AS user_id FROM users WHERE email IS NOT NULL ORDER BY id",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回email非NULL的用户ID，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            4
+          ]
+        ],
+        "edge": [
+          [
+            2
+          ],
+          [
+            4
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base只有用户3无email；edge1/3无email。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id AS user_id FROM users WHERE email<>NULL ORDER BY id",
+          "reason": "反例故意改变题目要求：base只有用户3无email；edge1/3无email。"
+        }
+      ]
+    },
+    {
+      "id": "sql11",
+      "split": "dev",
+      "tags": [
+        "negation",
+        "null"
+      ],
+      "question": "用任意正确方式返回没有订单的用户ID，匿名订单不能使结果丢失，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT u.id AS user_id FROM users u WHERE NOT EXISTS (SELECT 1 FROM orders o WHERE o.user_id=u.id) ORDER BY u.id",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "用任意正确方式返回没有订单的用户ID，匿名订单不能使结果丢失，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            4
+          ]
+        ],
+        "edge": [
+          [
+            3
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base/edge都有user_id=NULL，NOT IN陷阱必须由fixture击穿。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id AS user_id FROM users WHERE id NOT IN (SELECT user_id FROM orders) ORDER BY id",
+          "reason": "反例故意改变题目要求：base/edge都有user_id=NULL，NOT IN陷阱必须由fixture击穿。"
+        }
+      ]
+    },
+    {
+      "id": "sql12",
+      "split": "holdout",
+      "tags": [
+        "time",
+        "boundary"
+      ],
+      "question": "返回2026年1月UTC订单ID，范围[2026-01-01 00:00:00,2026-02-01 00:00:00)，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM orders WHERE created_at>='2026-01-01 00:00:00' AND created_at<'2026-02-01 00:00:00' ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回2026年1月UTC订单ID，范围[2026-01-01 00:00:00,2026-02-01 00:00:00)，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            10
+          ],
+          [
+            20
+          ],
+          [
+            60
+          ]
+        ],
+        "edge": [
+          [
+            70
+          ],
+          [
+            80
+          ],
+          [
+            110
+          ],
+          [
+            130
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base30/50、edge90/120恰好2月1日零点，必须排除；1月末秒20/110保留。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM orders WHERE created_at BETWEEN '2026-01-01 00:00:00' AND '2026-02-01 00:00:00' ORDER BY id",
+          "reason": "反例故意改变题目要求：base30/50、edge90/120恰好2月1日零点，必须排除；1月末秒20/110保留。"
+        }
+      ]
+    },
+    {
+      "id": "sql13",
+      "split": "dev",
+      "tags": [
+        "time",
+        "boundary"
+      ],
+      "question": "返回严格早于2026-01-01 00:00:00 UTC的订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM orders WHERE created_at<'2026-01-01 00:00:00' ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回严格早于2026-01-01 00:00:00 UTC的订单ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            40
+          ]
+        ],
+        "edge": [
+          [
+            100
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base40/edge100在前一年末秒；base10/edge70恰好边界应排除。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM orders WHERE created_at<='2026-01-01 00:00:00' ORDER BY id",
+          "reason": "反例故意改变题目要求：base40/edge100在前一年末秒；base10/edge70恰好边界应排除。"
+        }
+      ]
+    },
+    {
+      "id": "sql14",
+      "split": "dev",
+      "tags": [
+        "time",
+        "status"
+      ],
+      "question": "返回2026年2月UTC且completed的订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM orders WHERE created_at>='2026-02-01 00:00:00' AND created_at<'2026-03-01 00:00:00' AND status='completed' ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回2026年2月UTC且completed的订单ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            50
+          ]
+        ],
+        "edge": [
+          [
+            90
+          ],
+          [
+            120
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base同在2月1日的30已取消、50已完成；edge90/120完成。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM orders WHERE created_at>='2026-02-01 00:00:00' AND created_at<'2026-03-01 00:00:00' ORDER BY id",
+          "reason": "反例故意改变题目要求：base同在2月1日的30已取消、50已完成；edge90/120完成。"
+        }
+      ]
+    },
+    {
+      "id": "sql15",
+      "split": "holdout",
+      "tags": [
+        "aggregate",
+        "count"
+      ],
+      "question": "统计completed订单笔数，无匹配返回一行0。 输出列依次为order_count。单行结果，不要求ORDER BY。",
+      "gold_sql": "SELECT COUNT(*) AS order_count FROM orders WHERE status='completed'",
+      "output_columns": [
+        "order_count"
+      ],
+      "ordered": true,
+      "requires_order_by": false,
+      "row_semantics": "统计completed订单笔数，无匹配返回一行0。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            4
+          ]
+        ],
+        "edge": [
+          [
+            5
+          ]
+        ],
+        "empty": [
+          [
+            0
+          ]
+        ]
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base4笔、edge5笔completed，匿名订单也计入。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT COUNT(*) AS order_count FROM orders",
+          "reason": "反例故意改变题目要求：base4笔、edge5笔completed，匿名订单也计入。"
+        }
+      ]
+    },
+    {
+      "id": "sql16",
+      "split": "dev",
+      "tags": [
+        "aggregate",
+        "average"
+      ],
+      "question": "统计completed订单平均amount，无匹配返回一行0。 输出列依次为average_amount。单行结果，不要求ORDER BY。",
+      "gold_sql": "SELECT COALESCE(AVG(amount),0) AS average_amount FROM orders WHERE status='completed'",
+      "output_columns": [
+        "average_amount"
+      ],
+      "ordered": true,
+      "requires_order_by": false,
+      "row_semantics": "统计completed订单平均amount，无匹配返回一行0。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            33
+          ]
+        ],
+        "edge": [
+          [
+            7
+          ]
+        ],
+        "empty": [
+          [
+            0
+          ]
+        ]
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base132/4=33；edge35/5=7；空集0。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT COALESCE(AVG(amount),0) AS average_amount FROM orders",
+          "reason": "反例故意改变题目要求：base132/4=33；edge35/5=7；空集0。"
+        }
+      ]
+    },
+    {
+      "id": "sql17",
+      "split": "dev",
+      "tags": [
+        "aggregate",
+        "refund"
+      ],
+      "question": "统计completed订单退款总额，无匹配返回一行0。 输出列依次为refunded。单行结果，不要求ORDER BY。",
+      "gold_sql": "SELECT COALESCE(SUM(refund_amount),0) AS refunded FROM orders WHERE status='completed'",
+      "output_columns": [
+        "refunded"
+      ],
+      "ordered": true,
+      "requires_order_by": false,
+      "row_semantics": "统计completed订单退款总额，无匹配返回一行0。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            22
+          ]
+        ],
+        "edge": [
+          [
+            7
+          ]
+        ],
+        "empty": [
+          [
+            0
+          ]
+        ]
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base退款15+7=22；edge仅70全退7。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT COALESCE(SUM(amount),0) AS refunded FROM orders WHERE status='completed'",
+          "reason": "反例故意改变题目要求：base退款15+7=22；edge仅70全退7。"
+        }
+      ]
+    },
+    {
+      "id": "sql18",
+      "split": "holdout",
+      "tags": [
+        "join",
+        "group",
+        "zero"
+      ],
+      "question": "按商品ID统计completed订单笔数，所有商品含0，按product_id升序。 输出列依次为product_id,order_count。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT p.id AS product_id,COUNT(o.id) AS order_count FROM products p LEFT JOIN orders o ON o.product_id=p.id AND o.status='completed' GROUP BY p.id ORDER BY p.id",
+      "output_columns": [
+        "product_id",
+        "order_count"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "按商品ID统计completed订单笔数，所有商品含0，按product_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "edge": [
+          [
+            4,
+            2
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            6,
+            0
+          ],
+          [
+            7,
+            1
+          ],
+          [
+            8,
+            2
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "edge商品5/6没有completed，4/8各两笔；base每商品各一笔。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT p.id AS product_id,COUNT(*) AS order_count FROM products p LEFT JOIN orders o ON o.product_id=p.id AND o.status='completed' GROUP BY p.id ORDER BY p.id",
+          "reason": "反例故意改变题目要求：edge商品5/6没有completed，4/8各两笔；base每商品各一笔。"
+        }
+      ]
+    },
+    {
+      "id": "sql19",
+      "split": "dev",
+      "tags": [
+        "join",
+        "group",
+        "null"
+      ],
+      "question": "按商品category汇总completed订单amount，NULL自成一组，按category升序且NULL在前。 输出列依次为category,total_amount。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT p.category AS category,SUM(o.amount) AS total_amount FROM orders o JOIN products p ON p.id=o.product_id WHERE o.status='completed' GROUP BY p.category ORDER BY p.category",
+      "output_columns": [
+        "category",
+        "total_amount"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "按商品category汇总completed订单amount，NULL自成一组，按category升序且NULL在前。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            null,
+            5
+          ],
+          [
+            "books",
+            100
+          ],
+          [
+            "grocery",
+            7
+          ],
+          [
+            "stationery",
+            20
+          ]
+        ],
+        "edge": [
+          [
+            "Unknown",
+            7
+          ],
+          [
+            "unknown",
+            28
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base四类5/100/7/20；edge Unknown为110的7，unknown四笔共28；大小写不合并。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT p.category AS category,SUM(o.amount) AS total_amount FROM orders o JOIN products p ON p.id=o.product_id GROUP BY p.category ORDER BY p.category",
+          "reason": "反例故意改变题目要求：base四类5/100/7/20；edge Unknown为110的7，unknown四笔共28；大小写不合并。"
+        }
+      ]
+    },
+    {
+      "id": "sql20",
+      "split": "dev",
+      "tags": [
+        "same_name",
+        "group"
+      ],
+      "question": "按姓名统计用户数量，同名用户合并，按user_name升序。 输出列依次为user_name,user_count。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT name AS user_name,COUNT(*) AS user_count FROM users GROUP BY name ORDER BY name",
+      "output_columns": [
+        "user_name",
+        "user_count"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "按姓名统计用户数量，同名用户合并，按user_name升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            "Ada",
+            1
+          ],
+          [
+            "Bo",
+            1
+          ],
+          [
+            "Chen",
+            1
+          ],
+          [
+            "Dia",
+            1
+          ]
+        ],
+        "edge": [
+          [
+            "Alpha",
+            2
+          ],
+          [
+            "Zulu",
+            2
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "edge存在两对同名用户，同名聚合与按ID分组不可混淆。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT name AS user_name,COUNT(*) AS user_count FROM users GROUP BY id ORDER BY name",
+          "reason": "反例故意改变题目要求：edge存在两对同名用户，同名聚合与按ID分组不可混淆。"
+        }
+      ]
+    },
+    {
+      "id": "sql21",
+      "split": "holdout",
+      "tags": [
+        "same_name",
+        "bag"
+      ],
+      "question": "返回姓名精确为Alpha的用户ID，不要求行顺序。 输出列依次为user_id。忽略行顺序，重复行仍保留。",
+      "gold_sql": "SELECT id AS user_id FROM users WHERE name='Alpha'",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": false,
+      "requires_order_by": false,
+      "row_semantics": "返回姓名精确为Alpha的用户ID，不要求行顺序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [],
+        "edge": [
+          [
+            3
+          ],
+          [
+            4
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base无Alpha；edge用户3/4为Alpha而1/2为Zulu。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id AS user_id FROM users WHERE name='Zulu'",
+          "reason": "反例故意改变题目要求：base无Alpha；edge用户3/4为Alpha而1/2为Zulu。"
+        }
+      ]
+    },
+    {
+      "id": "sql22",
+      "split": "dev",
+      "tags": [
+        "top_k",
+        "tie"
+      ],
+      "question": "按amount降序、id升序返回前3笔订单ID及amount。 输出列依次为id,amount。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id,amount FROM orders ORDER BY amount DESC,id ASC LIMIT 3",
+      "output_columns": [
+        "id",
+        "amount"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "按amount降序、id升序返回前3笔订单ID及amount。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            10,
+            100
+          ],
+          [
+            30,
+            40
+          ],
+          [
+            20,
+            20
+          ]
+        ],
+        "edge": [
+          [
+            80,
+            999
+          ],
+          [
+            100,
+            13
+          ],
+          [
+            70,
+            7
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "edge第三名同价7必须选最小ID70，不能选130。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id,amount FROM orders ORDER BY amount DESC,id DESC LIMIT 3",
+          "reason": "反例故意改变题目要求：edge第三名同价7必须选最小ID70，不能选130。"
+        }
+      ]
+    },
+    {
+      "id": "sql23",
+      "split": "dev",
+      "tags": [
+        "having",
+        "group"
+      ],
+      "question": "返回订单数量至少2笔的已知用户ID，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT user_id FROM orders WHERE user_id IS NOT NULL GROUP BY user_id HAVING COUNT(*)>=2 ORDER BY user_id",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回订单数量至少2笔的已知用户ID，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "edge": [
+          [
+            2
+          ],
+          [
+            4
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base1/2各两笔；edge2三笔/4两笔。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT user_id FROM orders WHERE user_id IS NOT NULL GROUP BY user_id HAVING COUNT(*)>2 ORDER BY user_id",
+          "reason": "反例故意改变题目要求：base1/2各两笔；edge2三笔/4两笔。"
+        }
+      ]
+    },
+    {
+      "id": "sql24",
+      "split": "holdout",
+      "tags": [
+        "join",
+        "aggregate",
+        "zero"
+      ],
+      "question": "每个用户completed订单净额，包含无匹配用户为0，按user_id升序。 输出列依次为user_id,net_amount。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT u.id AS user_id,COALESCE(SUM(o.amount-o.refund_amount),0) AS net_amount FROM users u LEFT JOIN orders o ON o.user_id=u.id AND o.status='completed' GROUP BY u.id ORDER BY u.id",
+      "output_columns": [
+        "user_id",
+        "net_amount"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "每个用户completed订单净额，包含无匹配用户为0，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1,
+            105
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "edge": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            7
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            14
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base1为85+20；3全退为0，2/4无匹配仍返回；edge2为7，4为14。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT u.id AS user_id,COALESCE(SUM(o.amount-o.refund_amount),0) AS net_amount FROM users u LEFT JOIN orders o ON o.user_id=u.id WHERE o.status='completed' GROUP BY u.id ORDER BY u.id",
+          "reason": "反例故意改变题目要求：base1为85+20；3全退为0，2/4无匹配仍返回；edge2为7，4为14。"
+        }
+      ]
+    },
+    {
+      "id": "sql25",
+      "split": "dev",
+      "tags": [
+        "filter",
+        "zero"
+      ],
+      "question": "返回库存恰好为0的商品ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM products WHERE stock=0 ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回库存恰好为0的商品ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            2
+          ]
+        ],
+        "edge": [
+          [
+            4
+          ],
+          [
+            6
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "edge商品5库存1，不能当成缺货；base2、edge4/6为0。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM products WHERE stock<=1 ORDER BY id",
+          "reason": "反例故意改变题目要求：edge商品5库存1，不能当成缺货；base2、edge4/6为0。"
+        }
+      ]
+    },
+    {
+      "id": "sql26",
+      "split": "dev",
+      "tags": [
+        "filter",
+        "boundary"
+      ],
+      "question": "返回price严格大于7的商品ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM products WHERE price>7 ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回price严格大于7的商品ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1
+          ],
+          [
+            2
+          ]
+        ],
+        "edge": [
+          [
+            5
+          ],
+          [
+            6
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base1/2与edge5/6超过7；等于7的商品不能计入。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM products WHERE price>=7 ORDER BY id",
+          "reason": "反例故意改变题目要求：base1/2与edge5/6超过7；等于7的商品不能计入。"
+        }
+      ]
+    },
+    {
+      "id": "sql27",
+      "split": "holdout",
+      "tags": [
+        "union",
+        "distinct"
+      ],
+      "question": "返回gold用户或有completed订单的已知用户ID，去重，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id AS user_id FROM users WHERE tier='gold' UNION SELECT user_id FROM orders WHERE status='completed' AND user_id IS NOT NULL ORDER BY user_id",
+      "output_columns": [
+        "user_id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回gold用户或有completed订单的已知用户ID，去重，按user_id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            1
+          ],
+          [
+            3
+          ]
+        ],
+        "edge": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            4
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base gold1与买家1/3取并集；edge gold1/4与买家2/4取并集。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id AS user_id FROM users WHERE tier='gold' UNION ALL SELECT user_id FROM orders WHERE status='completed' AND user_id IS NOT NULL ORDER BY user_id",
+          "reason": "反例故意改变题目要求：base gold1与买家1/3取并集；edge gold1/4与买家2/4取并集。"
+        }
+      ]
+    },
+    {
+      "id": "sql28",
+      "split": "dev",
+      "tags": [
+        "cte",
+        "time",
+        "refund"
+      ],
+      "question": "用任意正确方式统计2026年1月UTC completed订单净额，无匹配返回一行0。 输出列依次为net_amount。单行结果，不要求ORDER BY。",
+      "gold_sql": "WITH jan AS (SELECT amount,refund_amount FROM orders WHERE created_at>='2026-01-01 00:00:00' AND created_at<'2026-02-01 00:00:00' AND status='completed') SELECT COALESCE(SUM(amount-refund_amount),0) AS net_amount FROM jan",
+      "output_columns": [
+        "net_amount"
+      ],
+      "ordered": true,
+      "requires_order_by": false,
+      "row_semantics": "用任意正确方式统计2026年1月UTC completed订单净额，无匹配返回一行0。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            110
+          ]
+        ],
+        "edge": [
+          [
+            14
+          ]
+        ],
+        "empty": [
+          [
+            0
+          ]
+        ]
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "base一月85+20+5=110；edge一月0+7+7=14。"
+      },
+      "counterexamples": [
+        {
+          "sql": "WITH jan AS (SELECT amount,refund_amount FROM orders WHERE created_at>='2026-01-01 00:00:00' AND created_at<'2026-02-01 00:00:00' AND status='completed') SELECT COALESCE(SUM(amount),0) AS net_amount FROM jan",
+          "reason": "反例故意改变题目要求：base一月85+20+5=110；edge一月0+7+7=14。"
+        }
+      ]
+    },
+    {
+      "id": "sql29",
+      "split": "dev",
+      "tags": [
+        "empty",
+        "filter"
+      ],
+      "question": "返回amount严格小于0的订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT id FROM orders WHERE amount<0 ORDER BY id",
+      "output_columns": [
+        "id"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回amount严格小于0的订单ID，按id升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [],
+        "edge": [],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "三个场景都没有负金额；空结果也必须保留id列。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT id FROM orders ORDER BY id",
+          "reason": "反例故意改变题目要求：三个场景都没有负金额；空结果也必须保留id列。"
+        }
+      ]
+    },
+    {
+      "id": "sql30",
+      "split": "holdout",
+      "tags": [
+        "duplicates",
+        "bag"
+      ],
+      "question": "返回每笔completed订单的amount，重复金额必须保留，按amount升序。 输出列依次为amount。按题目给定排序键返回，重复行保留。",
+      "gold_sql": "SELECT amount FROM orders WHERE status='completed' ORDER BY amount,id",
+      "output_columns": [
+        "amount"
+      ],
+      "ordered": true,
+      "requires_order_by": true,
+      "row_semantics": "返回每笔completed订单的amount，重复金额必须保留，按amount升序。",
+      "permission": "select_only",
+      "db_id": "shop_a",
+      "domain": "commerce",
+      "expected_rows": {
+        "base": [
+          [
+            5
+          ],
+          [
+            7
+          ],
+          [
+            20
+          ],
+          [
+            100
+          ]
+        ],
+        "edge": [
+          [
+            7
+          ],
+          [
+            7
+          ],
+          [
+            7
+          ],
+          [
+            7
+          ],
+          [
+            7
+          ]
+        ],
+        "empty": []
+      },
+      "annotation": {
+        "source": "manual-fixture-facts",
+        "derivation": "edge五笔7必须返回五行；不能用DISTINCT把多重集变集合。"
+      },
+      "counterexamples": [
+        {
+          "sql": "SELECT DISTINCT amount FROM orders WHERE status='completed' ORDER BY amount",
+          "reason": "反例故意改变题目要求：edge五笔7必须返回五行；不能用DISTINCT把多重集变集合。"
+        }
+      ]
+    }
+  ]
+}

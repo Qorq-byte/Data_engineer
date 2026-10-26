@@ -23,6 +23,7 @@ jobs:
       - run: npm run check:frontend:build
       - run: ruff check .
       - run: mypy scripts/evaluate_quality.py
+      - run: mypy app/evaluation/acceptance_data.py app/evaluation/acceptance_sql.py app/evaluation/acceptance_retrieval.py app/evaluation/acceptance_suite.py app/evaluation/ranking.py scripts/evaluate_acceptance.py
       - run: mypy app/evaluation/predictions.py scripts/export_predictions.py
       - run: mypy app/llm/streaming.py
       - run: mypy app/llm/usage.py app/llm/responses.py
