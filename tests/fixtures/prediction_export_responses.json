@@ -1,0 +1,69 @@
+[
+  {
+    "query_id": "q_000000000001",
+    "status": "completed",
+    "nl_text": "列出所有订单 ID 并按 ID 排序",
+    "llm_calls": 2,
+    "llm_usage": {
+      "attempt_count": 2,
+      "attempts": [
+        {
+          "attempt": 1,
+          "provider": "fixture",
+          "model": "fixture",
+          "source": "adapter_boundary",
+          "status": "completed",
+          "latency_ms": 0,
+          "prompt_tokens": 4,
+          "completion_tokens": 2,
+          "missing_reason": null,
+          "finish_status": "unknown",
+          "usage_basis": "response_fields"
+        },
+        {
+          "attempt": 2,
+          "provider": "fixture",
+          "model": "fixture",
+          "source": "adapter_boundary",
+          "status": "completed",
+          "latency_ms": 0,
+          "prompt_tokens": null,
+          "completion_tokens": null,
+          "missing_reason": "usage_missing",
+          "finish_status": "unknown",
+          "usage_basis": "response_fields"
+        }
+      ],
+      "known_prompt_tokens": 4,
+      "known_completion_tokens": 2,
+      "missing_usage_count": 1,
+      "usage_coverage": 0.5,
+      "complete": false,
+      "dropped_attempts": 0
+    },
+    "source_note": "Synthetic functional fixture; no real model response or measured latency",
+    "candidates": [
+      {
+        "id": "unused",
+        "db_id": "other",
+        "dialect": "sqlite",
+        "sql_text": "SELECT 99"
+      },
+      {
+        "id": "selected",
+        "db_id": "fixture_sqlite",
+        "dialect": "sqlite",
+        "sql_text": "SELECT id FROM orders ORDER BY id"
+      }
+    ]
+  },
+  {
+    "query_id": "q_000000000002",
+    "status": "failed",
+    "nl_text": "已完成订单的总金额",
+    "llm_calls": 1,
+    "llm_usage": null,
+    "source_note": "Synthetic generation failure fixture; no real model response",
+    "candidates": []
+  }
+]

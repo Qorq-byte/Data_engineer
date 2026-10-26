@@ -1,0 +1,385 @@
+test	Run pytest	﻿2026-10-24T07:08:50.2449102Z ##[group]Run pytest
+test	Run pytest	2026-10-24T07:08:50.2449381Z ^[[36;1mpytest^[[0m
+test	Run pytest	2026-10-24T07:08:50.2513550Z shell: /usr/bin/bash -e {0}
+test	Run pytest	2026-10-24T07:08:50.2513831Z env:
+test	Run pytest	2026-10-24T07:08:50.2514058Z   LITELLM_LOCAL_MODEL_COST_MAP: True
+test	Run pytest	2026-10-24T07:08:50.2514371Z   RAG_EMBEDDING_PROVIDER: mock
+test	Run pytest	2026-10-24T07:08:50.2514731Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+test	Run pytest	2026-10-24T07:08:50.2515229Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib/pkgconfig
+test	Run pytest	2026-10-24T07:08:50.2515727Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+test	Run pytest	2026-10-24T07:08:50.2516182Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+test	Run pytest	2026-10-24T07:08:50.2516645Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+test	Run pytest	2026-10-24T07:08:50.2517089Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib
+test	Run pytest	2026-10-24T07:08:50.2517502Z ##[endgroup]
+test	Run pytest	2026-10-24T07:09:03.0978993Z ============================= test session starts ==============================
+test	Run pytest	2026-10-24T07:09:03.0980907Z platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0
+test	Run pytest	2026-10-24T07:09:03.0982263Z rootdir: /home/runner/work/Data_engineer/Data_engineer
+test	Run pytest	2026-10-24T07:09:03.0983179Z configfile: pyproject.toml
+test	Run pytest	2026-10-24T07:09:03.0983773Z testpaths: tests
+test	Run pytest	2026-10-24T07:09:03.0984301Z plugins: asyncio-1.4.0, platformdirs-4.13.5, cov-7.1.0, anyio-4.15.1
+test	Run pytest	2026-10-24T07:09:03.0985355Z asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+test	Run pytest	2026-10-24T07:09:03.0986127Z collected 3681 items
+test	Run pytest	2026-10-24T07:09:03.0986303Z 
+test	Run pytest	2026-10-24T07:09:03.8624618Z tests/e2e/test_full_pipeline.py ....                                     [  0%]
+test	Run pytest	2026-10-24T07:09:03.8797667Z tests/e2e/test_learning_loop.py ...                                      [  0%]
+test	Run pytest	2026-10-24T07:09:03.8951570Z tests/test_agents/test_base.py ..................                        [  0%]
+test	Run pytest	2026-10-24T07:09:03.9187455Z tests/test_agents/test_bus.py ....................                       [  1%]
+test	Run pytest	2026-10-24T07:09:03.9475630Z tests/test_agents/test_collaboration.py ...................              [  1%]
+test	Run pytest	2026-10-24T07:09:03.9653777Z tests/test_agents/test_feedback.py ..............                        [  2%]
+test	Run pytest	2026-10-24T07:09:03.9909477Z tests/test_agents/test_nl_understander.py .............                  [  2%]
+test	Run pytest	2026-10-24T07:09:04.0220576Z tests/test_agents/test_orchestrator.py ............................      [  3%]
+test	Run pytest	2026-10-24T07:09:04.0358598Z tests/test_agents/test_schema_retriever.py ..........                    [  3%]
+test	Run pytest	2026-10-24T07:09:04.0494798Z tests/test_agents/test_sql_generator.py ..........                       [  3%]
+test	Run pytest	2026-10-24T07:09:04.0672505Z tests/test_agents/test_sql_validator.py ..........                       [  4%]
+test	Run pytest	2026-10-24T07:09:04.1270877Z tests/test_agents/test_tool_executor.py ..............                   [  4%]
+test	Run pytest	2026-10-24T07:09:04.1496512Z tests/test_agents/test_trace.py ..........................               [  5%]
+test	Run pytest	2026-10-24T07:09:04.1546753Z tests/test_api/test_auth_metadata.py .....                               [  5%]
+test	Run pytest	2026-10-24T07:09:04.1619435Z tests/test_api/test_bootstrap_lifecycle.py ..                            [  5%]
+test	Run pytest	2026-10-24T07:09:05.9258171Z tests/test_api/test_database_settings.py ........................        [  5%]
+test	Run pytest	2026-10-24T07:09:07.8401550Z tests/test_api/test_domains_api.py ..................................... [  6%]
+test	Run pytest	2026-10-24T07:09:08.6364243Z .................                                                        [  7%]
+test	Run pytest	2026-10-24T07:09:08.8153702Z tests/test_api/test_frontend_delivery.py ......                          [  7%]
+test	Run pytest	2026-10-24T07:09:11.1541556Z tests/test_api/test_harness_settings.py ........................         [  8%]
+test	Run pytest	2026-10-24T07:09:11.1558186Z tests/test_api/test_learning_api.py .                                    [  8%]
+test	Run pytest	2026-10-24T07:09:12.5563166Z tests/test_api/test_llm_persistence.py ..........................        [  8%]
+test	Run pytest	2026-10-24T07:09:13.4355056Z tests/test_api/test_query_api.py ................................        [  9%]
+test	Run pytest	2026-10-24T07:09:17.5019776Z tests/test_api/test_query_contract.py .................................. [ 10%]
+test	Run pytest	2026-10-24T07:09:19.4433737Z ...................................                                      [ 11%]
+test	Run pytest	2026-10-24T07:09:19.5178933Z tests/test_api/test_runtime_limits.py ......                             [ 11%]
+test	Run pytest	2026-10-24T07:09:22.0812254Z tests/test_api/test_schema_api.py ...................................... [ 12%]
+test	Run pytest	2026-10-24T07:09:22.0820348Z                                                                          [ 12%]
+test	Run pytest	2026-10-24T07:09:23.5726993Z tests/test_api/test_settings_llm.py .......                              [ 13%]
+test	Run pytest	2026-10-24T07:09:23.6976206Z tests/test_cache/test_query_cache.py ................................... [ 14%]
+test	Run pytest	2026-10-24T07:09:23.7472898Z ..................                                                       [ 14%]
+test	Run pytest	2026-10-24T07:09:23.7826222Z tests/test_core/test_ambiguity.py ...................................... [ 15%]
+test	Run pytest	2026-10-24T07:09:23.8424148Z .................................................................        [ 17%]
+test	Run pytest	2026-10-24T07:09:23.8712895Z tests/test_core/test_intent_classifier.py .............................. [ 18%]
+test	Run pytest	2026-10-24T07:09:23.9425431Z ........................................................................ [ 20%]
+test	Run pytest	2026-10-24T07:09:23.9606585Z ..................                                                       [ 20%]
+test	Run pytest	2026-10-24T07:09:23.9789392Z tests/test_core/test_language_detector.py .....................          [ 21%]
+test	Run pytest	2026-10-24T07:09:24.0299206Z tests/test_core/test_nlp_parser.py .........................             [ 21%]
+test	Run pytest	2026-10-24T07:09:24.0618868Z tests/test_core/test_prompt_builder.py ................................. [ 22%]
+test	Run pytest	2026-10-24T07:09:24.6728160Z .........................                                                [ 23%]
+test	Run pytest	2026-10-24T07:09:24.7054896Z tests/test_core/test_self_heal.py ............................           [ 24%]
+test	Run pytest	2026-10-24T07:09:24.7425775Z tests/test_core/test_sql_generator.py ............................       [ 24%]
+test	Run pytest	2026-10-24T07:09:24.9007100Z tests/test_core/test_sql_quality_boundaries.py ......................... [ 25%]
+test	Run pytest	2026-10-24T07:09:25.0036221Z .............................                                            [ 26%]
+test	Run pytest	2026-10-24T07:09:25.0999512Z tests/test_core/test_sql_validator.py .................................. [ 27%]
+test	Run pytest	2026-10-24T07:09:25.1029949Z ...                                                                      [ 27%]
+test	Run pytest	2026-10-24T07:09:25.4502346Z tests/test_core/test_sql_validator_perf_rules.py ....................... [ 28%]
+test	Run pytest	2026-10-24T07:09:25.6824098Z ..............                                                           [ 28%]
+test	Run pytest	2026-10-24T07:09:25.7161309Z tests/test_core/test_sqr_builder.py .................................... [ 29%]
+test	Run pytest	2026-10-24T07:09:25.7404844Z .........................                                                [ 30%]
+test	Run pytest	2026-10-24T07:09:25.7723777Z tests/test_core/test_time_parser.py .................................... [ 31%]
+test	Run pytest	2026-10-24T07:09:25.8401452Z ........................................................................ [ 33%]
+test	Run pytest	2026-10-24T07:09:25.8501045Z ..........                                                               [ 33%]
+test	Run pytest	2026-10-24T07:09:25.8988046Z tests/test_core/test_time_parser_l2.py .......................           [ 33%]
+test	Run pytest	2026-10-24T07:09:25.9073910Z tests/test_db/test_connections.py .....                                  [ 34%]
+test	Run pytest	2026-10-24T07:09:27.0272502Z tests/test_db/test_duckdb_source.py .......................              [ 34%]
+test	Run pytest	2026-10-24T07:09:27.0290785Z tests/test_db/test_mysql_pool_boundary.py .                              [ 34%]
+test	Run pytest	2026-10-24T07:09:27.1036119Z tests/test_db/test_query_targets.py ..........                           [ 34%]
+test	Run pytest	2026-10-24T07:09:27.2201131Z tests/test_db/test_runtime_isolation.py ......                           [ 35%]
+test	Run pytest	2026-10-24T07:09:27.2883079Z tests/test_db/test_schema_namespaces.py ................................ [ 36%]
+test	Run pytest	2026-10-24T07:09:27.3690622Z ......                                                                   [ 36%]
+test	Run pytest	2026-10-24T07:09:27.4441966Z tests/test_db/test_sqlite_schema_revision.py ..........................  [ 36%]
+test	Run pytest	2026-10-24T07:09:27.4496118Z tests/test_db/test_uvloop_gate.py .                                      [ 36%]
+test	Run pytest	2026-10-24T07:09:27.4774741Z tests/test_harness/test_compaction.py .............................      [ 37%]
+test	Run pytest	2026-10-24T07:09:27.4826536Z tests/test_harness/test_permission.py ......                             [ 37%]
+test	Run pytest	2026-10-24T07:09:27.6050068Z tests/test_harness/test_request_invariants.py ...........                [ 38%]
+test	Run pytest	2026-10-24T07:09:27.6478970Z tests/test_harness/test_runner_evaluation.py ........................... [ 38%]
+test	Run pytest	2026-10-24T07:09:27.6490041Z                                                                          [ 38%]
+test	Run pytest	2026-10-24T07:09:27.7103724Z tests/test_harness/test_session.py ......................                [ 39%]
+test	Run pytest	2026-10-24T07:09:27.7694904Z tests/test_harness/test_skill_manager.py ..........................      [ 40%]
+test	Run pytest	2026-10-24T07:09:27.7764178Z tests/test_harness/test_tool_registry.py ........                        [ 40%]
+test	Run pytest	2026-10-24T07:09:27.8035669Z tests/test_harness/test_type_boundaries.py ...........                   [ 40%]
+test	Run pytest	2026-10-24T07:09:28.1411174Z tests/test_integration/test_e2e_pipeline.py ............................ [ 41%]
+test	Run pytest	2026-10-24T07:09:28.8816178Z .................................................                        [ 42%]
+test	Run pytest	2026-10-24T07:09:29.0597116Z tests/test_knowledge/test_domain_manager.py ............................ [ 43%]
+test	Run pytest	2026-10-24T07:09:29.1143819Z ..........                                                               [ 43%]
+test	Run pytest	2026-10-24T07:09:29.1361266Z tests/test_knowledge/test_evolvable_context.py ......................... [ 44%]
+test	Run pytest	2026-10-24T07:09:29.1779559Z ...............................................                          [ 45%]
+test	Run pytest	2026-10-24T07:09:29.2098010Z tests/test_knowledge/test_glossary.py .................................. [ 46%]
+test	Run pytest	2026-10-24T07:09:29.2245187Z ................                                                         [ 47%]
+test	Run pytest	2026-10-24T07:09:29.2458546Z tests/test_knowledge/test_metricflow_layer.py .......................... [ 47%]
+test	Run pytest	2026-10-24T07:09:29.2857937Z ..........................                                               [ 48%]
+test	Run pytest	2026-10-24T07:09:29.3129921Z tests/test_knowledge/test_rule_engine.py ............................... [ 49%]
+test	Run pytest	2026-10-24T07:09:29.3422405Z .............................                                            [ 50%]
+test	Run pytest	2026-10-24T07:09:29.3669118Z tests/test_knowledge/test_schema_linking_boundaries.py ................. [ 50%]
+test	Run pytest	2026-10-24T07:09:29.3801776Z .........                                                                [ 50%]
+test	Run pytest	2026-10-24T07:09:29.4441935Z tests/test_knowledge/test_schema_retriever.py ....................       [ 51%]
+test	Run pytest	2026-10-24T07:09:29.6103444Z tests/test_learning/test_feedback_collector.py ......................    [ 52%]
+test	Run pytest	2026-10-24T07:09:29.6907550Z tests/test_learning/test_pattern_analyzer.py ......................      [ 52%]
+test	Run pytest	2026-10-24T07:09:29.9166497Z tests/test_learning/test_query_pair_store.py ..........................  [ 53%]
+test	Run pytest	2026-10-24T07:09:29.9425219Z tests/test_llm/test_budget_adapter.py ................                   [ 53%]
+test	Run pytest	2026-10-24T07:09:29.9895287Z tests/test_llm/test_completion_finish.py ............................... [ 54%]
+test	Run pytest	2026-10-24T07:09:30.0175087Z ...................                                                      [ 55%]
+test	Run pytest	2026-10-24T07:09:30.1871107Z tests/test_llm/test_factory.py ......................                    [ 55%]
+test	Run pytest	2026-10-24T07:09:30.2098282Z tests/test_llm/test_factory_settings.py ..........                       [ 56%]
+test	Run pytest	2026-10-24T07:09:30.2685886Z tests/test_llm/test_resilience.py ......                                 [ 56%]
+test	Run pytest	2026-10-24T07:09:30.2749846Z tests/test_llm/test_response_boundary.py ....                            [ 56%]
+test	Run pytest	2026-10-24T07:09:30.3201877Z tests/test_llm/test_router.py .......................................... [ 57%]
+test	Run pytest	2026-10-24T07:09:30.3273696Z ......                                                                   [ 57%]
+test	Run pytest	2026-10-24T07:09:30.4372409Z tests/test_llm/test_sdk_boundary.py ............................         [ 58%]
+test	Run pytest	2026-10-24T07:09:31.6398360Z tests/test_llm/test_token_policy.py .................................... [ 59%]
+test	Run pytest	2026-10-24T07:09:31.7524444Z ....                                                                     [ 59%]
+test	Run pytest	2026-10-24T07:09:31.8018906Z tests/test_llm/test_usage.py .......................                     [ 60%]
+test	Run pytest	2026-10-24T07:09:33.3321923Z tests/test_llm/test_usage_audit.py .....................FF.FF........... [ 61%]
+test	Run pytest	2026-10-24T07:09:33.4280077Z ...                                                                      [ 61%]
+test	Run pytest	2026-10-24T07:09:33.4477022Z tests/test_mcp/test_fastmcp_client.py ....................               [ 61%]
+test	Run pytest	2026-10-24T07:09:33.9117837Z tests/test_mcp/test_fastmcp_server.py .................................. [ 62%]
+test	Run pytest	2026-10-24T07:09:33.9132209Z .                                                                        [ 62%]
+test	Run pytest	2026-10-24T07:09:33.9382691Z tests/test_mcp/test_knowledge_server.py ................................ [ 63%]
+test	Run pytest	2026-10-24T07:09:33.9628944Z .............................                                            [ 64%]
+test	Run pytest	2026-10-24T07:09:33.9706083Z tests/test_mcp/test_transport.py .........                               [ 64%]
+test	Run pytest	2026-10-24T07:09:33.9977745Z tests/test_mcp/test_vector_server.py ................................... [ 65%]
+test	Run pytest	2026-10-24T07:09:34.0179740Z ........................                                                 [ 66%]
+test	Run pytest	2026-10-24T07:09:34.0218726Z tests/test_models/test_schema.py ....                                    [ 66%]
+test	Run pytest	2026-10-24T07:09:34.0824427Z tests/test_models/test_workflow_trace.py ................                [ 66%]
+test	Run pytest	2026-10-24T07:09:34.1104993Z tests/test_nodes/test_agentic_capabilities.py .......................... [ 67%]
+test	Run pytest	2026-10-24T07:09:34.1183755Z .....                                                                    [ 67%]
+test	Run pytest	2026-10-24T07:09:34.1248487Z tests/test_nodes/test_base_node.py .....                                 [ 67%]
+test	Run pytest	2026-10-24T07:09:34.1704270Z tests/test_nodes/test_dialect_translate.py ............................. [ 68%]
+test	Run pytest	2026-10-24T07:09:34.2058358Z ......................                                                   [ 69%]
+test	Run pytest	2026-10-24T07:09:34.2347397Z tests/test_nodes/test_execute_sql_explain.py ......................      [ 69%]
+test	Run pytest	2026-10-24T07:09:34.3040939Z tests/test_nodes/test_execute_sql_node.py ..........                     [ 69%]
+test	Run pytest	2026-10-24T07:09:34.3508133Z tests/test_nodes/test_explain_plan.py .................................. [ 70%]
+test	Run pytest	2026-10-24T07:09:34.3594759Z .....                                                                    [ 70%]
+test	Run pytest	2026-10-24T07:09:34.4184689Z tests/test_nodes/test_format_sql.py .............................        [ 71%]
+test	Run pytest	2026-10-24T07:09:34.4491321Z tests/test_nodes/test_generate_sql_node.py .....................         [ 72%]
+test	Run pytest	2026-10-24T07:09:34.8920757Z tests/test_nodes/test_hybrid_search_node.py ...........................  [ 73%]
+test	Run pytest	2026-10-24T07:09:34.9477197Z tests/test_nodes/test_metric_resolve.py ................................ [ 73%]
+test	Run pytest	2026-10-24T07:09:34.9653910Z ...............                                                          [ 74%]
+test	Run pytest	2026-10-24T07:09:35.0237484Z tests/test_nodes/test_parse_nl_node.py ................................. [ 75%]
+test	Run pytest	2026-10-24T07:09:35.0274191Z ...                                                                      [ 75%]
+test	Run pytest	2026-10-24T07:09:35.0570980Z tests/test_nodes/test_reflection.py .................................... [ 76%]
+test	Run pytest	2026-10-24T07:09:35.1336468Z ..............................................................           [ 77%]
+test	Run pytest	2026-10-24T07:09:35.1727016Z tests/test_nodes/test_respond.py .............................           [ 78%]
+test	Run pytest	2026-10-24T07:09:35.1976887Z tests/test_nodes/test_schema_linking_node.py ........................... [ 79%]
+test	Run pytest	2026-10-24T07:09:35.2164419Z ...........                                                              [ 79%]
+test	Run pytest	2026-10-24T07:09:35.2743085Z tests/test_nodes/test_validate_sql_node.py ....................          [ 80%]
+test	Run pytest	2026-10-24T07:09:35.3141915Z tests/test_rag/test_bm25_index.py ...................................... [ 81%]
+test	Run pytest	2026-10-24T07:09:35.3599362Z ........................                                                 [ 82%]
+test	Run pytest	2026-10-24T07:09:35.7840023Z tests/test_rag/test_document_store.py .................................. [ 82%]
+test	Run pytest	2026-10-24T07:09:35.9557023Z .......                                                                  [ 83%]
+test	Run pytest	2026-10-24T07:09:38.6850432Z tests/test_rag/test_effective_settings.py .............................. [ 83%]
+test	Run pytest	2026-10-24T07:09:38.9718507Z ........                                                                 [ 84%]
+test	Run pytest	2026-10-24T07:09:39.0477098Z tests/test_rag/test_embedding.py .....................                   [ 84%]
+test	Run pytest	2026-10-24T07:09:40.6951694Z tests/test_rag/test_engine_startup.py ..................                 [ 85%]
+test	Run pytest	2026-10-24T07:09:40.9444803Z tests/test_rag/test_index_consistency.py ......                          [ 85%]
+test	Run pytest	2026-10-24T07:09:41.0129294Z tests/test_rag/test_lancedb_dim_migration.py ....                        [ 85%]
+test	Run pytest	2026-10-24T07:09:41.3212615Z tests/test_rag/test_lancedb_store.py .............................       [ 86%]
+test	Run pytest	2026-10-24T07:09:41.7344375Z tests/test_rag/test_metric_rag.py ..................................     [ 87%]
+test	Run pytest	2026-10-24T07:09:41.7482493Z tests/test_rag/test_ollama_embedding.py ........                         [ 87%]
+test	Run pytest	2026-10-24T07:09:41.7895185Z tests/test_rag/test_prediction_accounting.py ........................... [ 88%]
+test	Run pytest	2026-10-24T07:09:42.0241282Z ..................................                                       [ 89%]
+test	Run pytest	2026-10-24T07:09:42.0325961Z tests/test_rag/test_quality_evaluator.py ...                             [ 89%]
+test	Run pytest	2026-10-24T07:09:42.0711902Z tests/test_rag/test_rrf_fusion.py ...................................    [ 90%]
+test	Run pytest	2026-10-24T07:09:48.0115407Z tests/test_rag/test_schema_maintenance.py .............................. [ 90%]
+test	Run pytest	2026-10-24T07:09:48.0140531Z                                                                          [ 90%]
+test	Run pytest	2026-10-24T07:09:48.3485479Z tests/test_rag/test_schema_rag.py .........................              [ 91%]
+test	Run pytest	2026-10-24T07:09:49.8254812Z tests/test_rag/test_schema_refresh_source.py ........................... [ 92%]
+test	Run pytest	2026-10-24T07:09:51.4368658Z .........................                                                [ 93%]
+test	Run pytest	2026-10-24T07:09:51.4439317Z tests/test_security/test_crypto.py .......                               [ 93%]
+test	Run pytest	2026-10-24T07:09:51.6553457Z tests/test_security/test_execution_boundary.py ......................... [ 93%]
+test	Run pytest	2026-10-24T07:09:51.9802226Z .............                                                            [ 94%]
+test	Run pytest	2026-10-24T07:09:52.0114587Z tests/test_subagent/test_instance.py .................                   [ 94%]
+test	Run pytest	2026-10-24T07:09:52.0531369Z tests/test_subagent/test_manager.py .......................              [ 95%]
+test	Run pytest	2026-10-24T07:09:52.0749566Z tests/test_subagent/test_router.py ....................                  [ 95%]
+test	Run pytest	2026-10-24T07:09:52.1268708Z tests/test_workflow/test_plan_selector.py .............................. [ 96%]
+test	Run pytest	2026-10-24T07:09:52.1503823Z ......................                                                   [ 97%]
+test	Run pytest	2026-10-24T07:09:52.1913853Z tests/test_workflow/test_plan_selector_l2_l3.py ........................ [ 97%]
+test	Run pytest	2026-10-24T07:09:52.3594008Z .......................                                                  [ 98%]
+test	Run pytest	2026-10-24T07:09:52.5517620Z tests/test_workflow/test_plans.py ...................................... [ 99%]
+test	Run pytest	2026-10-24T07:09:52.8198550Z ..............                                                           [100%]
+test	Run pytest	2026-10-24T07:09:52.8199117Z 
+test	Run pytest	2026-10-24T07:09:52.8199558Z =================================== FAILURES ===================================
+test	Run pytest	2026-10-24T07:09:52.8200914Z _________ test_protocol_persistence_status_is_truthful[disabled-json] __________
+test	Run pytest	2026-10-24T07:09:52.8201953Z 
+test	Run pytest	2026-10-24T07:09:52.8202583Z connected_query = <starlette.testclient.TestClient object at 0x7f1f0be75c40>
+test	Run pytest	2026-10-24T07:09:52.8203773Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat0')
+test	Run pytest	2026-10-24T07:09:52.8205110Z monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f1f0be1ed50>
+test	Run pytest	2026-10-24T07:09:52.8206108Z protocol = 'json', persistence = 'disabled'
+test	Run pytest	2026-10-24T07:09:52.8206538Z 
+test	Run pytest	2026-10-24T07:09:52.8206979Z     @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+test	Run pytest	2026-10-24T07:09:52.8207990Z     @pytest.mark.parametrize("persistence", ["disabled", "failed"])
+test	Run pytest	2026-10-24T07:09:52.8208777Z     async def test_protocol_persistence_status_is_truthful(
+test	Run pytest	2026-10-24T07:09:52.8209394Z         connected_query, tmp_path, monkeypatch, protocol, persistence
+test	Run pytest	2026-10-24T07:09:52.8209857Z     ):
+test	Run pytest	2026-10-24T07:09:52.8210120Z         monkeypatch.setattr(
+test	Run pytest	2026-10-24T07:09:52.8210977Z             settings, "llm_audit_path", "" if persistence == "disabled" else str(tmp_path)
+test	Run pytest	2026-10-24T07:09:52.8211521Z         )
+test	Run pytest	2026-10-24T07:09:52.8212076Z         body = {"nl_text": "find orders", "database": "contract", "execute": True, "num_candidates": 1}
+test	Run pytest	2026-10-24T07:09:52.8212695Z         if protocol == "mcp":
+test	Run pytest	2026-10-24T07:09:52.8213202Z             response = await contracts.mcp_query(nl_text="find orders", db_id="contract")
+test	Run pytest	2026-10-24T07:09:52.8213674Z         elif protocol == "sse":
+test	Run pytest	2026-10-24T07:09:52.8213944Z             response = next(
+test	Run pytest	2026-10-24T07:09:52.8214184Z                 v
+test	Run pytest	2026-10-24T07:09:52.8214462Z                 for e, v in contracts.stream_events(
+test	Run pytest	2026-10-24T07:09:52.8214894Z                     connected_query.post("/api/v1/query/stream", json=body)
+test	Run pytest	2026-10-24T07:09:52.8215518Z                 )
+test	Run pytest	2026-10-24T07:09:52.8215749Z                 if e == "done"
+test	Run pytest	2026-10-24T07:09:52.8215993Z             )
+test	Run pytest	2026-10-24T07:09:52.8216188Z         else:
+test	Run pytest	2026-10-24T07:09:52.8216541Z             response = connected_query.post("/api/v1/query", json=body).json()
+test	Run pytest	2026-10-24T07:09:52.8216994Z         assert response["status"] == "completed"
+test	Run pytest	2026-10-24T07:09:52.8217386Z         assert response["llm_audit"]["status"] == persistence
+test	Run pytest	2026-10-24T07:09:52.8217852Z         assert response["llm_audit"]["query_id"] == response["query_id"]
+test	Run pytest	2026-10-24T07:09:52.8218308Z >       assert str(tmp_path) not in str(response)
+test	Run pytest	2026-10-24T07:09:52.8218806Z E       assert '/tmp/pytest...stence_stat0' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:52.8219184Z E         
+test	Run pytest	2026-10-24T07:09:52.8219555Z E         '/tmp/pytest-of-run...l_persistence_stat0' is contained here:
+test	Run pytest	2026-10-24T07:09:52.8227602Z E           name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat0/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:52.8235375Z E         ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:52.8235640Z 
+test	Run pytest	2026-10-24T07:09:52.8235872Z tests/test_llm/test_usage_audit.py:368: AssertionError
+test	Run pytest	2026-10-24T07:09:52.8236428Z __________ test_protocol_persistence_status_is_truthful[disabled-sse] __________
+test	Run pytest	2026-10-24T07:09:52.8236754Z 
+test	Run pytest	2026-10-24T07:09:52.8237063Z connected_query = <starlette.testclient.TestClient object at 0x7f1f0a64a180>
+test	Run pytest	2026-10-24T07:09:52.8237736Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat1')
+test	Run pytest	2026-10-24T07:09:52.8238375Z monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f1f0be1de20>
+test	Run pytest	2026-10-24T07:09:52.8238845Z protocol = 'sse', persistence = 'disabled'
+test	Run pytest	2026-10-24T07:09:52.8239046Z 
+test	Run pytest	2026-10-24T07:09:52.8239260Z     @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+test	Run pytest	2026-10-24T07:09:52.8239737Z     @pytest.mark.parametrize("persistence", ["disabled", "failed"])
+test	Run pytest	2026-10-24T07:09:52.8240438Z     async def test_protocol_persistence_status_is_truthful(
+test	Run pytest	2026-10-24T07:09:52.8240979Z         connected_query, tmp_path, monkeypatch, protocol, persistence
+test	Run pytest	2026-10-24T07:09:52.8241337Z     ):
+test	Run pytest	2026-10-24T07:09:52.8241807Z         monkeypatch.setattr(
+test	Run pytest	2026-10-24T07:09:52.8242255Z             settings, "llm_audit_path", "" if persistence == "disabled" else str(tmp_path)
+test	Run pytest	2026-10-24T07:09:52.8242668Z         )
+test	Run pytest	2026-10-24T07:09:52.8243094Z         body = {"nl_text": "find orders", "database": "contract", "execute": True, "num_candidates": 1}
+test	Run pytest	2026-10-24T07:09:52.8243572Z         if protocol == "mcp":
+test	Run pytest	2026-10-24T07:09:52.8244010Z             response = await contracts.mcp_query(nl_text="find orders", db_id="contract")
+test	Run pytest	2026-10-24T07:09:52.8244451Z         elif protocol == "sse":
+test	Run pytest	2026-10-24T07:09:52.8244715Z             response = next(
+test	Run pytest	2026-10-24T07:09:52.8244967Z                 v
+test	Run pytest	2026-10-24T07:09:52.8245248Z                 for e, v in contracts.stream_events(
+test	Run pytest	2026-10-24T07:09:52.8245676Z                     connected_query.post("/api/v1/query/stream", json=body)
+test	Run pytest	2026-10-24T07:09:52.8246034Z                 )
+test	Run pytest	2026-10-24T07:09:52.8246267Z                 if e == "done"
+test	Run pytest	2026-10-24T07:09:52.8246503Z             )
+test	Run pytest	2026-10-24T07:09:52.8246714Z         else:
+test	Run pytest	2026-10-24T07:09:52.8247063Z             response = connected_query.post("/api/v1/query", json=body).json()
+test	Run pytest	2026-10-24T07:09:52.8247627Z         assert response["status"] == "completed"
+test	Run pytest	2026-10-24T07:09:52.8248060Z         assert response["llm_audit"]["status"] == persistence
+test	Run pytest	2026-10-24T07:09:52.8248528Z         assert response["llm_audit"]["query_id"] == response["query_id"]
+test	Run pytest	2026-10-24T07:09:52.8248995Z >       assert str(tmp_path) not in str(response)
+test	Run pytest	2026-10-24T07:09:52.8249497Z E       assert '/tmp/pytest...stence_stat1' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:52.8249879Z E         
+test	Run pytest	2026-10-24T07:09:52.8250671Z E         '/tmp/pytest-of-run...l_persistence_stat1' is contained here:
+test	Run pytest	2026-10-24T07:09:52.8258508Z E           name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat1/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:52.8265069Z E         ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:52.8265321Z 
+test	Run pytest	2026-10-24T07:09:52.8265535Z tests/test_llm/test_usage_audit.py:368: AssertionError
+test	Run pytest	2026-10-24T07:09:52.8266059Z __________ test_protocol_persistence_status_is_truthful[failed-json] ___________
+test	Run pytest	2026-10-24T07:09:52.8266378Z 
+test	Run pytest	2026-10-24T07:09:52.8266825Z connected_query = <starlette.testclient.TestClient object at 0x7f1f0a620c50>
+test	Run pytest	2026-10-24T07:09:52.8267484Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat3')
+test	Run pytest	2026-10-24T07:09:52.8268112Z monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f1f0a64b680>
+test	Run pytest	2026-10-24T07:09:52.8268576Z protocol = 'json', persistence = 'failed'
+test	Run pytest	2026-10-24T07:09:52.8269085Z 
+test	Run pytest	2026-10-24T07:09:52.8269449Z     @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+test	Run pytest	2026-10-24T07:09:52.8270514Z     @pytest.mark.parametrize("persistence", ["disabled", "failed"])
+test	Run pytest	2026-10-24T07:09:52.8271402Z     async def test_protocol_persistence_status_is_truthful(
+test	Run pytest	2026-10-24T07:09:52.8272243Z         connected_query, tmp_path, monkeypatch, protocol, persistence
+test	Run pytest	2026-10-24T07:09:52.8272636Z     ):
+test	Run pytest	2026-10-24T07:09:52.8272851Z         monkeypatch.setattr(
+test	Run pytest	2026-10-24T07:09:52.8273290Z             settings, "llm_audit_path", "" if persistence == "disabled" else str(tmp_path)
+test	Run pytest	2026-10-24T07:09:52.8273714Z         )
+test	Run pytest	2026-10-24T07:09:52.8274138Z         body = {"nl_text": "find orders", "database": "contract", "execute": True, "num_candidates": 1}
+test	Run pytest	2026-10-24T07:09:52.8274594Z         if protocol == "mcp":
+test	Run pytest	2026-10-24T07:09:52.8275038Z             response = await contracts.mcp_query(nl_text="find orders", db_id="contract")
+test	Run pytest	2026-10-24T07:09:52.8275485Z         elif protocol == "sse":
+test	Run pytest	2026-10-24T07:09:52.8275749Z             response = next(
+test	Run pytest	2026-10-24T07:09:52.8275998Z                 v
+test	Run pytest	2026-10-24T07:09:52.8276294Z                 for e, v in contracts.stream_events(
+test	Run pytest	2026-10-24T07:09:52.8276720Z                     connected_query.post("/api/v1/query/stream", json=body)
+test	Run pytest	2026-10-24T07:09:52.8277064Z                 )
+test	Run pytest	2026-10-24T07:09:52.8277291Z                 if e == "done"
+test	Run pytest	2026-10-24T07:09:52.8277529Z             )
+test	Run pytest	2026-10-24T07:09:52.8277730Z         else:
+test	Run pytest	2026-10-24T07:09:52.8278096Z             response = connected_query.post("/api/v1/query", json=body).json()
+test	Run pytest	2026-10-24T07:09:52.8278553Z         assert response["status"] == "completed"
+test	Run pytest	2026-10-24T07:09:52.8278952Z         assert response["llm_audit"]["status"] == persistence
+test	Run pytest	2026-10-24T07:09:52.8279414Z         assert response["llm_audit"]["query_id"] == response["query_id"]
+test	Run pytest	2026-10-24T07:09:52.8279870Z >       assert str(tmp_path) not in str(response)
+test	Run pytest	2026-10-24T07:09:52.8280672Z E       assert '/tmp/pytest...stence_stat3' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:52.8281261Z E         
+test	Run pytest	2026-10-24T07:09:52.8281633Z E         '/tmp/pytest-of-run...l_persistence_stat3' is contained here:
+test	Run pytest	2026-10-24T07:09:52.8289562Z E           name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat3/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer', 'LLM usage audit was not persisted'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:52.8296027Z E         ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:52.8296279Z 
+test	Run pytest	2026-10-24T07:09:52.8296487Z tests/test_llm/test_usage_audit.py:368: AssertionError
+test	Run pytest	2026-10-24T07:09:52.8296996Z ------------------------------ Captured log call -------------------------------
+test	Run pytest	2026-10-24T07:09:52.8297639Z WARNING  app.workflow.query_audit:query_audit.py:42 LLM usage audit was not persisted
+test	Run pytest	2026-10-24T07:09:52.8298275Z ___________ test_protocol_persistence_status_is_truthful[failed-sse] ___________
+test	Run pytest	2026-10-24T07:09:52.8298592Z 
+test	Run pytest	2026-10-24T07:09:52.8298905Z connected_query = <starlette.testclient.TestClient object at 0x7f1f0a64b5c0>
+test	Run pytest	2026-10-24T07:09:52.8299560Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat4')
+test	Run pytest	2026-10-24T07:09:52.8300305Z monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f1f0a7ead50>
+test	Run pytest	2026-10-24T07:09:52.8300788Z protocol = 'sse', persistence = 'failed'
+test	Run pytest	2026-10-24T07:09:52.8300982Z 
+test	Run pytest	2026-10-24T07:09:52.8301196Z     @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+test	Run pytest	2026-10-24T07:09:52.8301672Z     @pytest.mark.parametrize("persistence", ["disabled", "failed"])
+test	Run pytest	2026-10-24T07:09:52.8302172Z     async def test_protocol_persistence_status_is_truthful(
+test	Run pytest	2026-10-24T07:09:52.8302643Z         connected_query, tmp_path, monkeypatch, protocol, persistence
+test	Run pytest	2026-10-24T07:09:52.8302997Z     ):
+test	Run pytest	2026-10-24T07:09:52.8303219Z         monkeypatch.setattr(
+test	Run pytest	2026-10-24T07:09:52.8303656Z             settings, "llm_audit_path", "" if persistence == "disabled" else str(tmp_path)
+test	Run pytest	2026-10-24T07:09:52.8304064Z         )
+test	Run pytest	2026-10-24T07:09:52.8304496Z         body = {"nl_text": "find orders", "database": "contract", "execute": True, "num_candidates": 1}
+test	Run pytest	2026-10-24T07:09:52.8304954Z         if protocol == "mcp":
+test	Run pytest	2026-10-24T07:09:52.8305394Z             response = await contracts.mcp_query(nl_text="find orders", db_id="contract")
+test	Run pytest	2026-10-24T07:09:52.8305980Z         elif protocol == "sse":
+test	Run pytest	2026-10-24T07:09:52.8306245Z             response = next(
+test	Run pytest	2026-10-24T07:09:52.8306483Z                 v
+test	Run pytest	2026-10-24T07:09:52.8306766Z                 for e, v in contracts.stream_events(
+test	Run pytest	2026-10-24T07:09:52.8307197Z                     connected_query.post("/api/v1/query/stream", json=body)
+test	Run pytest	2026-10-24T07:09:52.8307550Z                 )
+test	Run pytest	2026-10-24T07:09:52.8307793Z                 if e == "done"
+test	Run pytest	2026-10-24T07:09:52.8308031Z             )
+test	Run pytest	2026-10-24T07:09:52.8308232Z         else:
+test	Run pytest	2026-10-24T07:09:52.8308586Z             response = connected_query.post("/api/v1/query", json=body).json()
+test	Run pytest	2026-10-24T07:09:52.8309039Z         assert response["status"] == "completed"
+test	Run pytest	2026-10-24T07:09:52.8309432Z         assert response["llm_audit"]["status"] == persistence
+test	Run pytest	2026-10-24T07:09:52.8309891Z         assert response["llm_audit"]["query_id"] == response["query_id"]
+test	Run pytest	2026-10-24T07:09:52.8310478Z >       assert str(tmp_path) not in str(response)
+test	Run pytest	2026-10-24T07:09:52.8310980Z E       assert '/tmp/pytest...stence_stat4' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:52.8311363Z E         
+test	Run pytest	2026-10-24T07:09:52.8311728Z E         '/tmp/pytest-of-run...l_persistence_stat4' is contained here:
+test	Run pytest	2026-10-24T07:09:52.8319638Z E           name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat4/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer', 'LLM usage audit was not persisted'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:52.8326304Z E         ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:52.8326566Z 
+test	Run pytest	2026-10-24T07:09:52.8326777Z tests/test_llm/test_usage_audit.py:368: AssertionError
+test	Run pytest	2026-10-24T07:09:52.8327282Z ------------------------------ Captured log call -------------------------------
+test	Run pytest	2026-10-24T07:09:52.8327889Z WARNING  app.workflow.query_audit:query_audit.py:42 LLM usage audit was not persisted
+test	Run pytest	2026-10-24T07:09:52.8328451Z =============================== warnings summary ===============================
+test	Run pytest	2026-10-24T07:09:52.8329207Z tests/test_api/test_query_contract.py::test_real_sdk_objects_through_query_protocols[stop-json]
+test	Run pytest	2026-10-24T07:09:52.8329874Z tests/test_llm/test_sdk_boundary.py::test_sdk_stream_tail_usage_and_cleanup
+test	Run pytest	2026-10-24T07:09:52.8331449Z   /opt/hostedtoolcache/Python/3.12.15/x64/lib/python3.12/site-packages/pydantic/_internal/_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+test	Run pytest	2026-10-24T07:09:52.8332781Z     warnings.warn(
+test	Run pytest	2026-10-24T07:09:52.8332917Z 
+test	Run pytest	2026-10-24T07:09:52.8333209Z -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+test	Run pytest	2026-10-24T07:09:52.8333751Z =========================== short test summary info ============================
+test	Run pytest	2026-10-24T07:09:52.8334746Z FAILED tests/test_llm/test_usage_audit.py::test_protocol_persistence_status_is_truthful[disabled-json] - assert '/tmp/pytest...stence_stat0' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:52.8335483Z   
+test	Run pytest	2026-10-24T07:09:52.8335803Z   '/tmp/pytest-of-run...l_persistence_stat0' is contained here:
+test	Run pytest	2026-10-24T07:09:52.8342819Z     name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat0/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:53.6082157Z   ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:53.6084982Z FAILED tests/test_llm/test_usage_audit.py::test_protocol_persistence_status_is_truthful[disabled-sse] - assert '/tmp/pytest...stence_stat1' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:53.6086824Z   
+test	Run pytest	2026-10-24T07:09:53.6087321Z   '/tmp/pytest-of-run...l_persistence_stat1' is contained here:
+test	Run pytest	2026-10-24T07:09:53.6097542Z     name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat1/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:53.6105590Z   ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:53.6106628Z FAILED tests/test_llm/test_usage_audit.py::test_protocol_persistence_status_is_truthful[failed-json] - assert '/tmp/pytest...stence_stat3' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:53.6107348Z   
+test	Run pytest	2026-10-24T07:09:53.6107674Z   '/tmp/pytest-of-run...l_persistence_stat3' is contained here:
+test	Run pytest	2026-10-24T07:09:53.6118627Z     name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat3/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer', 'LLM usage audit was not persisted'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:53.6125433Z   ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:53.6126497Z FAILED tests/test_llm/test_usage_audit.py::test_protocol_persistence_status_is_truthful[failed-sse] - assert '/tmp/pytest...stence_stat4' not in "{'query_id'...e_note': ''}"
+test	Run pytest	2026-10-24T07:09:53.6127235Z   
+test	Run pytest	2026-10-24T07:09:53.6127555Z   '/tmp/pytest-of-run...l_persistence_stat4' is contained here:
+test	Run pytest	2026-10-24T07:09:53.6134842Z     name': '/tmp/pytest-of-runner/pytest-0/test_protocol_persistence_stat4/test.db', 'db_id': 'contract', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}}], 'primary_sql': 'SELECT id FROM orders ORDER BY id', 'validation': {'passed': True, 'syntax_ok': True, 'syntax_errors': [], 'schema_valid': True, 'schema_errors': [], 'type_valid': True, 'type_errors': [], 'plan_analysis': {'scan_types': [], 'estimated_rows': 0, 'join_types': [], 'has_full_scan': True, 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded']}, 'business_valid': True, 'business_warnings': [], 'warnings': ['PERF_WARNING: No WHERE clause, potential full table scan', 'PERF_WARNING: No LIMIT on non-aggregate query; result set size is unbounded'], 'score': 0.96}, 'linked_tables': ['orders', 'products', 'users'], 'linked_columns': [], 'execution': {'columns': ['id'], 'rows': [[1], [2], [3], [4], [5]], 'row_count': 5, 'truncated': False}, 'errors': [], 'warnings': ['RAG unavailable; schema linking uses keyword matching', 'MOCK LLM: output is a test placeholder, not a verified database answer', 'LLM usage audit was not persisted'], 'source': 'database', 'source_note': ''}
+test	Run pytest	2026-10-24T07:09:53.6141721Z   ?           ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+test	Run pytest	2026-10-24T07:09:53.6142264Z ============ 4 failed, 3677 passed, 2 warnings in 61.91s (0:01:01) =============
+test	Run pytest	2026-10-24T07:09:55.4862713Z ##[error]Process completed with exit code 1.

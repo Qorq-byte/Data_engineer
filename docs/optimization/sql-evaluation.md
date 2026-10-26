@@ -22,7 +22,7 @@ completion_status为missing/generation_failed/rejected/stop/legacy_unknown，com
 
 report_version=sql-evaluation-v2；case_count始终是全部案例，prediction_count是实际提供预测。execution_success_count/result_correct_count及其rate均以全部案例为分母，缺失/生成失败/截断/空SQL/执行失败都算失败。结果错但执行成功仍计执行成功；无序比较是多重集，保留重复行，ordered=true比较顺序。
 
-latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受bool、字符串、NaN/Infinity），缺省/null表示未知，有效0照常计样本。任何非法值、总费用溢出或不受支持的资源边界都在evaluate_sql打开预测执行库前ValueError；失败预测的有效费用/生成延迟也进入统计，避免只统计成功。组合CLI会先完成独立BM25烟测（同样使用SQLite），再调用SQL评测；前述门禁针对SQL评测库，不承诺在所有检索工作前拒绝输入。输入错误不覆盖原报告。
+latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受bool、字符串、NaN/Infinity），缺省/null表示未知，有效0照常计样本。任何非法值、总费用溢出或不受支持的资源边界都在evaluate_sql打开预测执行库前ValueError；失败预测的有效费用/生成延迟也进入统计，避免只统计成功。阶段37组合入口进一步在BM25前预检结构/预测遥测/导出哈希；gold真实执行仍于原SQL阶段。CLI输入/IO错误固定退出2并保留旧报告，程序调用仍抛ValueError；详见[评测文件边界](evaluation-artifact-boundaries.md)。
 
 - reported_generation_latency_ms：sample_count、case_count、coverage、complete、mean、p50/p95/p99及percentile_method=nearest_rank，分位下标ceil(p*n)-1。两样本0和100的P50为0、P95/P99为100，不用插值。小样本尾分位不作为生产性能结论。
 - reported_cost_usd：sample_count/case_count/coverage/complete、total和mean。coverage不足1时total只是已报告样本的部分总额，不外推全部题目成本。无样本的总额/均值/分位均null，不能把未知补0。
@@ -37,3 +37,14 @@ latency_ms/cost_usd是外部报告，必须为有限非负JSON数值（不接受
 离线导入不加载Router/LiteLLM；app.llm公共五个Router/配置/成本导出改按需加载，实际使用它们时才保留原SDK行为。无需通过设置环境变量掩盖导入副作用。SQLite连接初始化失败也在finally关闭。
 
 `tests/fixtures/sql_prediction_accounting.json`是6题固定功能集，不含真实模型输出。重跑`pytest tests/test_rag/test_prediction_accounting.py -q`可验证预期计数、分母和覆盖率；阶段28保存同输入哈希、阶段27固定SHA重放与当前输出的[功能对照](results/stage-28-accounting.json)，旧执行4/6、正确3/6改为执行2/6、正确1/6，是拒绝错误计分，不是模型退化或质量提升。保留原7查询/8文档BM25烟测，未运行真实模型/dense/reranker、真实标注或压测。
+
+
+阶段32新增显式离线[预测导出](prediction-export.md)。新export_version行消费前验证行/案例集哈希与来源格式，完整evaluate额外核验dataset哈希；旧普通列表保持原语义。缺候选finish仍legacy_unknown，请求用量只作来源元数据，生成latency/费用不从策略均摊或部分token猜测。
+
+阶段33标准响应候选保留生成来源及该响应stop/null；导出所选model_response候选可以进入stop计数，prepared拒绝作为模型预测，stream_text/unknown仍legacy_unknown。原缺来源的文件兼容，不根据请求usage或workflow成功补stop；既有阶段32固定烟测样例及其哈希不变。
+
+阶段34所选model_stream候选可采用其自身stop进入完成计数；该证据由可选结构化流在完整消费及尾部校验后提供。旧文本流/Mock仍未知，费用/生成耗时不从事件推断；见[流事件契约](stream-completion.md)。
+
+阶段35兼容消费request-prediction-v2候选摘要绑定行，核对候选摘要及完成语义后沿原规则评测；失败行无SQL，全部案例分母不变。v1与普通平铺预测兼容，原固定烟测哈希不变。候选摘要不证明SQL语义或数据快照，见[绑定契约](candidate-audit-binding.md)。
+
+阶段37三个评测CLI接入严格JSON/输入保护/原子报告写入及资源预检；报告字段和哈希算法保持，stdout改为counts/哈希摘要，详细内容请读文件。非法/空/非字符串模型SQL仍按原错误计入分母，数据集结构错误才拒绝整批；历史stage10回放与正常决策不匹配退出规则不变。

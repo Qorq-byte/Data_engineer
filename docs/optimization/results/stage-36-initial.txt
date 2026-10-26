@@ -1,0 +1,1340 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                               [100%]
+================================== FAILURES ===================================
+_______________ test_exact_decimal_and_deterministic_allowlist ________________
+
+    def test_exact_decimal_and_deterministic_allowlist():
+        records, book = [audit()], prices()
+        before = copy.deepcopy((records, book))
+>       report = estimate(records, book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:54: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_______ test_decimal_context_is_local_and_large_token_formula_is_exact ________
+
+    def test_decimal_context_is_local_and_large_token_formula_is_exact():
+        previous = getcontext().prec
+        try:
+            getcontext().prec = 2
+            source = audit([{"prompt_tokens": 9223372036854775807, "completion_tokens": 0}])
+            book = prices()
+            book["prices"][0]["prompt_usd_per_million"] = "0.000000000001"
+>           result = estimate([source], book)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:73: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+___________________ test_valid_zero_is_not_unknown[tokens] ____________________
+
+zero = 'tokens'
+
+    @pytest.mark.parametrize("zero", ["tokens", "rates"])
+    def test_valid_zero_is_not_unknown(zero):
+        source, book = audit(), prices()
+        if zero == "tokens":
+            source = audit([{"prompt_tokens": 0, "completion_tokens": 0}])
+        else:
+            book["prices"][0].update(prompt_usd_per_million="0", completion_usd_per_million="0")
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____________________ test_valid_zero_is_not_unknown[rates] ____________________
+
+zero = 'rates'
+
+    @pytest.mark.parametrize("zero", ["tokens", "rates"])
+    def test_valid_zero_is_not_unknown(zero):
+        source, book = audit(), prices()
+        if zero == "tokens":
+            source = audit([{"prompt_tokens": 0, "completion_tokens": 0}])
+        else:
+            book["prices"][0].update(prompt_usd_per_million="0", completion_usd_per_million="0")
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_missing_observations_or_prices_never_become_zero[usage] _________
+
+missing = 'usage'
+
+    @pytest.mark.parametrize("missing", ["usage", "prompt", "completion", "price", "prompt_rate", "completion_rate"])
+    def test_missing_observations_or_prices_never_become_zero(missing):
+        source, book = audit(), prices()
+        if missing == "usage":
+            source = audit([None])
+        elif missing == "prompt":
+            source = audit([{"completion_tokens": 2}])
+        elif missing == "completion":
+            source = audit([{"prompt_tokens": 3}])
+        elif missing == "price":
+            book["prices"] = []
+        else:
+            book["prices"][0]["prompt_usd_per_million" if missing == "prompt_rate"
+                              else "completion_usd_per_million"] = None
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_missing_observations_or_prices_never_become_zero[prompt] ________
+
+missing = 'prompt'
+
+    @pytest.mark.parametrize("missing", ["usage", "prompt", "completion", "price", "prompt_rate", "completion_rate"])
+    def test_missing_observations_or_prices_never_become_zero(missing):
+        source, book = audit(), prices()
+        if missing == "usage":
+            source = audit([None])
+        elif missing == "prompt":
+            source = audit([{"completion_tokens": 2}])
+        elif missing == "completion":
+            source = audit([{"prompt_tokens": 3}])
+        elif missing == "price":
+            book["prices"] = []
+        else:
+            book["prices"][0]["prompt_usd_per_million" if missing == "prompt_rate"
+                              else "completion_usd_per_million"] = None
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_missing_observations_or_prices_never_become_zero[completion] ______
+
+missing = 'completion'
+
+    @pytest.mark.parametrize("missing", ["usage", "prompt", "completion", "price", "prompt_rate", "completion_rate"])
+    def test_missing_observations_or_prices_never_become_zero(missing):
+        source, book = audit(), prices()
+        if missing == "usage":
+            source = audit([None])
+        elif missing == "prompt":
+            source = audit([{"completion_tokens": 2}])
+        elif missing == "completion":
+            source = audit([{"prompt_tokens": 3}])
+        elif missing == "price":
+            book["prices"] = []
+        else:
+            book["prices"][0]["prompt_usd_per_million" if missing == "prompt_rate"
+                              else "completion_usd_per_million"] = None
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_missing_observations_or_prices_never_become_zero[price] _________
+
+missing = 'price'
+
+    @pytest.mark.parametrize("missing", ["usage", "prompt", "completion", "price", "prompt_rate", "completion_rate"])
+    def test_missing_observations_or_prices_never_become_zero(missing):
+        source, book = audit(), prices()
+        if missing == "usage":
+            source = audit([None])
+        elif missing == "prompt":
+            source = audit([{"completion_tokens": 2}])
+        elif missing == "completion":
+            source = audit([{"prompt_tokens": 3}])
+        elif missing == "price":
+            book["prices"] = []
+        else:
+            book["prices"][0]["prompt_usd_per_million" if missing == "prompt_rate"
+                              else "completion_usd_per_million"] = None
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_____ test_missing_observations_or_prices_never_become_zero[prompt_rate] ______
+
+missing = 'prompt_rate'
+
+    @pytest.mark.parametrize("missing", ["usage", "prompt", "completion", "price", "prompt_rate", "completion_rate"])
+    def test_missing_observations_or_prices_never_become_zero(missing):
+        source, book = audit(), prices()
+        if missing == "usage":
+            source = audit([None])
+        elif missing == "prompt":
+            source = audit([{"completion_tokens": 2}])
+        elif missing == "completion":
+            source = audit([{"prompt_tokens": 3}])
+        elif missing == "price":
+            book["prices"] = []
+        else:
+            book["prices"][0]["prompt_usd_per_million" if missing == "prompt_rate"
+                              else "completion_usd_per_million"] = None
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+___ test_missing_observations_or_prices_never_become_zero[completion_rate] ____
+
+missing = 'completion_rate'
+
+    @pytest.mark.parametrize("missing", ["usage", "prompt", "completion", "price", "prompt_rate", "completion_rate"])
+    def test_missing_observations_or_prices_never_become_zero(missing):
+        source, book = audit(), prices()
+        if missing == "usage":
+            source = audit([None])
+        elif missing == "prompt":
+            source = audit([{"completion_tokens": 2}])
+        elif missing == "completion":
+            source = audit([{"prompt_tokens": 3}])
+        elif missing == "price":
+            book["prices"] = []
+        else:
+            book["prices"][0]["prompt_usd_per_million" if missing == "prompt_rate"
+                              else "completion_usd_per_million"] = None
+>       report = estimate([source], book)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:107: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+__ test_partial_retry_sum_is_not_total_and_failed_attempts_are_not_refunded ___
+
+    def test_partial_retry_sum_is_not_total_and_failed_attempts_are_not_refunded():
+        source = audit([{"prompt_tokens": 3, "completion_tokens": 2},
+                        {"prompt_tokens": 5, "completion_tokens": 1}, None])
+        source["usage"]["attempts"][0]["status"] = "failed"
+        source["usage"]["attempts"][1]["status"] = "cancelled"
+>       report = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:118: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 3, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____________ test_incomplete_query_never_gets_full_total[dropped] _____________
+
+condition = 'dropped'
+
+    @pytest.mark.parametrize("condition", ["dropped", "pending", "accounting", "empty", "no_usage"])
+    def test_incomplete_query_never_gets_full_total(condition):
+        source = audit()
+        if condition == "dropped":
+            source = audit(dropped=1)
+        elif condition == "pending":
+            source["usage"]["attempts"][0]["status"] = "pending"
+            source["usage"]["complete"] = False
+        elif condition == "accounting":
+            source["llm_calls"] += 1
+        elif condition == "empty":
+            source = audit([])
+        else:
+            source["usage"] = None
+>       result = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 2, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____________ test_incomplete_query_never_gets_full_total[pending] _____________
+
+condition = 'pending'
+
+    @pytest.mark.parametrize("condition", ["dropped", "pending", "accounting", "empty", "no_usage"])
+    def test_incomplete_query_never_gets_full_total(condition):
+        source = audit()
+        if condition == "dropped":
+            source = audit(dropped=1)
+        elif condition == "pending":
+            source["usage"]["attempts"][0]["status"] = "pending"
+            source["usage"]["complete"] = False
+        elif condition == "accounting":
+            source["llm_calls"] += 1
+        elif condition == "empty":
+            source = audit([])
+        else:
+            source["usage"] = None
+>       result = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+___________ test_incomplete_query_never_gets_full_total[accounting] ___________
+
+condition = 'accounting'
+
+    @pytest.mark.parametrize("condition", ["dropped", "pending", "accounting", "empty", "no_usage"])
+    def test_incomplete_query_never_gets_full_total(condition):
+        source = audit()
+        if condition == "dropped":
+            source = audit(dropped=1)
+        elif condition == "pending":
+            source["usage"]["attempts"][0]["status"] = "pending"
+            source["usage"]["complete"] = False
+        elif condition == "accounting":
+            source["llm_calls"] += 1
+        elif condition == "empty":
+            source = audit([])
+        else:
+            source["usage"] = None
+>       result = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 2, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_____________ test_incomplete_query_never_gets_full_total[empty] ______________
+
+condition = 'empty'
+
+    @pytest.mark.parametrize("condition", ["dropped", "pending", "accounting", "empty", "no_usage"])
+    def test_incomplete_query_never_gets_full_total(condition):
+        source = audit()
+        if condition == "dropped":
+            source = audit(dropped=1)
+        elif condition == "pending":
+            source["usage"]["attempts"][0]["status"] = "pending"
+            source["usage"]["complete"] = False
+        elif condition == "accounting":
+            source["llm_calls"] += 1
+        elif condition == "empty":
+            source = audit([])
+        else:
+            source["usage"] = None
+>       result = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 0, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____________ test_incomplete_query_never_gets_full_total[no_usage] ____________
+
+condition = 'no_usage'
+
+    @pytest.mark.parametrize("condition", ["dropped", "pending", "accounting", "empty", "no_usage"])
+    def test_incomplete_query_never_gets_full_total(condition):
+        source = audit()
+        if condition == "dropped":
+            source = audit(dropped=1)
+        elif condition == "pending":
+            source["usage"]["attempts"][0]["status"] = "pending"
+            source["usage"]["complete"] = False
+        elif condition == "accounting":
+            source["llm_calls"] += 1
+        elif condition == "empty":
+            source = audit([])
+        else:
+            source["usage"] = None
+>       result = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_____ test_uncertain_identity_or_source_is_not_priced[provider-redacted] ______
+
+field = 'provider', value = 'redacted'
+
+    @pytest.mark.parametrize("field,value", [("provider", "redacted"), ("model", "unknown"),
+                                            ("provider", "mock"), ("source", "adapter_boundary"),
+                                            ("usage_basis", "unknown")])
+    def test_uncertain_identity_or_source_is_not_priced(field, value):
+        source = audit()
+        source["usage"]["attempts"][0][field] = value
+>       report = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_______ test_uncertain_identity_or_source_is_not_priced[model-unknown] ________
+
+field = 'model', value = 'unknown'
+
+    @pytest.mark.parametrize("field,value", [("provider", "redacted"), ("model", "unknown"),
+                                            ("provider", "mock"), ("source", "adapter_boundary"),
+                                            ("usage_basis", "unknown")])
+    def test_uncertain_identity_or_source_is_not_priced(field, value):
+        source = audit()
+        source["usage"]["attempts"][0][field] = value
+>       report = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_______ test_uncertain_identity_or_source_is_not_priced[provider-mock] ________
+
+field = 'provider', value = 'mock'
+
+    @pytest.mark.parametrize("field,value", [("provider", "redacted"), ("model", "unknown"),
+                                            ("provider", "mock"), ("source", "adapter_boundary"),
+                                            ("usage_basis", "unknown")])
+    def test_uncertain_identity_or_source_is_not_priced(field, value):
+        source = audit()
+        source["usage"]["attempts"][0][field] = value
+>       report = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+__ test_uncertain_identity_or_source_is_not_priced[source-adapter_boundary] ___
+
+field = 'source', value = 'adapter_boundary'
+
+    @pytest.mark.parametrize("field,value", [("provider", "redacted"), ("model", "unknown"),
+                                            ("provider", "mock"), ("source", "adapter_boundary"),
+                                            ("usage_basis", "unknown")])
+    def test_uncertain_identity_or_source_is_not_priced(field, value):
+        source = audit()
+        source["usage"]["attempts"][0][field] = value
+>       report = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____ test_uncertain_identity_or_source_is_not_priced[usage_basis-unknown] _____
+
+field = 'usage_basis', value = 'unknown'
+
+    @pytest.mark.parametrize("field,value", [("provider", "redacted"), ("model", "unknown"),
+                                            ("provider", "mock"), ("source", "adapter_boundary"),
+                                            ("usage_basis", "unknown")])
+    def test_uncertain_identity_or_source_is_not_priced(field, value):
+        source = audit()
+        source["usage"]["attempts"][0][field] = value
+>       report = estimate([source])
+                 ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:150: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_token_out_of_range_is_unknown_not_rounded_or_overflowed _________
+
+    def test_token_out_of_range_is_unknown_not_rounded_or_overflowed():
+        source = audit([{"prompt_tokens": 2 ** 63, "completion_tokens": 0}])
+>       assert estimate([source])["summary"]["estimated_total_usd"] is None
+               ^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:157: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_pricebook_rejects_unsupported_or_ambiguous_inputs[duplicate] ______
+
+invalid = 'duplicate'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_pricebook_rejects_unsupported_or_ambiguous_inputs[negative] _______
+
+invalid = 'negative'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_pricebook_rejects_unsupported_or_ambiguous_inputs[float] ________
+
+invalid = 'float'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_pricebook_rejects_unsupported_or_ambiguous_inputs[bool] _________
+
+invalid = 'bool'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_________ test_pricebook_rejects_unsupported_or_ambiguous_inputs[nan] _________
+
+invalid = 'nan'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_pricebook_rejects_unsupported_or_ambiguous_inputs[exponent] _______
+
+invalid = 'exponent'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_pricebook_rejects_unsupported_or_ambiguous_inputs[precision] ______
+
+invalid = 'precision'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_pricebook_rejects_unsupported_or_ambiguous_inputs[currency] _______
+
+invalid = 'currency'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'CNY', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_______ test_pricebook_rejects_unsupported_or_ambiguous_inputs[version] _______
+
+invalid = 'version'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'future', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_pricebook_rejects_unsupported_or_ambiguous_inputs[extra] ________
+
+invalid = 'extra'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-10-25', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+________ test_pricebook_rejects_unsupported_or_ambiguous_inputs[date] _________
+
+invalid = 'date'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "negative", "float", "bool", "nan", "exponent",
+                                         "precision", "currency", "version", "extra", "date"])
+    def test_pricebook_rejects_unsupported_or_ambiguous_inputs(invalid):
+        book = prices()
+        if invalid == "duplicate":
+            book["prices"] *= 2
+        elif invalid in ("negative", "float", "bool", "nan", "exponent", "precision"):
+            book["prices"][0]["prompt_usd_per_million"] = {
+                "negative": "-1", "float": 1.2, "bool": True, "nan": "NaN",
+                "exponent": "1e-3", "precision": "0.0000000000001",
+            }[invalid]
+        elif invalid == "currency":
+            book["currency"] = "CNY"
+        elif invalid == "version":
+            book["version"] = "future"
+        elif invalid == "extra":
+            book["prices"][0]["cached_rate"] = "0.1"
+        else:
+            book["as_of"] = "2026-02-30"
+        with pytest.raises(ValueError):
+>           estimate(book=book)
+
+tests\test_llm\test_usage_costs.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = None
+book = {'version': 'flat-token-prices-v1', 'currency': 'USD', 'label': 'synthetic-fixture-only', 'as_of': '2026-02-30', ...}
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____ test_records_reject_duplicates_and_corrupt_audit_metadata[duplicate] _____
+
+invalid = 'duplicate'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "version", "usage", "attempt_id", "empty", "bound_version"])
+    def test_records_reject_duplicates_and_corrupt_audit_metadata(invalid):
+        source = audit()
+        records = [source]
+        if invalid == "duplicate":
+            records *= 2
+        elif invalid == "version":
+            source["schema_version"] = 3
+        elif invalid == "usage":
+            source["usage"]["known_prompt_tokens"] = 99
+        elif invalid == "attempt_id":
+            source["usage"]["attempts"][0]["attempt"] = 2
+        elif invalid == "empty":
+            records = []
+        else:
+            source["schema_version"] = 2
+            source["candidate_digest_version"] = "future"
+            source["candidate_digests"] = []
+        with pytest.raises(ValueError):
+>           estimate(records)
+
+tests\test_llm\test_usage_costs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}, {'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_____ test_records_reject_duplicates_and_corrupt_audit_metadata[version] ______
+
+invalid = 'version'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "version", "usage", "attempt_id", "empty", "bound_version"])
+    def test_records_reject_duplicates_and_corrupt_audit_metadata(invalid):
+        source = audit()
+        records = [source]
+        if invalid == "duplicate":
+            records *= 2
+        elif invalid == "version":
+            source["schema_version"] = 3
+        elif invalid == "usage":
+            source["usage"]["known_prompt_tokens"] = 99
+        elif invalid == "attempt_id":
+            source["usage"]["attempts"][0]["attempt"] = 2
+        elif invalid == "empty":
+            records = []
+        else:
+            source["schema_version"] = 2
+            source["candidate_digest_version"] = "future"
+            source["candidate_digests"] = []
+        with pytest.raises(ValueError):
+>           estimate(records)
+
+tests\test_llm\test_usage_costs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 3, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_records_reject_duplicates_and_corrupt_audit_metadata[usage] _______
+
+invalid = 'usage'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "version", "usage", "attempt_id", "empty", "bound_version"])
+    def test_records_reject_duplicates_and_corrupt_audit_metadata(invalid):
+        source = audit()
+        records = [source]
+        if invalid == "duplicate":
+            records *= 2
+        elif invalid == "version":
+            source["schema_version"] = 3
+        elif invalid == "usage":
+            source["usage"]["known_prompt_tokens"] = 99
+        elif invalid == "attempt_id":
+            source["usage"]["attempts"][0]["attempt"] = 2
+        elif invalid == "empty":
+            records = []
+        else:
+            source["schema_version"] = 2
+            source["candidate_digest_version"] = "future"
+            source["candidate_digests"] = []
+        with pytest.raises(ValueError):
+>           estimate(records)
+
+tests\test_llm\test_usage_costs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+____ test_records_reject_duplicates_and_corrupt_audit_metadata[attempt_id] ____
+
+invalid = 'attempt_id'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "version", "usage", "attempt_id", "empty", "bound_version"])
+    def test_records_reject_duplicates_and_corrupt_audit_metadata(invalid):
+        source = audit()
+        records = [source]
+        if invalid == "duplicate":
+            records *= 2
+        elif invalid == "version":
+            source["schema_version"] = 3
+        elif invalid == "usage":
+            source["usage"]["known_prompt_tokens"] = 99
+        elif invalid == "attempt_id":
+            source["usage"]["attempts"][0]["attempt"] = 2
+        elif invalid == "empty":
+            records = []
+        else:
+            source["schema_version"] = 2
+            source["candidate_digest_version"] = "future"
+            source["candidate_digests"] = []
+        with pytest.raises(ValueError):
+>           estimate(records)
+
+tests\test_llm\test_usage_costs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+______ test_records_reject_duplicates_and_corrupt_audit_metadata[empty] _______
+
+invalid = 'empty'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "version", "usage", "attempt_id", "empty", "bound_version"])
+    def test_records_reject_duplicates_and_corrupt_audit_metadata(invalid):
+        source = audit()
+        records = [source]
+        if invalid == "duplicate":
+            records *= 2
+        elif invalid == "version":
+            source["schema_version"] = 3
+        elif invalid == "usage":
+            source["usage"]["known_prompt_tokens"] = 99
+        elif invalid == "attempt_id":
+            source["usage"]["attempts"][0]["attempt"] = 2
+        elif invalid == "empty":
+            records = []
+        else:
+            source["schema_version"] = 2
+            source["candidate_digest_version"] = "future"
+            source["candidate_digests"] = []
+        with pytest.raises(ValueError):
+>           estimate(records)
+
+tests\test_llm\test_usage_costs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [], book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+__ test_records_reject_duplicates_and_corrupt_audit_metadata[bound_version] ___
+
+invalid = 'bound_version'
+
+    @pytest.mark.parametrize("invalid", ["duplicate", "version", "usage", "attempt_id", "empty", "bound_version"])
+    def test_records_reject_duplicates_and_corrupt_audit_metadata(invalid):
+        source = audit()
+        records = [source]
+        if invalid == "duplicate":
+            records *= 2
+        elif invalid == "version":
+            source["schema_version"] = 3
+        elif invalid == "usage":
+            source["usage"]["known_prompt_tokens"] = 99
+        elif invalid == "attempt_id":
+            source["usage"]["attempts"][0]["attempt"] = 2
+        elif invalid == "empty":
+            records = []
+        else:
+            source["schema_version"] = 2
+            source["candidate_digest_version"] = "future"
+            source["candidate_digests"] = []
+        with pytest.raises(ValueError):
+>           estimate(records)
+
+tests\test_llm\test_usage_costs.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 2, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+___________ test_batch_counts_each_query_once_and_accepts_audit_v2 ____________
+
+    def test_batch_counts_each_query_once_and_accepts_audit_v2():
+        first, second = audit(), audit(query_id="q_000000000002", outcome="failed")
+        second.update(schema_version=2, candidate_digest_version="candidate-binding-v1",
+                      candidate_digests=[])
+>       report = estimate([first, second])
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_costs.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+records = [{'schema_version': 1, 'query_id': 'q_000000000001', 'outcome': 'completed', 'llm_calls': 1, ...}, {'schema_version': 2, 'query_id': 'q_000000000002', 'outcome': 'failed', 'llm_calls': 1, ...}]
+book = None
+
+    def estimate(records=None, book=None):
+>       from app.evaluation.usage_costs import estimate_usage_costs
+E       ModuleNotFoundError: No module named 'app.evaluation.usage_costs'
+
+tests\test_llm\test_usage_costs.py:45: ModuleNotFoundError
+_______ test_cli_reads_audit_read_only_and_preserves_report_on_failure ________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage36/.pytest-initial/test_cli_reads_audit_read_only0')
+
+    def test_cli_reads_audit_read_only_and_preserves_report_on_failure(tmp_path):
+        path, output, book = tmp_path / "audit.db", tmp_path / "costs.json", tmp_path / "prices.json"
+        source = audit()
+        UsageAuditStore(str(path)).write(UsageAuditRecord(
+            query_id=source["query_id"], session_id="private", outcome=source["outcome"],
+            llm_calls=source["llm_calls"], usage=source["usage"], candidate_digests=[],
+        ))
+        book.write_text(json.dumps(prices()), encoding="utf-8")
+        before = path.read_bytes()
+        argv = [sys.executable, "-m", "scripts.estimate_usage_cost", "--audit-db", str(path),
+                "--query-id", source["query_id"], "--prices", str(book), "--output", str(output)]
+        run = subprocess.run(argv, cwd=ROOT, capture_output=True, text=True, timeout=20)
+>       assert run.returncode == 0, run.stderr
+E       AssertionError: D:\python\data_engineer\.stage29\.check-venv\Scripts\python.exe: No module named scripts.estimate_usage_cost
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['D:\\python\\data_engineer\\.stage29\\.check-venv\\Scripts\\python.exe', '-m', 'scripts.estimat...'D:\\python\\data_engineer\\.stage29\\.check-venv\\Scripts\\python.exe: No module named scripts.estimate_usage_cost\n').returncode
+
+tests\test_llm\test_usage_costs.py:226: AssertionError
+_______ test_fresh_cost_import_has_no_model_database_or_network_clients _______
+
+    def test_fresh_cost_import_has_no_model_database_or_network_clients():
+        code = '''
+    import importlib.abc
+    import sys
+    class Guard(importlib.abc.MetaPathFinder):
+        def find_spec(self, fullname, path=None, target=None):
+            if fullname.split('.')[0] in {'litellm', 'mysql', 'httpx', 'requests'}:
+                raise RuntimeError('forbidden dependency')
+    sys.meta_path.insert(0, Guard())
+    import scripts.estimate_usage_cost
+    '''
+        environment = dict(os.environ)
+        environment.pop("LITELLM_LOCAL_MODEL_COST_MAP", None)
+        run = subprocess.run([sys.executable, "-c", code], cwd=ROOT, env=environment,
+                             capture_output=True, text=True, timeout=20)
+>       assert run.returncode == 0, run.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "<string>", line 9, in <module>
+E         ModuleNotFoundError: No module named 'scripts.estimate_usage_cost'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['D:\\python\\data_engineer\\.stage29\\.check-venv\\Scripts\\python.exe', '-c', "\nimport import...ast):\n  File "<string>", line 9, in <module>\nModuleNotFoundError: No module named \'scripts.estimate_usage_cost\'\n').returncode
+
+tests\test_llm\test_usage_costs.py:258: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_usage_costs.py::test_exact_decimal_and_deterministic_allowlist
+FAILED tests/test_llm/test_usage_costs.py::test_decimal_context_is_local_and_large_token_formula_is_exact
+FAILED tests/test_llm/test_usage_costs.py::test_valid_zero_is_not_unknown[tokens]
+FAILED tests/test_llm/test_usage_costs.py::test_valid_zero_is_not_unknown[rates]
+FAILED tests/test_llm/test_usage_costs.py::test_missing_observations_or_prices_never_become_zero[usage]
+FAILED tests/test_llm/test_usage_costs.py::test_missing_observations_or_prices_never_become_zero[prompt]
+FAILED tests/test_llm/test_usage_costs.py::test_missing_observations_or_prices_never_become_zero[completion]
+FAILED tests/test_llm/test_usage_costs.py::test_missing_observations_or_prices_never_become_zero[price]
+FAILED tests/test_llm/test_usage_costs.py::test_missing_observations_or_prices_never_become_zero[prompt_rate]
+FAILED tests/test_llm/test_usage_costs.py::test_missing_observations_or_prices_never_become_zero[completion_rate]
+FAILED tests/test_llm/test_usage_costs.py::test_partial_retry_sum_is_not_total_and_failed_attempts_are_not_refunded
+FAILED tests/test_llm/test_usage_costs.py::test_incomplete_query_never_gets_full_total[dropped]
+FAILED tests/test_llm/test_usage_costs.py::test_incomplete_query_never_gets_full_total[pending]
+FAILED tests/test_llm/test_usage_costs.py::test_incomplete_query_never_gets_full_total[accounting]
+FAILED tests/test_llm/test_usage_costs.py::test_incomplete_query_never_gets_full_total[empty]
+FAILED tests/test_llm/test_usage_costs.py::test_incomplete_query_never_gets_full_total[no_usage]
+FAILED tests/test_llm/test_usage_costs.py::test_uncertain_identity_or_source_is_not_priced[provider-redacted]
+FAILED tests/test_llm/test_usage_costs.py::test_uncertain_identity_or_source_is_not_priced[model-unknown]
+FAILED tests/test_llm/test_usage_costs.py::test_uncertain_identity_or_source_is_not_priced[provider-mock]
+FAILED tests/test_llm/test_usage_costs.py::test_uncertain_identity_or_source_is_not_priced[source-adapter_boundary]
+FAILED tests/test_llm/test_usage_costs.py::test_uncertain_identity_or_source_is_not_priced[usage_basis-unknown]
+FAILED tests/test_llm/test_usage_costs.py::test_token_out_of_range_is_unknown_not_rounded_or_overflowed
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[duplicate]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[negative]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[float]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[bool]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[nan]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[exponent]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[precision]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[currency]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[version]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[extra]
+FAILED tests/test_llm/test_usage_costs.py::test_pricebook_rejects_unsupported_or_ambiguous_inputs[date]
+FAILED tests/test_llm/test_usage_costs.py::test_records_reject_duplicates_and_corrupt_audit_metadata[duplicate]
+FAILED tests/test_llm/test_usage_costs.py::test_records_reject_duplicates_and_corrupt_audit_metadata[version]
+FAILED tests/test_llm/test_usage_costs.py::test_records_reject_duplicates_and_corrupt_audit_metadata[usage]
+FAILED tests/test_llm/test_usage_costs.py::test_records_reject_duplicates_and_corrupt_audit_metadata[attempt_id]
+FAILED tests/test_llm/test_usage_costs.py::test_records_reject_duplicates_and_corrupt_audit_metadata[empty]
+FAILED tests/test_llm/test_usage_costs.py::test_records_reject_duplicates_and_corrupt_audit_metadata[bound_version]
+FAILED tests/test_llm/test_usage_costs.py::test_batch_counts_each_query_once_and_accepts_audit_v2
+FAILED tests/test_llm/test_usage_costs.py::test_cli_reads_audit_read_only_and_preserves_report_on_failure
+FAILED tests/test_llm/test_usage_costs.py::test_fresh_cost_import_has_no_model_database_or_network_clients
+42 failed in 2.38s

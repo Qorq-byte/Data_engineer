@@ -1,0 +1,32 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+_____________ test_explain_rejection_does_not_log_prediction_sql ______________
+
+caplog = <_pytest.logging.LogCaptureFixture object at 0x000001F08438B530>
+
+    def test_explain_rejection_does_not_log_prediction_sql(caplog):
+        suite = load_suite()
+        rows = predictions(suite)
+        rows[0]["sql"] = (
+            "EXPLAIN QUERY PLAN SELECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id"
+        )
+        with caplog.at_level("WARNING", logger="sqlglot"):
+            report = evaluate_suite(suite, rows)
+        assert report["robust_match_count"] == 3
+>       assert "PRIVATE_SQL_MARKER" not in caplog.text
+E       assert 'PRIVATE_SQL_MARKER' not in "WARNING  sq...'Command'.\n"
+E
+E         'PRIVATE_SQL_MARKER' is contained here:
+E           ECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id' contains unsupported syntax. Falling back to parsing as a 'Command'.
+E         ?           ++++++++++++++++++
+E           WARNING  sqlglot:parser.py:2280 'EXPLAIN QUERY PLAN SELECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id' contains unsupported syntax. Falling back to parsing as a 'Command'.
+E           WARNING  sqlglot:parser.py:2280 'EXPLAIN QUERY PLAN SELECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id' contains unsupported syntax. Falling back to parsing as a 'Command'.
+
+tests\test_evaluation\test_contract_suite.py:100: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  sqlglot:parser.py:2280 'EXPLAIN QUERY PLAN SELECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id' contains unsupported syntax. Falling back to parsing as a 'Command'.
+WARNING  sqlglot:parser.py:2280 'EXPLAIN QUERY PLAN SELECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id' contains unsupported syntax. Falling back to parsing as a 'Command'.
+WARNING  sqlglot:parser.py:2280 'EXPLAIN QUERY PLAN SELECT id AS PRIVATE_SQL_MARKER FROM orders ORDER BY id' contains unsupported syntax. Falling back to parsing as a 'Command'.
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_contract_suite.py::test_explain_rejection_does_not_log_prediction_sql
+1 failed, 28 deselected in 3.37s

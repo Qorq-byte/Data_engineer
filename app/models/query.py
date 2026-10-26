@@ -107,6 +107,10 @@ class SQLCandidate:
     validation: dict[str, Any] | None = None   # per-candidate validation result
     execution: dict[str, Any] | None = None    # per-candidate execution result
     db_id: str = ""
+    generation_source: Literal[
+        "model_response", "model_stream", "prepared", "stream_text", "unknown"
+    ] = "unknown"
+    finish_reason: Literal["stop"] | None = None
 
 
 @dataclass

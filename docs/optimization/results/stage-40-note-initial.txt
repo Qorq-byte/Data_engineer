@@ -1,0 +1,28 @@
+.F                                                                       [100%]
+================================== FAILURES ===================================
+___________ test_explain_uses_async_driver_and_returns_plan[mysql] ____________
+
+connection = ('stage40-mysql', <aiomysql.connection.Connection object at 0x000001D196B411F0>)
+recwarn = WarningsRecorder(record=True)
+
+    async def test_explain_uses_async_driver_and_returns_plan(connection, recwarn):
+        identity, conn = connection
+        plans = []
+
+        class ObservedNode(ExecuteSQLNode):
+            def _parse_explain_output(self, result, existing=None):
+                plans.append(result)
+                return super()._parse_explain_output(result, existing)
+
+        output = await ObservedNode().execute(query(
+            identity, conn, "SELECT id AS private_plan_marker FROM orders", explain=True))
+        assert output.metadata["status"] == "success"
+        assert plans[0]["row_count"] > 0 and plans[0]["columns"]
+>       assert all("private_plan_marker" not in str(w.message) for w in recwarn)
+E       assert False
+E        +  where False = all(<generator object test_explain_uses_async_driver_and_returns_plan.<locals>.<genexpr> at 0x000001D196F3BAE0>)
+
+tests\real_db\test_acceptance.py:108: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/real_db/test_acceptance.py::test_explain_uses_async_driver_and_returns_plan[mysql]
+1 failed, 1 passed, 26 deselected in 1.33s

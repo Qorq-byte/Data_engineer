@@ -637,3 +637,28 @@ PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型
 阶段15为DuckDB保存并核对原生namespace身份、search_path与用户临时对象状态，防止同句柄切库后复用旧来源；绑定EXPLAIN使用原会话。保守main/no-temp范围、DDL与索引限制及实测见[阶段15报告](docs/optimization/stage-15.md)。
 
 阶段16统一Schema/RAG刷新并在索引删除前核对来源；冲突HTTP409、旧索引保留，前端按实际业务字段统计成功。四条写入口、取消/失败和双后端部分写限制见[阶段16报告](docs/optimization/stage-16.md)。check:frontend同时执行实际页面刷新处理函数的12项契约场景。
+
+阶段29新增请求级 `llm_usage`：JSON、SSE done、MCP 共用隔离摘要；逐次尝试、缺测和覆盖率语义见[用量契约](docs/optimization/request-llm-usage.md)，验收见[阶段29报告](docs/optimization/stage-29.md)。不提供费用估算或持久账本。新增模块类型门禁：`mypy app/llm/usage.py`。Windows 本地验证需可用的时区数据库（如 `tzdata`）。
+
+阶段30修复原生LiteLLM SDK对象响应兼容，异常映射前保留可用usage，逐次usage_basis区分SDK归一化来源（SDK可能补零，不能据此证明原始报告完整）。检查命令：`mypy app/llm/usage.py app/llm/responses.py`；详见[阶段30报告](docs/optimization/stage-30.md)及[计划](docs/optimization/stage-30-plan.md)。
+
+阶段31新增可选本机用量审计：默认关闭，设置`LLM_AUDIT_PATH=data/llm_usage.sqlite3`后重启启用；`LLM_AUDIT_MAX_RECORDS=1000`控制逻辑保留条数。检查响应`llm_audit.status`，管理员通过`GET /api/v1/usage-audits/{query_id}`读取，详见[审计契约](docs/optimization/usage-audit.md)。不保存问题/SQL，取消/写失败和SDK缺测限制仍适用；新strict门禁`mypy app/audit/store.py app/workflow/query_audit.py`。
+[阶段31报告](docs/optimization/stage-31.md)记录真实SQLite验证、取消/审计失败处理及已知边界。
+
+阶段32新增`python -m scripts.export_predictions`，按显式案例/查询/候选/数据库绑定导出保存的QueryResponse，供既有离线SQL评测器消费。可选只读审计核对，缺生成耗时/费用保留null；不发模型请求、不从审计还原SQL。用法及合成重跑样例见[预测导出契约](docs/optimization/prediction-export.md)。
+
+阶段33在JSON/SSE/MCP候选中保留`generation_source`和`finish_reason`，导出只用所选候选证据，拒绝系统预制SQL。缺完成标记或纯文本流仍未知，不从请求用量猜测。见[阶段33计划](docs/optimization/stage-33-plan.md)及[查询契约](docs/optimization/query-contract.md)。
+
+阶段34新增可选结构化流接口：完整消费并校验原生流后，候选保留`model_stream/stop`；旧文本接口和Mock仍兼容且保留未知。预算/用量不重复计数，取消/超时/非法尾部不产出完成候选。公开SSE仍是工作流事件流。见[流事件契约](docs/optimization/stream-completion.md)。
+
+阶段35新增默认关闭的`LLM_AUDIT_CANDIDATE_DIGESTS`：审计启用后可保存候选摘要以核对SQL与完成信息；不存SQL原文，摘要不是加密或签名。导出可用`--require-candidate-audit`强制成功SQL绑定，旧v1兼容。见[候选摘要绑定契约](docs/optimization/candidate-audit-binding.md)。
+
+阶段36新增`python -m scripts.estimate_usage_cost`：只读明确选择的审计请求，使用操作者提供的平坦价格表生成独立估算报告。无默认真实价格、不联网，缺测不补0，合法0保留；不回填预测cost_usd或改在线响应。参数、范围与合成样例见[用量估算契约](docs/optimization/usage-cost-estimates.md)。
+
+阶段37统一三个离线评测CLI的严格JSON、输入路径保护和原子报告写入，预检先于索引/节点评测；SQL验证支持显式`--dataset`。输入/IO错误统一退出2，stdout只给计数/哈希，详细报告格式不变。见[评测文件边界](docs/optimization/evaluation-artifact-boundaries.md)。
+
+阶段38新增 `python -m scripts.run_model_evaluation`：默认显式prepare生成无凭据清单，execute须匹配SHA并使用新运行目录；固定4题公开合成SQLite、每题1次、禁重试/fallback，走正式Harness及v2候选审计绑定。费用未知不补0，结果只表示合成冒烟；用法与边界见[受控模型验收](docs/optimization/controlled-model-evaluation.md)。
+
+阶段39新增独立的合成SQL输出契约v2：4个明确问题、base/edge/empty三组SQLite、手写标签与gold交叉自检；同一预测在三库检查列名/列序、结果及最外层排序，完整4题分母。离线入口 `python -m scripts.evaluate_sql_contracts`；受控模型准备可显式 `--profile synthetic-sqlite-model-v2`，仍最多4次调用，费用未知。旧v1及历史分数保持，两个版本不能直接比较。详见[SQL输出契约](docs/optimization/sql-output-contracts.md)。
+
+阶段40增加真实PostgreSQL16/MySQL8.4验收：`python -m scripts.run_real_db_tests` 使用专用受限临时容器、只读账号和真实驱动，finally核对所有权后清理；普通离线命令 `pytest -m "not real_database"`，独立真实服务CI必须同时通过。修复PG只读角色约束/空结果列、异步EXPLAIN和取消重连候选清理，不调用真实LLM。准备镜像、实测边界见[真实数据库验收](docs/optimization/real-database-acceptance.md)。

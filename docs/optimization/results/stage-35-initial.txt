@@ -1,0 +1,774 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF                                    [100%]
+================================== FAILURES ===================================
+_________ test_digest_is_exact_utf8_and_does_not_store_private_fields _________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_digest_is_exact_utf8_and_0')
+
+    def test_digest_is_exact_utf8_and_does_not_store_private_fields(tmp_path):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:53: ModuleNotFoundError
+_________________ test_each_bound_field_changes_digest[query] _________________
+
+field = 'query'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+__________________ test_each_bound_field_changes_digest[id] ___________________
+
+field = 'id'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+_________________ test_each_bound_field_changes_digest[db_id] _________________
+
+field = 'db_id'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+________________ test_each_bound_field_changes_digest[dialect] ________________
+
+field = 'dialect'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+_______________ test_each_bound_field_changes_digest[sql_text] ________________
+
+field = 'sql_text'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+___________ test_each_bound_field_changes_digest[generation_source] ___________
+
+field = 'generation_source'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+_____________ test_each_bound_field_changes_digest[finish_reason] _____________
+
+field = 'finish_reason'
+
+    @pytest.mark.parametrize("field", ["query", "id", "db_id", "dialect", "sql_text",
+                                       "generation_source", "finish_reason"])
+    def test_each_bound_field_changes_digest(field):
+>       from app.audit.candidates import candidate_digest
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:76: ModuleNotFoundError
+_____ test_capture_rejects_duplicates_bounds_and_unsafe_fields[duplicate] _____
+
+mode = 'duplicate'
+
+    @pytest.mark.parametrize("mode", ["duplicate", "too_many", "byte_limit", "total_bytes", "unsafe"])
+    def test_capture_rejects_duplicates_bounds_and_unsafe_fields(mode):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:94: ModuleNotFoundError
+_____ test_capture_rejects_duplicates_bounds_and_unsafe_fields[too_many] ______
+
+mode = 'too_many'
+
+    @pytest.mark.parametrize("mode", ["duplicate", "too_many", "byte_limit", "total_bytes", "unsafe"])
+    def test_capture_rejects_duplicates_bounds_and_unsafe_fields(mode):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:94: ModuleNotFoundError
+____ test_capture_rejects_duplicates_bounds_and_unsafe_fields[byte_limit] _____
+
+mode = 'byte_limit'
+
+    @pytest.mark.parametrize("mode", ["duplicate", "too_many", "byte_limit", "total_bytes", "unsafe"])
+    def test_capture_rejects_duplicates_bounds_and_unsafe_fields(mode):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:94: ModuleNotFoundError
+____ test_capture_rejects_duplicates_bounds_and_unsafe_fields[total_bytes] ____
+
+mode = 'total_bytes'
+
+    @pytest.mark.parametrize("mode", ["duplicate", "too_many", "byte_limit", "total_bytes", "unsafe"])
+    def test_capture_rejects_duplicates_bounds_and_unsafe_fields(mode):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:94: ModuleNotFoundError
+______ test_capture_rejects_duplicates_bounds_and_unsafe_fields[unsafe] _______
+
+mode = 'unsafe'
+
+    @pytest.mark.parametrize("mode", ["duplicate", "too_many", "byte_limit", "total_bytes", "unsafe"])
+    def test_capture_rejects_duplicates_bounds_and_unsafe_fields(mode):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:94: ModuleNotFoundError
+______________ test_v1_v2_same_database_retention_and_conflicts _______________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_v1_v2_same_database_reten0')
+
+    def test_v1_v2_same_database_retention_and_conflicts(tmp_path):
+        path = tmp_path / "audit.sqlite3"
+        store = UsageAuditStore(str(path), max_records=2)
+        old = record(bound=False)
+        store.write(old)
+        second = response()
+        second["query_id"] = "q_000000000002"
+>       new = record(second)
+              ^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000002', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+bound = True
+
+    def record(source=None, *, bound=True):
+        source = response() if source is None else source
+        kwargs = {}
+        if bound:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:43: ModuleNotFoundError
+_____________ test_bound_export_v2_roundtrip_and_legacy_stays_v1 ______________
+
+    def test_bound_export_v2_roundtrip_and_legacy_stays_v1():
+        source = response()
+        source["candidates"][1].update(generation_source="model_stream", finish_reason="stop")
+>       audit = captured(source)
+                ^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:137: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+____ test_v2_never_downgrades_when_selected_candidate_is_changed[sql_text] ____
+
+field = 'sql_text'
+
+    @pytest.mark.parametrize("field", ["sql_text", "db_id", "generation_source", "finish_reason"])
+    def test_v2_never_downgrades_when_selected_candidate_is_changed(field):
+        source = response()
+>       audit = captured(source)
+                ^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+_____ test_v2_never_downgrades_when_selected_candidate_is_changed[db_id] ______
+
+field = 'db_id'
+
+    @pytest.mark.parametrize("field", ["sql_text", "db_id", "generation_source", "finish_reason"])
+    def test_v2_never_downgrades_when_selected_candidate_is_changed(field):
+        source = response()
+>       audit = captured(source)
+                ^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+_ test_v2_never_downgrades_when_selected_candidate_is_changed[generation_source] _
+
+field = 'generation_source'
+
+    @pytest.mark.parametrize("field", ["sql_text", "db_id", "generation_source", "finish_reason"])
+    def test_v2_never_downgrades_when_selected_candidate_is_changed(field):
+        source = response()
+>       audit = captured(source)
+                ^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+_ test_v2_never_downgrades_when_selected_candidate_is_changed[finish_reason] __
+
+field = 'finish_reason'
+
+    @pytest.mark.parametrize("field", ["sql_text", "db_id", "generation_source", "finish_reason"])
+    def test_v2_never_downgrades_when_selected_candidate_is_changed(field):
+        source = response()
+>       audit = captured(source)
+                ^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:154: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+___________ test_bad_audit_candidate_metadata_is_rejected[version] ____________
+
+mode = 'version'
+
+    @pytest.mark.parametrize("mode", ["version", "digest_version", "missing", "bad_hash", "duplicate"])
+    def test_bad_audit_candidate_metadata_is_rejected(mode):
+>       audit = captured()
+                ^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+________ test_bad_audit_candidate_metadata_is_rejected[digest_version] ________
+
+mode = 'digest_version'
+
+    @pytest.mark.parametrize("mode", ["version", "digest_version", "missing", "bad_hash", "duplicate"])
+    def test_bad_audit_candidate_metadata_is_rejected(mode):
+>       audit = captured()
+                ^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+___________ test_bad_audit_candidate_metadata_is_rejected[missing] ____________
+
+mode = 'missing'
+
+    @pytest.mark.parametrize("mode", ["version", "digest_version", "missing", "bad_hash", "duplicate"])
+    def test_bad_audit_candidate_metadata_is_rejected(mode):
+>       audit = captured()
+                ^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+___________ test_bad_audit_candidate_metadata_is_rejected[bad_hash] ___________
+
+mode = 'bad_hash'
+
+    @pytest.mark.parametrize("mode", ["version", "digest_version", "missing", "bad_hash", "duplicate"])
+    def test_bad_audit_candidate_metadata_is_rejected(mode):
+>       audit = captured()
+                ^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+__________ test_bad_audit_candidate_metadata_is_rejected[duplicate] ___________
+
+mode = 'duplicate'
+
+    @pytest.mark.parametrize("mode", ["version", "digest_version", "missing", "bad_hash", "duplicate"])
+    def test_bad_audit_candidate_metadata_is_rejected(mode):
+>       audit = captured()
+                ^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:167: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+__ test_strict_binding_requires_audit_and_v2_for_completed_predictions[None] __
+
+lookup = None
+
+    @pytest.mark.parametrize("lookup", [None, "v1"])
+    def test_strict_binding_requires_audit_and_v2_for_completed_predictions(lookup):
+        with pytest.raises(ValueError):
+>           build(audit_lookup=(lambda _: captured(version=1)) if lookup else None,
+                  require_candidate_audit=True)
+
+tests\test_llm\test_candidate_audit.py:185: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None
+kwargs = {'audit_lookup': None, 'require_candidate_audit': True}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+        from app.evaluation.predictions import export_predictions
+    
+>       return export_predictions(
+            dataset() if data is None else data,
+            [response()] if responses is None else responses,
+            [binding()] if bindings is None else bindings,
+            **kwargs,
+        )
+E       TypeError: export_predictions() got an unexpected keyword argument 'require_candidate_audit'
+
+tests\test_rag\test_prediction_export.py:81: TypeError
+___ test_strict_binding_requires_audit_and_v2_for_completed_predictions[v1] ___
+
+lookup = 'v1'
+
+    @pytest.mark.parametrize("lookup", [None, "v1"])
+    def test_strict_binding_requires_audit_and_v2_for_completed_predictions(lookup):
+        with pytest.raises(ValueError):
+>           build(audit_lookup=(lambda _: captured(version=1)) if lookup else None,
+                  require_candidate_audit=True)
+
+tests\test_llm\test_candidate_audit.py:185: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None
+kwargs = {'audit_lookup': <function test_strict_binding_requires_audit_and_v2_for_completed_predictions.<locals>.<lambda> at 0x00000253B052C680>, 'require_candidate_audit': True}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+        from app.evaluation.predictions import export_predictions
+    
+>       return export_predictions(
+            dataset() if data is None else data,
+            [response()] if responses is None else responses,
+            [binding()] if bindings is None else bindings,
+            **kwargs,
+        )
+E       TypeError: export_predictions() got an unexpected keyword argument 'require_candidate_audit'
+
+tests\test_rag\test_prediction_export.py:81: TypeError
+_________ test_failed_prediction_is_still_a_failure_with_strict_audit _________
+
+    def test_failed_prediction_is_still_a_failure_with_strict_audit():
+        source = response()
+        source.update(status="failed", candidates=[])
+        selected = binding()
+        del selected["candidate_id"]
+>       rows = build(responses=[source], bindings=[selected], audit_lookup=lambda _: captured(source),
+                     require_candidate_audit=True)
+
+tests\test_llm\test_candidate_audit.py:194: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'failed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000001', 'db_id': 'db2'}]
+kwargs = {'audit_lookup': <function test_failed_prediction_is_still_a_failure_with_strict_audit.<locals>.<lambda> at 0x00000253B052DEE0>, 'require_candidate_audit': True}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+        from app.evaluation.predictions import export_predictions
+    
+>       return export_predictions(
+            dataset() if data is None else data,
+            [response()] if responses is None else responses,
+            [binding()] if bindings is None else bindings,
+            **kwargs,
+        )
+E       TypeError: export_predictions() got an unexpected keyword argument 'require_candidate_audit'
+
+tests\test_rag\test_prediction_export.py:81: TypeError
+_ test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[sql] _
+
+field = 'sql'
+
+    @pytest.mark.parametrize("field", ["sql", "candidate_sha256", "candidate_finish_reason", "sql_binding"])
+    def test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed(field):
+>       rows = build(audit_lookup=lambda _: captured())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_prediction_export.py:81: in build
+    return export_predictions(
+app\evaluation\predictions.py:240: in export_predictions
+    record = audit_lookup(query_id)
+             ^^^^^^^^^^^^^^^^^^^^^^
+tests\test_llm\test_candidate_audit.py:202: in <lambda>
+    rows = build(audit_lookup=lambda _: captured())
+                                        ^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+_ test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[candidate_sha256] _
+
+field = 'candidate_sha256'
+
+    @pytest.mark.parametrize("field", ["sql", "candidate_sha256", "candidate_finish_reason", "sql_binding"])
+    def test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed(field):
+>       rows = build(audit_lookup=lambda _: captured())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_prediction_export.py:81: in build
+    return export_predictions(
+app\evaluation\predictions.py:240: in export_predictions
+    record = audit_lookup(query_id)
+             ^^^^^^^^^^^^^^^^^^^^^^
+tests\test_llm\test_candidate_audit.py:202: in <lambda>
+    rows = build(audit_lookup=lambda _: captured())
+                                        ^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+_ test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[candidate_finish_reason] _
+
+field = 'candidate_finish_reason'
+
+    @pytest.mark.parametrize("field", ["sql", "candidate_sha256", "candidate_finish_reason", "sql_binding"])
+    def test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed(field):
+>       rows = build(audit_lookup=lambda _: captured())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_prediction_export.py:81: in build
+    return export_predictions(
+app\evaluation\predictions.py:240: in export_predictions
+    record = audit_lookup(query_id)
+             ^^^^^^^^^^^^^^^^^^^^^^
+tests\test_llm\test_candidate_audit.py:202: in <lambda>
+    rows = build(audit_lookup=lambda _: captured())
+                                        ^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+_ test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[sql_binding] _
+
+field = 'sql_binding'
+
+    @pytest.mark.parametrize("field", ["sql", "candidate_sha256", "candidate_finish_reason", "sql_binding"])
+    def test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed(field):
+>       rows = build(audit_lookup=lambda _: captured())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_candidate_audit.py:202: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_rag\test_prediction_export.py:81: in build
+    return export_predictions(
+app\evaluation\predictions.py:240: in export_predictions
+    record = audit_lookup(query_id)
+             ^^^^^^^^^^^^^^^^^^^^^^
+tests\test_llm\test_candidate_audit.py:202: in <lambda>
+    rows = build(audit_lookup=lambda _: captured())
+                                        ^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+source = {'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}
+version = 2
+
+    def captured(source=None, *, version=2):
+        source = response() if source is None else source
+        record = {
+            "schema_version": version, "query_id": source["query_id"], "outcome": source["status"],
+            "llm_calls": source["llm_calls"], "usage": source["llm_usage"],
+        }
+        if version == 2:
+>           from app.audit.candidates import candidate_digests
+E           ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:32: ModuleNotFoundError
+________ test_protocols_capture_final_candidates_without_raw_sql[json] ________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000253B06E05F0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253B07CAAE0>
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_protocols_capture_final_c0')
+protocol = 'json'
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    async def test_protocols_capture_final_candidates_without_raw_sql(connected_query, monkeypatch, tmp_path, protocol):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:218: ModuleNotFoundError
+________ test_protocols_capture_final_candidates_without_raw_sql[sse] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000253B03FBEC0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253B0E43620>
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_protocols_capture_final_c1')
+protocol = 'sse'
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    async def test_protocols_capture_final_candidates_without_raw_sql(connected_query, monkeypatch, tmp_path, protocol):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:218: ModuleNotFoundError
+________ test_protocols_capture_final_candidates_without_raw_sql[mcp] _________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000253B0DB43B0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253B0E2A4B0>
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_protocols_capture_final_c2')
+protocol = 'mcp'
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    async def test_protocols_capture_final_candidates_without_raw_sql(connected_query, monkeypatch, tmp_path, protocol):
+>       from app.audit.candidates import candidate_digests
+E       ModuleNotFoundError: No module named 'app.audit.candidates'
+
+tests\test_llm\test_candidate_audit.py:218: ModuleNotFoundError
+________ test_enabled_capture_with_disabled_store_does_not_create_file ________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000253B0DB6F60>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253B0DB6F00>
+
+    async def test_enabled_capture_with_disabled_store_does_not_create_file(connected_query, monkeypatch):
+        monkeypatch.setattr(settings, "llm_audit_path", "")
+>       monkeypatch.setattr(settings, "llm_audit_candidate_digests", True)
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, llm_audit_path='', llm_audit_max_records=1000, rag_embedding_provider='ollama', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_candidate_digests'
+
+tests\test_llm\test_candidate_audit.py:242: AttributeError
+______________ test_digest_failure_cannot_overwrite_query_result ______________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000253B0E23CE0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253B0E23D70>
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_digest_failure_cannot_ove0')
+
+    async def test_digest_failure_cannot_overwrite_query_result(connected_query, monkeypatch, tmp_path):
+        import app.workflow.query_audit as audit_module
+    
+        monkeypatch.setattr(settings, "llm_audit_path", str(tmp_path / "audit.sqlite3"))
+>       monkeypatch.setattr(settings, "llm_audit_candidate_digests", True)
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, llm_audit_path='D:\\python\\data_engineer\\.stage35\\.pytest-initial\\test_digest_failure_cannot_ove0\\audit.sqlite3', llm_audit_max_records=1000, rag_embedding_provider='ollama', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_candidate_digests'
+
+tests\test_llm\test_candidate_audit.py:252: AttributeError
+___________ test_real_sdk_query_to_bound_cli_and_sqlite_evaluation ____________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000253B074EAE0>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253B0DB5EB0>
+tmp_path = WindowsPath('D:/python/data_engineer/.stage35/.pytest-initial/test_real_sdk_query_to_bound_c0')
+
+    async def test_real_sdk_query_to_bound_cli_and_sqlite_evaluation(connected_query, monkeypatch, tmp_path):
+        import litellm
+        from scripts.evaluate_quality import evaluate
+    
+        path = tmp_path / "audit.sqlite3"
+        monkeypatch.setattr(settings, "llm_audit_path", str(path))
+>       monkeypatch.setattr(settings, "llm_audit_candidate_digests", True)
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, llm_audit_path='D:\\python\\data_engineer\\.stage35\\.pytest-initial\\test_real_sdk_query_to_bound_c0\\audit.sqlite3', llm_audit_max_records=1000, rag_embedding_provider='ollama', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_candidate_digests'
+
+tests\test_llm\test_candidate_audit.py:270: AttributeError
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_candidate_audit.py::test_digest_is_exact_utf8_and_does_not_store_private_fields
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[query]
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[id]
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[db_id]
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[dialect]
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[sql_text]
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[generation_source]
+FAILED tests/test_llm/test_candidate_audit.py::test_each_bound_field_changes_digest[finish_reason]
+FAILED tests/test_llm/test_candidate_audit.py::test_capture_rejects_duplicates_bounds_and_unsafe_fields[duplicate]
+FAILED tests/test_llm/test_candidate_audit.py::test_capture_rejects_duplicates_bounds_and_unsafe_fields[too_many]
+FAILED tests/test_llm/test_candidate_audit.py::test_capture_rejects_duplicates_bounds_and_unsafe_fields[byte_limit]
+FAILED tests/test_llm/test_candidate_audit.py::test_capture_rejects_duplicates_bounds_and_unsafe_fields[total_bytes]
+FAILED tests/test_llm/test_candidate_audit.py::test_capture_rejects_duplicates_bounds_and_unsafe_fields[unsafe]
+FAILED tests/test_llm/test_candidate_audit.py::test_v1_v2_same_database_retention_and_conflicts
+FAILED tests/test_llm/test_candidate_audit.py::test_bound_export_v2_roundtrip_and_legacy_stays_v1
+FAILED tests/test_llm/test_candidate_audit.py::test_v2_never_downgrades_when_selected_candidate_is_changed[sql_text]
+FAILED tests/test_llm/test_candidate_audit.py::test_v2_never_downgrades_when_selected_candidate_is_changed[db_id]
+FAILED tests/test_llm/test_candidate_audit.py::test_v2_never_downgrades_when_selected_candidate_is_changed[generation_source]
+FAILED tests/test_llm/test_candidate_audit.py::test_v2_never_downgrades_when_selected_candidate_is_changed[finish_reason]
+FAILED tests/test_llm/test_candidate_audit.py::test_bad_audit_candidate_metadata_is_rejected[version]
+FAILED tests/test_llm/test_candidate_audit.py::test_bad_audit_candidate_metadata_is_rejected[digest_version]
+FAILED tests/test_llm/test_candidate_audit.py::test_bad_audit_candidate_metadata_is_rejected[missing]
+FAILED tests/test_llm/test_candidate_audit.py::test_bad_audit_candidate_metadata_is_rejected[bad_hash]
+FAILED tests/test_llm/test_candidate_audit.py::test_bad_audit_candidate_metadata_is_rejected[duplicate]
+FAILED tests/test_llm/test_candidate_audit.py::test_strict_binding_requires_audit_and_v2_for_completed_predictions[None]
+FAILED tests/test_llm/test_candidate_audit.py::test_strict_binding_requires_audit_and_v2_for_completed_predictions[v1]
+FAILED tests/test_llm/test_candidate_audit.py::test_failed_prediction_is_still_a_failure_with_strict_audit
+FAILED tests/test_llm/test_candidate_audit.py::test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[sql]
+FAILED tests/test_llm/test_candidate_audit.py::test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[candidate_sha256]
+FAILED tests/test_llm/test_candidate_audit.py::test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[candidate_finish_reason]
+FAILED tests/test_llm/test_candidate_audit.py::test_consumer_checks_candidate_binding_even_after_row_hash_is_recomputed[sql_binding]
+FAILED tests/test_llm/test_candidate_audit.py::test_protocols_capture_final_candidates_without_raw_sql[json]
+FAILED tests/test_llm/test_candidate_audit.py::test_protocols_capture_final_candidates_without_raw_sql[sse]
+FAILED tests/test_llm/test_candidate_audit.py::test_protocols_capture_final_candidates_without_raw_sql[mcp]
+FAILED tests/test_llm/test_candidate_audit.py::test_enabled_capture_with_disabled_store_does_not_create_file
+FAILED tests/test_llm/test_candidate_audit.py::test_digest_failure_cannot_overwrite_query_result
+FAILED tests/test_llm/test_candidate_audit.py::test_real_sdk_query_to_bound_cli_and_sqlite_evaluation
+37 failed in 9.00s

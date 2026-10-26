@@ -1,0 +1,19 @@
+{
+  "scope": "Independent read-only review; not a full security audit",
+  "findings": [
+    {
+      "id": "ORDER_COUNTEREXAMPLE",
+      "status": "fixed",
+      "regressions": "stage-39-order-initial.txt",
+      "resolution": "Edge names and counts now conflict with ID order; both wrong orderings fail"
+    },
+    {
+      "id": "PARSER_SQL_LOGGING",
+      "status": "fixed",
+      "regressions": "stage-39-privacy-initial.txt",
+      "resolution": "Only check order after column/row match; offline CLI restores scoped logging suppression"
+    }
+  ],
+  "followup_review": "Both reproducers closed; no new issue found in scoring, cost scope, cleanup or v1 compatibility",
+  "external_calls": 0
+}

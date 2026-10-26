@@ -1,0 +1,88 @@
+................FF                                                       [100%]
+================================== FAILURES ===================================
+_ test_counterexamples_reject_plausible_mutants[SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.name-2] _
+
+sql = 'SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.name'
+index = 2
+
+    @pytest.mark.parametrize("sql,index", [
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.id", 2),
+        ("SELECT u.id AS user_id, COUNT(*) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.id", 2),
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.name ORDER BY u.id", 2),
+        ("SELECT COALESCE(SUM(DISTINCT amount),0) AS total_amount FROM orders "
+         "WHERE status='completed'", 1),
+        ("SELECT COALESCE(SUM(amount-refund_amount),0) AS total_amount FROM orders "
+         "WHERE status='completed'", 1),
+        ("SELECT COALESCE(SUM(amount),0) AS total_amount FROM orders", 1),
+        ("SELECT SUM(amount) AS total_amount FROM orders WHERE status='completed'", 1),
+        ("SELECT id FROM products WHERE 0 ORDER BY id", 3),
+        ("SELECT id FROM products WHERE category <> 'unknown' ORDER BY id", 3),
+        ("SELECT id FROM products WHERE category LIKE '%unknown%' ORDER BY id", 3),
+        ("SELECT id FROM products WHERE category='unknown' ORDER BY id DESC", 3),
+        ("SELECT id,name FROM products WHERE category='unknown' ORDER BY id", 3),
+        ("SELECT id AS wrong_name FROM orders ORDER BY id", 0),
+        ("SELECT id FROM orders ORDER BY id DESC", 0),
+        ("SELECT id FROM orders", 0),
+        ("SELECT id FROM (SELECT id FROM orders ORDER BY id)", 0),
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.name", 2),
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY order_count DESC, user_id", 2),
+    ])
+    def test_counterexamples_reject_plausible_mutants(sql, index):
+        suite = load_suite()
+        rows = predictions(suite)
+        rows[index]["sql"] = sql
+        report = evaluate_suite(suite, rows)
+>       assert report["robust_match_count"] == 3
+E       assert 4 == 3
+
+tests\test_evaluation\test_contract_suite.py:55: AssertionError
+_ test_counterexamples_reject_plausible_mutants[SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY order_count DESC, user_id-2] _
+
+sql = 'SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY order_count DESC, user_id'
+index = 2
+
+    @pytest.mark.parametrize("sql,index", [
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.id", 2),
+        ("SELECT u.id AS user_id, COUNT(*) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.id", 2),
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.name ORDER BY u.id", 2),
+        ("SELECT COALESCE(SUM(DISTINCT amount),0) AS total_amount FROM orders "
+         "WHERE status='completed'", 1),
+        ("SELECT COALESCE(SUM(amount-refund_amount),0) AS total_amount FROM orders "
+         "WHERE status='completed'", 1),
+        ("SELECT COALESCE(SUM(amount),0) AS total_amount FROM orders", 1),
+        ("SELECT SUM(amount) AS total_amount FROM orders WHERE status='completed'", 1),
+        ("SELECT id FROM products WHERE 0 ORDER BY id", 3),
+        ("SELECT id FROM products WHERE category <> 'unknown' ORDER BY id", 3),
+        ("SELECT id FROM products WHERE category LIKE '%unknown%' ORDER BY id", 3),
+        ("SELECT id FROM products WHERE category='unknown' ORDER BY id DESC", 3),
+        ("SELECT id,name FROM products WHERE category='unknown' ORDER BY id", 3),
+        ("SELECT id AS wrong_name FROM orders ORDER BY id", 0),
+        ("SELECT id FROM orders ORDER BY id DESC", 0),
+        ("SELECT id FROM orders", 0),
+        ("SELECT id FROM (SELECT id FROM orders ORDER BY id)", 0),
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.name", 2),
+        ("SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u "
+         "LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY order_count DESC, user_id", 2),
+    ])
+    def test_counterexamples_reject_plausible_mutants(sql, index):
+        suite = load_suite()
+        rows = predictions(suite)
+        rows[index]["sql"] = sql
+        report = evaluate_suite(suite, rows)
+>       assert report["robust_match_count"] == 3
+E       assert 4 == 3
+
+tests\test_evaluation\test_contract_suite.py:55: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_contract_suite.py::test_counterexamples_reject_plausible_mutants[SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY u.name-2]
+FAILED tests/test_evaluation/test_contract_suite.py::test_counterexamples_reject_plausible_mutants[SELECT u.id AS user_id, COUNT(o.id) AS order_count FROM users u LEFT JOIN orders o ON o.user_id=u.id GROUP BY u.id ORDER BY order_count DESC, user_id-2]
+2 failed, 16 passed, 10 deselected in 3.67s

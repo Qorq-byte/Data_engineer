@@ -1,0 +1,42 @@
+{
+  "baseline_commit": "c2f5050291acb21b2fd3de882785db01bd015a3f",
+  "fixture_results": [
+    {
+      "path": "tests/fixtures/retrieval_eval.json",
+      "raw_bytes_unchanged": true,
+      "sha256": "42f76caf666735aaa23f965a0525c737dbe6754eecd42448c7915014de09f869"
+    },
+    {
+      "path": "tests/fixtures/test_schema.sql",
+      "raw_bytes_unchanged": true,
+      "sha256": "0ff8fb23352acc7241fd65e275b9f1932529b41dea3fb43a8d7dd9096eef1c54"
+    }
+  ],
+  "stage32_predictions_unchanged": true,
+  "predictions_sha256": "3a3b12662c3d27ebddddee556c805504bba5ddf9adb6f52ae532763b7182d4f8",
+  "stage36_estimate_unchanged": true,
+  "estimate_report_sha256": "5670d9cc3ba4c7d962c79ecc3f37a0a4b7abfcf85b00d614981cf6b2633bc7f1",
+  "quality_same_input_comparison": {
+    "semantic_report_unchanged": true,
+    "comparison_scope": "All fields except measured latency values; nulls, sample counts, denominators, completion and cost fields retained",
+    "semantic_report_sha256": "229bf7ef710b4226d4ae8058499437099ef6404438e3da27b862841a02bd05a0",
+    "case_count": 4,
+    "prediction_count": 2,
+    "result_correct_count": 1,
+    "execution_success_count": 1,
+    "completion_counts": {
+      "legacy_unknown": 1,
+      "generation_failed": 1,
+      "missing": 2
+    },
+    "reported_cost_usd": {
+      "sample_count": 0,
+      "case_count": 4,
+      "coverage": 0.0,
+      "complete": false,
+      "total": null,
+      "mean": null
+    }
+  },
+  "external_model_calls": 0
+}

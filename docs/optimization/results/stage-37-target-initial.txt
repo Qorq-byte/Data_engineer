@@ -1,0 +1,42 @@
+........................................................................ [ 10%]
+........................................................................ [ 21%]
+........................................................................ [ 32%]
+........................................................................ [ 43%]
+........................................................................ [ 53%]
+......................................................F................. [ 64%]
+........................................................................ [ 75%]
+........................................................................ [ 86%]
+........................................................................ [ 97%]
+...................                                                      [100%]
+================================== FAILURES ===================================
+_______________ test_full_dataset_mismatch_rejected_before_bm25 _______________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013E8318DF70>
+
+    def test_full_dataset_mismatch_rejected_before_bm25(monkeypatch):
+        from scripts import evaluate_quality as module
+    
+        data = {**dataset(), "documents": [], "queries": []}
+        rows = build(data=data)
+        changed = {**data, "version": "different"}
+    
+        def forbidden():
+            raise AssertionError("BM25 started before validating provenance")
+    
+        monkeypatch.setattr(module, "BM25Index", forbidden)
+>       with pytest.raises(ValueError, match="dataset mismatch"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'dataset mismatch'
+E         Actual message: 'Invalid evaluation list or limit'
+
+tests\test_rag\test_prediction_export.py:427: AssertionError
+============================== warnings summary ===============================
+tests/test_rag/test_prediction_export.py::test_real_query_audit_export_and_sqlite_evaluation
+  D:\python\data_engineer\.stage29\.check-venv\Lib\site-packages\pydantic\_internal\_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_prediction_export.py::test_full_dataset_mismatch_rejected_before_bm25
+1 failed, 666 passed, 1 warning in 67.06s (0:01:07)

@@ -78,21 +78,31 @@ class ConnectionFactory:
             ConnectionError: If connection fails.
         """
         conn = await cls._connect(db_type, config)
-        if db_id:
-            if db_id in cls._connections:
-                await cls.aclose(db_id)
-            if db_type == DatabaseType.SQLITE and not config.get("check_same_thread", False):
-                cls._offload_connections[id(conn)] = conn
-            cls._connections[db_id] = conn
-            cls._infos[db_id] = ConnectionInfo(
-                db_id=db_id,
-                db_type=db_type,
-                alias=config.get("alias", db_id),
-                host=config.get("host", ""),
-                port=config.get("port", 0),
-                database_name=config.get("database", config.get("path", "")),
-            )
-        return conn
+        try:
+            if db_id:
+                if db_id in cls._connections:
+                    await cls.aclose(db_id)
+                if db_type == DatabaseType.SQLITE and not config.get("check_same_thread", False):
+                    cls._offload_connections[id(conn)] = conn
+                cls._connections[db_id] = conn
+                cls._infos[db_id] = ConnectionInfo(
+                    db_id=db_id,
+                    db_type=db_type,
+                    alias=config.get("alias", db_id),
+                    host=config.get("host", ""),
+                    port=config.get("port", 0),
+                    database_name=config.get("database", config.get("path", "")),
+                )
+            return conn
+        except BaseException:
+            # A replacement may be waiting for the old handle's lease. Its newly
+            # connected candidate must not leak when that wait is cancelled.
+            if db_id and cls._connections.get(db_id) is conn:
+                cls._connections.pop(db_id, None)
+                cls._infos.pop(db_id, None)
+                cls._offload_connections.pop(id(conn), None)
+            await cls._close_handle(conn)
+            raise
 
     @classmethod
     async def _connect(cls, db_type: DatabaseType, config: dict[str, Any]) -> Any:
@@ -168,7 +178,12 @@ class ConnectionFactory:
                 db=config["database"],
                 autocommit=True,
             )
-            conn = await pool.acquire()
+            try:
+                conn = await pool.acquire()
+            except BaseException:
+                pool.close()
+                await pool.wait_closed()
+                raise
             # Store the pool so it can be properly closed later
             cls._mysql_pools[id(conn)] = pool
             return conn
@@ -265,16 +280,32 @@ class ConnectionFactory:
             cls._infos.pop(db_id, None)
             cls._offload_connections.pop(id(conn), None)
             SchemaExtractor.invalidate(conn)
+            await cls._close_handle(conn)
+
+    @classmethod
+    async def _close_handle(cls, conn: Any) -> None:
+        async def dispose() -> None:
             pool = cls._mysql_pools.pop(id(conn), None)
             if pool is not None:
                 pool.release(conn)
                 pool.close()
                 await pool.wait_closed()
             else:
-                assert conn is not None  # Identity comparison above may widen static Any.
+                assert conn is not None
                 result = conn.close()
                 if inspect.isawaitable(result):
                     await result
+
+        task = asyncio.create_task(dispose())
+        try:
+            await asyncio.shield(task)
+        except asyncio.CancelledError:
+            while not task.done():
+                with suppress(Exception, asyncio.CancelledError):
+                    await asyncio.shield(task)
+            with suppress(Exception, asyncio.CancelledError):
+                task.result()
+            raise
 
     @classmethod
     async def aclose_all(cls) -> None:

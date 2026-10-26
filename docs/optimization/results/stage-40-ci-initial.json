@@ -1,0 +1,15 @@
+{
+  "head_sha": "0aee8c1ce01774de9d9ba2f400a942abb149fc6f",
+  "mvp": {
+    "run_id": 40257282329,
+    "conclusion": "success"
+  },
+  "real_database": {
+    "run_id": 40257281400,
+    "conclusion": "failure",
+    "jobs_created": 0
+  },
+  "reason": "Dynamic job.services ports were placed in job.env, where job context is unavailable",
+  "fix": "Move port expressions to test step env",
+  "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability"
+}

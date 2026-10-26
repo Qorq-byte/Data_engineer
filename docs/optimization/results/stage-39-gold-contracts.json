@@ -1,0 +1,108 @@
+{
+  "report_version": "sql-contract-evaluation-v1",
+  "profile": "synthetic-sqlite-model-v2",
+  "suite_sha256": "30e3007c1bb3569afd2fc3ee67e805568bc907c59001450661484cc6abc7b45a",
+  "predictions_sha256": "e47779cf7fafe7bcb9aa3ccfe58777804c9120f4d222781841af67730aba7187",
+  "fixture_sha256": {
+    "base": "7520694551af33d9c3ffee047466416825470b8d506f0548822421e409eb7289",
+    "edge": "5bf91827224d611685b65e3bc955cef27977dfcd1903dc616c7aaf44df965efe",
+    "empty": "eb573968a9c5838fa80eae9534e673486f939cc92a9af9b0c5a3948127be523b"
+  },
+  "gold_self_check_count": 12,
+  "case_count": 4,
+  "prediction_count": 4,
+  "check_count": 12,
+  "execution_success_count": 12,
+  "contract_match_count": 12,
+  "robust_match_count": 4,
+  "robust_match_rate": 1.0,
+  "error_counts": {},
+  "actual_cost_usd": null,
+  "details": [
+    {
+      "id": "v2_orders",
+      "scenario": "base",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_amount",
+      "scenario": "base",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_users",
+      "scenario": "base",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_category",
+      "scenario": "base",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_orders",
+      "scenario": "edge",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_amount",
+      "scenario": "edge",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_users",
+      "scenario": "edge",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_category",
+      "scenario": "edge",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_orders",
+      "scenario": "empty",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_amount",
+      "scenario": "empty",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_users",
+      "scenario": "empty",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    },
+    {
+      "id": "v2_category",
+      "scenario": "empty",
+      "execution_success": true,
+      "contract_match": true,
+      "error_code": null
+    }
+  ],
+  "measurement_scope": "Four predictions, three local datasets; not twelve model calls. Not comparable to v1 scores or a business accuracy estimate."
+}

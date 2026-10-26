@@ -1,0 +1,818 @@
+FFFFFFFFFFFFFFFFFFFFFFFFFFF.FF                                           [100%]
+================================== FAILURES ===================================
+___________ test_explicit_selection_unknown_telemetry_and_whitelist ___________
+
+    def test_explicit_selection_unknown_telemetry_and_whitelist():
+>       rows = build()
+               ^^^^^^^
+
+tests\test_rag\test_prediction_export.py:57: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+________________ test_bad_or_ambiguous_bindings_rejected[case] ________________
+
+change = 'case'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'unknown', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'db2'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_______________ test_bad_or_ambiguous_bindings_rejected[query] ________________
+
+change = 'query'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000999', 'candidate_id': 'b', 'db_id': 'db2'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_____________ test_bad_or_ambiguous_bindings_rejected[candidate] ______________
+
+change = 'candidate'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000001', 'candidate_id': 'unknown', 'db_id': 'db2'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_________________ test_bad_or_ambiguous_bindings_rejected[db] _________________
+
+change = 'db'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'wrong'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+______________ test_bad_or_ambiguous_bindings_rejected[dialect] _______________
+
+change = 'dialect'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'db2'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+___________ test_bad_or_ambiguous_bindings_rejected[duplicate_case] ___________
+
+change = 'duplicate_case'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'db2'}, {'id': 'one', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'db2'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+__________ test_bad_or_ambiguous_bindings_rejected[duplicate_query] ___________
+
+change = 'duplicate_query'
+
+    @pytest.mark.parametrize("change", ["case", "query", "candidate", "db", "dialect", "duplicate_case", "duplicate_query"])
+    def test_bad_or_ambiguous_bindings_rejected(change):
+        b, r = binding(), response()
+        bindings = [b]
+        if change == "case": b["id"] = "unknown"
+        elif change == "query": b["query_id"] = "q_000000000999"
+        elif change == "candidate": b["candidate_id"] = "unknown"
+        elif change == "db": b["db_id"] = "wrong"
+        elif change == "dialect": r["candidates"][1]["dialect"] = "postgresql"
+        elif change == "duplicate_case": bindings.append(dict(b))
+        elif change == "duplicate_query": bindings.append({**b, "id": "two"})
+        with pytest.raises(ValueError):
+>           build(responses=[r], bindings=bindings)
+
+tests\test_rag\test_prediction_export.py:87: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = [{'id': 'one', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'db2'}, {'id': 'two', 'query_id': 'q_000000000001', 'candidate_id': 'b', 'db_id': 'db2'}]
+kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+__________ test_failed_request_and_missing_case_stay_in_denominator ___________
+
+    def test_failed_request_and_missing_case_stay_in_denominator():
+        r = response()
+        r["status"] = "failed"
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:93: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'failed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_ test_only_selected_candidate_completion_fields_used[finish_reason-length-INCOMPLETE_COMPLETION] _
+
+field = 'finish_reason', value = 'length', expected = 'INCOMPLETE_COMPLETION'
+
+    @pytest.mark.parametrize("field,value,expected", [
+        ("finish_reason", "length", "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "private reason", "INCOMPLETE_COMPLETION"),
+        ("refusal", "private refusal", "INCOMPLETE_COMPLETION"),
+        ("tool_calls", [{"private": "args"}], "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "stop", None),
+    ])
+    def test_only_selected_candidate_completion_fields_used(field, value, expected):
+        r = response()
+        r["candidates"][1][field] = value
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_ test_only_selected_candidate_completion_fields_used[finish_reason-private reason-INCOMPLETE_COMPLETION] _
+
+field = 'finish_reason', value = 'private reason'
+expected = 'INCOMPLETE_COMPLETION'
+
+    @pytest.mark.parametrize("field,value,expected", [
+        ("finish_reason", "length", "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "private reason", "INCOMPLETE_COMPLETION"),
+        ("refusal", "private refusal", "INCOMPLETE_COMPLETION"),
+        ("tool_calls", [{"private": "args"}], "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "stop", None),
+    ])
+    def test_only_selected_candidate_completion_fields_used(field, value, expected):
+        r = response()
+        r["candidates"][1][field] = value
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_ test_only_selected_candidate_completion_fields_used[refusal-private refusal-INCOMPLETE_COMPLETION] _
+
+field = 'refusal', value = 'private refusal', expected = 'INCOMPLETE_COMPLETION'
+
+    @pytest.mark.parametrize("field,value,expected", [
+        ("finish_reason", "length", "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "private reason", "INCOMPLETE_COMPLETION"),
+        ("refusal", "private refusal", "INCOMPLETE_COMPLETION"),
+        ("tool_calls", [{"private": "args"}], "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "stop", None),
+    ])
+    def test_only_selected_candidate_completion_fields_used(field, value, expected):
+        r = response()
+        r["candidates"][1][field] = value
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_ test_only_selected_candidate_completion_fields_used[tool_calls-value3-INCOMPLETE_COMPLETION] _
+
+field = 'tool_calls', value = [{'private': 'args'}]
+expected = 'INCOMPLETE_COMPLETION'
+
+    @pytest.mark.parametrize("field,value,expected", [
+        ("finish_reason", "length", "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "private reason", "INCOMPLETE_COMPLETION"),
+        ("refusal", "private refusal", "INCOMPLETE_COMPLETION"),
+        ("tool_calls", [{"private": "args"}], "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "stop", None),
+    ])
+    def test_only_selected_candidate_completion_fields_used(field, value, expected):
+        r = response()
+        r["candidates"][1][field] = value
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_ test_only_selected_candidate_completion_fields_used[finish_reason-stop-None] _
+
+field = 'finish_reason', value = 'stop', expected = None
+
+    @pytest.mark.parametrize("field,value,expected", [
+        ("finish_reason", "length", "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "private reason", "INCOMPLETE_COMPLETION"),
+        ("refusal", "private refusal", "INCOMPLETE_COMPLETION"),
+        ("tool_calls", [{"private": "args"}], "INCOMPLETE_COMPLETION"),
+        ("finish_reason", "stop", None),
+    ])
+    def test_only_selected_candidate_completion_fields_used(field, value, expected):
+        r = response()
+        r["candidates"][1][field] = value
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:111: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_______ test_request_sibling_finish_does_not_certify_selected_candidate _______
+
+    def test_request_sibling_finish_does_not_certify_selected_candidate():
+        r = response()
+        r["llm_usage"]["attempts"][0]["finish_status"] = "length"
+        r["llm_usage"]["attempts"][0]["status"] = "incomplete"
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:122: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+___________________ test_missing_usage_is_unknown_not_zero ____________________
+
+    def test_missing_usage_is_unknown_not_zero():
+        r = response()
+        del r["llm_usage"]
+        del r["llm_calls"]
+>       rows = build(responses=[r])
+               ^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:131: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'errors': ['private error'], ...}]
+bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+___________ test_evaluator_rejects_changed_export_or_case_set[sql] ____________
+
+change = 'sql'
+
+    @pytest.mark.parametrize("change", ["sql", "status", "provenance", "cases"])
+    def test_evaluator_rejects_changed_export_or_case_set(change):
+>       rows = build()
+               ^^^^^^^
+
+tests\test_rag\test_prediction_export.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+__________ test_evaluator_rejects_changed_export_or_case_set[status] __________
+
+change = 'status'
+
+    @pytest.mark.parametrize("change", ["sql", "status", "provenance", "cases"])
+    def test_evaluator_rejects_changed_export_or_case_set(change):
+>       rows = build()
+               ^^^^^^^
+
+tests\test_rag\test_prediction_export.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+________ test_evaluator_rejects_changed_export_or_case_set[provenance] ________
+
+change = 'provenance'
+
+    @pytest.mark.parametrize("change", ["sql", "status", "provenance", "cases"])
+    def test_evaluator_rejects_changed_export_or_case_set(change):
+>       rows = build()
+               ^^^^^^^
+
+tests\test_rag\test_prediction_export.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+__________ test_evaluator_rejects_changed_export_or_case_set[cases] ___________
+
+change = 'cases'
+
+    @pytest.mark.parametrize("change", ["sql", "status", "provenance", "cases"])
+    def test_evaluator_rejects_changed_export_or_case_set(change):
+>       rows = build()
+               ^^^^^^^
+
+tests\test_rag\test_prediction_export.py:138: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+______ test_audit_metadata_match_is_read_only_and_not_sql_authentication ______
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_audit_metadata_match_is_r0')
+
+    def test_audit_metadata_match_is_read_only_and_not_sql_authentication(tmp_path):
+        from app.audit.store import UsageAuditRecord, UsageAuditStore
+        path = tmp_path / "audit.db"
+        s = UsageAuditStore(str(path), 10)
+        r = response()
+        s.write(UsageAuditRecord(query_id=r["query_id"], session_id="private", outcome=r["status"],
+                                llm_calls=r["llm_calls"], usage=r["llm_usage"]))
+        before = path.read_bytes()
+>       rows = build(responses=[r], audit_lookup=s.read)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:156: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None
+kwargs = {'audit_lookup': <bound method UsageAuditStore.read of <app.audit.store.UsageAuditStore object at 0x00000223C7DB77D0>>}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+________ test_requested_audit_missing_or_mismatching_rejected[missing] ________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_requested_audit_missing_o0')
+change = 'missing'
+
+    @pytest.mark.parametrize("change", ["missing", "outcome", "usage", "calls"])
+    def test_requested_audit_missing_or_mismatching_rejected(tmp_path, change):
+        from app.audit.store import UsageAuditRecord, UsageAuditStore
+        s = UsageAuditStore(str(tmp_path / "audit.db"), 10)
+        r = response()
+        if change != "missing":
+            s.write(UsageAuditRecord(query_id=r["query_id"], session_id="fixture", outcome=r["status"],
+                                    llm_calls=r["llm_calls"], usage=r["llm_usage"]))
+        if change == "outcome": r["status"] = "failed"
+        elif change == "usage": r["llm_usage"]["attempts"][0]["completion_tokens"] = 10
+        elif change == "calls": r["llm_calls"] = 2
+        with pytest.raises(ValueError):
+>           build(responses=[r], audit_lookup=s.read)
+
+tests\test_rag\test_prediction_export.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None
+kwargs = {'audit_lookup': <bound method UsageAuditStore.read of <app.audit.store.UsageAuditStore object at 0x00000223C7DB63C0>>}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+________ test_requested_audit_missing_or_mismatching_rejected[outcome] ________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_requested_audit_missing_o1')
+change = 'outcome'
+
+    @pytest.mark.parametrize("change", ["missing", "outcome", "usage", "calls"])
+    def test_requested_audit_missing_or_mismatching_rejected(tmp_path, change):
+        from app.audit.store import UsageAuditRecord, UsageAuditStore
+        s = UsageAuditStore(str(tmp_path / "audit.db"), 10)
+        r = response()
+        if change != "missing":
+            s.write(UsageAuditRecord(query_id=r["query_id"], session_id="fixture", outcome=r["status"],
+                                    llm_calls=r["llm_calls"], usage=r["llm_usage"]))
+        if change == "outcome": r["status"] = "failed"
+        elif change == "usage": r["llm_usage"]["attempts"][0]["completion_tokens"] = 10
+        elif change == "calls": r["llm_calls"] = 2
+        with pytest.raises(ValueError):
+>           build(responses=[r], audit_lookup=s.read)
+
+tests\test_rag\test_prediction_export.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'failed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None
+kwargs = {'audit_lookup': <bound method UsageAuditStore.read of <app.audit.store.UsageAuditStore object at 0x00000223C7E0BA70>>}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_________ test_requested_audit_missing_or_mismatching_rejected[usage] _________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_requested_audit_missing_o2')
+change = 'usage'
+
+    @pytest.mark.parametrize("change", ["missing", "outcome", "usage", "calls"])
+    def test_requested_audit_missing_or_mismatching_rejected(tmp_path, change):
+        from app.audit.store import UsageAuditRecord, UsageAuditStore
+        s = UsageAuditStore(str(tmp_path / "audit.db"), 10)
+        r = response()
+        if change != "missing":
+            s.write(UsageAuditRecord(query_id=r["query_id"], session_id="fixture", outcome=r["status"],
+                                    llm_calls=r["llm_calls"], usage=r["llm_usage"]))
+        if change == "outcome": r["status"] = "failed"
+        elif change == "usage": r["llm_usage"]["attempts"][0]["completion_tokens"] = 10
+        elif change == "calls": r["llm_calls"] = 2
+        with pytest.raises(ValueError):
+>           build(responses=[r], audit_lookup=s.read)
+
+tests\test_rag\test_prediction_export.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 1, ...}]
+bindings = None
+kwargs = {'audit_lookup': <bound method UsageAuditStore.read of <app.audit.store.UsageAuditStore object at 0x00000223C7E0AB70>>}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_________ test_requested_audit_missing_or_mismatching_rejected[calls] _________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_requested_audit_missing_o3')
+change = 'calls'
+
+    @pytest.mark.parametrize("change", ["missing", "outcome", "usage", "calls"])
+    def test_requested_audit_missing_or_mismatching_rejected(tmp_path, change):
+        from app.audit.store import UsageAuditRecord, UsageAuditStore
+        s = UsageAuditStore(str(tmp_path / "audit.db"), 10)
+        r = response()
+        if change != "missing":
+            s.write(UsageAuditRecord(query_id=r["query_id"], session_id="fixture", outcome=r["status"],
+                                    llm_calls=r["llm_calls"], usage=r["llm_usage"]))
+        if change == "outcome": r["status"] = "failed"
+        elif change == "usage": r["llm_usage"]["attempts"][0]["completion_tokens"] = 10
+        elif change == "calls": r["llm_calls"] = 2
+        with pytest.raises(ValueError):
+>           build(responses=[r], audit_lookup=s.read)
+
+tests\test_rag\test_prediction_export.py:177: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None
+responses = [{'query_id': 'q_000000000001', 'status': 'completed', 'nl_text': 'private prompt', 'llm_calls': 2, ...}]
+bindings = None
+kwargs = {'audit_lookup': <bound method UsageAuditStore.read of <app.audit.store.UsageAuditStore object at 0x00000223C7E09F40>>}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_________________ test_question_binding_exact_when_available __________________
+
+    def test_question_binding_exact_when_available():
+        data = dataset()
+        data["sql_cases"][0]["question"] = "private prompt"
+>       assert build(data=data)
+               ^^^^^^^^^^^^^^^^
+
+tests\test_rag\test_prediction_export.py:183: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = {'version': 'fixture-v1', 'sql_cases': [{'id': 'one', 'gold_sql': 'SELECT 1', 'question': 'private prompt'}, {'id': 'two', 'gold_sql': 'SELECT 2'}]}
+responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+______________________ test_export_does_not_execute_sql _______________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000223C7DB7320>
+
+    def test_export_does_not_execute_sql(monkeypatch):
+        def forbidden(*args, **kwargs): raise AssertionError("SQL execution attempted")
+        monkeypatch.setattr(sqlite3, "connect", forbidden)
+>       assert build()[0]["sql"] == "SELECT 1"
+               ^^^^^^^
+
+tests\test_rag\test_prediction_export.py:192: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = None, responses = None, bindings = None, kwargs = {}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+_________________ test_cli_atomic_output_and_input_protection _________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_cli_atomic_output_and_inp0')
+
+    def test_cli_atomic_output_and_input_protection(tmp_path):
+        data, responses, bindings, output = [tmp_path / n for n in ("data.json", "responses.json", "bindings.json", "out.json")]
+        for path, value in [(data, dataset()), (responses, [response()]), (bindings, [binding()])]:
+            path.write_text(json.dumps(value), encoding="utf-8")
+        command = [sys.executable, "-m", "scripts.export_predictions", "--dataset", str(data),
+                   "--responses", str(responses), "--bindings", str(bindings), "--output", str(output)]
+        run = subprocess.run(command, capture_output=True, text=True, timeout=30)
+>       assert run.returncode == 0, run.stderr
+E       AssertionError: D:\python\data_engineer\.stage29\.check-venv\Scripts\python.exe: No module named scripts.export_predictions
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['D:\\python\\data_engineer\\.stage29\\.check-venv\\Scripts\\python.exe', '-m', 'scripts.export_...='D:\\python\\data_engineer\\.stage29\\.check-venv\\Scripts\\python.exe: No module named scripts.export_predictions\n').returncode
+
+tests\test_rag\test_prediction_export.py:207: AssertionError
+_____________ test_real_query_audit_export_and_sqlite_evaluation ______________
+
+connected_query = <starlette.testclient.TestClient object at 0x00000223C7DBE390>
+tmp_path = WindowsPath('D:/python/data_engineer/.stage32/.pytest-before32/test_real_query_audit_export_a0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000223C7E08770>
+
+    async def test_real_query_audit_export_and_sqlite_evaluation(connected_query, tmp_path, monkeypatch):
+        import litellm
+        from app.audit.store import UsageAuditStore
+        path = tmp_path / "audit.db"
+        monkeypatch.setattr(settings, "llm_audit_path", str(path))
+        async def transport(**options):
+            return litellm.ModelResponse(model="fixture", usage={"prompt_tokens": 4, "completion_tokens": 2},
+                choices=[{"finish_reason": "stop", "message": {"role": "assistant", "content": "SELECT id FROM orders ORDER BY id"}}])
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        monkeypatch.setattr(query, "get_default_router", lambda: native_router(max_retries=0))
+        data = json.loads((ROOT / "tests/fixtures/retrieval_eval.json").read_text(encoding="utf-8"))
+        question = data["sql_cases"][0]["question"]
+        r = connected_query.post("/api/v1/query", json={"nl_text": question, "database": "contract",
+                                                       "execute": True, "num_candidates": 1}).json()
+        assert r["llm_audit"]["status"] == "persisted"
+>       rows = build(data=data, responses=[r], bindings=[{"id": "sql1", "query_id": r["query_id"],
+            "candidate_id": r["candidates"][0]["id"], "db_id": "contract"}],
+            audit_lookup=UsageAuditStore(str(path)).read)
+
+tests\test_rag\test_prediction_export.py:237: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+data = {'version': 'synthetic-smoke-v1', 'documents': [{'id': 'orders', 'domain': 'commerce', 'text': '���� orders ���� sales ��� ...question': 'û����Ʒ���ڵ���� unknown ����Ʒ', 'gold_sql': "SELECT id FROM products WHERE category='unknown'", 'ordered': False}]}
+responses = [{'query_id': 'q_6112cdce3266', 'session_id': 's_710247b8a64e459a', 'status': 'completed', 'plan_id': 'request_query', ...}]
+bindings = [{'id': 'sql1', 'query_id': 'q_6112cdce3266', 'candidate_id': 'cand_75df1c10', 'db_id': 'contract'}]
+kwargs = {'audit_lookup': <bound method UsageAuditStore.read of <app.audit.store.UsageAuditStore object at 0x00000223C0A68050>>}
+
+    def build(data=None, responses=None, bindings=None, **kwargs):
+>       from app.evaluation.predictions import export_predictions
+E       ModuleNotFoundError: No module named 'app.evaluation'
+
+tests\test_rag\test_prediction_export.py:51: ModuleNotFoundError
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.413 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.413 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+============================== warnings summary ===============================
+tests/test_rag/test_prediction_export.py::test_real_query_audit_export_and_sqlite_evaluation
+  D:\python\data_engineer\.stage29\.check-venv\Lib\site-packages\pydantic\_internal\_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_prediction_export.py::test_explicit_selection_unknown_telemetry_and_whitelist
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[case]
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[query]
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[candidate]
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[db]
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[dialect]
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[duplicate_case]
+FAILED tests/test_rag/test_prediction_export.py::test_bad_or_ambiguous_bindings_rejected[duplicate_query]
+FAILED tests/test_rag/test_prediction_export.py::test_failed_request_and_missing_case_stay_in_denominator
+FAILED tests/test_rag/test_prediction_export.py::test_only_selected_candidate_completion_fields_used[finish_reason-length-INCOMPLETE_COMPLETION]
+FAILED tests/test_rag/test_prediction_export.py::test_only_selected_candidate_completion_fields_used[finish_reason-private reason-INCOMPLETE_COMPLETION]
+FAILED tests/test_rag/test_prediction_export.py::test_only_selected_candidate_completion_fields_used[refusal-private refusal-INCOMPLETE_COMPLETION]
+FAILED tests/test_rag/test_prediction_export.py::test_only_selected_candidate_completion_fields_used[tool_calls-value3-INCOMPLETE_COMPLETION]
+FAILED tests/test_rag/test_prediction_export.py::test_only_selected_candidate_completion_fields_used[finish_reason-stop-None]
+FAILED tests/test_rag/test_prediction_export.py::test_request_sibling_finish_does_not_certify_selected_candidate
+FAILED tests/test_rag/test_prediction_export.py::test_missing_usage_is_unknown_not_zero
+FAILED tests/test_rag/test_prediction_export.py::test_evaluator_rejects_changed_export_or_case_set[sql]
+FAILED tests/test_rag/test_prediction_export.py::test_evaluator_rejects_changed_export_or_case_set[status]
+FAILED tests/test_rag/test_prediction_export.py::test_evaluator_rejects_changed_export_or_case_set[provenance]
+FAILED tests/test_rag/test_prediction_export.py::test_evaluator_rejects_changed_export_or_case_set[cases]
+FAILED tests/test_rag/test_prediction_export.py::test_audit_metadata_match_is_read_only_and_not_sql_authentication
+FAILED tests/test_rag/test_prediction_export.py::test_requested_audit_missing_or_mismatching_rejected[missing]
+FAILED tests/test_rag/test_prediction_export.py::test_requested_audit_missing_or_mismatching_rejected[outcome]
+FAILED tests/test_rag/test_prediction_export.py::test_requested_audit_missing_or_mismatching_rejected[usage]
+FAILED tests/test_rag/test_prediction_export.py::test_requested_audit_missing_or_mismatching_rejected[calls]
+FAILED tests/test_rag/test_prediction_export.py::test_question_binding_exact_when_available
+FAILED tests/test_rag/test_prediction_export.py::test_export_does_not_execute_sql
+FAILED tests/test_rag/test_prediction_export.py::test_cli_atomic_output_and_input_protection
+FAILED tests/test_rag/test_prediction_export.py::test_real_query_audit_export_and_sqlite_evaluation
+29 failed, 1 passed, 1 warning in 10.50s

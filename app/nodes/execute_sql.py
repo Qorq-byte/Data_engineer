@@ -166,6 +166,17 @@ class ExecuteSQLNode(AgenticNode):
         )
 
         try:
+            async_driver = self._is_asyncpg_connection(conn) or self._is_aiomysql_connection(conn)
+            deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
+
+            def remaining_timeout() -> int:
+                if not async_driver:
+                    return timeout_ms
+                remaining = deadline - asyncio.get_running_loop().time()
+                if remaining <= 0:
+                    raise TimeoutError("SQL statement deadline exceeded")
+                return max(1, int(remaining * 1000))
+
             # Harden native connections before EXPLAIN/binding can inspect external files.
             if self._is_duckdb_connection(conn):
                 await native_call(conn, lambda: conn.execute("SET enable_external_access=false"))
@@ -175,13 +186,19 @@ class ExecuteSQLNode(AgenticNode):
 
             # EXPLAIN execution
             if do_explain:
-                explain_result = await native_call(
-                    conn, lambda: self._execute_explain(conn, sql, source_version, duckdb_state)
-                )
+                if async_driver:
+                    explain_result = await self._execute_bounded(
+                        conn, sql, 1000, remaining_timeout(), source_version, duckdb_state,
+                        explain=True,
+                    )
+                else:
+                    explain_result = await native_call(
+                        conn, lambda: self._execute_explain(conn, sql, source_version, duckdb_state)
+                    )
                 plan = self._parse_explain_output(explain_result, plan)
 
             result = await self._execute_bounded(
-                conn, sql, max_rows, timeout_ms, source_version, duckdb_state,
+                conn, sql, max_rows, remaining_timeout(), source_version, duckdb_state,
             )
 
             metadata: dict[str, Any] = {
@@ -233,16 +250,22 @@ class ExecuteSQLNode(AgenticNode):
         self, conn: Any, sql: str, max_rows: int, timeout_ms: int,
         source_version: int | None = None,
         duckdb_state: DuckDBSourceState | None = None,
+        *, explain: bool = False,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
         if self._is_aiomysql_connection(conn):
             try:
-                return await asyncio.wait_for(self._execute_aiomysql(conn, sql, max_rows), timeout)
+                query = f"EXPLAIN {sql}" if explain else sql
+                return await asyncio.wait_for(
+                    self._execute_aiomysql(conn, query, max_rows, explain=explain), timeout
+                )
             except (TimeoutError, asyncio.CancelledError):
                 conn.close()
                 raise
         if self._is_asyncpg_connection(conn):
-            return await asyncio.wait_for(self._execute_asyncpg(conn, sql, max_rows), timeout)
+            return await asyncio.wait_for(
+                self._execute_asyncpg(conn, sql, max_rows, explain=explain), timeout
+            )
         from app.db.runtime import native_call
 
         return await native_call(
@@ -339,14 +362,16 @@ class ExecuteSQLNode(AgenticNode):
 
     @staticmethod
     async def _execute_asyncpg(
-        conn: asyncpg.Connection, sql: str, max_rows: int
+        conn: asyncpg.Connection, sql: str, max_rows: int, *, explain: bool = False,
     ) -> ExecutionResult:
         """Execute SQL on an asyncpg connection."""
-        bounded_sql = f"SELECT * FROM ({sql.strip().rstrip(';')}) AS _result LIMIT {max_rows + 1}"
-        records = await conn.fetch(bounded_sql)
+        bounded_sql = (f"EXPLAIN {sql}" if explain else
+                       f"SELECT * FROM ({sql.strip().rstrip(';')}) AS _result LIMIT {max_rows + 1}")
+        statement = await conn.prepare(bounded_sql)
+        columns = [attribute.name for attribute in statement.get_attributes()]
+        records = await statement.fetch()
         rows = [list(r) for r in records[:max_rows]]
         truncated = len(records) > max_rows
-        columns = list(records[0].keys()) if records else []
         return {
             "columns": columns,
             "rows": rows,
@@ -356,11 +381,21 @@ class ExecuteSQLNode(AgenticNode):
 
     @staticmethod
     async def _execute_aiomysql(
-        conn: aiomysql.Connection, sql: str, max_rows: int
+        conn: aiomysql.Connection, sql: str, max_rows: int, *, explain: bool = False,
     ) -> ExecutionResult:
         """Execute SQL on an aiomysql (MySQL) connection."""
         cursor = await conn.cursor()
+        previous_notes: int | None = None
         try:
+            if explain or sql.lstrip().upper().startswith("EXPLAIN "):
+                # MySQL EXPLAIN emits Note 1003 containing the rewritten SQL. Suppress
+                # notes only on this leased session, never change process-wide warnings.
+                await cursor.execute("SELECT @@SESSION.sql_notes")
+                original = await cursor.fetchone()
+                if original is None:
+                    raise RuntimeError("Unable to inspect MySQL session note setting")
+                previous_notes = int(original[0])
+                await cursor.execute("SET SESSION sql_notes=0")
             await cursor.execute(sql)
             rows = await cursor.fetchmany(max_rows + 1)
             truncated = len(rows) > max_rows
@@ -374,7 +409,15 @@ class ExecuteSQLNode(AgenticNode):
                 "truncated": truncated,
             }
         finally:
-            await cursor.close()
+            try:
+                if previous_notes is not None and not conn.closed:
+                    try:
+                        await cursor.execute(f"SET SESSION sql_notes={previous_notes}")
+                    except BaseException:
+                        conn.close()  # Never reuse a session whose settings were not restored.
+                        raise
+            finally:
+                await cursor.close()
 
     @staticmethod
     def _execute_generic(conn: CursorConnection, sql: str, max_rows: int) -> ExecutionResult:

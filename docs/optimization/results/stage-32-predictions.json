@@ -1,0 +1,94 @@
+[
+  {
+    "id": "sql1",
+    "sql": "SELECT id FROM orders ORDER BY id",
+    "status": "completed",
+    "finish_reason": null,
+    "latency_ms": null,
+    "cost_usd": null,
+    "export_version": "request-prediction-v1",
+    "provenance": {
+      "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a",
+      "cases_sha256": "c2ec007f19a2b6ceb993236002942bd6217b90049adcb3fe531ed7305d3069b2",
+      "responses_sha256": "efe3a3b7344d145e7c54c0e9595d5bea327f86b5516d3587ae631c46e1f1d954",
+      "bindings_sha256": "382bce0fa8f58912523453997c582c3838e94468a3491ea5e4959e75bdeae0de",
+      "query_id": "q_000000000001",
+      "candidate_id": "selected",
+      "db_id": "fixture_sqlite",
+      "dialect": "sqlite",
+      "question_match": "exact_match",
+      "completion_source": "unavailable",
+      "llm_calls": 2,
+      "llm_usage": {
+        "attempt_count": 2,
+        "attempts": [
+          {
+            "attempt": 1,
+            "provider": "fixture",
+            "model": "fixture",
+            "source": "adapter_boundary",
+            "status": "completed",
+            "latency_ms": 0,
+            "prompt_tokens": 4,
+            "completion_tokens": 2,
+            "missing_reason": null,
+            "finish_status": "unknown",
+            "usage_basis": "response_fields"
+          },
+          {
+            "attempt": 2,
+            "provider": "fixture",
+            "model": "fixture",
+            "source": "adapter_boundary",
+            "status": "completed",
+            "latency_ms": 0,
+            "prompt_tokens": null,
+            "completion_tokens": null,
+            "missing_reason": "usage_missing",
+            "finish_status": "unknown",
+            "usage_basis": "response_fields"
+          }
+        ],
+        "known_prompt_tokens": 4,
+        "known_completion_tokens": 2,
+        "missing_usage_count": 1,
+        "usage_coverage": 0.5,
+        "complete": false,
+        "dropped_attempts": 0
+      },
+      "audit_match": "not_requested",
+      "audit_sha256": null,
+      "usage_scope": "entire_query_including_retries_candidates_and_targets",
+      "sql_binding": "caller_supplied_not_verified_by_audit"
+    },
+    "export_sha256": "5199d1b27f3863e8e3c48aead9318a11df7d7b281e665db6c9022445b1bd60f0"
+  },
+  {
+    "id": "sql2",
+    "sql": null,
+    "status": "failed",
+    "finish_reason": null,
+    "latency_ms": null,
+    "cost_usd": null,
+    "export_version": "request-prediction-v1",
+    "provenance": {
+      "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a",
+      "cases_sha256": "c2ec007f19a2b6ceb993236002942bd6217b90049adcb3fe531ed7305d3069b2",
+      "responses_sha256": "efe3a3b7344d145e7c54c0e9595d5bea327f86b5516d3587ae631c46e1f1d954",
+      "bindings_sha256": "382bce0fa8f58912523453997c582c3838e94468a3491ea5e4959e75bdeae0de",
+      "query_id": "q_000000000002",
+      "candidate_id": null,
+      "db_id": "fixture_sqlite",
+      "dialect": null,
+      "question_match": "exact_match",
+      "completion_source": "unavailable",
+      "llm_calls": 1,
+      "llm_usage": null,
+      "audit_match": "not_requested",
+      "audit_sha256": null,
+      "usage_scope": "entire_query_including_retries_candidates_and_targets",
+      "sql_binding": "caller_supplied_not_verified_by_audit"
+    },
+    "export_sha256": "bc2a1c7eb4aadd014134952db511a3473a2a4eb0a726ba012dd36124e0aedbe6"
+  }
+]

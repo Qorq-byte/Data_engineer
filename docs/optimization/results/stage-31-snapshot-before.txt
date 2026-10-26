@@ -1,0 +1,35 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+_______________ test_snapshot_failure_does_not_replace_success ________________
+
+audit_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-snapshot31/test_snapshot_failure_does_not0/usage.db')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000022F1D5CEF90>
+
+    async def test_snapshot_failure_does_not_replace_success(audit_path, monkeypatch):
+        async def done(*args, **kwargs):
+            def broken():
+                raise ValueError("private snapshot failure")
+            kwargs["audit"].collector.summary = broken
+            return {"status": "completed"}
+        monkeypatch.setattr(query_service, "_run_query", done)
+>       result = await query_service.run_query(query.QueryRequest(nl_text="test"))
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_llm\test_usage_audit.py:555: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\workflow\query_service.py:141: in run_query
+    persistence = await finish_audit(audit, body.session_id)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\workflow\query_audit.py:34: in finish_audit
+    usage=state.collector.summary(),
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def broken():
+>       raise ValueError("private snapshot failure")
+E       ValueError: private snapshot failure
+
+tests\test_llm\test_usage_audit.py:551: ValueError
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_usage_audit.py::test_snapshot_failure_does_not_replace_success
+1 failed in 5.17s

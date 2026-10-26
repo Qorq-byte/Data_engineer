@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     session_max_turns: int = Field(default=50, ge=1)
     session_ttl_seconds: int = Field(default=3600, gt=0)
 
+    # --- Optional local request usage audit ---
+    llm_audit_path: str = ""  # Empty disables persistence
+    llm_audit_max_records: int = Field(default=1000, ge=1, le=10000)
+    llm_audit_candidate_digests: bool = False  # Opt-in, no SQL text persistence
+
     # --- RAG Embedding ---
     rag_embedding_provider: str = "ollama"  # ollama | openai | bge | mock
     rag_lancedb_dir: str = ""  # Empty uses data/lancedb; switch for explicit versioned rebuilds

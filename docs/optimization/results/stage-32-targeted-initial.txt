@@ -1,0 +1,49 @@
+......................................F..F.............................. [ 15%]
+........................................................................ [ 31%]
+........................................................................ [ 47%]
+........................................................................ [ 63%]
+........................................................................ [ 79%]
+........................................................................ [ 95%]
+....................                                                     [100%]
+================================== FAILURES ===================================
+_______ test_consumer_rejects_malformed_export_headers[duplicate_query] _______
+
+mode = 'duplicate_query'
+
+    @pytest.mark.parametrize("mode", ["remove_version", "unknown_version", "duplicate_query"])
+    def test_consumer_rejects_malformed_export_headers(mode):
+        rows = build()
+        if mode == "remove_version":
+            del rows[0]["export_version"]
+        elif mode == "unknown_version":
+            rows[0]["export_version"] = "future-export"
+        else:
+            from app.evaluation.predictions import fingerprint
+    
+>           second = copy.deepcopy(rows[0])
+                     ^^^^
+E           NameError: name 'copy' is not defined. Did you forget to import 'copy'
+
+tests\test_rag\test_prediction_export.py:399: NameError
+________ test_sources_unchanged_and_hashes_ignore_dictionary_key_order ________
+
+    def test_sources_unchanged_and_hashes_ignore_dictionary_key_order():
+        from app.evaluation.predictions import export_predictions
+    
+        data, rs, bs = dataset(), [response()], [binding()]
+>       before = copy.deepcopy((data, rs, bs))
+                 ^^^^
+E       NameError: name 'copy' is not defined. Did you forget to import 'copy'
+
+tests\test_rag\test_prediction_export.py:437: NameError
+============================== warnings summary ===============================
+tests/test_rag/test_prediction_export.py::test_real_query_audit_export_and_sqlite_evaluation
+tests/test_llm/test_sdk_boundary.py::test_sdk_stream_tail_usage_and_cleanup
+  D:\python\data_engineer\.stage29\.check-venv\Lib\site-packages\pydantic\_internal\_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_prediction_export.py::test_consumer_rejects_malformed_export_headers[duplicate_query]
+FAILED tests/test_rag/test_prediction_export.py::test_sources_unchanged_and_hashes_ignore_dictionary_key_order
+2 failed, 450 passed, 2 warnings in 17.08s

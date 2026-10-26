@@ -50,3 +50,11 @@ node_modules/
 
 # Rebuilt with npm run build:frontend
 frontend_dist/
+
+.check-venv/
+.test-venv/
+.pip-tmp/
+
+.npm-cache/
+.pytest-*/
+.baseline-probe.py

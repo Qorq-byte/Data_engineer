@@ -1,0 +1,248 @@
+FFFFFFFFFEEEEEEEEFFEF                                                    [100%]
+=================================== ERRORS ====================================
+_ ERROR at setup of test_protocol_audit_matches_persisted_summary[stop-json] __
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_protocol_audit_matches_pe0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000131255B8EC0>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+__ ERROR at setup of test_protocol_audit_matches_persisted_summary[stop-sse] __
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_protocol_audit_matches_pe1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001312542B8C0>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+__ ERROR at setup of test_protocol_audit_matches_persisted_summary[stop-mcp] __
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_protocol_audit_matches_pe2')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000131253C2240>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+_ ERROR at setup of test_protocol_audit_matches_persisted_summary[length-json] _
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_protocol_audit_matches_pe3')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000131253C05F0>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+_ ERROR at setup of test_protocol_audit_matches_persisted_summary[length-sse] _
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_protocol_audit_matches_pe4')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013125357890>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+_ ERROR at setup of test_protocol_audit_matches_persisted_summary[length-mcp] _
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_protocol_audit_matches_pe5')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013125355790>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+______ ERROR at setup of test_cancellation_audits_after_provider_cleanup ______
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_cancellation_audits_after0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013125402600>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+______ ERROR at setup of test_infrastructure_error_is_saved_without_body ______
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_infrastructure_error_is_s0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013125387710>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+____________ ERROR at setup of test_read_endpoint_auth_and_errors _____________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_read_endpoint_auth_and_er0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000013125408DA0>
+
+    @pytest.fixture
+    def audit_path(tmp_path, monkeypatch):
+        path = tmp_path / "usage.db"
+>       monkeypatch.setattr(settings, "llm_audit_path", str(path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:133: AttributeError
+================================== FAILURES ===================================
+___________________ test_file_round_trip_and_fresh_process ____________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_file_round_trip_and_fresh0')
+
+    def test_file_round_trip_and_fresh_process(tmp_path):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:35: ModuleNotFoundError
+_____________________ test_allowlist_and_unknowns_survive _____________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_allowlist_and_unknowns_su0')
+
+    def test_allowlist_and_unknowns_survive(tmp_path):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:52: ModuleNotFoundError
+___________________ test_idempotency_conflict_and_retention ___________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_idempotency_conflict_and_0')
+
+    def test_idempotency_conflict_and_retention(tmp_path):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:70: ModuleNotFoundError
+_________________ test_concurrent_writers_do_not_mix_records __________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_concurrent_writers_do_not0')
+
+    def test_concurrent_writers_do_not_mix_records(tmp_path):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:86: ModuleNotFoundError
+___________ test_foreign_or_unknown_schema_is_not_modified[foreign] ___________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_foreign_or_unknown_schema0')
+kind = 'foreign'
+
+    @pytest.mark.parametrize("kind", ["foreign", "version", "corrupt"])
+    def test_foreign_or_unknown_schema_is_not_modified(tmp_path, kind):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:96: ModuleNotFoundError
+___________ test_foreign_or_unknown_schema_is_not_modified[version] ___________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_foreign_or_unknown_schema1')
+kind = 'version'
+
+    @pytest.mark.parametrize("kind", ["foreign", "version", "corrupt"])
+    def test_foreign_or_unknown_schema_is_not_modified(tmp_path, kind):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:96: ModuleNotFoundError
+___________ test_foreign_or_unknown_schema_is_not_modified[corrupt] ___________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_foreign_or_unknown_schema2')
+kind = 'corrupt'
+
+    @pytest.mark.parametrize("kind", ["foreign", "version", "corrupt"])
+    def test_foreign_or_unknown_schema_is_not_modified(tmp_path, kind):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:96: ModuleNotFoundError
+___________________ test_read_missing_does_not_create_file ____________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_read_missing_does_not_cre0')
+
+    def test_read_missing_does_not_create_file(tmp_path):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:112: ModuleNotFoundError
+____________________ test_locked_file_fails_without_record ____________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_locked_file_fails_without0')
+
+    def test_locked_file_fails_without_record(tmp_path):
+>       from app.storage.usage_audit import UsageAuditStore
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:119: ModuleNotFoundError
+_____________ test_write_failure_does_not_change_workflow_result ______________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_write_failure_does_not_ch0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001312540B0E0>
+
+    async def test_write_failure_does_not_change_workflow_result(tmp_path, monkeypatch):
+>       monkeypatch.setattr(settings, "llm_audit_path", str(tmp_path))
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:211: AttributeError
+_____________________ test_disabled_audit_does_not_write ______________________
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage31/.pytest-before31/test_disabled_audit_does_not_w0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001312540B500>
+
+    async def test_disabled_audit_does_not_write(tmp_path, monkeypatch):
+>       monkeypatch.setattr(settings, "llm_audit_path", "")
+E       AttributeError: Settings(app_env='development', app_debug=True, app_host='0.0.0.0', app_port=8001, database_url='sqlite:///./data/app.db', mysql_host='127.0.0.1', mysql_port=3306, mysql_user='root', mysql_password='', mysql_database='nl2sql_engine', openai_api_key=None, anthropic_api_key=None, google_api_key=None, deepseek_api_key=None, deepseek_base_url='https://api.deepseek.com/v1', llm_mock_mode=True, llm_max_concurrency=4, llm_max_retries=1, llm_timeout_seconds=30.0, llm_cooldown_seconds=5.0, llm_rate_limit_rpm=60, query_timeout_seconds=120.0, max_concurrent_queries=8, schema_cache_seconds=30.0, session_max_entries=1000, session_max_versions=100, session_max_turns=50, session_ttl_seconds=3600, rag_embedding_provider='mock', rag_lancedb_dir='', rag_bm25_path='', ollama_base_url='http://127.0.0.1:11434', ollama_embedding_model='embeddinggemma', ollama_embedding_dim=768, mcp_server_host='0.0.0.0', mcp_server_port=8080, max_result_rows=1000, statement_timeout_ms=30000, read_only=True, auth_mysql_host='127.0.0.1', auth_mysql_port=3306, auth_mysql_user='root', auth_mysql_password='', auth_mysql_database='nl2sql_auth', admin_user_ids=[1], registration_token=None, cors_origins=['http://localhost:8001', 'http://127.0.0.1:8001'], jwt_secret='unit-test-signing-secret-never-used-outside-tests-2026', jwt_algorithm='HS256', jwt_expire_minutes=1440, agent_config_path='app/config/agent.yml') has no attribute 'llm_audit_path'
+
+tests\test_llm\test_usage_audit.py:222: AttributeError
+_____________ test_thread_cleanup_survives_repeated_cancellation ______________
+
+    async def test_thread_cleanup_survives_repeated_cancellation():
+>       from app.storage.usage_audit import audit_io
+E       ModuleNotFoundError: No module named 'app.storage.usage_audit'
+
+tests\test_llm\test_usage_audit.py:246: ModuleNotFoundError
+=========================== short test summary info ===========================
+FAILED tests/test_llm/test_usage_audit.py::test_file_round_trip_and_fresh_process
+FAILED tests/test_llm/test_usage_audit.py::test_allowlist_and_unknowns_survive
+FAILED tests/test_llm/test_usage_audit.py::test_idempotency_conflict_and_retention
+FAILED tests/test_llm/test_usage_audit.py::test_concurrent_writers_do_not_mix_records
+FAILED tests/test_llm/test_usage_audit.py::test_foreign_or_unknown_schema_is_not_modified[foreign]
+FAILED tests/test_llm/test_usage_audit.py::test_foreign_or_unknown_schema_is_not_modified[version]
+FAILED tests/test_llm/test_usage_audit.py::test_foreign_or_unknown_schema_is_not_modified[corrupt]
+FAILED tests/test_llm/test_usage_audit.py::test_read_missing_does_not_create_file
+FAILED tests/test_llm/test_usage_audit.py::test_locked_file_fails_without_record
+FAILED tests/test_llm/test_usage_audit.py::test_write_failure_does_not_change_workflow_result
+FAILED tests/test_llm/test_usage_audit.py::test_disabled_audit_does_not_write
+FAILED tests/test_llm/test_usage_audit.py::test_thread_cleanup_survives_repeated_cancellation
+ERROR tests/test_llm/test_usage_audit.py::test_protocol_audit_matches_persisted_summary[stop-json]
+ERROR tests/test_llm/test_usage_audit.py::test_protocol_audit_matches_persisted_summary[stop-sse]
+ERROR tests/test_llm/test_usage_audit.py::test_protocol_audit_matches_persisted_summary[stop-mcp]
+ERROR tests/test_llm/test_usage_audit.py::test_protocol_audit_matches_persisted_summary[length-json]
+ERROR tests/test_llm/test_usage_audit.py::test_protocol_audit_matches_persisted_summary[length-sse]
+ERROR tests/test_llm/test_usage_audit.py::test_protocol_audit_matches_persisted_summary[length-mcp]
+ERROR tests/test_llm/test_usage_audit.py::test_cancellation_audits_after_provider_cleanup
+ERROR tests/test_llm/test_usage_audit.py::test_infrastructure_error_is_saved_without_body
+ERROR tests/test_llm/test_usage_audit.py::test_read_endpoint_auth_and_errors
+12 failed, 9 errors in 16.30s

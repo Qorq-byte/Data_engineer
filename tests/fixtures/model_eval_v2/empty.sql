@@ -1,0 +1,1 @@
+-- Schema only: empty aggregates must return the explicitly requested zero.

@@ -14,9 +14,10 @@ import re as _re_module
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi import Path as PathParam
 from fastapi.responses import StreamingResponse
 from pydantic import AliasChoices, BaseModel, Field
 
@@ -222,6 +223,7 @@ def _detect_metadata_query(
                 sql_text=sql,
                 confidence=0.95,
                 generation_mode="metadata_query",
+                generation_source="prepared",
                 dialect=db_type,
                 database_name=db_name,
             )
@@ -269,6 +271,10 @@ class CandidateResult(BaseModel):
     db_id: str = ""
     validation: dict[str, Any] | None = None
     execution: dict[str, Any] | None = None
+    generation_source: Literal[
+        "model_response", "model_stream", "prepared", "stream_text", "unknown"
+    ] = "unknown"
+    finish_reason: Literal["stop"] | None = None
 
 
 class QueryResponse(BaseModel):
@@ -280,6 +286,8 @@ class QueryResponse(BaseModel):
     plan_id: str = "request_query"
     workflow_ids: list[str] = []
     llm_calls: int = 0
+    llm_usage: dict[str, Any] = Field(default_factory=dict)
+    llm_audit: dict[str, Any] = Field(default_factory=dict)
     nl_text: str
     language: str = ""
     intent: str = ""
@@ -834,3 +842,32 @@ async def explain_sql_alias(body: dict) -> dict:
 async def candidates_alias(body: QueryRequest) -> QueryResponse:
     """Alias for POST /query/generate — matches SPEC §6.1 path."""
     return await generate_only(body)
+
+
+@router.get("/usage-audits/{query_id}")
+async def read_usage_audit(
+    query_id: str = PathParam(pattern=r"^q_[0-9a-f]{12}$"),
+) -> dict[str, Any]:
+    from app.audit.store import UsageAuditStore, audit_io
+    from app.config.settings import settings
+
+    if not settings.llm_audit_path.strip():
+        raise HTTPException(
+            503, detail={"code": "USAGE_AUDIT_DISABLED", "message": "Usage audit is disabled"}
+        )
+    try:
+        store = UsageAuditStore(settings.llm_audit_path, settings.llm_audit_max_records)
+        record = await audit_io(lambda: store.read(query_id))
+    except Exception:
+        raise HTTPException(
+            503, detail={"code": "USAGE_AUDIT_UNAVAILABLE", "message": "Usage audit is unavailable"}
+        ) from None
+    if record is None:
+        raise HTTPException(
+            404,
+            detail={
+                "code": "USAGE_AUDIT_NOT_FOUND",
+                "message": "Usage audit was not found or has expired",
+            },
+        )
+    return record
