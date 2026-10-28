@@ -48,4 +48,3 @@ Success: no issues found in 36 source files
 
 mypy scripts/run_real_db_tests.py
 Success: no issues found in 1 source file
-

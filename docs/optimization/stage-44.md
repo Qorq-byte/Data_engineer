@@ -25,3 +25,9 @@ prepare仅本地读文件/依赖版本并生成清单，不导入SDK或初始化
 [具体清单](results/stage-44-execution-manifest.json) SHA256：`bdf95e0f754d2faf673154c4cf6387a9dbea031306a8a555e460959ee47106f2`。最多30次真实调用，每题1次/n1/无重试或fallback；83,923UTF8字节冻结消息，输出参数合计上限30,720token。单请求30秒、单题45秒、worker1500秒另5秒清理。输入token未假装精确已知，实际费用未知且没有硬美元限额。按照路线另请求本批执行授权，未收到授权不调用。
 
 尚未合并main；阶段45及后续本次不实施。
+
+## 远端验收与当前完成边界
+
+代码提交 `9eae3ea28556f9c43c662a4494bf9e6765869dce` 的[常规CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/40668363089)和[真实双库CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/40668363123)均成功，headSha精确一致。Linux离线4227项、真实双库82项；17项strict、Ruff、前端182契约/构建通过。见[代码CI证据](results/stage-44-code-ci.json)。本次文档补记也另核验精确SHA双CI。
+
+已交付阶段44的计划、离线工具、提示词/执行清单和门禁，真实30题付费批次尚未执行。本阶段不能标为真实质量验收完成，也不推进阶段45。用户确认清单bdf95e0f后才能执行一次；旧4题和阶段43的授权均不外推到此批。原始响应、候选SQL、审计、trace仍只在成功执行后的私有运行目录保留，公开只有摘要。

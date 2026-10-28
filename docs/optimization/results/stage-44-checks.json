@@ -21,5 +21,8 @@
   "frontend_build": "passed",
   "manifest_sha256": "bdf95e0f754d2faf673154c4cf6387a9dbea031306a8a555e460959ee47106f2",
   "real_model_calls": 0,
-  "actual_cost_usd": null
+  "actual_cost_usd": null,
+  "code_sha": "9eae3ea28556f9c43c662a4494bf9e6765869dce",
+  "code_dual_ci": "passed",
+  "linux_offline_passed": 4227
 }

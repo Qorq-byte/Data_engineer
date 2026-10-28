@@ -1,0 +1,22 @@
+[
+  {
+    "conclusion": "success",
+    "headSha": "9eae3ea28556f9c43c662a4494bf9e6765869dce",
+    "name": "MVP checks",
+    "status": "completed",
+    "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/40668363089",
+    "test_summaries": [
+      "2026-10-28T10:02:52.8296597Z ========= 4227 passed, 82 deselected, 2 warnings in 105.24s (0:01:45) =========="
+    ]
+  },
+  {
+    "conclusion": "success",
+    "headSha": "9eae3ea28556f9c43c662a4494bf9e6765869dce",
+    "name": "Real database acceptance",
+    "status": "completed",
+    "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/40668363123",
+    "test_summaries": [
+      "2026-10-28T09:59:44.4086767Z 82 passed, 3 warnings in 8.77s"
+    ]
+  }
+]
