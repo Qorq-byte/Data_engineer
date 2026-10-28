@@ -1,0 +1,25 @@
+{
+  "status": "offline_prepared_live_authorization_pending",
+  "offline_pytest": {
+    "passed": 4226,
+    "skipped": 1,
+    "real_database_deselected": 82
+  },
+  "targeted_controls": 28,
+  "real_databases": {
+    "postgresql": 19,
+    "mysql": 63,
+    "owned_containers_removed": 2
+  },
+  "strict_gates": 17,
+  "type_debt": {
+    "before": 178,
+    "after": 178,
+    "added": 0
+  },
+  "frontend_contracts": 182,
+  "frontend_build": "passed",
+  "manifest_sha256": "bdf95e0f754d2faf673154c4cf6387a9dbea031306a8a555e460959ee47106f2",
+  "real_model_calls": 0,
+  "actual_cost_usd": null
+}

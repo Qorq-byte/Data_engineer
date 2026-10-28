@@ -1,0 +1,706 @@
+{
+  "profile": "synthetic-nl2sql-v3",
+  "run_name": "stage44-sql-v3",
+  "provider": "deepseek",
+  "model": "deepseek-v4-flash",
+  "base_url": "https://api.deepseek.com/v1",
+  "api_key_env": "DEEPSEEK_API_KEY",
+  "limits": {
+    "max_calls": 30,
+    "calls_per_case": 1,
+    "n": 1,
+    "max_retries": 0,
+    "message_bytes": 32768,
+    "max_output_tokens": 1024,
+    "request_seconds": 30,
+    "case_seconds": 45,
+    "worker_seconds": 1500,
+    "cleanup_seconds": 5,
+    "max_artifact_bytes": 67108864
+  },
+  "fallback_chain": [],
+  "cases": [
+    {
+      "id": "sql01",
+      "question": "返回所有订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "projection",
+        "ordering"
+      ]
+    },
+    {
+      "id": "sql02",
+      "question": "统计completed订单amount总额，不扣退款，无匹配返回一行0。 输出列依次为total_amount。单行结果，不要求ORDER BY。",
+      "split": "dev",
+      "tags": [
+        "aggregate",
+        "status",
+        "empty"
+      ]
+    },
+    {
+      "id": "sql03",
+      "question": "统计completed订单净额amount-refund_amount，无匹配返回一行0。 输出列依次为net_amount。单行结果，不要求ORDER BY。",
+      "split": "holdout",
+      "tags": [
+        "aggregate",
+        "refund",
+        "empty"
+      ]
+    },
+    {
+      "id": "sql04",
+      "question": "每个用户订单数，包含无订单用户，按user_id升序。 输出列依次为user_id,order_count。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "join",
+        "zero",
+        "group"
+      ]
+    },
+    {
+      "id": "sql05",
+      "question": "返回没有订单的用户ID，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "negation",
+        "join"
+      ]
+    },
+    {
+      "id": "sql06",
+      "question": "返回有completed订单的已知用户ID，去重，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "distinct",
+        "join"
+      ]
+    },
+    {
+      "id": "sql07",
+      "question": "返回completed且有已知用户的订单ID、用户姓名、商品名，按order_id升序。 输出列依次为order_id,user_name,product_name。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "join",
+        "multi_table"
+      ]
+    },
+    {
+      "id": "sql08",
+      "question": "返回category精确等于小写unknown的商品ID，排除NULL、Unknown及unknownish，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "exact_case",
+        "empty"
+      ]
+    },
+    {
+      "id": "sql09",
+      "question": "返回category为NULL的商品ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "null"
+      ]
+    },
+    {
+      "id": "sql10",
+      "question": "返回email非NULL的用户ID，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "null",
+        "filter"
+      ]
+    },
+    {
+      "id": "sql11",
+      "question": "用任意正确方式返回没有订单的用户ID，匿名订单不能使结果丢失，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "negation",
+        "null"
+      ]
+    },
+    {
+      "id": "sql12",
+      "question": "返回2026年1月UTC订单ID，范围[2026-01-01 00:00:00,2026-02-01 00:00:00)，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "time",
+        "boundary"
+      ]
+    },
+    {
+      "id": "sql13",
+      "question": "返回严格早于2026-01-01 00:00:00 UTC的订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "time",
+        "boundary"
+      ]
+    },
+    {
+      "id": "sql14",
+      "question": "返回2026年2月UTC且completed的订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "time",
+        "status"
+      ]
+    },
+    {
+      "id": "sql15",
+      "question": "统计completed订单笔数，无匹配返回一行0。 输出列依次为order_count。单行结果，不要求ORDER BY。",
+      "split": "holdout",
+      "tags": [
+        "aggregate",
+        "count"
+      ]
+    },
+    {
+      "id": "sql16",
+      "question": "统计completed订单平均amount，无匹配返回一行0。 输出列依次为average_amount。单行结果，不要求ORDER BY。",
+      "split": "dev",
+      "tags": [
+        "aggregate",
+        "average"
+      ]
+    },
+    {
+      "id": "sql17",
+      "question": "统计completed订单退款总额，无匹配返回一行0。 输出列依次为refunded。单行结果，不要求ORDER BY。",
+      "split": "dev",
+      "tags": [
+        "aggregate",
+        "refund"
+      ]
+    },
+    {
+      "id": "sql18",
+      "question": "按商品ID统计completed订单笔数，所有商品含0，按product_id升序。 输出列依次为product_id,order_count。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "join",
+        "group",
+        "zero"
+      ]
+    },
+    {
+      "id": "sql19",
+      "question": "按商品category汇总completed订单amount，NULL自成一组，按category升序且NULL在前。 输出列依次为category,total_amount。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "join",
+        "group",
+        "null"
+      ]
+    },
+    {
+      "id": "sql20",
+      "question": "按姓名统计用户数量，同名用户合并，按user_name升序。 输出列依次为user_name,user_count。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "same_name",
+        "group"
+      ]
+    },
+    {
+      "id": "sql21",
+      "question": "返回姓名精确为Alpha的用户ID，不要求行顺序。 输出列依次为user_id。忽略行顺序，重复行仍保留。",
+      "split": "holdout",
+      "tags": [
+        "same_name",
+        "bag"
+      ]
+    },
+    {
+      "id": "sql22",
+      "question": "按amount降序、id升序返回前3笔订单ID及amount。 输出列依次为id,amount。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "top_k",
+        "tie"
+      ]
+    },
+    {
+      "id": "sql23",
+      "question": "返回订单数量至少2笔的已知用户ID，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "having",
+        "group"
+      ]
+    },
+    {
+      "id": "sql24",
+      "question": "每个用户completed订单净额，包含无匹配用户为0，按user_id升序。 输出列依次为user_id,net_amount。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "join",
+        "aggregate",
+        "zero"
+      ]
+    },
+    {
+      "id": "sql25",
+      "question": "返回库存恰好为0的商品ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "filter",
+        "zero"
+      ]
+    },
+    {
+      "id": "sql26",
+      "question": "返回price严格大于7的商品ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "filter",
+        "boundary"
+      ]
+    },
+    {
+      "id": "sql27",
+      "question": "返回gold用户或有completed订单的已知用户ID，去重，按user_id升序。 输出列依次为user_id。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "union",
+        "distinct"
+      ]
+    },
+    {
+      "id": "sql28",
+      "question": "用任意正确方式统计2026年1月UTC completed订单净额，无匹配返回一行0。 输出列依次为net_amount。单行结果，不要求ORDER BY。",
+      "split": "dev",
+      "tags": [
+        "cte",
+        "time",
+        "refund"
+      ]
+    },
+    {
+      "id": "sql29",
+      "question": "返回amount严格小于0的订单ID，按id升序。 输出列依次为id。按题目给定排序键返回，重复行保留。",
+      "split": "dev",
+      "tags": [
+        "empty",
+        "filter"
+      ]
+    },
+    {
+      "id": "sql30",
+      "question": "返回每笔completed订单的amount，重复金额必须保留，按amount升序。 输出列依次为amount。按题目给定排序键返回，重复行保留。",
+      "split": "holdout",
+      "tags": [
+        "duplicates",
+        "bag"
+      ]
+    }
+  ],
+  "prompt_inventory": [
+    {
+      "id": "sql01",
+      "messages_sha256": "99e64642684eff0cf51fe43df50875d757cd8ad7cbd7e5398f8dba379a3f3e79",
+      "message_bytes": 2575
+    },
+    {
+      "id": "sql02",
+      "messages_sha256": "fcb8f20fcff7a82810fdfc3d72eb5d84d3a377277ac1ae6d2344cf586ec93bf4",
+      "message_bytes": 3035
+    },
+    {
+      "id": "sql03",
+      "messages_sha256": "3cea131e1660c38e8c212e1eb99d331c1fc9d07804cfb7292c8edb1c2855c695",
+      "message_bytes": 3032
+    },
+    {
+      "id": "sql04",
+      "messages_sha256": "2543dac952036da74238b92bad3a7254cd1acfd9460d695eca57742d46f8a1fe",
+      "message_bytes": 3049
+    },
+    {
+      "id": "sql05",
+      "messages_sha256": "09cba12745bcd740178659920818199a597ddc4e25d3f0a123e9bd5a29ae35c6",
+      "message_bytes": 2594
+    },
+    {
+      "id": "sql06",
+      "messages_sha256": "3bd4046645f36307bcd85a83c1b249f859fbfdbae702ae613ba3a17350675157",
+      "message_bytes": 2615
+    },
+    {
+      "id": "sql07",
+      "messages_sha256": "1bae3f9b14dfc0d189cd470dc6298039322f23dc3e6c8096ffb3e972c74ca5e9",
+      "message_bytes": 2661
+    },
+    {
+      "id": "sql08",
+      "messages_sha256": "46a1ed6f60790777f6bd10edddbe93c8638ad6186f38cdbfb6b95dd3573ff57f",
+      "message_bytes": 2641
+    },
+    {
+      "id": "sql09",
+      "messages_sha256": "ebd4284e7d92974c5c809df1e6997b76de6657330c7b30badf91c41dfd44bcbc",
+      "message_bytes": 2587
+    },
+    {
+      "id": "sql10",
+      "messages_sha256": "243e6014f615502a3a033cdbabbb569a871b88d80c76567f8fb578e06c01901a",
+      "message_bytes": 2594
+    },
+    {
+      "id": "sql11",
+      "messages_sha256": "81f0029ac79276df69cb676787ee7f86d041f68dddfbb502efb98db41dd75fdd",
+      "message_bytes": 2651
+    },
+    {
+      "id": "sql12",
+      "messages_sha256": "9005fef1e5c216ddc61510b85929556ed6d2bb698ffe2bc0011ec84578e496e0",
+      "message_bytes": 3060
+    },
+    {
+      "id": "sql13",
+      "messages_sha256": "589605ec5c317ae1e1bfd8b3bc8497a315c66e2334e83a2e454ffdd9f560682c",
+      "message_bytes": 2607
+    },
+    {
+      "id": "sql14",
+      "messages_sha256": "72ecf5fb5a7da18da858917ae7e3c9fe97bca08bdbb2256c8f892ed57f499690",
+      "message_bytes": 3025
+    },
+    {
+      "id": "sql15",
+      "messages_sha256": "7d6cdc7c6ccc4e9ef3675284cda92b52906064d0240aee8254af8a942f68ed5f",
+      "message_bytes": 3013
+    },
+    {
+      "id": "sql16",
+      "messages_sha256": "b013dd0e1959b228cfa95a602de52ccb8d2976ccc3439970d4b892a39a7a84ae",
+      "message_bytes": 3022
+    },
+    {
+      "id": "sql17",
+      "messages_sha256": "e1a7e1ba45a356f38ec09c66783dc148b67ca57e99bb1b5349a935af78f37234",
+      "message_bytes": 3016
+    },
+    {
+      "id": "sql18",
+      "messages_sha256": "19acd359ead68151b96f9112761cf2a78ae9993fad98838e2f55587295e19e19",
+      "message_bytes": 3067
+    },
+    {
+      "id": "sql19",
+      "messages_sha256": "fe4150d817b5b707a5669a470b70246761c33453fc32cff5859c2f87d199d8d1",
+      "message_bytes": 3083
+    },
+    {
+      "id": "sql20",
+      "messages_sha256": "0109d4c2069dc542f91d5d3860e13cef32989537c89de9e30e6fcb99e9ef1e4f",
+      "message_bytes": 3055
+    },
+    {
+      "id": "sql21",
+      "messages_sha256": "2215da766973c12ccac4513932ccc3c9620cfe16138915dcba95f5ee9a7891dc",
+      "message_bytes": 2592
+    },
+    {
+      "id": "sql22",
+      "messages_sha256": "9d33fa491318a7c077d9727f5336f7cb5913865007ed07d0555e455d24b32b3d",
+      "message_bytes": 2604
+    },
+    {
+      "id": "sql23",
+      "messages_sha256": "973410f0aeff8c1aa2fb80df6336acc0b669d9b4e0fab50cce6f515a5827433d",
+      "message_bytes": 2610
+    },
+    {
+      "id": "sql24",
+      "messages_sha256": "9c49ba8ec9dbcc18498edff9dc008c0a4e02404bb1a1e75e66b99f4b6f976095",
+      "message_bytes": 3064
+    },
+    {
+      "id": "sql25",
+      "messages_sha256": "2a484d069461b071ef4e7fed2dc731845ef41dd7989fb9bf00d065c27887c80a",
+      "message_bytes": 2588
+    },
+    {
+      "id": "sql26",
+      "messages_sha256": "9b01b4c42e3de4392f748c3a264ac0899878d5ba58ac0147c6479f4bbb065a99",
+      "message_bytes": 2590
+    },
+    {
+      "id": "sql27",
+      "messages_sha256": "9092bca16bd1a2af4085f222ec9444d49199eae39cf10e591f6fd6c9d2b6df38",
+      "message_bytes": 2628
+    },
+    {
+      "id": "sql28",
+      "messages_sha256": "33ec69e33306b9a929b95eef32415d49f03090776e16eb87e5ee9412a9107698",
+      "message_bytes": 3048
+    },
+    {
+      "id": "sql29",
+      "messages_sha256": "70c7e4f9b260ff1b2c5cd8743b65a5016ae8d4a4d8734d5232212884d55352e2",
+      "message_bytes": 2591
+    },
+    {
+      "id": "sql30",
+      "messages_sha256": "b8a66df7046afb2cbbaa76057a1cd8f357ea4e9d9dc664a9e55faa22b22372a1",
+      "message_bytes": 2626
+    }
+  ],
+  "exact_message_utf8_bytes": 83923,
+  "acceptance_manifest_sha256": "ed4be1acd589350adf428491ae4db542ee686fd3bd212a3f2f3517dca6b45755",
+  "retrieval": "Production keyword-only SchemaRetriever; no embedding or BM25 claim",
+  "workflow": "request_query: parse/link/gen/validate/exec; execute=false; audit export",
+  "scenarios": [
+    "base",
+    "edge",
+    "empty"
+  ],
+  "input_question_utf8_bytes": 4482,
+  "max_aggregate_message_bytes": 983040,
+  "max_aggregate_output_tokens_parameter": 30720,
+  "input_token_estimate": null,
+  "actual_cost_usd": null,
+  "runtime": {
+    "python": "3.12.13",
+    "litellm": "1.106.4",
+    "sqlglot": "30.18.0",
+    "pydantic": "2.14.1",
+    "httpx": "0.28.1"
+  },
+  "sources": {
+    "app/__init__.py": "36e17d7301fe1c3ecd081aba47276fcfa1247e340b30e9fb922a629c39f0b552",
+    "app/agents/__init__.py": "3c91c3926900ad7caed0e1cef4efbf6317cb65266635636abfb53fa919834354",
+    "app/agents/base.py": "63b0bebf4c6ea69243cdce5b0b498900fdfc8de6a88bd9fabbbab06523612b3c",
+    "app/agents/bus.py": "facbfd94edd96464203ce68f368528ed93d11876f63adebb238c21023d77573e",
+    "app/agents/collaboration.py": "3fb071929bb137a10f908988a13d2911b187848a092805182e5c991e33b8ede2",
+    "app/agents/feedback.py": "97262f9b9b95d5c146f8243a5d59944444ddd526271574d15a12d5181d0f4bbb",
+    "app/agents/nl_understander.py": "2c6c189d1f9bd0a7546646c95bb933bc727d42e20ec6bca184246385803d16e9",
+    "app/agents/orchestrator.py": "291057e49d63f7ce5be7831f8750a6c4bed32d9146e33c3eccfd91d3d059aec3",
+    "app/agents/registry.py": "21785fc25f0a8760f4c75664233115ce595ad97e61ed1bd2afeffe8ef291c1de",
+    "app/agents/schema_retriever.py": "008be1658ad2312475780bf8c5a849e97e3bac9dec3d1647339442bba573920c",
+    "app/agents/sql_generator.py": "19b90fc31b4ea6a433c6e0580646a63f6ee0b6cf206693a6d88c4d4d8e7b8aaa",
+    "app/agents/sql_validator.py": "f0f77b544047dabe3a16fbf9ddb0e753717e047bc9088697d1a71fd4eab45cf1",
+    "app/agents/tool_executor.py": "ed49c3e3ed07c611bd3255a683bc50624caa78fe7086756db1d53b9e8cde25ad",
+    "app/agents/trace.py": "58dbab71d7bc04d4242bd36ddb581d5d05299ad5d1392c20b5840502e4a9a4ee",
+    "app/api/__init__.py": "833974017204f495d0616e61606305d7927c7737355cb0ad2f876995ac74fd65",
+    "app/api/auth.py": "e509ab2893090ad7a73277070260a914b64772e0348b63ff575d47d19ce035ea",
+    "app/api/documents.py": "62bf2f8ad6878120eb932e146d58f72ed4b39671ed5c1b722dd8226a33607545",
+    "app/api/domains.py": "99cd9aa038d701de63196f07213ebc39c1dbf4b61cba941a512f77f76a5232af",
+    "app/api/feedback.py": "aa5ddd81b122777612781ae995a0977e3b1e6d448d98a3afbf6aa00d659e5192",
+    "app/api/frontend.py": "d2436a2c20c295da6ea9375a2630fb65f8727ce6464b8f9ab4e01d2d6f5d8084",
+    "app/api/health.py": "6b214b0688339b3f6eb54184cbded4129bdcd1292e666bb14c3f4fe3090e48c5",
+    "app/api/learning.py": "8198411d4993dcdac8ff3a1be9ca65fb2ec72da74b637d07d1a27a75f13fbbc0",
+    "app/api/mcp_api.py": "dabac782f8bf06020e18c0ea7ddeda77e128f603466a6160f3363c2073d75ac4",
+    "app/api/query.py": "5fcf6d3c8980b182e10a094df7af829de30eb0be80e946e958b6965830cb1e74",
+    "app/api/schema.py": "50d6bbf6593d6b14d66d2147a6518d881961e94e7e010645efb07c79aed6094f",
+    "app/api/settings.py": "944a68b5fe25d6224bb24f3deb1ce7f2d74a6d35dc719fb19a1f2dca191ad993",
+    "app/api/sql_utils.py": "c6c3fd9a284a7082074db3b0e8f75c7f02eb514c416ccacfab8486aeca3012a5",
+    "app/api/subagents.py": "fddd2b67a4be58618e2cf459170092ea6609e427cf0b45ccd5e31faea4631388",
+    "app/api/workflows.py": "c1746531f2be181f12e9b1bce53f035340b1509a04453aa0c6c9b7cc6b3d12a2",
+    "app/audit/__init__.py": "5fdb8e16ac84623770cc9948f868159b43010004fb28ebcf5f47e60f31b53f87",
+    "app/audit/candidates.py": "ca7f36a4f1f2a401faa0404cd512e65a0ff3aff17723f71d2347e0ef12625a5c",
+    "app/audit/store.py": "b50b79611f26f90e08096da8acaae9a841c4b821241e2a4568e445055541b80c",
+    "app/auth/__init__.py": "59ede2b7b02ff118784b37bff5b357408e8032d268ec7943c0d8124a93a989dd",
+    "app/auth/access.py": "9d0b1eca840a627eccf56a8abd230bc15dd558c35635664808966739a5ec9ec2",
+    "app/auth/database.py": "7291904ee80da2bdbb2678de3517c9779097f7aba0685e4165310caf6bfa9403",
+    "app/auth/models.py": "8746afac82473560ea3f2ed292725178ad1201ddd2724a51ccda57893132be7c",
+    "app/auth/security.py": "af490d745d66d79cd9d1b22ae1505fcf4eeb0a37b8da13d50f9e66d8995d09c0",
+    "app/background.py": "078635822403a1d7ea083737210c73263ae21537c5bac5878ee4b984e9bc7b9b",
+    "app/bootstrap.py": "fc801277317614e2a2484a2c50253ea62ed29750ca9391ccba7dad609d20c85a",
+    "app/cache/__init__.py": "d802affb56019edf5151d855db2f41955efd6644f8c5cb2115b567c894571bbf",
+    "app/cache/query_cache.py": "571355987ee6a76110a16a029450e8f63c0bef8d4ed8abfd6511cbcd92724212",
+    "app/config/__init__.py": "f10987b28c4f3f2942f61ac865b65eff1d81b0af82b52183f91dc1febe57aeec",
+    "app/config/agent.yml": "6d44fde7bd5540a706c86a72a094c8071a6a5f7f5dc3652968268ea2dec06c97",
+    "app/config/domains/default/domain.yaml": "d01986ae7d4e5102f4eee6249a6d513231e9f7df864620dea18c04904e339286",
+    "app/config/domains/default/glossary.yaml": "87c0d41eeacc5f7111a14bc71d4990e37ed226753667ea6b616a1c9ab154ca48",
+    "app/config/domains/default/rules.yaml": "6916065af78456832260065cebccce2884b079d3dbb537299c8882f53a1292fc",
+    "app/config/domains/ecommerce.yml": "bffcf23434f0726e97182cd7f27dd0e8983ac62b4d1ad5a0b097d571e416e102",
+    "app/config/domains/finance.yml": "fcb2db6957eb1596b6a1b09d0fd87f0a17e001f97717239eb1d5e6757e42d990",
+    "app/config/settings.py": "ef103624024c95feda8d796960da1826c0e8516f2bc2a7e1b8cb87bc393a83db",
+    "app/config/subagents/ecommerce_analyst.yaml": "9914981e6d3d9e39dec9b466747621c836586b3118783ddcb1a8765bcf8a30d3",
+    "app/core/__init__.py": "60bf6bf20e8840acc18deac9cbb367e84c98333f07e14e44950a235020b82f97",
+    "app/core/ambiguity.py": "e2c0563cb7454af20cb5f7ee42e54f2a173b123b6138b766be9b9630e79e69ad",
+    "app/core/intent_classifier.py": "49142f4fb0bc38d0de6f54e1b4a0a10ec15bd4395cbc8413791b6b7c2c655461",
+    "app/core/language_detector.py": "787023174c73504f9922366a055b64ceca69b0c0e02b69b04da7aa7cbbc056f3",
+    "app/core/nlp_parser.py": "a7b72e4588010088fe2ff219affbbf8d6d81ec8574bcb9a467217ac37ea29c20",
+    "app/core/performance.py": "9666ed660dc6d1bdc4bf3fe2932e4c21112f1fdbcbfcba25d14dabe49a1e384d",
+    "app/core/prompt_builder.py": "a9897e8639011f659e88552e54b336e1bb8f081ec4b6bad70a191aea4e6db91d",
+    "app/core/schema_validation.py": "88f105834276abc46949147c5a8f56fbba3e135d9e3438481b0e64f8f2a07a1c",
+    "app/core/self_heal.py": "2b35b5dfdb2b5359da9e9ecc46ee5d79be718c9a71629e7f1f60483854de8c90",
+    "app/core/sql_generator.py": "4c64f0dd8f5d708e673243bf397ef0422d24a369279064d9ffd8720ddecb066f",
+    "app/core/sql_validator.py": "57a9c05cacf86b1018ebf37fd354ac5fc057c5a208bab8e03ef40b418233bcbc",
+    "app/core/sqr_builder.py": "83731b19496a7e92e00d0700bd31cdeb4768a4d0337a7e9ad528d72c2e2e2f48",
+    "app/core/time_parser.py": "8fe12d3b6fd946c5824459e5f67cb939a6fb346dddc52018c1c2b7d98ca9d107",
+    "app/db/__init__.py": "2ba5199dde787d80c40716c748c3db014241bc4e2098c9c67db6296d2986aaf7",
+    "app/db/connections.py": "ff381edbab6cf4f8e9762bab2d8e2816af2bc2b4e4e6b019de99f04fc07d6647",
+    "app/db/dialect_adapter.py": "4b0208dbdb025256df940e0bb6203d8248be83cc00624c150fbb60eeeb29795e",
+    "app/db/duckdb_source.py": "94010377d0dd09c115abdb157b11333fcf910507686fdb7571a2507bad22514d",
+    "app/db/execution_types.py": "1841b00aeb99474f19e92b5654f30724e3d7e499f41632635c9668560bad0587",
+    "app/db/mysql_query.py": "25444793f1e2764e0cddf88d1a979fa116a4c1aa7ec8f3e20bb688a760943118",
+    "app/db/pii_detector.py": "5f1088f060525701a2dc9e0cfae3047cb3ad45c49430d3a196f48be365db53f6",
+    "app/db/query_targets.py": "00111b4f2fc9e707168b2afe970281e01c514f4373f3c070b7349b9afbc007e4",
+    "app/db/runtime.py": "5604e4c91e08da671e89ff5353f742bcd90322f5a15a9f9750bb807fa07c34c4",
+    "app/db/schema_extractor.py": "25a69051021ed98a12f89fca7d1c6af8b14482226091d202025bbd5fedf12d55",
+    "app/db/schema_refresh.py": "33eba2a8dfc6bd24ea3f63aac4347fdc7a66e38a4f220534e8b8c583804006ca",
+    "app/db/sqlite_source.py": "22e601906153ee7910b4b55748d8357f97632955c493a029026577c517866593",
+    "app/evaluation/__init__.py": "1fa07d701df568da4e2632c3b35941912b05f61f1b7083d69fe93ab3139c54e4",
+    "app/evaluation/acceptance_data.py": "b2ab4db9c95595cb7899f0487c62778887590bb62b0537116e02cf1cd15af4c1",
+    "app/evaluation/acceptance_retrieval.py": "eca31ffbefee20af807ed08575ff49eb6abdb7c66c7cb1719792e191f6872ecd",
+    "app/evaluation/acceptance_sql.py": "fe59ab80b4c02cb5ab770426505c4e0c2b60eac5bb9ea3d606ab548226db4568",
+    "app/evaluation/acceptance_suite.py": "04c68ee855b69812c7d8d7cbec711753ed74d542a2443197b4d923db99808a02",
+    "app/evaluation/artifacts.py": "cdab7eca024f420591d1ca0b3a64eeddbae2008fd41814d7071e1f7f7f8cb763",
+    "app/evaluation/contract_suite.py": "29375cdc26de068213f7093172fe46f5c2c47bdfe532d3bd14987d1d5c0b0437",
+    "app/evaluation/embedding_batch.py": "3cbbfcf11297a7d70eb17f9fc29795c14513562eceb01cfb2c4cdb914c0eefd3",
+    "app/evaluation/embedding_probe.py": "c916ad6b8ac07ea67c461c809f217138308259a1291a64182a5b4a1e0e042e4c",
+    "app/evaluation/embedding_rankings.py": "9e04a4e5d88cf44de979fc8bb70bd152d97d8d00724d473878aa585dd2b4646f",
+    "app/evaluation/embedding_runtime.py": "ec4a591db933bacdff3e3a95539dbcae512e3cb3f4042edf0ae699eab48e5b91",
+    "app/evaluation/inputs.py": "16245d84a6209b197223b6598fcda906fe039e866becac98b9cd62c3bdf0d1b0",
+    "app/evaluation/model_batch.py": "9585e2620befca17c523d9eeb5bde7c27f7cdf9a27419deb34adc60365d132f7",
+    "app/evaluation/model_runtime.py": "9bdee734128fd28fdb670ed6bfead7cf5722f73b1f8eef1ee28e41728b7ff9f1",
+    "app/evaluation/nl2sql_batch.py": "f91794f874c00e3bf6d294d823d92ae731bc119b26502e00c4ad304de83af481",
+    "app/evaluation/nl2sql_runtime.py": "0932cc802383f70b57d5ae0145c726aa6ac5ce674ae548045288612324258480",
+    "app/evaluation/predictions.py": "b5c8597ad6c141a31856246ea2ae980f8b22f782d4b963392a1640fea1412159",
+    "app/evaluation/ranking.py": "fc2b6606d72ffa1d9b144d55d862891c73be7196dee573d9a40b317af11a629d",
+    "app/evaluation/sqlite_query.py": "e2bb3991caf843810a8615762b483ea3e60408c8828c31b809f87af5b56712df",
+    "app/evaluation/usage_costs.py": "a97ecebbef11a2b9c4e25bf7bfb9089de76eed2d8fa93685f569e542b9442a07",
+    "app/harness/__init__.py": "7b2d1c3a69407b91a5f688935ce0ddde497140c64bfeadd058822bc961f1274d",
+    "app/harness/action_history.py": "3816fe1dd8f76080a5b43bc152f19683f9a41c299114e81e2f6d5776377ce65c",
+    "app/harness/compaction.py": "e67543e3210234b75bd43bf190cd5f25e44b72b68f4f365e198bd80f09f634f7",
+    "app/harness/config_loader.py": "41168d03d8d874d8c12b2dca931d07d0451804482e667419ecaaf484bf95cf3a",
+    "app/harness/constraint.py": "47024261fd34f0a40e0fe6bdeb3b2c6af16ef8abf854a11a4dd9f766516bdf67",
+    "app/harness/events.py": "6ddbe5c94a06523fab3b31ecfdff8f4d78aa3c8975403606bc090d55d4a7c1d6",
+    "app/harness/permission.py": "cf0f8c638c56b181d827e0b09b2783273958cb6002cfc18670128921bb852992",
+    "app/harness/plan_loader.py": "6ba2d25c2f36fd58d9ad96bc1e587402b5d0b7490bb1027800116e0800149f74",
+    "app/harness/runner.py": "a284951420abc59671ab880b8a77aed74c8f0a9e5c7167a1b851eaee709f0c7e",
+    "app/harness/session.py": "6a0e1522d3ee7675be2ca9203c7fd572296236ab1f5f0ad61cc6f9d8f82e70ad",
+    "app/harness/skill_manager.py": "7e80f3ca4cfc0ebffd3998a7ee6771233aec5822320d90939f9162eb42378409",
+    "app/harness/tool_registry.py": "9cd85edbe8a54ad201e7502bcd2612e04c15585cf70f8666f06cf751714da931",
+    "app/knowledge/__init__.py": "0376f47db986ec555dd14fa8d060084ff0b4c73ca544b069eae71224d19f26d4",
+    "app/knowledge/domain_manager.py": "466e04f3b0018933a0cbe78ab49f472e1632fc7d9d7809c0deb312e61c5c9b66",
+    "app/knowledge/evolvable_context.py": "5b96982278b1e9b8f8412cefc495b1b0dbdd6cea452104296e960e672e9ba3f5",
+    "app/knowledge/glossary.py": "11ecf51070f2e3b4c1e85eb4779336dcbf731a430e8ea0a7078936018bccd140",
+    "app/knowledge/metricflow_layer.py": "8b0f250450f1ea095fe7118b9288638a7a56404d40cd5c1fa45c4050f65ddb62",
+    "app/knowledge/retrieval/__init__.py": "469e9e23d2b917cb88b2dc04894002fb8c44f3206440177bccac162c3fe07d2d",
+    "app/knowledge/retrieval/bm25_index.py": "293ac727e7e3bdcee4c74a8a18d7699b388224d38df8b2be6849337e7a4ca3b9",
+    "app/knowledge/retrieval/document_store.py": "12be205d4a6189b54cad29facee4002f5cde6f07bf1cb6a9470a8d3511276f70",
+    "app/knowledge/retrieval/embedding.py": "934ad02ecc51d5dad68053670eacbbe1ed144935f60ad57373b239d9f7acbbbc",
+    "app/knowledge/retrieval/filters.py": "d57cdb235ebaa6b2dee9316d921b63911b9b9677804bdfbf2109419da9d7b299",
+    "app/knowledge/retrieval/lancedb_store.py": "4f7d1fd23251fe3b2b8dda4eb1552c9653020a05472726d77c691cfea1959012",
+    "app/knowledge/retrieval/metric_rag.py": "3e50a7f3419715240f20702f555781d6b0f34537a8b3bf0e09334cb85b95952b",
+    "app/knowledge/retrieval/rrf_fusion.py": "d46631d57650ccde2d704c10e59eeafcef1726f2dfe83bc91a7d035919fd5cf8",
+    "app/knowledge/retrieval/schema_rag.py": "bf10c719ffe35805d8108af8c5d140c59c6f04e09d0194fb51aaa9a390646edb",
+    "app/knowledge/rule_engine.py": "e4efa5c2c6680bbe485cf6bfe5869eb506ba049d9fb32eb4fe5e0884db5ed029",
+    "app/knowledge/schema_graph.py": "cc3aebb48629b5150f0303cbb793bccb612b694e03d5d0d57caed6480aa4ecc8",
+    "app/knowledge/schema_retriever.py": "c7b7926a9dd5fe83d6aff4ec77a54f483c33bc6d009e745c223a120e062797ba",
+    "app/learning/__init__.py": "d0f413d34a20ff6a7b2c25eb393e1e1f45f2c8ee3b6348faf2366952c2175974",
+    "app/learning/feedback_collector.py": "f3f2965233e63a64ec297ea5be0ce1d9bf6383f8ae140739b819faf55eb7059e",
+    "app/learning/pattern_analyzer.py": "bd7a7a49bef6c1277a730aaf96f17461661c14257e07aca8d8eebc37a9bba288",
+    "app/learning/query_pair_store.py": "3fdcec5c73d9d8d3ab86d1513d188d2ad8dbe12e511555298bcab2e2b7825985",
+    "app/llm/__init__.py": "3c2ee9e459e7ef3cecd2ec1a83357dd3b183cbc4671e7191c63527b56d144584",
+    "app/llm/budget.py": "23afb827b96649b287375cd613d1cfe40f35f91e4a1f7506b12bd682126c2689",
+    "app/llm/completion.py": "e8a22d3d3f912f577bb5b6c36c2ebf62590794f9245e3284b11aaa76d9395ba9",
+    "app/llm/factory.py": "6b1f3650078f4345f1739f02bd2110150a9e9e0910c2ec08f2e0c8586df22568",
+    "app/llm/protocols.py": "e22d05ada66584e1155c0dd13e40d0b237f480dcedb5b35cd9385a4afa9edd12",
+    "app/llm/responses.py": "48d54378f0fc5b43bb230e5d056b698e86496f7882cb96cdeb190236300cad0a",
+    "app/llm/router.py": "d3c505af53e365d89b02fffc929d421650d5431c69de7eabc16315bdb7eb1d4b",
+    "app/llm/streaming.py": "8cb5b385f1e14fdfcf0ea3a8ed0414c0375279bf74b1101a4deee1da8549e155",
+    "app/llm/usage.py": "d5c9a1c72e3bbc52e6bef3289e1616f8d4e173a54197cc99904e1f0444698bef",
+    "app/mcp/__init__.py": "8c5602ee982a724ae05d3973d82f579133eac44e1a5104138afcea9d0509a33a",
+    "app/mcp/fastmcp_client.py": "b47f9c00a406fb5eb798bf286bb0de4bcb9e741ce82fa1f1ddf9bfce5fa6dfb1",
+    "app/mcp/fastmcp_server.py": "49261e052fa7b920fcb98388d1935ca9f8337c2cd2e472bec1ff704a276ea00c",
+    "app/mcp/registry.py": "c2147cb370f07f33caf3af79158d2b831373936c21ea62e5d9ae6bda93ca5e42",
+    "app/mcp/servers/__init__.py": "d8a8aa70466092dc5bd110b583f033b2c02ce433c500d0e225ad7474547f20d9",
+    "app/mcp/servers/db_server.py": "726c8709d3194160d5557aa1a87bbc078512535741bc6187c8959a2db8bf3363",
+    "app/mcp/servers/knowledge_server.py": "229c2a2529692deacb43f98182664e3d996db1bbf4873c49565790df124e4d4d",
+    "app/mcp/servers/learning_server.py": "57fe4c9ba4d5f88b64422d97e702794bd874016aacb47e359060b33759002b44",
+    "app/mcp/servers/vector_server.py": "b72a67d89fe0e3a0b213568f983b9b23ecd1120360acb867d8fa4190781e4edf",
+    "app/mcp/transport.py": "6d5f76b4aaaaa65ac4a737e7d1f6eee6c70a343dd5b423302ec36adff934ac53",
+    "app/models/__init__.py": "fb3818260f784dab96c963440967b00c2d73181b05f95dc44cbb6eecf7006295",
+    "app/models/conversation.py": "76f9557bd0c2139e3e920371c114bb111ed85f980d4074b03f81d7d802a3b44b",
+    "app/models/domain.py": "84c9cf3cdf846b70c3ff84dc93415b87d0ea5f956e5ab5348ef4bccce760272f",
+    "app/models/feedback.py": "796924979a9ac5b1683d15ab485c0a29e524e9c90948b5ae9ef6e636bee74eba",
+    "app/models/mcp.py": "8cbc3fdd5afcb60994eca9db1527af8b1d857058341c171aad8a6308155019a4",
+    "app/models/query.py": "42743e968c4a04ba151224a60c6cbd2296afa4f40d2d63c88c76a4f586fd0edf",
+    "app/models/rag_document.py": "da6c97a45f27b74879a06a43aad6f90e6f4132f660de2a2bebd919b2781b3b5e",
+    "app/models/rag_metric.py": "ff63ae9f9b0cd69dd040c2a654ddc4978019cb63234c437562a32b9b81a979d2",
+    "app/models/rag_schema.py": "8bd9063050b10cef92a0c609ea3b9ac18092d839c6abea9d44da2a59d10cd9c1",
+    "app/models/rag_settings.py": "2d559012a5a36b9ce1f13901da710f58836fb3646343214f76db0bae07c76c8b",
+    "app/models/schema.py": "cab230a89535b726b2949e1c9a5944b04976cfe0671a86564aa1ce4502cd2a74",
+    "app/models/subagent.py": "2a679856147eb999b4ce1bd37ca8a2f346df2a03a6f3eca5e0f710cccb63d332",
+    "app/models/workflow.py": "867309b67985f97d6675ed246cdf661e285d1a9c8f9d172f7e7106a4e5ef4948",
+    "app/nodes/__init__.py": "dc38f1f04fb3e7783628c3ae092a774c56c4b0b434b44db56be09db85756b67e",
+    "app/nodes/_template.py": "d5ba2f121274be6ecae88ffc37cd125afea904eeb433032be52b7dd7401eb1be",
+    "app/nodes/agentic.py": "c5da91aa6b691bedb1aceb9f8ab4a6a01761a4d00a43830c70c0dd8142139609",
+    "app/nodes/base.py": "c4a9a608127e19893e630ec4cac2ff2788fb2c53caf707c135961c8ce39054a5",
+    "app/nodes/dialect_translate.py": "2430b8e2f4b6c4c59022b6add3efa9d574e9a284a78b3848035e92d9b1aa4183",
+    "app/nodes/execute_sql.py": "bef30966414de1c03206babb447eb0b48179b67a5607026cf823b2799c81e49b",
+    "app/nodes/explain_plan.py": "e78ca0bb086c1b3399c3c394087e3af7f084a7687c6fe7c75090ba884f8bcd84",
+    "app/nodes/format_sql.py": "e8219f463050f4d55bed9c65dff3b0541390809517f3293cffbae413f90ccd88",
+    "app/nodes/generate_sql.py": "aa2f14de81e839877efa813a1ddedce02c5bc5afe538f0fc0fe62d854748f8fe",
+    "app/nodes/hybrid_search.py": "209cd5f31e60d4314fa76a85d7c576e84aba782e7edc2bf650fff2befe3cb089",
+    "app/nodes/metric_resolve.py": "befeb9a9bf9f3d5a05a7b0ac58b1dcde1f5e41d0bd0a05824760f43e083955f3",
+    "app/nodes/parse_nl.py": "2aae45a6e728fbb4189dbb2df4a95647f66e9fa8e81d3fe0fd2b1c843dcdd61d",
+    "app/nodes/reflection.py": "6b6d3e6c0f931b7092c9c7445821a4f867582c146838f570e8ba1f27623474b7",
+    "app/nodes/registry.py": "84c71f7bffb305a065f9ab103f61cc616df43bcdce9671ea12d80a8f9b14f5df",
+    "app/nodes/respond.py": "31c51c44e04fc0628d3d88aa321490cc549f49b694e891977ae7f88bc79e8779",
+    "app/nodes/schema_linking.py": "3589a9f0d6fdd35a55c8b2b618b2391819c51c7ed17631b52529416c4983d634",
+    "app/nodes/validate_sql.py": "9a12281e0e751c916d8c073102718afbe2bef5dbc7ef1abb2353c6ac481224d7",
+    "app/rag/__init__.py": "97858f5c87cc02fa6a2e5a2c41ddafc95c94268c810a63ae4b1504de115c383a",
+    "app/rag/converters.py": "45a660df8d67e803a3a6d1c2bfea376912d122eac825c9a492fce5d16c3ee023",
+    "app/rag/engine.py": "0cd858750a0e3b799a3b91f372b6022e2efce9a72f7af170f9e26f2786703ed6",
+    "app/rag/index_refresher.py": "81199c5bdd61438252a20634cf2f6dc3d0830b8c075cb172c94499fca8295a2e",
+    "app/security/__init__.py": "0eaf9dd3d3899ae8bdccc606e49d8844f937d1101bd54eb90cc9e35997164c5d",
+    "app/security/crypto.py": "78c760049d67cf1b846e765e96875f9afb04d2848fcbf327fb4919a5341a98b7",
+    "app/security/sql_policy.py": "256a27d9517a0d3d8696760c2f63ea041fedc786058b0ca239668e8bfed46f24",
+    "app/storage/__init__.py": "820a47f6ae3f5c0478b68af128cfc40e08a84b30c914395d6e0d02acea488101",
+    "app/storage/mysql_store.py": "d45902d4db5e844c16e461abbd7f083f8291f40ad54775b28de53125901ab3e8",
+    "app/subagent/__init__.py": "5a3ccf59cfa82997503ba758030a2639b0b916365684112c331dc7697c47b4a8",
+    "app/subagent/instance.py": "e74b3f0d0cb51b4e7645a0c2c167a362c1974f21babe46f8f014ab80af228ee6",
+    "app/subagent/manager.py": "5f52bc4dd3f41ad0472c88c61fea42dbb9e53abaf7548af212c7424e0fb06335",
+    "app/subagent/router.py": "2c48f1f3dc7bb4f7073ded305aaccb18028637d9bddc096d60c51a11ac19db01",
+    "app/workflow/__init__.py": "dfdfd66909b20a17a29cdfc78209616858703424116462f5d9765019a86e475a",
+    "app/workflow/contracts.py": "f76626e75bc993bf4b6b22f2448d08c3f81181d68adc2f98624ac0ee3f83e9eb",
+    "app/workflow/history_store.py": "6410fd1fc76bf041bdb7ad1b66e183ffc237806827aa3dfa225922baa3db1c64",
+    "app/workflow/plan_selector.py": "dd6b41379121eafc2b78b6e90fe5ae25c2c65c3c3f6d16445525aac1bd05f154",
+    "app/workflow/plans/chat_agentic.yml": "5a4e2f2882a19d985a25ff011a491c6a28b62f329ff740826c5a3f22f03dc146",
+    "app/workflow/plans/explore.yml": "5688ffbee288b2fca9d6de95f2d2fe78592b690b7c9e4d3e0b6719709c58b771",
+    "app/workflow/plans/ez_query.yml": "7f7172d4ff2ed6a424f803ffa5596b7a9ad9969971efb666de80d8e77385062f",
+    "app/workflow/plans/gensql_agentic.yml": "d465bb9b07d56ddf78bd56bb459c9fa8d949ea88a046c5fa2e9328e6cf184ac5",
+    "app/workflow/plans/metric_query.yml": "32174839e19cac19c324491bf6914e52b9d34e5e8723cca6d9faae0e364312f1",
+    "app/workflow/plans/reflection.yml": "339aaa0bb268009f5c6534dd6610ed4ea021208bac14d07ffa99b7b3013de388",
+    "app/workflow/plans/request_query.yml": "0b4687760b0c3e9d8f6418a0aa17ac55578331c8dedd6a9a9ad97aad423130d1",
+    "app/workflow/query_audit.py": "668a954f578104e497c293a1a0194c384ca75d9855e05f241ff92b0d6e5e1fd0",
+    "app/workflow/query_service.py": "3a03e2b78ff37b9278a701775f49f7231da1f4b011f02626d5868bbf4fe96ccb",
+    "pyproject.toml": "33724175a96bcd358cd2d4b271d802cef697410a6f477edd28cbb1666bbca608",
+    "scripts/browser_qa_server.py": "a0011972b84c31a847347b64cc276f9658356184d1b266098b82f18d9d85d8b8",
+    "scripts/create_api_files.py": "d67794a0c52d153a4d973aeae1bec75c0838e1bff1330f420ed77205fae27c9d",
+    "scripts/estimate_usage_cost.py": "b525539ac06ad5dedf5e5d8ee92600ff64f98a2cb66cb394e5002ee22ff76002",
+    "scripts/evaluate_acceptance.py": "7b9d58044cc58a5a0738effc88e857554046e383cf7d5cd74863e0912747af61",
+    "scripts/evaluate_quality.py": "6c3499d9058b9f03d22f2d68b0cf5524252d370d320635727884f0d6493ffbbe",
+    "scripts/evaluate_schema_linking.py": "417a50fc0a2dc102bd233663bfb69446cbcff89c441d753fcecac548a20b61dc",
+    "scripts/evaluate_sql_contracts.py": "6cd7c5363217e631806d3a44143bb5470851a3e6a1ca2b7b2161f90177e46ca4",
+    "scripts/evaluate_sql_validation.py": "f3b0a2dc75499cff0b03a420f7f27ff2b3c37315e71e6c1f0a4c1f09e07a082f",
+    "scripts/export_predictions.py": "6c1ccdca47d1bd02b0a8e0041573a7320ab86cc9e96aa824e9cacf9036976614",
+    "scripts/gen_api.py": "260b0e5b559ef44536137e25683b51702be4d094276e3787f5b0859d3ffb0f5d",
+    "scripts/init_db.py": "15bb5ebb0a3c9b709265118d74f2000346ff8d82ed5c8854a7cab21c799c2f90",
+    "scripts/load_test.py": "60e9f42b83c43529c8fe09a0269def02bc290cd6923a0a3e1ca9b7e79858bff5",
+    "scripts/replay_schema_linking_baseline.py": "9f3ca11b2f6e91bd988825cea97e9c6b4fafe30b7beb92c03139fe810141f15a",
+    "scripts/run_embedding_acceptance.py": "b1590266ff1326b557f31507c27a0e316baec32821451f625cfcb9b3ed5b6c17",
+    "scripts/run_model_evaluation.py": "7fd5013b5750490bd0fa5cff8e1d237bc3ba6a11af7ac9e560f33398f598dce6",
+    "scripts/run_nl2sql_acceptance.py": "f3ba88d87b68411873ad785ebc57d293d8c768e01b3555d073ac0b355249529a",
+    "scripts/run_real_db_tests.py": "58b5cac6d1de442e9c2678b53ea8c47f6a6aabbf0c70313d42cc7937b34d7b62",
+    "tests/fixtures/acceptance_v3/base.sql": "96421afdb7855afbba7bea0eff41c1e9d60b2cf4505bebed9abb65d318221fca",
+    "tests/fixtures/acceptance_v3/edge.sql": "f15dc4c27591bfad94029b96dd216bcfb224ec1697d0f77317d1c9d9476df96c",
+    "tests/fixtures/acceptance_v3/empty.sql": "899eb708648a0364e69408a5d601b582970e96d41871a69dd86ae8461de91d79",
+    "tests/fixtures/acceptance_v3/manifest.json": "dd0ff42ed7ee4ac534a6d0ebe3e5ed40e3461680b77e77295e51f12c7762cebb",
+    "tests/fixtures/acceptance_v3/retrieval.json": "16b299e35c1c6ecff0b07d5dd9528445c6c9dfb901c8961520592c7adb0d32fb",
+    "tests/fixtures/acceptance_v3/schema.sql": "c2a29d3cd189333e71c06d3190c7684ac151f32058a9ebf65c3b4648c1c1db2d",
+    "tests/fixtures/acceptance_v3/sql.json": "627ee4b026c2a9595b775a6daaeb052c7bc6dd4a3616701fc73a7f769f60aca0",
+    "tests/fixtures/nl2sql_acceptance/prompt-inventory.json": "703f06ddfc9aa39834623fcc4cf72073805b1cf051db7173775240c587402846"
+  },
+  "resource_scope": "Parent supervises worker1500s plus cleanup5s. Artifact64MiB checked after cases, not a filesystem quota. No provider memory or dollar quota; termination cannot guarantee billing reversal.",
+  "scope": "Public synthetic30 cases x3 local scenarios; not business accuracy. Alias is not an immutable provider model version; no score-driven tuning."
+}

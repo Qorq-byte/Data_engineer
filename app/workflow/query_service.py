@@ -8,7 +8,7 @@ import uuid
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from app.audit.store import UsageAuditStore
 from app.db.query_targets import resolve_query_targets
@@ -31,6 +31,9 @@ from app.nodes.schema_linking import SchemaLinkingNode
 from app.nodes.validate_sql import ValidateSQLNode
 from app.workflow.contracts import QueryCapacityError, QueryEventHandler, QueryEventName, QueryInput
 from app.workflow.query_audit import QueryAuditState, finish_audit
+
+if TYPE_CHECKING:
+    from app.knowledge.schema_retriever import SchemaRetriever
 
 _ROOT = Path(__file__).resolve().parents[1]
 _CONFIG_LOADER = ConfigLoader(str(_ROOT / "config/agent.yml"))
@@ -111,6 +114,7 @@ async def run_query(
     emit: QueryEventHandler | None = None,
     *,
     llm_router: CompletionRouter | None = None,
+    schema_retriever: SchemaRetriever | None = None,
 ) -> dict[str, Any]:
     from app.config.settings import settings
     from app.db.runtime import gate
@@ -131,7 +135,8 @@ async def run_query(
                 )
             result: dict[str, Any] | None = None
             try:
-                result = await _run_query(body, emit, llm_router=llm_router, audit=audit)
+                result = await _run_query(body, emit, llm_router=llm_router, audit=audit,
+                                          schema_retriever=schema_retriever)
                 status = result.get("status")
                 audit.outcome = (
                     status if isinstance(status, str) and status in ("completed", "failed")
@@ -158,6 +163,7 @@ async def _run_query(
     *,
     llm_router: CompletionRouter | None = None,
     audit: QueryAuditState,
+    schema_retriever: SchemaRetriever | None = None,
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
@@ -177,15 +183,16 @@ async def _run_query(
     from app.knowledge.schema_retriever import SchemaRetriever
     from app.rag.engine import get_schema_rag
 
-    retriever = None
-    try:
-        schema_rag = get_schema_rag()
-        retriever = SchemaRetriever(schema_rag)
-        provider = getattr(getattr(schema_rag, "_embedding", None), "provider", None)
-        if type(provider).__name__ == "MockEmbeddingProvider":
-            warnings.append("MOCK embeddings: retrieval is not a semantic quality guarantee")
-    except RuntimeError:
-        warnings.append("RAG unavailable; schema linking uses keyword matching")
+    retriever = schema_retriever
+    if retriever is None:
+        try:
+            schema_rag = get_schema_rag()
+            retriever = SchemaRetriever(schema_rag)
+            provider = getattr(getattr(schema_rag, "_embedding", None), "provider", None)
+            if type(provider).__name__ == "MockEmbeddingProvider":
+                warnings.append("MOCK embeddings: retrieval is not a semantic quality guarantee")
+        except RuntimeError:
+            warnings.append("RAG unavailable; schema linking uses keyword matching")
     if getattr(router, "mock_mode", False):
         warnings.append("MOCK LLM: output is a test placeholder, not a verified database answer")
     domain = _domain_manager.get(body.domain) if body.domain else None

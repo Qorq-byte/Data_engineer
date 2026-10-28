@@ -1,0 +1,57 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+________ test_actual_native_harness_audit_and_full_denominators[False] ________
+
+isolated_worker = WindowsPath('D:/python/data_engineer/.stage44/.pytest-stage44-prompt-drift/test_actual_native_harness_aud0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000011CC313A330>
+mixed = False
+
+    @pytest.mark.parametrize("mixed", [False, True])
+    async def test_actual_native_harness_audit_and_full_denominators(
+            isolated_worker, monkeypatch, mixed):
+        import litellm
+
+        from app.db.connections import ConnectionFactory
+        from app.rag import engine
+        suite = load_suite()
+        calls = []
+        async def transport(**kwargs):
+            i = len(calls)
+            calls.append(kwargs)
+            assert kwargs["num_retries"] == 0 and kwargs["n"] == 1
+            assert kwargs["max_tokens"] == 1024
+            assert kwargs["api_base"] == "https://api.deepseek.com/v1"
+            prompt = json.dumps(kwargs["messages"], ensure_ascii=False)
+            assert "expected_rows" not in prompt and "counterexamples" not in prompt
+            assert all(case["gold_sql"] not in prompt for case in suite["sql_cases"])
+            mode = i % 6 if mixed else 0
+            if mode == 3:
+                raise RuntimeError("private-exception-never-persist")
+            choice = {"index": 0, "message": {"role": "assistant",
+                "content": "SELECT 1" if mode == 4 else suite["sql_cases"][i]["gold_sql"]},
+                "finish_reason": "length" if mode == 1 else "stop"}
+            if mode == 2:
+                choice["message"]["refusal"] = "private-refusal-never-persist"
+            return litellm.ModelResponse(choices=[choice], usage=None if mode == 5 else
+                {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120})
+        monkeypatch.setattr(litellm, "acompletion", transport)
+        monkeypatch.setattr(engine, "get_schema_rag", lambda: pytest.fail("embedding/RAG accessed"))
+        report = await run_batch(prepare("control-thirty"), "synthetic-private-key", isolated_worker)
+        assert report["status"] == "finished"
+>       assert len(calls) == report["physical_calls_reserved"] == report["native_budget_calls"] == 30
+E       assert 0 == 30
+
+D:\python\data_engineer\.stage44\tests\test_evaluation\test_nl2sql_runtime.py:61: AssertionError
+---------------------------- Captured stderr call -----------------------------
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Temp\jieba.cache
+Loading model cost 0.414 seconds.
+Prefix dict has been built successfully.
+------------------------------ Captured log call ------------------------------
+DEBUG    jieba:__init__.py:113 Building prefix dict from the default dictionary ...
+DEBUG    jieba:__init__.py:132 Loading model from cache C:\Temp\jieba.cache
+DEBUG    jieba:__init__.py:164 Loading model cost 0.414 seconds.
+DEBUG    jieba:__init__.py:166 Prefix dict has been built successfully.
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_nl2sql_runtime.py::test_actual_native_harness_audit_and_full_denominators[False]
+1 failed, 10 deselected in 8.01s
