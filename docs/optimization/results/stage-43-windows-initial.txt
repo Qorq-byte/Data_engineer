@@ -70,7 +70,7 @@ after_digest_valid = True
             manifest, tmp_path, monkeypatch, after_digest_valid):
         from app.evaluation import embedding_rankings
         from app.evaluation.artifacts import write_atomic
-    
+
         directory = tmp_path / "run"
         directory.mkdir()
         owner = "a" * 32
@@ -101,7 +101,7 @@ after_digest_valid = True
 >           report = await runtime.worker(manifest, confirmation, owner)
                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests\test_evaluation\test_embedding_runtime.py:209: 
+tests\test_evaluation\test_embedding_runtime.py:209:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 app\evaluation\embedding_runtime.py:308: in worker
     result = await provider.embed([row["text"]])
@@ -160,7 +160,7 @@ after_digest_valid = False
             manifest, tmp_path, monkeypatch, after_digest_valid):
         from app.evaluation import embedding_rankings
         from app.evaluation.artifacts import write_atomic
-    
+
         directory = tmp_path / "run"
         directory.mkdir()
         owner = "a" * 32
@@ -196,7 +196,7 @@ after_digest_valid = False
             with pytest.raises(runtime.MeasurementError, match="MODEL_IDENTITY"):
 >               await runtime.worker(manifest, confirmation, owner)
 
-tests\test_evaluation\test_embedding_runtime.py:215: 
+tests\test_evaluation\test_embedding_runtime.py:215:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 app\evaluation\embedding_runtime.py:317: in worker
     ledger.update(len(ledger.records) - 1, state="validated",

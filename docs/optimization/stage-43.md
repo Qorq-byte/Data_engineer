@@ -1,6 +1,6 @@
 # 阶段43：真实 embedding 检索基线
 
-2026-10-28，基线阶段42最终52bd7a8。独立分支 `codex/embedding-acceptance`，工作树 `.stage43`。已完成受限工具、离线控制及用户授权的一次成功真实embedding验收；远端精确SHA双CI正在验证。仅为冻结合成小集和本机环境基线，不代表业务质量或生产容量。
+2026-10-28，基线阶段42最终52bd7a8。独立分支 `codex/embedding-acceptance`，工作树 `.stage43`。已完成受限工具、离线控制及用户授权的一次成功真实embedding验收；代码提交1082b7a的精确SHA双CI已通过，最终文档提交另核验对应CI。仅为冻结合成小集和本机环境基线，不代表业务质量或生产容量。
 
 ## 实现与证据
 
@@ -37,3 +37,9 @@
 真实双库82项通过（PostgreSQL19/MySQL63），两个自有容器均已清理，见[双库证据](results/stage-43-real-services.json)。前端182项契约与三页重复构建/失败构建保留检查通过。Ruff通过。16项配置strict门禁通过；全仓类型诊断仍178项，按文件/错误码/消息比较新增0、消除0。最终全量离线4204项通过、1项Windows跳过、82项real_database独立运行。最初瞬时HTTP控制暴露Windows替换文件的占用错误，现已由有界原子发布重试修复，离线测试恢复瞬时响应验证；保留stage-43-windows-initial.txt和stage-43-before-lock-fix.txt。真实运行的HTTP重试仍为0。
 
 尚未合并main；阶段44–48本次不实施。
+
+## 远端验收
+
+代码提交 `1082b7a54f468a1cb4ee88c59e1d0dd8872ce03d` 的[常规检查](https://github.com/Qorq-byte/Data_engineer/actions/runs/40651171503)与[真实数据库检查](https://github.com/Qorq-byte/Data_engineer/actions/runs/40651171510)均成功。Linux离线4205项、真实双库82项（JUnit失败0/错误0）；前端、Ruff与16项strict门禁通过。见[代码CI证据](results/stage-43-code-ci.json)。本次文档补记提交也继续核验自己的精确SHA双CI，不将代码提交的结论替代文档提交的状态。
+
+下一步建议阶段44：基于冻结30条SQL任务规划单独受限profile，保留现有4次小集上限；登记调用数、token/超时/失败分类及结果契约后再申请真实执行。阶段43本次没有证明混合检索收益，因此阶段44先固定可解释的词法基线，不增设重排器或语义缓存。
