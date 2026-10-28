@@ -251,7 +251,10 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         self._base_url = (
             base_url or os.getenv("OLLAMA_BASE_URL", self.DEFAULT_BASE_URL)
         ).rstrip("/")
-        raw_dim = dimension or int(os.getenv("OLLAMA_EMBEDDING_DIM", str(self.DEFAULT_DIM)))
+        raw_dim = (dimension if dimension is not None else
+                   int(os.getenv("OLLAMA_EMBEDDING_DIM", str(self.DEFAULT_DIM))))
+        if type(raw_dim) is not int or not 1 <= raw_dim <= 65536:
+            raise ValueError("Invalid Ollama embedding dimension")
         self._dim = raw_dim
         self._client = client  # injectable for tests
         self._semaphore = asyncio.Semaphore(self.MAX_CONCURRENCY)
@@ -299,13 +302,20 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
             raise RuntimeError(
                 f"Ollama 未返回 embedding(模型 '{self._model}'),响应: {str(data)[:200]}"
             )
-        return self._normalize([float(x) for x in vec])
+        if not isinstance(vec, list) or len(vec) != self._dim:
+            raise RuntimeError("Ollama embedding dimension mismatch")
+        try:
+            if any(type(x) not in (int, float) or not math.isfinite(x) for x in vec):
+                raise ValueError("Non-finite embedding")
+            return self._normalize([float(x) for x in vec])
+        except (ValueError, OverflowError) as exc:
+            raise RuntimeError("Ollama embedding contains invalid numeric values") from exc
 
     @staticmethod
     def _normalize(vec: list[float]) -> list[float]:
-        norm = math.sqrt(sum(v * v for v in vec))
-        if norm <= 0:
-            return vec
+        norm = math.hypot(*vec)
+        if not math.isfinite(norm) or norm <= 0:
+            raise ValueError("Embedding norm must be positive and finite")
         return [v / norm for v in vec]
 
     async def embed(self, texts: list[str]) -> EmbeddingResult:

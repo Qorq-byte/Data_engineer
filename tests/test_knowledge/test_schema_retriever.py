@@ -128,7 +128,7 @@ class TestBuildSearchQuery:
         sqr = SQR(raw_text="monthly sales by region")
         result = _build_search_query("monthly sales by region", sqr)
         assert "monthly sales" in result
-        assert "UNKNOWN" in result  # intent is UNKNOWN
+        assert result == "monthly sales by region"  # Unspecified intent adds no search token.
 
     def test_with_entities(self):
         sqr = SQR(

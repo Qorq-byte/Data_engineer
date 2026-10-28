@@ -1,0 +1,10 @@
+[
+  {
+    "sequence": 1,
+    "kind": "model_before",
+    "method": "GET",
+    "path": "/api/tags",
+    "state": "reserved",
+    "tokens_used": null
+  }
+]

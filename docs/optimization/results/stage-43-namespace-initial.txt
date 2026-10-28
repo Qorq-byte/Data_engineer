@@ -1,0 +1,80 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+______ test_real_rag_namespace_survives_retriever_and_linking_node[main] ______
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage43/.pytest-stage43-namespace-evidence/test_real_rag_namespace_surviv0')
+namespace = 'main'
+
+    @pytest.mark.parametrize("namespace", ["main", "public"])
+    async def test_real_rag_namespace_survives_retriever_and_linking_node(tmp_path, namespace):
+        dense = LanceDBStore(dimension=16, uri=str(tmp_path / "vectors"))
+        sparse = BM25Index(":memory:")
+        query = "semantic revenue cue"  # No table/column keyword can hide a rejected RAG hit.
+        rag = SchemaMetadataRAG(
+            lancedb_store=dense,
+            bm25_index=sparse,
+            embedding_generator=EmbeddingGenerator(MockEmbeddingProvider(dimension=16)),
+        )
+        try:
+            await rag.index_schemas([SchemaDocument(
+                doc_id="fixture.orders.amount", db_id="fixture", schema_name=namespace,
+                table_name="orders", column_name="amount", data_type="REAL",
+                embedding_text=query,
+            )])
+            schema = SchemaSnapshot("sqlite", "synthetic", tables={
+                "orders": TableSchema("orders", schema_name=namespace, columns=[
+                    ColumnSchema("id", "INTEGER"), ColumnSchema("amount", "REAL"),
+                ]),
+            })
+            retriever = SchemaRetriever(rag)
+            result = await retriever.retrieve(
+                query, schema, sqr=SQR(raw_text=query), db_id="fixture", fk_expand=False,
+            )
+>           assert result.method == "hybrid"
+E           AssertionError: assert 'keyword' == 'hybrid'
+E             
+E             - hybrid
+E             + keyword
+
+tests\test_rag\test_schema_result_namespace.py:46: AssertionError
+_____ test_real_rag_namespace_survives_retriever_and_linking_node[public] _____
+
+tmp_path = WindowsPath('D:/python/data_engineer/.stage43/.pytest-stage43-namespace-evidence/test_real_rag_namespace_surviv1')
+namespace = 'public'
+
+    @pytest.mark.parametrize("namespace", ["main", "public"])
+    async def test_real_rag_namespace_survives_retriever_and_linking_node(tmp_path, namespace):
+        dense = LanceDBStore(dimension=16, uri=str(tmp_path / "vectors"))
+        sparse = BM25Index(":memory:")
+        query = "semantic revenue cue"  # No table/column keyword can hide a rejected RAG hit.
+        rag = SchemaMetadataRAG(
+            lancedb_store=dense,
+            bm25_index=sparse,
+            embedding_generator=EmbeddingGenerator(MockEmbeddingProvider(dimension=16)),
+        )
+        try:
+            await rag.index_schemas([SchemaDocument(
+                doc_id="fixture.orders.amount", db_id="fixture", schema_name=namespace,
+                table_name="orders", column_name="amount", data_type="REAL",
+                embedding_text=query,
+            )])
+            schema = SchemaSnapshot("sqlite", "synthetic", tables={
+                "orders": TableSchema("orders", schema_name=namespace, columns=[
+                    ColumnSchema("id", "INTEGER"), ColumnSchema("amount", "REAL"),
+                ]),
+            })
+            retriever = SchemaRetriever(rag)
+            result = await retriever.retrieve(
+                query, schema, sqr=SQR(raw_text=query), db_id="fixture", fk_expand=False,
+            )
+>           assert result.method == "hybrid"
+E           AssertionError: assert 'keyword' == 'hybrid'
+E             
+E             - hybrid
+E             + keyword
+
+tests\test_rag\test_schema_result_namespace.py:46: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_rag/test_schema_result_namespace.py::test_real_rag_namespace_survives_retriever_and_linking_node[main]
+FAILED tests/test_rag/test_schema_result_namespace.py::test_real_rag_namespace_survives_retriever_and_linking_node[public]
+2 failed in 3.77s

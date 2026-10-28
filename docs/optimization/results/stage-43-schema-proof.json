@@ -1,0 +1,80 @@
+{
+  "status": "passed",
+  "query_id": "retrieval03",
+  "query_text_sha256": "b74fa76c9aa731cad12b39e8d7be38ace6b46e1878c46627306af2d1b629c913",
+  "plan_sha256": "88fef76c4883f58e22042d4bc0d74c8ccf00ea612c4632ea4a7272c50377269d",
+  "trace_order": [
+    "schema_linking",
+    "generate_sql"
+  ],
+  "node_lifecycle": [
+    "link.setup_input",
+    "link.execute",
+    "link.update_context",
+    "gen.setup_input",
+    "gen.execute",
+    "gen.update_context"
+  ],
+  "link_method": "hybrid",
+  "link_warnings": [],
+  "retrieved_doc_ids": [
+    "a.join",
+    "a.orders",
+    "a.count"
+  ],
+  "retrieved_hit_evidence": [
+    {
+      "doc_id": "a.join",
+      "db_id": "shop_a",
+      "schema_name": "main",
+      "table_name": "orders"
+    },
+    {
+      "doc_id": "a.orders",
+      "db_id": "shop_a",
+      "schema_name": "main",
+      "table_name": "orders"
+    },
+    {
+      "doc_id": "a.count",
+      "db_id": "shop_a",
+      "schema_name": "main",
+      "table_name": "orders"
+    }
+  ],
+  "linked_tables": [
+    "orders",
+    "products",
+    "users"
+  ],
+  "linked_columns": {
+    "orders": [
+      "id",
+      "user_id",
+      "product_id",
+      "amount"
+    ],
+    "products": [
+      "id",
+      "name"
+    ],
+    "users": [
+      "id",
+      "name"
+    ],
+    "unrelated": []
+  },
+  "source_namespace": "main",
+  "prompt_messages_sha256": "dc787a252cda033e9e8d6a80606c272f1fb66b1c1115315f156b6ed45272232c",
+  "relevant_column_markers_in_prompt": true,
+  "unrelated_column_excluded": true,
+  "deterministic_router_calls": 1,
+  "harness_llm_calls_reserved": 1,
+  "real_llm_calls": 0,
+  "actual_cost_usd": null,
+  "artifacts": {
+    "trace": "schema-prompt/workflow-trace.json",
+    "prompt": "schema-prompt/prompt.json"
+  },
+  "measurement_scope": "Fixed Harness schema-context wiring with deterministic Router; not a model quality or production namespace coverage estimate"
+}

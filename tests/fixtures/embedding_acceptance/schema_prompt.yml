@@ -1,0 +1,31 @@
+id: stage43_schema_prompt
+name: Stage43 fixed schema-to-prompt wiring probe
+description: Deterministic Router only; no database execution or real LLM.
+plan:
+  node_order:
+    - id: link
+      node: schema_linking
+      config:
+        db_id: shop_a
+        fk_expand: true
+        top_k: 3
+        language: auto
+    - id: gen
+      node: generate_sql
+      depends_on: [link]
+      config:
+        max_candidates: 1
+        dialect: sqlite
+        model: stage43-deterministic-probe
+        strategy: temperature
+        permissions:
+          build_prompt: allow
+          call_llm: allow
+  failure_policy:
+    max_retries: 0
+    on_exhausted: abort
+  evaluation:
+    enabled: true
+    metrics: [execution_success, syntax_valid]
+  max_iterations: 2
+  on_exhausted: abort

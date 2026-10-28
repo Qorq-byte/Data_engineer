@@ -1,0 +1,245 @@
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  6%]
+........................................................................ [  8%]
+........................................................................ [ 10%]
+........................................................................ [ 12%]
+........................................................................ [ 13%]
+........................................................................ [ 15%]
+........................................................................ [ 17%]
+........................................................................ [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 25%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 32%]
+.....................s.................................................. [ 34%]
+........................................................................ [ 36%]
+................................................................FF...... [ 37%]
+........................................................................ [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 44%]
+........................................................................ [ 46%]
+........................................................................ [ 48%]
+........................................................................ [ 49%]
+........................................................................ [ 51%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 56%]
+........................................................................ [ 58%]
+........................................................................ [ 60%]
+........................................................................ [ 61%]
+........................................................................ [ 63%]
+........................................................................ [ 65%]
+........................................................................ [ 66%]
+........................................................................ [ 68%]
+........................................................................ [ 70%]
+........................................................................ [ 72%]
+........................................................................ [ 73%]
+........................................................................ [ 75%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 80%]
+........................................................................ [ 82%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 87%]
+........................................................................ [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 94%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 99%]
+.....................                                                    [100%]
+================================== FAILURES ===================================
+_ test_complete_collection_checks_final_model_before_publishing_vectors[True] _
+
+manifest = {'profile': 'local-embeddinggemma-acceptance-v1', 'run_name': 'runtime-control', 'model': {'provider': 'ollama', 'name...256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', ...}, 'base_url': 'http://127.0.0.1:11434', ...}
+tmp_path = WindowsPath('D:/python/data_engineer/.stage43/.pytest-stage43-full-final/test_complete_collection_check0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001AA445C74A0>
+after_digest_valid = True
+
+    @pytest.mark.parametrize("after_digest_valid", [True, False])
+    async def test_complete_collection_checks_final_model_before_publishing_vectors(
+            manifest, tmp_path, monkeypatch, after_digest_valid):
+        from app.evaluation import embedding_rankings
+        from app.evaluation.artifacts import write_atomic
+    
+        directory = tmp_path / "run"
+        directory.mkdir()
+        owner = "a" * 32
+        confirmation = manifest_digest(manifest)
+        write_atomic(directory / "run-state.json", {"owner": owner,
+                     "manifest_sha256": confirmation, "state": "starting"})
+        monkeypatch.setattr(runtime, "run_directory", lambda name: directory)
+        requests = []
+        raw_client = httpx.AsyncClient
+        def response(request):
+            requests.append(request)
+            if request.url.path == "/api/tags":
+                digest = manifest["model"]["digest"]
+                if len(requests) == 55 and not after_digest_valid:
+                    digest = "sha256:" + "b" * 64
+                return httpx.Response(200, json={"models": [{"name": "embeddinggemma:latest",
+                                                             "digest": digest}]})
+            return httpx.Response(200, json={"embedding": [1.] + [0.] * (DIMENSION - 1)})
+        def client(**kwargs):
+            assert kwargs["trust_env"] is False and kwargs["follow_redirects"] is False
+            return raw_client(transport=httpx.MockTransport(response))
+        async def measure(*args):
+            assert (directory / "vectors.json").exists()
+            return {"index_ready": True, "technical_errors": []}
+        monkeypatch.setattr(httpx, "AsyncClient", client)
+        monkeypatch.setattr(embedding_rankings, "measure_rankings", measure)
+        if after_digest_valid:
+>           report = await runtime.worker(manifest, confirmation, owner)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\test_evaluation\test_embedding_runtime.py:209: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\evaluation\embedding_runtime.py:308: in worker
+    result = await provider.embed([row["text"]])
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\knowledge\retrieval\embedding.py:324: in embed
+    vectors = await asyncio.gather(*(self._embed_one(t) for t in texts))
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\knowledge\retrieval\embedding.py:283: in _embed_one
+    resp = await client.post(
+app\evaluation\embedding_runtime.py:160: in post
+    return await self._request("embedding", self.inventory[json["prompt"]], json)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+app\evaluation\embedding_runtime.py:150: in _request
+    self.ledger.update(index, state="response_received", http_status=status,
+app\evaluation\embedding_runtime.py:115: in update
+    write_atomic(self.path, self.records)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+output = WindowsPath('D:/python/data_engineer/.stage43/.pytest-stage43-full-final/test_complete_collection_check0/run/requests.json')
+rows = [{'sequence': 1, 'kind': 'model_before', 'method': 'GET', 'path': '/api/tags', ...}, {'sequence': 2, 'kind': 'embeddin...: '/api/embeddings', ...}, {'sequence': 6, 'kind': 'embedding', 'method': 'POST', 'path': '/api/embeddings', ...}, ...]
+prefix = '.offline-report-'
+
+    def write_atomic(
+        output: Path,
+        rows: object,
+        *,
+        prefix: str = ".offline-report-",
+    ) -> None:
+        serialized = json.dumps(rows, ensure_ascii=False, indent=2, allow_nan=False)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=output.parent,
+                prefix=prefix,
+                suffix=".tmp",
+                delete=False,
+            ) as target:
+                temporary = Path(target.name)
+                target.write(serialized)
+>           os.replace(temporary, output)
+E           PermissionError: [WinError 5] 拒绝访问。: 'D:\\python\\data_engineer\\.stage43\\.pytest-stage43-full-final\\test_complete_collection_check0\\run\\.offline-report-om9dy8pq.tmp' -> 'D:\\python\\data_engineer\\.stage43\\.pytest-stage43-full-final\\test_complete_collection_check0\\run\\requests.json'
+
+app\evaluation\artifacts.py:99: PermissionError
+_ test_complete_collection_checks_final_model_before_publishing_vectors[False] _
+
+manifest = {'profile': 'local-embeddinggemma-acceptance-v1', 'run_name': 'runtime-control', 'model': {'provider': 'ollama', 'name...256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', ...}, 'base_url': 'http://127.0.0.1:11434', ...}
+tmp_path = WindowsPath('D:/python/data_engineer/.stage43/.pytest-stage43-full-final/test_complete_collection_check1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001AA4476E120>
+after_digest_valid = False
+
+    @pytest.mark.parametrize("after_digest_valid", [True, False])
+    async def test_complete_collection_checks_final_model_before_publishing_vectors(
+            manifest, tmp_path, monkeypatch, after_digest_valid):
+        from app.evaluation import embedding_rankings
+        from app.evaluation.artifacts import write_atomic
+    
+        directory = tmp_path / "run"
+        directory.mkdir()
+        owner = "a" * 32
+        confirmation = manifest_digest(manifest)
+        write_atomic(directory / "run-state.json", {"owner": owner,
+                     "manifest_sha256": confirmation, "state": "starting"})
+        monkeypatch.setattr(runtime, "run_directory", lambda name: directory)
+        requests = []
+        raw_client = httpx.AsyncClient
+        def response(request):
+            requests.append(request)
+            if request.url.path == "/api/tags":
+                digest = manifest["model"]["digest"]
+                if len(requests) == 55 and not after_digest_valid:
+                    digest = "sha256:" + "b" * 64
+                return httpx.Response(200, json={"models": [{"name": "embeddinggemma:latest",
+                                                             "digest": digest}]})
+            return httpx.Response(200, json={"embedding": [1.] + [0.] * (DIMENSION - 1)})
+        def client(**kwargs):
+            assert kwargs["trust_env"] is False and kwargs["follow_redirects"] is False
+            return raw_client(transport=httpx.MockTransport(response))
+        async def measure(*args):
+            assert (directory / "vectors.json").exists()
+            return {"index_ready": True, "technical_errors": []}
+        monkeypatch.setattr(httpx, "AsyncClient", client)
+        monkeypatch.setattr(embedding_rankings, "measure_rankings", measure)
+        if after_digest_valid:
+            report = await runtime.worker(manifest, confirmation, owner)
+            assert report["status"] == "completed"
+            assert report["requests"]["requests_validated"] == 55
+            assert report["actual_cost_usd"] is None
+        else:
+            with pytest.raises(runtime.MeasurementError, match="MODEL_IDENTITY"):
+>               await runtime.worker(manifest, confirmation, owner)
+
+tests\test_evaluation\test_embedding_runtime.py:215: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+app\evaluation\embedding_runtime.py:317: in worker
+    ledger.update(len(ledger.records) - 1, state="validated",
+app\evaluation\embedding_runtime.py:115: in update
+    write_atomic(self.path, self.records)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+output = WindowsPath('D:/python/data_engineer/.stage43/.pytest-stage43-full-final/test_complete_collection_check1/run/requests.json')
+rows = [{'sequence': 1, 'kind': 'model_before', 'method': 'GET', 'path': '/api/tags', ...}, {'sequence': 2, 'kind': 'embeddin...: '/api/embeddings', ...}, {'sequence': 6, 'kind': 'embedding', 'method': 'POST', 'path': '/api/embeddings', ...}, ...]
+prefix = '.offline-report-'
+
+    def write_atomic(
+        output: Path,
+        rows: object,
+        *,
+        prefix: str = ".offline-report-",
+    ) -> None:
+        serialized = json.dumps(rows, ensure_ascii=False, indent=2, allow_nan=False)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=output.parent,
+                prefix=prefix,
+                suffix=".tmp",
+                delete=False,
+            ) as target:
+                temporary = Path(target.name)
+                target.write(serialized)
+>           os.replace(temporary, output)
+E           PermissionError: [WinError 5] 拒绝访问。: 'D:\\python\\data_engineer\\.stage43\\.pytest-stage43-full-final\\test_complete_collection_check1\\run\\.offline-report-pg0df8aw.tmp' -> 'D:\\python\\data_engineer\\.stage43\\.pytest-stage43-full-final\\test_complete_collection_check1\\run\\requests.json'
+
+app\evaluation\artifacts.py:99: PermissionError
+============================== warnings summary ===============================
+tests/test_api/test_query_contract.py::test_real_sdk_objects_through_query_protocols[stop-json]
+tests/test_llm/test_sdk_boundary.py::test_sdk_stream_tail_usage_and_cleanup
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\pydantic\_internal\_generate_schema.py:1507: UserWarning: Item 'summary' on TypedDict class 'ChatCompletionReasoningItem' is using the `ReadOnly` qualifier. Pydantic will not protect items from any mutation on dictionary instances.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_embedding_runtime.py::test_complete_collection_checks_final_model_before_publishing_vectors[True]
+FAILED tests/test_evaluation/test_embedding_runtime.py::test_complete_collection_checks_final_model_before_publishing_vectors[False]
+2 failed, 4194 passed, 1 skipped, 82 deselected, 2 warnings in 232.49s (0:03:52)

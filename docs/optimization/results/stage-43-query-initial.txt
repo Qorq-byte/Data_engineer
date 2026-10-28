@@ -1,0 +1,20 @@
+F                                                                        [100%]
+================================== FAILURES ===================================
+__________ test_empty_sqr_keeps_embedding_query_inside_frozen_inputs __________
+
+    def test_empty_sqr_keeps_embedding_query_inside_frozen_inputs():
+        from app.knowledge.schema_retriever import _build_search_query
+        from app.models.query import SQR
+    
+        query = "orders user_id users id ������"
+>       assert _build_search_query(query, SQR(raw_text=query)) == query
+E       AssertionError: assert 'orders user_...d ������ UNKNOWN' == 'orders user_id users id ������'
+E         
+E         - orders user_id users id ������
+E         + orders user_id users id ������ UNKNOWN
+E         ?                            ++++++++
+
+tests\test_evaluation\test_embedding_acceptance.py:26: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_embedding_acceptance.py::test_empty_sqr_keeps_embedding_query_inside_frozen_inputs
+1 failed, 3 deselected in 2.30s

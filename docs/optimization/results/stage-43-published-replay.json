@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "scope": "Published real vector artifact replay on real backends; no HTTP or new model calls",
+  "all_three_modes_identical_to_collected_report": true,
+  "technical_errors": [],
+  "schema_prompt_proof": "passed"
+}

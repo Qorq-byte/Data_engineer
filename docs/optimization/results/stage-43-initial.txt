@@ -1,0 +1,52 @@
+FFF                                                                      [100%]
+================================== FAILURES ===================================
+________ test_ollama_rejects_invalid_vectors_before_indexing[vector0] _________
+
+vector = [1.0, 2.0]
+
+    @pytest.mark.parametrize("vector", [[1.0, 2.0], [float("nan")] * 4, [0.0] * 4])
+    async def test_ollama_rejects_invalid_vectors_before_indexing(vector):
+        async with httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, content=json.dumps({"embedding": vector}))
+        )) as client:
+            provider = OllamaEmbeddingProvider(dimension=4, client=client)
+>           with pytest.raises(RuntimeError):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE RuntimeError
+
+tests\test_evaluation\test_embedding_acceptance.py:17: Failed
+________ test_ollama_rejects_invalid_vectors_before_indexing[vector1] _________
+
+vector = [nan, nan, nan, nan]
+
+    @pytest.mark.parametrize("vector", [[1.0, 2.0], [float("nan")] * 4, [0.0] * 4])
+    async def test_ollama_rejects_invalid_vectors_before_indexing(vector):
+        async with httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, content=json.dumps({"embedding": vector}))
+        )) as client:
+            provider = OllamaEmbeddingProvider(dimension=4, client=client)
+>           with pytest.raises(RuntimeError):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE RuntimeError
+
+tests\test_evaluation\test_embedding_acceptance.py:17: Failed
+________ test_ollama_rejects_invalid_vectors_before_indexing[vector2] _________
+
+vector = [0.0, 0.0, 0.0, 0.0]
+
+    @pytest.mark.parametrize("vector", [[1.0, 2.0], [float("nan")] * 4, [0.0] * 4])
+    async def test_ollama_rejects_invalid_vectors_before_indexing(vector):
+        async with httpx.AsyncClient(transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, content=json.dumps({"embedding": vector}))
+        )) as client:
+            provider = OllamaEmbeddingProvider(dimension=4, client=client)
+>           with pytest.raises(RuntimeError):
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           Failed: DID NOT RAISE RuntimeError
+
+tests\test_evaluation\test_embedding_acceptance.py:17: Failed
+=========================== short test summary info ===========================
+FAILED tests/test_evaluation/test_embedding_acceptance.py::test_ollama_rejects_invalid_vectors_before_indexing[vector0]
+FAILED tests/test_evaluation/test_embedding_acceptance.py::test_ollama_rejects_invalid_vectors_before_indexing[vector1]
+FAILED tests/test_evaluation/test_embedding_acceptance.py::test_ollama_rejects_invalid_vectors_before_indexing[vector2]
+3 failed in 4.51s

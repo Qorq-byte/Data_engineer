@@ -1,0 +1,66 @@
+{
+  "workflow_id": "wf_20261028_153045_715892",
+  "plan_id": "stage43_schema_prompt",
+  "nodes": [
+    {
+      "node_id": "link",
+      "node_name": "schema_linking",
+      "input_summary": "input_chars=27",
+      "output_summary": "type=dict; status=success",
+      "evaluation": {
+        "passed": true,
+        "metrics": {
+          "execution_success": {
+            "name": "execution_success",
+            "passed": true,
+            "details": "no execution errors detected"
+          },
+          "syntax_valid": {
+            "name": "syntax_valid",
+            "passed": true,
+            "details": "not applicable: no SQL found in output"
+          }
+        },
+        "needs_revision": false,
+        "notes": ""
+      },
+      "started_at": "2026-10-28 15:30:45.715892",
+      "completed_at": "2026-10-28 15:30:45.732735",
+      "error": null,
+      "latency_ms": 16.843
+    },
+    {
+      "node_id": "gen",
+      "node_name": "generate_sql",
+      "input_summary": "input_chars=27",
+      "output_summary": "type=dict; status=success",
+      "evaluation": {
+        "passed": true,
+        "metrics": {
+          "execution_success": {
+            "name": "execution_success",
+            "passed": true,
+            "details": "no execution errors detected"
+          },
+          "syntax_valid": {
+            "name": "syntax_valid",
+            "passed": true,
+            "details": "SQL parsed successfully"
+          }
+        },
+        "needs_revision": false,
+        "notes": ""
+      },
+      "started_at": "2026-10-28 15:30:45.732735",
+      "completed_at": "2026-10-28 15:30:45.734898",
+      "error": null,
+      "latency_ms": 2.163
+    }
+  ],
+  "started_at": "2026-10-28 15:30:45.715892",
+  "completed_at": "2026-10-28 15:30:45.735417",
+  "session_id": "",
+  "status": "completed",
+  "error": "",
+  "persistence_error": ""
+}
