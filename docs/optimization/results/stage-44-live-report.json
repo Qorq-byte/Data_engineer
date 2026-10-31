@@ -1,0 +1,580 @@
+{
+  "profile": "synthetic-nl2sql-v3",
+  "model": "deepseek-v4-flash",
+  "manifest_sha256": "bdf95e0f754d2faf673154c4cf6387a9dbea031306a8a555e460959ee47106f2",
+  "run_name": "stage44-sql-v3",
+  "run_status": "finished",
+  "executed_at_utc": "2026-10-31T07:44:47Z",
+  "call_accounting": {
+    "physical_calls_reserved": 30,
+    "native_budget_calls": 30,
+    "unknown_transport_outcomes": 0,
+    "max_calls": 30,
+    "calls_per_case": 1,
+    "n": 1,
+    "retries": 0,
+    "fallback_chain": []
+  },
+  "generation": {
+    "generated_count": 27,
+    "generated_rate": 0.9,
+    "validation_passed_count": 27,
+    "validation_pass_rate": 0.9
+  },
+  "evaluation": {
+    "case_count": 30,
+    "check_count": 90,
+    "prediction_count": 30,
+    "execution_success_count": 81,
+    "contract_match_count": 79,
+    "robust_match_count": 26,
+    "robust_match_rate": 0.8666666666666667,
+    "predictions_sha256": "97b75280f8acb0175b5d8255a19cf14c37a1d293ce36cf0b1ef3dcda10eda02a",
+    "measurement_scope": "Saved predictions on synthetic contracts; not model calls"
+  },
+  "by_scenario": {
+    "base": {
+      "check_count": 30,
+      "execution_success": 27,
+      "contract_match": 26,
+      "error_counts": {
+        "GENERATION_FAILED": 3,
+        "CONTRACT_MISMATCH": 1
+      }
+    },
+    "edge": {
+      "check_count": 30,
+      "execution_success": 27,
+      "contract_match": 26,
+      "error_counts": {
+        "GENERATION_FAILED": 3,
+        "CONTRACT_MISMATCH": 1
+      }
+    },
+    "empty": {
+      "check_count": 30,
+      "execution_success": 27,
+      "contract_match": 27,
+      "error_counts": {
+        "GENERATION_FAILED": 3
+      }
+    }
+  },
+  "by_split": {
+    "dev": {
+      "case_count": 20,
+      "check_count": 60,
+      "robust_match_count": 18,
+      "robust_match_rate": 0.9,
+      "error_counts": {
+        "GENERATION_FAILED": 6
+      }
+    },
+    "holdout": {
+      "case_count": 10,
+      "check_count": 30,
+      "robust_match_count": 8,
+      "robust_match_rate": 0.8,
+      "error_counts": {
+        "GENERATION_FAILED": 3,
+        "CONTRACT_MISMATCH": 2
+      }
+    }
+  },
+  "by_tag": {
+    "aggregate": {
+      "case_count": 6,
+      "check_count": 18,
+      "robust_match_count": 6,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "average": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "bag": {
+      "case_count": 2,
+      "check_count": 6,
+      "robust_match_count": 2,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "boundary": {
+      "case_count": 3,
+      "check_count": 9,
+      "robust_match_count": 3,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "count": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "cte": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "distinct": {
+      "case_count": 2,
+      "check_count": 6,
+      "robust_match_count": 0,
+      "robust_match_rate": 0.0,
+      "error_counts": {
+        "GENERATION_FAILED": 3,
+        "CONTRACT_MISMATCH": 2
+      }
+    },
+    "duplicates": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "empty": {
+      "case_count": 4,
+      "check_count": 12,
+      "robust_match_count": 4,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "exact_case": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "filter": {
+      "case_count": 4,
+      "check_count": 12,
+      "robust_match_count": 3,
+      "robust_match_rate": 0.75,
+      "error_counts": {
+        "GENERATION_FAILED": 3
+      }
+    },
+    "group": {
+      "case_count": 5,
+      "check_count": 15,
+      "robust_match_count": 4,
+      "robust_match_rate": 0.8,
+      "error_counts": {
+        "GENERATION_FAILED": 3
+      }
+    },
+    "having": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 0,
+      "robust_match_rate": 0.0,
+      "error_counts": {
+        "GENERATION_FAILED": 3
+      }
+    },
+    "join": {
+      "case_count": 7,
+      "check_count": 21,
+      "robust_match_count": 6,
+      "robust_match_rate": 0.8571428571428571,
+      "error_counts": {
+        "GENERATION_FAILED": 3
+      }
+    },
+    "multi_table": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "negation": {
+      "case_count": 2,
+      "check_count": 6,
+      "robust_match_count": 2,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "null": {
+      "case_count": 4,
+      "check_count": 12,
+      "robust_match_count": 3,
+      "robust_match_rate": 0.75,
+      "error_counts": {
+        "GENERATION_FAILED": 3
+      }
+    },
+    "ordering": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "projection": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "refund": {
+      "case_count": 3,
+      "check_count": 9,
+      "robust_match_count": 3,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "same_name": {
+      "case_count": 2,
+      "check_count": 6,
+      "robust_match_count": 2,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "status": {
+      "case_count": 2,
+      "check_count": 6,
+      "robust_match_count": 2,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "tie": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "time": {
+      "case_count": 4,
+      "check_count": 12,
+      "robust_match_count": 4,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "top_k": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 1,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    },
+    "union": {
+      "case_count": 1,
+      "check_count": 3,
+      "robust_match_count": 0,
+      "robust_match_rate": 0.0,
+      "error_counts": {
+        "CONTRACT_MISMATCH": 2
+      }
+    },
+    "zero": {
+      "case_count": 4,
+      "check_count": 12,
+      "robust_match_count": 4,
+      "robust_match_rate": 1.0,
+      "error_counts": {}
+    }
+  },
+  "latency": {
+    "sample_count": 30,
+    "p50_ms": 2111.1885000000257,
+    "p95_ms": 6659.400800000185,
+    "p99_ms": 13311.280599999918,
+    "policy": "Nearest-rank over attempted cases including failed/cancelled cases"
+  },
+  "usage": {
+    "observed_attempts": 30,
+    "known_prompt_tokens": 20684,
+    "known_completion_tokens": 10532,
+    "scope": "SDK/request observations only; unknown calls not counted as zero usage",
+    "covered_attempts": 30,
+    "unknown_usage_attempts": 0,
+    "usage_coverage": 1.0,
+    "prompt_tokens": 20684,
+    "completion_tokens": 10532
+  },
+  "case_error_counts": {
+    "TRUNCATED_COMPLETION": 3
+  },
+  "failure_taxonomy": [
+    {
+      "root_cause": "OUTPUT_BUDGET_TRUNCATION",
+      "cases": [
+        "sql06",
+        "sql10",
+        "sql23"
+      ],
+      "case_count": 3,
+      "checks_affected": 9,
+      "evidence": "Every affected attempt reports completion_tokens == 1024 and finish_status \"length\"; no SQL candidate was exported.",
+      "classification": "budget/parameter limit, not a demonstrated SQL capability limit"
+    },
+    {
+      "root_cause": "SEMANTIC_CONSTRAINT_OMISSION",
+      "cases": [
+        "sql27"
+      ],
+      "case_count": 1,
+      "checks_affected": 2,
+      "evidence": "Generated UNION emission omits the known-user restriction on the orders branch; base/edge contracts differ, empty scenario matched.",
+      "classification": "model semantic error on a holdout case"
+    }
+  ],
+  "cases": [
+    {
+      "id": "sql01",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 13311.3
+    },
+    {
+      "id": "sql02",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1591.3
+    },
+    {
+      "id": "sql03",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1203.9
+    },
+    {
+      "id": "sql04",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2120.8
+    },
+    {
+      "id": "sql05",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2111.2
+    },
+    {
+      "id": "sql06",
+      "status": "failed",
+      "error_code": "TRUNCATED_COMPLETION",
+      "generated": false,
+      "validation_passed": false,
+      "elapsed_ms": 6398.1
+    },
+    {
+      "id": "sql07",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2216.6
+    },
+    {
+      "id": "sql08",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2156.1
+    },
+    {
+      "id": "sql09",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1388.7
+    },
+    {
+      "id": "sql10",
+      "status": "failed",
+      "error_code": "TRUNCATED_COMPLETION",
+      "generated": false,
+      "validation_passed": false,
+      "elapsed_ms": 6404.1
+    },
+    {
+      "id": "sql11",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 3248.6
+    },
+    {
+      "id": "sql12",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2248.9
+    },
+    {
+      "id": "sql13",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1294.7
+    },
+    {
+      "id": "sql14",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 3458.2
+    },
+    {
+      "id": "sql15",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1572.2
+    },
+    {
+      "id": "sql16",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1372.9
+    },
+    {
+      "id": "sql17",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1553.9
+    },
+    {
+      "id": "sql18",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2724.6
+    },
+    {
+      "id": "sql19",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 2995.3
+    },
+    {
+      "id": "sql20",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1663.0
+    },
+    {
+      "id": "sql21",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1426.1
+    },
+    {
+      "id": "sql22",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1188.9
+    },
+    {
+      "id": "sql23",
+      "status": "failed",
+      "error_code": "TRUNCATED_COMPLETION",
+      "generated": false,
+      "validation_passed": false,
+      "elapsed_ms": 6659.4
+    },
+    {
+      "id": "sql24",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 5233.5
+    },
+    {
+      "id": "sql25",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1837.9
+    },
+    {
+      "id": "sql26",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1643.0
+    },
+    {
+      "id": "sql27",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 3287.1
+    },
+    {
+      "id": "sql28",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 4687.6
+    },
+    {
+      "id": "sql29",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1828.7
+    },
+    {
+      "id": "sql30",
+      "status": "completed",
+      "error_code": null,
+      "generated": true,
+      "validation_passed": true,
+      "elapsed_ms": 1136.2
+    }
+  ],
+  "actual_cost_usd": null,
+  "cost_note": "Provider billing amount unknown; not backfilled with zero. Token counts are SDK observations only.",
+  "private_artifacts": "Raw responses, prompts, candidate SQL, audit db and traces stay in the private run directory and are not published."
+}
