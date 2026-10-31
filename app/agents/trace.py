@@ -14,6 +14,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
 
@@ -43,11 +44,11 @@ class OrchestratorTrace:
     """
 
     trace_id: str
-    task_breakdown: dict = field(default_factory=dict)
+    task_breakdown: dict[str, Any] = field(default_factory=dict)
     agent_traces: list[AgentTraceEntry] = field(default_factory=list)
     collaboration_mode: str = ""
-    conflict_resolutions: list[dict] = field(default_factory=list)
-    handoffs: list[dict] = field(default_factory=list)
+    conflict_resolutions: list[dict[str, Any]] = field(default_factory=list)
+    handoffs: list[dict[str, Any]] = field(default_factory=list)
     total_latency_ms: float = 0.0
     llm_cost_estimate_usd: float = 0.0
     started_at: str = ""
@@ -108,12 +109,12 @@ class AgentTraceCollector:
                 "timestamp": datetime.now(UTC).isoformat(),
             })
 
-    def record_conflict(self, resolution: dict) -> None:
+    def record_conflict(self, resolution: dict[str, Any]) -> None:
         """Record a conflict resolution event."""
         if self._trace is not None:
             self._trace.conflict_resolutions.append(resolution)
 
-    def set_task_breakdown(self, breakdown: dict) -> None:
+    def set_task_breakdown(self, breakdown: dict[str, Any]) -> None:
         """Set the task breakdown for the current trace."""
         if self._trace is not None:
             self._trace.task_breakdown = breakdown

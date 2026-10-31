@@ -90,7 +90,8 @@ class ValidationAgent(BaseAgent):
         if isinstance(input, str):
             return input
         if isinstance(input, dict):
-            return input.get("sql") or input.get("query_text") or input.get("text") or ""
+            sql = input.get("sql") or input.get("query_text") or input.get("text") or ""
+            return str(sql)
         if hasattr(input, "sql_text"):
             return input.sql_text  # SQLCandidate
         return str(input)

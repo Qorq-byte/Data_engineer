@@ -15,6 +15,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 from uuid import uuid4
 
 
@@ -39,7 +40,7 @@ class AgentMessage:
     msg_type: MessageType
     from_agent: str
     to_agent: str
-    payload: dict
+    payload: dict[str, Any]
     trace_id: str
     timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
@@ -100,7 +101,7 @@ class AgentBus:
         self,
         from_agent: str,
         to_agent: str,
-        task: dict,
+        task: dict[str, Any],
         trace_id: str,
     ) -> AgentMessage:
         """Convenience: create and send a HANDOFF message in one call.

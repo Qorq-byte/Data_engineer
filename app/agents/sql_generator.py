@@ -14,7 +14,8 @@ import time
 from typing import Any
 
 from app.agents.base import AgentResult, BaseAgent
-from app.models.query import SQLCandidate
+from app.models.query import SQR, SQLCandidate
+from app.models.schema import SchemaSnapshot
 
 
 class SQLGenerationAgent(BaseAgent):
@@ -140,7 +141,9 @@ class SQLGenerationAgent(BaseAgent):
     # ── helpers ────────────────────────────────────────────────────────
 
     @staticmethod
-    def _resolve_input(input: Any, context: dict[str, Any]) -> tuple:
+    def _resolve_input(
+        input: Any, context: dict[str, Any]
+    ) -> tuple[SQR | None, SchemaSnapshot | None, str | None]:
         """Extract (sqr, schema, domain) from input dict or context."""
         sqr = schema = domain = None
         if isinstance(input, dict):

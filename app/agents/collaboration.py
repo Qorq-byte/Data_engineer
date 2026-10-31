@@ -244,7 +244,7 @@ async def run_parallel_debate(
                     errors=[str(pr)],
                 )
             )
-        elif pr is not None:
+        elif isinstance(pr, AgentResult):
             results.append(pr)
 
     # ── Synthesis: pick best candidate ─────────────────────────────

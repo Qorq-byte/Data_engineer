@@ -14,6 +14,8 @@ import time
 from typing import Any
 
 from app.agents.base import AgentResult, BaseAgent
+from app.knowledge.rule_engine import RuleMatch
+from app.models.domain import GlossaryTerm
 from app.models.query import SQR
 
 
@@ -84,7 +86,7 @@ class SchemaRetrievalAgent(BaseAgent):
                 tables = result.tables
 
             # ── Glossary matching ─────────────────────────────────
-            terms: list = []
+            terms: list[tuple[str, GlossaryTerm, float]] = []
             if self._glossary is not None and sqr is not None:
                 with contextlib.suppress(Exception):
                     terms = await self._glossary.match(
@@ -92,7 +94,7 @@ class SchemaRetrievalAgent(BaseAgent):
                     )
 
             # ── Rule matching ─────────────────────────────────────
-            matched_rules: list = []
+            matched_rules: list[RuleMatch] = []
             if self._rules is not None and sqr is not None:
                 with contextlib.suppress(Exception):
                     matched_rules = await self._rules.match(
@@ -126,7 +128,7 @@ class SchemaRetrievalAgent(BaseAgent):
             return input
         if isinstance(input, dict):
             sqr = input.get("sqr")
-            if sqr is not None:
+            if isinstance(sqr, SQR):
                 return sqr
             # Create a minimal SQR from raw text
             nl = input.get("nl_text") or input.get("query_text") or input.get("text") or ""
