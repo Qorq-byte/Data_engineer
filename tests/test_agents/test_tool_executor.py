@@ -73,13 +73,18 @@ class TestToolExecutionAgent:
         assert "SQL execution failed" in result.errors[0]
 
     @pytest.mark.anyio
-    async def test_execute_mcp_tool_without_client_returns_stub(self, agent):
+    async def test_execute_mcp_tool_without_client_is_an_error(self, agent):
+        """An unconfigured client means the tool never ran; that is not success."""
         result = await agent.execute(
             {"server": "db_server", "tool": "list_tables", "args": {}},
             {},
         )
-        assert result.status == AgentStatus.DONE
-        assert result.data.get("stub") is True
+        assert result.status == AgentStatus.ERROR
+        assert "No MCP client configured" in result.errors[0]
+        assert "db_server.list_tables was not called" in result.errors[0]
+        assert result.metadata["server"] == "db_server"
+        assert result.metadata["tool"] == "list_tables"
+        assert result.data is None
 
     @pytest.mark.anyio
     async def test_execute_get_schema_without_connection(self, agent):
@@ -112,10 +117,10 @@ class TestToolExecutionAgent:
         assert result.data["rows"][0][0] == 2
 
     @pytest.mark.anyio
-    async def test_convenience_call_mcp_tool(self, agent):
+    async def test_convenience_call_mcp_tool_without_client_reports_failure(self, agent):
         result = await agent.call_mcp_tool("db", "list", {})
-        assert result.status == AgentStatus.DONE
-        assert result.data.get("stub") is True
+        assert result.status == AgentStatus.ERROR
+        assert "db.list was not called" in result.errors[0]
 
     @pytest.mark.anyio
     async def test_reset(self, agent):

@@ -198,12 +198,16 @@ class ToolExecutionAgent(BaseAgent):
                     latency_ms=round(elapsed, 2),
                 )
 
-        # No MCP client — stub acknowledgment
+        # No MCP client: the call did not happen, so report failure rather than
+        # a hollow success. Returning {"stub": True} with status=DONE made callers
+        # treat an unexecuted tool as a completed one, which is exactly the kind of
+        # silent fake this codebase keeps calling out.
         elapsed = (time.perf_counter() - t0) * 1000
-        return self._ok(
-            {"stub": True, "server": server, "tool": tool, "args": args},
+        return self._error(
+            f"No MCP client configured; {server}.{tool} was not called",
             latency_ms=round(elapsed, 2),
-            note="No MCP client configured — returning stub result",
+            server=server,
+            tool=tool,
         )
 
     async def _get_schema(
