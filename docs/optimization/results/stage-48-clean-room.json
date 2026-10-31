@@ -1,0 +1,157 @@
+{
+  "stage": 48,
+  "date": "2026-10-31",
+  "branch": "codex/release-trial",
+  "baseline_commit": "3d6b363",
+  "fix_commit": "dcc2888",
+  "host": "Windows 11, 24 logical cores",
+  "clean_room": {
+    "venv": ".venv-clean",
+    "python": "3.12.13 (main, Apr 14 2026)",
+    "install": "pip install -e .",
+    "install_result": "success",
+    "env_file": "absent (no .env, no secrets committed)",
+    "first_start_without_secret": {
+      "result": "refused",
+      "error": "ValueError: JWT_SECRET must be configured with at least 32 characters",
+      "exit": 1,
+      "note": "fail-fast before the socket opens; default value change-me-in-production is 22 characters and is rejected in every environment"
+    },
+    "start_with_secret": {
+      "command": "APP_PORT=18001 JWT_SECRET=<32+ chars> python main.py",
+      "ready_after_seconds": 12,
+      "listen": "http://0.0.0.0:18001"
+    },
+    "routes": {
+      "/": 200,
+      "/login": 200,
+      "/workspace": 200,
+      "/docs": 200,
+      "/health": 200,
+      "/health/ready": 503,
+      "/api/v1/schema/databases": 401
+    },
+    "readiness_body": {
+      "status": "not_ready",
+      "initialized": true,
+      "components": {"storage": false, "auth": false, "rag": true, "llm": true},
+      "connected_database_count": 0,
+      "database_probe": "registry only; no live database health query performed",
+      "rag": {
+        "status": "ready",
+        "refresh_required_database_count": 0,
+        "recovery_failed_database_count": 0
+      }
+    },
+    "readiness_reason": "no MySQL reachable in the clean room, so storage/auth report false; this is the documented degraded state, not a crash",
+    "frontend_before_build": {
+      "/": 503,
+      "code": "FRONTEND_NOT_BUILT",
+      "note": "explicit degradation before npm run build:frontend; API and health endpoints unaffected"
+    }
+  },
+  "frontend": {
+    "node": "22.22.2",
+    "npm": "12.0.2",
+    "npm_ci": {"command": "npm ci --ignore-scripts", "seconds": 22, "exit": 0, "vulnerabilities_reported": 0},
+    "check_frontend": {
+      "command": "npm run check:frontend",
+      "exit": 0,
+      "passed": [
+        "workspace.html script #1",
+        "workspace.html script #2",
+        "form.html script #1",
+        "landing_page.html script #1",
+        "landing_page.html script #2",
+        "Schema/RAG refresh handlers: 12 contract scenarios",
+        "RAG maintenance: 37 actual-function contract scenarios",
+        "RAG configuration: 34 actual-function contract scenarios",
+        "Harness policy: 29 actual-function contract scenarios",
+        "Database capabilities: 29 actual-function contract scenarios",
+        "LLM configuration: 41 actual-function contract scenarios"
+      ]
+    },
+    "build": {
+      "command": "npm run build:frontend",
+      "exit": 0,
+      "output": "Built 3 pages, 46 files, 2043810 bytes"
+    },
+    "manifest_check": {
+      "entries": 45,
+      "total_bytes": 2036895,
+      "digest_mismatch": [],
+      "size_mismatch": [],
+      "assets_requested_over_http": 42,
+      "assets_http_failures": []
+    },
+    "pages_after_build": {"/": 200, "/login": 200, "/workspace": 200}
+  },
+  "backup_recovery": {
+    "script": "scripts.state_backup",
+    "sources": [
+      {"name": "lancedb", "kind": "tree", "present": true},
+      {"name": "bm25", "kind": "sqlite", "present": true},
+      {"name": "audit", "kind": "sqlite", "present": false}
+    ],
+    "backup_new_code": {"files": 41, "bytes": 222586, "exit": 0},
+    "verify_new_code": {"ok": true, "checked_files": 41, "exit": 0},
+    "restore_new_code": {"restored": ["lancedb", "bm25"], "checked_files": 41, "files_on_disk": 41, "exit": 0},
+    "restored_sqlite_openable": true,
+    "prune": {
+      "command": "--action prune --backup-root .drill2 --keep 1",
+      "before": ["new", "old", "restored-new", "restored-old"],
+      "removed": ["new"],
+      "after": ["old", "restored-new", "restored-old"],
+      "exit": 0,
+      "note": "non-backup directories without manifest.json were left untouched"
+    },
+    "defect_fixed": {
+      "issue": "prune was guarded by --backup-dir, so the documented retention command always exited 2",
+      "fix_commit": "dcc2888",
+      "regression_test": "tests/test_recovery/test_state_recovery.py::test_cli_prune_does_not_require_backup_dir",
+      "suite": "pytest tests/test_recovery -> 13 passed"
+    }
+  },
+  "cross_version": {
+    "old_commit": "3d6b363",
+    "new_commit": "dcc2888",
+    "old_reads_new_backup": {"verify_ok": true, "restore_files": 41, "files_on_disk": 41},
+    "old_version_service": {"/": 200, "/login": 200, "/workspace": 200, "/health": 200, "/health/ready": 503},
+    "old_backup": {"files": 51, "bytes": 275539, "note": "the old version wrote more lancedb transaction files during startup"},
+    "new_reads_old_backup": {"verify_ok": true, "restore_files": 51, "files_on_disk": 51},
+    "new_version_service": {"/": 200, "/login": 200, "/workspace": 200, "/health": 200, "/health/ready": 503, "/api/v1/schema/databases": 401},
+    "shared_frontend_dist": "the two commits do not touch frontend sources, so the already-built frontend_dist was served by both; rollback of static assets was not exercised because the content is identical"
+  },
+  "npm_audit": {
+    "command": "npm audit --json",
+    "date": "2026-10-31",
+    "total": 0,
+    "metadata": {"info": 0, "low": 0, "moderate": 0, "high": 0, "critical": 0},
+    "previous_recorded": "7 advisories (5 high, 2 moderate) on 2026-10-23 in docs/optimization/frontend-build.md",
+    "package_lock_last_change": "1510dd5 2026-10-23 feat(frontend): build and serve reproducible local assets",
+    "conclusion": "the lockfile did not change between the two audits, so the drop is registry-side advisory data, not a fix made here; 0 must not be reported as evidence that the build toolchain is clean"
+  },
+  "runtime_versions_clean_room": {
+    "litellm": "1.106.6",
+    "pydantic": "2.14.2",
+    "fastapi": "0.162.0",
+    "uvicorn": "0.54.0",
+    "lancedb": "0.41.0",
+    "sqlglot": "30.18.0",
+    "httpx": "0.28.1",
+    "pyarrow": "26.0.0"
+  },
+  "runtime_drift": {
+    "frozen_in_stage44_manifest": {"python": "3.12.13", "litellm": "1.106.4", "pydantic": "2.14.1"},
+    "resolved_in_clean_room": {"python": "3.12.13", "litellm": "1.106.6", "pydantic": "2.14.2"},
+    "cause": "pyproject.toml pins lower bounds only; there is no Python lockfile",
+    "consequence": "the stage 44 30-case result was produced on 1.106.4 / 2.14.1 and was not rerun on this combination"
+  },
+  "offline_note": "litellm tried three times to fetch its remote model cost map and fell back to the bundled copy; a deployment without egress stays functional but logs the warnings",
+  "not_exercised": [
+    "MySQL-backed storage/auth readiness (no MySQL in the clean room)",
+    "multi-worker or multi-process deployment",
+    "in-place frontend rebuild while the service is serving",
+    "dependency upgrade of Python packages (audit only, no version change)"
+  ]
+}
