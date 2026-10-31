@@ -75,6 +75,10 @@ def main(argv: list[str] | None = None) -> int:
                               "present": [s["name"] for s in manifest["sources"] if s["present"]]},
                              ensure_ascii=False))
             return 0
+        if args.action == "prune":
+            removed = prune(args.backup_root, args.keep)
+            print(json.dumps({"removed": removed, "kept": args.keep}, ensure_ascii=False))
+            return 0
         if args.backup_dir is None:
             raise RecoveryError("--backup-dir is required for this action")
         if args.action == "verify":
@@ -82,12 +86,8 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"ok": result["ok"], "checked_files": result["checked_files"],
                               "problems": result["problems"]}, ensure_ascii=False))
             return 0 if result["ok"] else 3
-        if args.action == "restore":
-            result = restore(args.backup_dir, root, overwrite=args.overwrite)
-            print(json.dumps(result, ensure_ascii=False))
-            return 0
-        removed = prune(args.backup_root, args.keep)
-        print(json.dumps({"removed": removed, "kept": args.keep}, ensure_ascii=False))
+        result = restore(args.backup_dir, root, overwrite=args.overwrite)
+        print(json.dumps(result, ensure_ascii=False))
         return 0
     except (RecoveryError, ValueError, OSError) as exc:
         print(json.dumps({"status": "refused", "reason": str(exc)}, ensure_ascii=False),

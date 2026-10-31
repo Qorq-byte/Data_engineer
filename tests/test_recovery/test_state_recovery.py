@@ -156,6 +156,25 @@ def test_prune_keeps_newest_manifests_only(tmp_path):
     assert sorted(path.name for path in root.iterdir()) == ["b2", "b3", "not-a-backup"]
 
 
+def test_cli_prune_does_not_require_backup_dir(tmp_path):
+    """`prune` is driven by --backup-root; demanding --backup-dir made it unusable."""
+    root = tmp_path / "backups"
+    for index in range(3):
+        folder = root / f"b{index}"
+        folder.mkdir(parents=True)
+        (folder / "manifest.json").write_text(
+            json.dumps({"version": 1, "sources": []}), encoding="utf-8")
+        os.utime(folder, (1_700_000_000 + index, 1_700_000_000 + index))
+    completed = subprocess.run(
+        [sys.executable, "-m", "scripts.state_backup", "--action", "prune",
+         "--backup-root", str(root), "--keep", "1"],
+        capture_output=True, text=True, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)["removed"] == ["b1", "b0"]
+    assert sorted(path.name for path in root.iterdir()) == ["b2"]
+
+
 # ── in-flight replacement markers ────────────────────────────────────────
 
 
