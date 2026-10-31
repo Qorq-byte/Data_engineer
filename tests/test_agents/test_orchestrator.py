@@ -287,3 +287,46 @@ class TestOrchestratorRun:
     async def test_reset(self, orch):
         orch.reset()
         assert orch.status == AgentStatus.IDLE
+
+
+class TestSynthesisOfToolOutcomes:
+    """A step that did not run must not be reported as an execution result."""
+
+    @pytest.fixture
+    def orch(self):
+        from app.agents.registry import AgentRegistry
+
+        o = OrchestratorAgent(registry=AgentRegistry())
+        yield o
+        o.reset()
+
+    def test_skipped_tool_step_is_not_an_execution_result(self, orch):
+        result = AgentResult(
+            agent_name="tool_executor",
+            status=AgentStatus.DONE,
+            data={"skipped": True, "reason": "No SQL to execute"},
+        )
+
+        output = orch._synthesize([result], {})
+
+        assert "execution_result" not in output
+        assert output["tool_skipped"] == "No SQL to execute"
+
+    def test_real_execution_is_still_reported(self, orch):
+        result = AgentResult(
+            agent_name="tool_executor",
+            status=AgentStatus.DONE,
+            data={"rows": [[1]], "columns": ["n"]},
+        )
+
+        output = orch._synthesize([result], {})
+
+        assert output["execution_result"]["rows"] == [[1]]
+        assert "tool_skipped" not in output
+
+    def test_skip_helper_payload_says_skipped(self):
+        from app.agents.collaboration import _skip_result
+
+        payload = _skip_result("tool_executor", "No SQL to execute").data
+
+        assert payload == {"skipped": True, "reason": "No SQL to execute"}

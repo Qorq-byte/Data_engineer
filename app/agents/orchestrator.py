@@ -288,7 +288,12 @@ class OrchestratorAgent(BaseAgent):
                 output["validation"] = r.data.get("report")
                 output["validation_passed"] = r.data.get("passed", False)
             elif r.agent_name == "tool_executor" and isinstance(r.data, dict):
-                output["execution_result"] = r.data
+                # A skip marker means the step never ran. Putting it under
+                # execution_result would let a consumer read "has_result": True.
+                if r.data.get("skipped"):
+                    output["tool_skipped"] = str(r.data.get("reason", ""))
+                else:
+                    output["execution_result"] = r.data
             elif r.agent_name == "feedback_processor" and isinstance(r.data, dict):
                 output["feedback"] = r.data
 

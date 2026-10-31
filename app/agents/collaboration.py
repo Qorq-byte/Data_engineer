@@ -98,7 +98,7 @@ async def run_pipeline(
         r = await tool_agent.execute({"sql": context["sql"]}, context)
         results.append(r)
     elif tool_agent is not None:
-        results.append(_stub_result("tool_executor", "No SQL to execute"))
+        results.append(_skip_result("tool_executor", "No SQL to execute"))
 
     return results
 
@@ -433,12 +433,17 @@ def _missing_agent(agent_name: str) -> AgentResult:
     )
 
 
-def _stub_result(agent_name: str, message: str) -> AgentResult:
-    """Return a stub/skip result."""
+def _skip_result(agent_name: str, message: str) -> AgentResult:
+    """Return a skip result: the step did not run, and nothing claims it did.
+
+    ``AgentStatus`` has no SKIPPED member, so this stays DONE — but the payload
+    says ``skipped`` rather than ``stub`` so a consumer cannot read it as an
+    execution result.
+    """
     return AgentResult(
         agent_name=agent_name,
         status=AgentStatus.DONE,
-        data={"stub": True, "message": message},
+        data={"skipped": True, "reason": message},
     )
 
 
