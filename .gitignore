@@ -29,6 +29,7 @@ _vendor_pytest/
 .stress_*
 .guard_*
 .rag_bench*
+.scale_probe/
 .aigrade*
 .check*.txt
 .reg.xml

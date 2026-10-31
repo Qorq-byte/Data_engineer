@@ -1,0 +1,533 @@
+{
+  "profile": "synthetic-scale-load",
+  "measured_at_utc": "2026-10-31T08:12:10Z",
+  "runs": [
+    {
+      "scale": "1k",
+      "spec": {
+        "tables": 1000,
+        "columns_per_table": 12,
+        "column_objects": 12000,
+        "documents": 1000
+      },
+      "build": {
+        "database_bytes": 4390912,
+        "tables": 1000,
+        "snapshot_tables": 1000,
+        "snapshot_columns": 12000,
+        "cold_extract_ms": 358.6553000004642,
+        "documents": 1000,
+        "index_build_ms": 463.289999999688,
+        "index_bytes": 2061355
+      },
+      "environment": {
+        "python": "3.13.6",
+        "platform": "win32",
+        "cpu_count": 24,
+        "rss_probe": "GetProcessMemoryInfo",
+        "rss_readable": true,
+        "platform_detail": "Windows-11-10.0.26200-SP0",
+        "transport": "in-process run_query; no HTTP serialisation",
+        "llm": "scripted fixed SQL; no external model call",
+        "embedding": "deterministic mock provider; no network",
+        "concurrency_levels": [
+          1,
+          2,
+          5
+        ],
+        "max_concurrent_queries": 8,
+        "serialisation": "Per-connection lease allows one in-flight query per registered connection; the admission gate capacity is max_concurrent_queries"
+      },
+      "limits": {
+        "scenario_seconds": 60.0,
+        "batch_seconds": 1200.0,
+        "rss_bytes": 2147483648,
+        "artifact_bytes": 1073741824,
+        "applies_to": "checked between attempts; a trip keeps partial samples"
+      },
+      "requests_per_level": 20,
+      "levels": [
+        {
+          "scenario": "schema_extract",
+          "concurrency": 1,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 2.9008751244043176,
+          "p50_ms": 309.8000999998476,
+          "p95_ms": 521.1577999998553,
+          "p99_ms": 540.1185999999143,
+          "event_loop_lag_p95_ms": 47.271399999881396,
+          "process_peak_rss_bytes": 345157632,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "schema_extract",
+          "concurrency": 2,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 2.580721717151257,
+          "p50_ms": 734.5712999995158,
+          "p95_ms": 907.184500000767,
+          "p99_ms": 969.2144000000553,
+          "event_loop_lag_p95_ms": 47.121900000202004,
+          "process_peak_rss_bytes": 345255936,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "schema_extract",
+          "concurrency": 5,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 2.6904889735018696,
+          "p50_ms": 1742.585300000428,
+          "p95_ms": 2198.8483000004635,
+          "p99_ms": 2233.3717999999863,
+          "event_loop_lag_p95_ms": 39.32660000020405,
+          "process_peak_rss_bytes": 348729344,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "keyword_retrieve",
+          "concurrency": 1,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 326.4714476202108,
+          "p50_ms": 0.8898999994926271,
+          "p95_ms": 1.0591000000204076,
+          "p99_ms": 1.1936999999306863,
+          "event_loop_lag_p95_ms": 56.10019999960059,
+          "process_peak_rss_bytes": 348737536,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "keyword_retrieve",
+          "concurrency": 2,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 328.49946372326826,
+          "p50_ms": 0.9124999996856786,
+          "p95_ms": 1.0381000001871143,
+          "p99_ms": 1.0775999999168562,
+          "event_loop_lag_p95_ms": 55.7319999999163,
+          "process_peak_rss_bytes": 348737536,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "keyword_retrieve",
+          "concurrency": 5,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 330.8021455820791,
+          "p50_ms": 0.8855000005496549,
+          "p95_ms": 0.9887999995044083,
+          "p99_ms": 1.0753000005934155,
+          "event_loop_lag_p95_ms": 55.31090000033146,
+          "process_peak_rss_bytes": 348737536,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "rag_index",
+          "concurrency": 1,
+          "requests_planned": 1,
+          "attempts": 1,
+          "not_attempted": 0,
+          "attempt_rps": 2.158475253082677,
+          "p50_ms": 463.289999999688,
+          "p95_ms": 463.289999999688,
+          "p99_ms": 463.289999999688,
+          "event_loop_lag_p95_ms": null,
+          "process_peak_rss_bytes": 348737536,
+          "statuses": {
+            "ok": 1
+          },
+          "stop_reason": null,
+          "documents": 1000,
+          "index_bytes": 2061355
+        },
+        {
+          "scenario": "rag_retrieve",
+          "concurrency": 1,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 84.86266462824779,
+          "p50_ms": 9.40820000050735,
+          "p95_ms": 11.403500000596978,
+          "p99_ms": 12.008700000478711,
+          "event_loop_lag_p95_ms": 230.49420000017562,
+          "process_peak_rss_bytes": 361304064,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "rag_retrieve",
+          "concurrency": 2,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 74.39834061939905,
+          "p50_ms": 10.73160000032658,
+          "p95_ms": 13.868699999875389,
+          "p99_ms": 14.195899999322137,
+          "event_loop_lag_p95_ms": 263.65989999987505,
+          "process_peak_rss_bytes": 362459136,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "rag_retrieve",
+          "concurrency": 5,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 74.55261905199922,
+          "p50_ms": 10.73880000058125,
+          "p95_ms": 13.27309999942372,
+          "p99_ms": 15.249399999447633,
+          "event_loop_lag_p95_ms": 263.10440000008384,
+          "process_peak_rss_bytes": 362504192,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "pipeline",
+          "concurrency": 1,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 1.2180977385424219,
+          "p50_ms": 778.7302999995518,
+          "p95_ms": 928.774699999849,
+          "p99_ms": 1007.7688999999737,
+          "event_loop_lag_p95_ms": 516.6450999996596,
+          "process_peak_rss_bytes": 435302400,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "pipeline",
+          "concurrency": 2,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 1.205267745619561,
+          "p50_ms": 1658.7202000000616,
+          "p95_ms": 2041.1918999998306,
+          "p99_ms": 2087.922900000194,
+          "event_loop_lag_p95_ms": 542.4743999993734,
+          "process_peak_rss_bytes": 443744256,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "pipeline",
+          "concurrency": 5,
+          "requests_planned": 20,
+          "attempts": 20,
+          "not_attempted": 0,
+          "attempt_rps": 1.2117664509686121,
+          "p50_ms": 4076.618199999757,
+          "p95_ms": 4259.720799999741,
+          "p99_ms": 4454.559400000107,
+          "event_loop_lag_p95_ms": 560.227799999775,
+          "process_peak_rss_bytes": 454246400,
+          "statuses": {
+            "ok": 20
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        }
+      ],
+      "batch_stop_reason": null,
+      "elapsed_seconds": 109.14245960000062,
+      "artifact_bytes": 6456363,
+      "final_rss_bytes": 454246400,
+      "measurement_scope": "Synthetic schema and documents on this machine; orchestration capacity only. No model or embedding latency is included, so this is not end-to-end capacity."
+    },
+    {
+      "scale": "10k",
+      "spec": {
+        "tables": 10000,
+        "columns_per_table": 12,
+        "column_objects": 120000,
+        "documents": 10000
+      },
+      "build": {
+        "database_bytes": 43839488,
+        "tables": 10000,
+        "snapshot_tables": 10000,
+        "snapshot_columns": 120000,
+        "cold_extract_ms": 2057.669299999361,
+        "documents": 10000,
+        "index_build_ms": 2117.7945999997974,
+        "index_bytes": 27540012
+      },
+      "environment": {
+        "python": "3.13.6",
+        "platform": "win32",
+        "cpu_count": 24,
+        "rss_probe": "GetProcessMemoryInfo",
+        "rss_readable": true,
+        "platform_detail": "Windows-11-10.0.26200-SP0",
+        "transport": "in-process run_query; no HTTP serialisation",
+        "llm": "scripted fixed SQL; no external model call",
+        "embedding": "deterministic mock provider; no network",
+        "concurrency_levels": [
+          1,
+          2
+        ],
+        "max_concurrent_queries": 8,
+        "serialisation": "Per-connection lease allows one in-flight query per registered connection; the admission gate capacity is max_concurrent_queries"
+      },
+      "limits": {
+        "scenario_seconds": 120.0,
+        "batch_seconds": 1500.0,
+        "rss_bytes": 2147483648,
+        "artifact_bytes": 1073741824,
+        "applies_to": "checked between attempts; a trip keeps partial samples"
+      },
+      "requests_per_level": 8,
+      "levels": [
+        {
+          "scenario": "schema_extract",
+          "concurrency": 1,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 0.6358911663366414,
+          "p50_ms": 1523.4086000000389,
+          "p95_ms": 1794.5423999999548,
+          "p99_ms": 1794.5423999999548,
+          "event_loop_lag_p95_ms": 11.451600000436882,
+          "process_peak_rss_bytes": 497549312,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "schema_extract",
+          "concurrency": 2,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 0.6499189697276501,
+          "p50_ms": 3029.9836999993204,
+          "p95_ms": 3151.5519999993558,
+          "p99_ms": 3151.5519999993558,
+          "event_loop_lag_p95_ms": 11.668200000822251,
+          "process_peak_rss_bytes": 442548224,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "keyword_retrieve",
+          "concurrency": 1,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 21.518611447053015,
+          "p50_ms": 11.90859999951499,
+          "p95_ms": 266.05019999988144,
+          "p99_ms": 266.05019999988144,
+          "event_loop_lag_p95_ms": 366.55560000064725,
+          "process_peak_rss_bytes": 442617856,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "keyword_retrieve",
+          "concurrency": 2,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 22.65026824996467,
+          "p50_ms": 12.277099999664642,
+          "p95_ms": 242.5862000000052,
+          "p99_ms": 242.5862000000052,
+          "event_loop_lag_p95_ms": 347.973999999449,
+          "process_peak_rss_bytes": 442617856,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "rag_index",
+          "concurrency": 1,
+          "requests_planned": 1,
+          "attempts": 1,
+          "not_attempted": 0,
+          "attempt_rps": 0.4721893237427726,
+          "p50_ms": 2117.7945999997974,
+          "p95_ms": 2117.7945999997974,
+          "p99_ms": 2117.7945999997974,
+          "event_loop_lag_p95_ms": null,
+          "process_peak_rss_bytes": 442617856,
+          "statuses": {
+            "ok": 1
+          },
+          "stop_reason": null,
+          "documents": 10000,
+          "index_bytes": 27540012
+        },
+        {
+          "scenario": "rag_retrieve",
+          "concurrency": 1,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 13.860193956091333,
+          "p50_ms": 40.49970000050962,
+          "p95_ms": 280.24249999998574,
+          "p99_ms": 280.24249999998574,
+          "event_loop_lag_p95_ms": 571.9899999995687,
+          "process_peak_rss_bytes": 456232960,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "rag_retrieve",
+          "concurrency": 2,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 13.37113129297119,
+          "p50_ms": 40.76660000009724,
+          "p95_ms": 293.0337000007057,
+          "p99_ms": 293.0337000007057,
+          "event_loop_lag_p95_ms": 593.1388999998671,
+          "process_peak_rss_bytes": 456650752,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "pipeline",
+          "concurrency": 1,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 0.09967144193749412,
+          "p50_ms": 9781.067000000803,
+          "p95_ms": 11649.80530000048,
+          "p99_ms": 11649.80530000048,
+          "event_loop_lag_p95_ms": 4383.737900000706,
+          "process_peak_rss_bytes": 693420032,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        },
+        {
+          "scenario": "pipeline",
+          "concurrency": 2,
+          "requests_planned": 8,
+          "attempts": 8,
+          "not_attempted": 0,
+          "attempt_rps": 0.0925979873899201,
+          "p50_ms": 22307.095000000118,
+          "p95_ms": 25729.968000000554,
+          "p99_ms": 25729.968000000554,
+          "event_loop_lag_p95_ms": 4936.033500000231,
+          "process_peak_rss_bytes": 736976896,
+          "statuses": {
+            "ok": 8
+          },
+          "stop_reason": null,
+          "documents": null,
+          "index_bytes": null
+        }
+      ],
+      "batch_stop_reason": null,
+      "elapsed_seconds": 369.9134309000001,
+      "artifact_bytes": 71383596,
+      "final_rss_bytes": 652783616,
+      "measurement_scope": "Synthetic schema and documents on this machine; orchestration capacity only. No model or embedding latency is included, so this is not end-to-end capacity."
+    }
+  ],
+  "notes": [
+    "Two independent runs; the 1k run used concurrency 1/2/5 and the 10k run used 1/2.",
+    "No model or embedding service was called; RAG used the deterministic mock provider.",
+    "Every level keeps its declared request denominator; not_attempted is reported separately.",
+    "Raw per-level detail and the generated databases stay in the ignored .scale_probe/ directory."
+  ]
+}
