@@ -39,6 +39,7 @@ Usage::
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -797,7 +798,7 @@ class EvolvableContext:
     def __contains__(self, item_id: str) -> bool:
         return item_id in self._items
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Any]:
         return iter(self._items.values())
 
 
@@ -837,7 +838,7 @@ def _keyword_match_score(item: KnowledgeItem, query: str) -> float:
     # Join into a single text block for substring matching
     text_block = " ".join(searchable).lower()
 
-    hits = 0
+    hits: float = 0
     for word in query_words:
         if word in text_block:
             hits += 1

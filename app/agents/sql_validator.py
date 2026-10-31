@@ -93,5 +93,5 @@ class ValidationAgent(BaseAgent):
             sql = input.get("sql") or input.get("query_text") or input.get("text") or ""
             return str(sql)
         if hasattr(input, "sql_text"):
-            return input.sql_text  # SQLCandidate
+            return str(input.sql_text)  # SQLCandidate
         return str(input)

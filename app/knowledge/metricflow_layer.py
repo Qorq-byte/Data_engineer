@@ -443,16 +443,15 @@ class MetricFlowEngine:
         Returns:
             Number of new metrics created.
         """
-        try:
-            from app.knowledge.domain_manager import domain_manager
-        except ImportError:
+        manager = self._domain_manager
+        if manager is None:
             return 0
 
-        domains = [domain] if domain else list(domain_manager._domains.keys())
+        domains = [domain] if domain else list(manager._domains.keys())
         count = 0
 
         for d in domains:
-            terms = domain_manager.get_glossary(d)
+            terms = manager.get_glossary(d)
             for term in terms:
                 if term.get("type") == "derived_column" or term.get("expression"):
                     name = term.get("name", "")
@@ -549,27 +548,13 @@ class MetricFlowEngine:
         if metric.dimensions:
             return list(metric.dimensions)  # already defined
 
-        # Try RAG-based discovery
-        try:
-            from app.knowledge.retrieval.lancedb_store import LanceDBStore
-            from app.knowledge.retrieval.schema_rag import SchemaMetadataRAG
-
-            store = LanceDBStore()
-            rag = SchemaMetadataRAG(store)
-            # Search for tables related to the metric
-            tables = rag.find_relevant_tables(
-                f"{metric.description} {metric.formula}",
-                top_k=3,
-            )
-            suggestions: list[str] = []
-            for t in tables:
-                if hasattr(t, "columns"):
-                    suggestions.extend(
-                        c.name for c in t.columns[:3] if hasattr(c, "name")
-                    )
-            return suggestions[:10]
-        except Exception:
-            return []
+        # Dimension discovery would need app.rag.engine's initialised
+        # SchemaMetadataRAG (LanceDBStore needs a dimension, the RAG needs a BM25
+        # index, and find_relevant_tables is async). The previous code built both
+        # with missing arguments and iterated a coroutine, so it always fell into
+        # the except branch. Nothing calls this synchronous helper yet, so it
+        # reports "no suggestions" instead of pretending to search.
+        return []
 
     def cross_dialect_validate(
         self, metric_name: str, dialects: list[str] | None = None
@@ -632,7 +617,7 @@ class MetricFlowEngine:
         """Translate *sql* to the target *dialect* if a ``DialectAdapter`` is set."""
         if self._dialect_adapter is not None:
             try:
-                return self._dialect_adapter.translate(sql, dialect)
+                return str(self._dialect_adapter.translate(sql, dialect))
             except Exception:
                 pass
         # Fallback: use sqlglot directly
