@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -41,7 +42,7 @@ class SQLRequest(BaseModel):
 
 
 @router.post("/sql/explain")
-async def explain_sql(body: SQLRequest) -> dict:
+async def explain_sql(body: SQLRequest) -> dict[str, Any]:
     """Analyse SQL structure and produce a human-readable execution plan."""
     try:
         import sqlglot
@@ -52,8 +53,10 @@ async def explain_sql(body: SQLRequest) -> dict:
         if not parsed:
             raise HTTPException(status_code=400, detail="Unable to parse SQL")
         tree = parsed[0]
+        if tree is None:
+            raise HTTPException(status_code=400, detail="Unable to parse SQL")
         tables: list[str] = []
-        joins: list[dict] = []
+        joins: list[dict[str, Any]] = []
         where_conditions: list[str] = []
         order_by_columns: list[str] = []
         has_aggregation = False
@@ -113,7 +116,7 @@ async def explain_sql(body: SQLRequest) -> dict:
 
 
 @router.post("/sql/translate")
-async def translate_sql(body: SQLRequest) -> dict:
+async def translate_sql(body: SQLRequest) -> dict[str, Any]:
     """Translate SQL from one dialect to another using sqlglot."""
     if not body.target_dialect:
         raise HTTPException(status_code=400, detail="target_dialect is required")
@@ -141,7 +144,7 @@ async def translate_sql(body: SQLRequest) -> dict:
 
 
 @router.post("/sql/format")
-async def format_sql(body: SQLRequest) -> dict:
+async def format_sql(body: SQLRequest) -> dict[str, Any]:
     """Format SQL with proper indentation and keyword casing."""
     try:
         import sqlparse
@@ -226,7 +229,7 @@ async def format_sql(body: SQLRequest) -> dict:
 
 
 @router.post("/sql/validate")
-async def validate_sql(body: SQLRequest) -> dict:
+async def validate_sql(body: SQLRequest) -> dict[str, Any]:
     """Quick syntax validation and basic lint checks for a SQL statement."""
     errors: list[str] = []
     warnings: list[str] = []

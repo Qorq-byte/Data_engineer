@@ -28,7 +28,6 @@ from app.models.query import SQLCandidate
 from app.models.schema import SchemaSnapshot
 from app.nodes.base import NodeInput
 from app.nodes.execute_sql import ExecuteSQLNode
-from app.storage.mysql_store import get_store
 from app.workflow.contracts import QueryEventName, QueryStatus, classify_query_failure
 
 logger = logging.getLogger(__name__)
@@ -340,7 +339,7 @@ class ExecuteRequest(BaseModel):
 
 
 @router.post("/execute")
-async def execute_sql_direct(body: ExecuteRequest) -> dict:
+async def execute_sql_direct(body: ExecuteRequest) -> dict[str, Any]:
     """Execute a raw SQL statement directly against a connected database.
 
     This is the direct execution endpoint for the WorkbenchPanel.
@@ -513,11 +512,18 @@ def _prune_sessions() -> None:
             _SESSION_STORE.pop(key, None)
             discard_gate(("session", key))
     while len(_SESSION_STORE) >= max(1, settings.session_max_entries):
-        key = next((key for key in _SESSION_STORE if not gate(("session", key)).locked()), None)
-        if key is None:
+        evicted = next(
+            (
+                candidate
+                for candidate in _SESSION_STORE
+                if not gate(("session", candidate)).locked()
+            ),
+            None,
+        )
+        if evicted is None:
             break
-        _SESSION_STORE.pop(key)
-        discard_gate(("session", key))
+        _SESSION_STORE.pop(evicted)
+        discard_gate(("session", evicted))
 
 
 def _get_or_create_session(session_id: str) -> dict[str, Any]:
@@ -542,19 +548,12 @@ def _get_or_create_session(session_id: str) -> dict[str, Any]:
 
 
 @router.get("/sessions/{session_id}")
-async def get_session(session_id: str) -> dict:
-    """Get conversation session details including all turns."""
-    # Try MySQL first
-    try:
-        store = get_store()
-        if store is not None:
-            mysql_session = await store.get_session(session_id)
-            if mysql_session:
-                return {"status": "ok", "session": mysql_session}
-    except Exception:
-        pass
+async def get_session(session_id: str) -> dict[str, Any]:
+    """Get conversation session details including all turns.
 
-    # Fallback to in-memory
+    Sessions live in this worker's memory only: ``MySQLStore`` has no session
+    tables, so there is no durable session lookup to fall back to.
+    """
     session = _SESSION_STORE.get(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
@@ -562,33 +561,19 @@ async def get_session(session_id: str) -> dict:
 
 
 @router.get("/sessions/{session_id}/versions")
-async def get_session_versions(session_id: str) -> dict:
+async def get_session_versions(session_id: str) -> dict[str, Any]:
     """Get version history for a conversation session.
 
-    Returns all SQL versions generated and edited during the session.
+    Returns all SQL versions generated and edited during the session. Version
+    history is process-local for the same reason as :func:`get_session`.
     """
-    # Try MySQL first
-    try:
-        store = get_store()
-        if store is not None:
-            versions = await store.get_session_versions(session_id)
-            if versions:
-                return {
-                    "status": "ok",
-                    "session_id": session_id,
-                    "versions": versions,
-                    "total": len(versions),
-                }
-    except Exception:
-        pass
-
-    # Fallback to in-memory
     session = _SESSION_STORE.get(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
     # Build version list: prefer explicit ``versions`` store (advanced
     # version management — SPEC §4.7.2), fall back to turns as versions.
+    versions: list[dict[str, Any]]
     if "versions" in session and session["versions"]:
         versions = session["versions"]
     else:
@@ -626,7 +611,8 @@ def _ensure_versions_store(session: dict[str, Any]) -> list[dict[str, Any]]:
         ]
         if session["versions"]:
             session["current_version"] = len(session["versions"])
-    return session["versions"]
+    resolved: list[dict[str, Any]] = session["versions"]
+    return resolved
 
 
 def _find_version(versions: list[dict[str, Any]], version_number: int) -> dict[str, Any]:
@@ -641,7 +627,7 @@ def _find_version(versions: list[dict[str, Any]], version_number: int) -> dict[s
 
 
 @router.post("/sessions/{session_id}/versions/{version_number}/rollback")
-async def rollback_to_version(session_id: str, version_number: int) -> dict:
+async def rollback_to_version(session_id: str, version_number: int) -> dict[str, Any]:
     """Rollback to a previous SQL version (SPEC §4.7.2).
 
     Creates a new version whose SQL is copied from version *N*. The
@@ -689,7 +675,7 @@ async def diff_versions(
     session_id: str,
     v1: int = Query(..., ge=1, description="First version number"),
     v2: int = Query(..., ge=1, description="Second version number"),
-) -> dict:
+) -> dict[str, Any]:
     """Compare two SQL versions and return a unified diff (SPEC §4.7.2).
 
     Returns both the structured line-by-line diff and a unified diff
@@ -772,8 +758,8 @@ async def diff_versions(
 
 @router.post("/sessions/{session_id}/versions/{version_number}/branch")
 async def branch_from_version(
-    session_id: str, version_number: int, body: dict | None = None
-) -> dict:
+    session_id: str, version_number: int, body: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Create a new branch from version N (SPEC §4.7.2).
 
     Unlike rollback (which copies the SQL verbatim), a branch creates an
@@ -830,7 +816,7 @@ async def branch_from_version(
 
 
 @router.post("/query/explain")
-async def explain_sql_alias(body: dict) -> dict:
+async def explain_sql_alias(body: dict[str, Any]) -> dict[str, Any]:
     """Alias for POST /sql/explain — matches SPEC §6.1 path."""
     from app.api.sql_utils import SQLRequest, explain_sql
 
