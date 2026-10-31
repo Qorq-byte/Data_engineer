@@ -231,23 +231,33 @@ class SchemaExtractor:
                 except Exception:
                     pass
 
-                # Get indexes
+                # Get indexes. pg_indexes.indexdef is a text blob; pg_get_indexdef
+                # per key column returns the real column name (or the expression
+                # text for functional indexes) without string parsing.
                 idx_rows = await conn.fetch(
                     """
-                    SELECT indexname, indexdef
-                    FROM pg_indexes
-                    WHERE schemaname = 'public' AND tablename = $1
+                    SELECT i.relname AS indexname,
+                           ix.indisunique AS is_unique,
+                           array_agg(pg_get_indexdef(ix.indexrelid, k.ord, true)
+                                     ORDER BY k.ord) AS columns
+                    FROM pg_index ix
+                    JOIN pg_class i ON i.oid = ix.indexrelid
+                    JOIN pg_class t ON t.oid = ix.indrelid
+                    JOIN pg_namespace n ON n.oid = t.relnamespace
+                    CROSS JOIN LATERAL generate_series(1, ix.indnkeyatts) AS k(ord)
+                    WHERE n.nspname = 'public' AND t.relname = $1
+                    GROUP BY i.relname, ix.indisunique
+                    ORDER BY i.relname
                 """,
                     table_name,
                 )
                 indexes = []
                 for ir in idx_rows:
-                    is_unique = "UNIQUE" in (ir["indexdef"] or "").upper()
                     indexes.append(
                         IndexInfo(
                             name=ir["indexname"],
-                            columns=[],  # Parsing indexdef is complex; stub for now
-                            is_unique=is_unique,
+                            columns=list(ir["columns"] or []),
+                            is_unique=bool(ir["is_unique"]),
                         )
                     )
 

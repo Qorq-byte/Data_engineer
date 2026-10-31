@@ -47,7 +47,10 @@ async def test_real_schema_keys_and_namespace(service, connection):
     assert orders.primary_keys == ["id"]
     assert orders.get_column("user_id").references == ("users", "id")
     assert any(f.column == "user_id" and f.ref_table == "users" for f in orders.foreign_keys)
-    assert any(i.name == "orders_user_idx" for i in orders.indexes)
+    user_idx = next(i for i in orders.indexes if i.name == "orders_user_idx")
+    # Both dialects must report the indexed column, not an empty list.
+    assert user_idx.columns == ["user_id"]
+    assert user_idx.is_unique is False
     expected = "public" if service.kind == "postgresql" else "de_stage40_fixture"
     assert all(t.schema_name == expected for t in schema.tables.values())
     assert ConnectionFactory.get_info(identity).db_type == service.kind
