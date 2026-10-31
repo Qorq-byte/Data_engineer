@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def _lifespan(app: FastAPI):
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     """The sole owner of startup and awaited shutdown in all launch modes."""
     import asyncio
 
@@ -28,7 +29,11 @@ async def _lifespan(app: FastAPI):
     components = {"storage": False, "auth": False, "rag": False, "llm": False}
     app.state.components = components
     app.state.initialized = False
-    for name, initialize in [("storage", init_db), ("auth", init_auth_db)]:
+    starters: list[tuple[str, Callable[[], Awaitable[object]]]] = [
+        ("storage", init_db),
+        ("auth", init_auth_db),
+    ]
+    for name, initialize in starters:
         try:
             await asyncio.wait_for(initialize(), timeout=10)
             components[name] = True
@@ -120,10 +125,12 @@ def create_app() -> FastAPI:
         mcp_api,
         query,
         schema,
-        settings,
         sql_utils,
         subagents,
         workflows,
+    )
+    from app.api import (
+        settings as settings_api,
     )
 
     app.include_router(health.router, tags=["Health"])
@@ -144,7 +151,9 @@ def create_app() -> FastAPI:
     app.include_router(
         sql_utils.router, dependencies=protected, prefix="/api/v1", tags=["SQL Utils"]
     )
-    app.include_router(settings.router, dependencies=protected, prefix="/api/v1", tags=["Settings"])
+    app.include_router(
+        settings_api.router, dependencies=protected, prefix="/api/v1", tags=["Settings"]
+    )
     app.include_router(
         subagents.router, dependencies=protected, prefix="/api/v1", tags=["Subagents"]
     )
@@ -159,7 +168,7 @@ def create_app() -> FastAPI:
 
     # Avatar static files → /avatars/{filename}
     @app.get("/avatars/{filename}", include_in_schema=False)
-    async def avatar_file(filename: str):
+    async def avatar_file(filename: str) -> Response:
         avatar_path = _data / "avatars" / filename
         if not avatar_path.exists():
             from fastapi.responses import PlainTextResponse

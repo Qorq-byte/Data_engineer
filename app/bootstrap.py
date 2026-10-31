@@ -5,6 +5,7 @@ This does not start alternate query flows; the query API still uses request_quer
 
 
 def initialize_catalogs() -> None:
+    from app.agents.base import BaseAgent
     from app.agents.feedback import FeedbackAgent
     from app.agents.nl_understander import NLUnderstandingAgent
     from app.agents.registry import agent_registry
@@ -17,6 +18,7 @@ def initialize_catalogs() -> None:
     from app.mcp.servers.knowledge_server import knowledge_mcp_config
     from app.mcp.servers.learning_server import learning_mcp_config
     from app.mcp.servers.vector_server import vector_mcp_config
+    from app.nodes.base import BaseNode
     from app.nodes.dialect_translate import DialectTranslateNode
     from app.nodes.execute_sql import ExecuteSQLNode
     from app.nodes.explain_plan import ExplainPlanNode
@@ -32,7 +34,7 @@ def initialize_catalogs() -> None:
     from app.nodes.validate_sql import ValidateSQLNode
     from app.subagent.manager import subagent_manager
 
-    for node_type in [
+    node_types: list[type[BaseNode]] = [
         ParseNLNode,
         SchemaLinkingNode,
         HybridSearchNode,
@@ -45,22 +47,24 @@ def initialize_catalogs() -> None:
         DialectTranslateNode,
         FormatSQLNode,
         RespondNode,
-    ]:
+    ]
+    for node_type in node_types:
         if node_type.name not in node_registry:
             node_registry.register(node_type())
-    for config in [db_mcp_config, knowledge_mcp_config, vector_mcp_config, learning_mcp_config]:
-        if config.name not in mcp_registry.list_names():
-            mcp_registry.register(config)
-    for agent_type in [
+    for mcp_config in [db_mcp_config, knowledge_mcp_config, vector_mcp_config, learning_mcp_config]:
+        if mcp_config.name not in mcp_registry.list_names():
+            mcp_registry.register(mcp_config)
+    agent_types: list[type[BaseAgent]] = [
         NLUnderstandingAgent,
         SchemaRetrievalAgent,
         SQLGenerationAgent,
         ValidationAgent,
         ToolExecutionAgent,
         FeedbackAgent,
-    ]:
+    ]
+    for agent_type in agent_types:
         if agent_registry.get(agent_type.name) is None:
             agent_registry.register(agent_type())
-    for config in subagent_manager.load_configs():
-        if subagent_manager.get(config.name) is None:
-            subagent_manager.register(config)
+    for subagent_config in subagent_manager.load_configs():
+        if subagent_manager.get(subagent_config.name) is None:
+            subagent_manager.register(subagent_config)
