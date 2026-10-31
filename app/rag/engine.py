@@ -17,6 +17,7 @@ import contextlib
 import logging
 import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
@@ -230,9 +231,10 @@ async def _build_rag_engine() -> _RAGEngine:
     # ── Persistent stores ──────────────────────────────────────────────
     from app.config.settings import settings
 
+    lancedb_uri = settings.rag_lancedb_dir or _DEFAULT_LANCEDB_DIR
     lancedb_store = LanceDBStore(
         dimension=dimension,
-        uri=settings.rag_lancedb_dir or _DEFAULT_LANCEDB_DIR,
+        uri=lancedb_uri,
         embedding_id=f"{type(provider).__name__}:{provider.model_name}:document-fulltext-v2",
     )
     bm25_index = BM25Index(settings.rag_bm25_path or _DEFAULT_BM25_PATH)
@@ -252,6 +254,9 @@ async def _build_rag_engine() -> _RAGEngine:
             bm25_index=bm25_index,
             embedding_generator=embedding_gen,
             rrf_fusion=rrf,
+            # In-flight replacement markers live beside the index so a crash is
+            # visible on the next start instead of being trusted silently.
+            state_dir=Path(lancedb_uri).parent,
         )
 
         metric_rag = MetricRAG(

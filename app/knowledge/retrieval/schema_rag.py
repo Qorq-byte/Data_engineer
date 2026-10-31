@@ -31,8 +31,12 @@ from app.knowledge.retrieval.filters import literal
 
 from __future__ import annotations
 
+import hashlib
+import json
+import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from app.knowledge.retrieval.bm25_index import BM25Index
@@ -159,6 +163,7 @@ class SchemaMetadataRAG:
         bm25_index: BM25Index,
         embedding_generator: EmbeddingGenerator | None = None,
         rrf_fusion: RRFFusion | None = None,
+        state_dir: Path | str | None = None,
     ):
         self._lancedb = lancedb_store
         self._bm25 = bm25_index
@@ -168,12 +173,16 @@ class SchemaMetadataRAG:
         self._rrf = rrf_fusion or RRFFusion()
         self._unavailable_databases: set[str] = set()
         self._refresh_required_databases: set[str] = set()
+        self._state_dir = Path(state_dir) if state_dir is not None else None
 
         # Ensure both backends are connected and the namespace exists
         self._lancedb.connect()
         self._bm25.connect()
         self._lancedb.ensure_namespace(self.NAMESPACE)
         self._bm25.ensure_namespace(self.NAMESPACE)
+        # A marker left behind means a previous replacement never reported success,
+        # so the on-disk index cannot be trusted until a full replacement succeeds.
+        self._refresh_required_databases.update(self.pending_replacements())
 
     # ── Properties ─────────────────────────────────────────────────────
 
@@ -213,10 +222,13 @@ class SchemaMetadataRAG:
         if replace_db_id is not None:
             from app.db.runtime import gate
 
+            marker = self._begin_replacement(replace_db_id)
             async with gate(("schema-rag-replace", id(self), replace_db_id)):
-                return await self._index_schemas(
+                result = await self._index_schemas(
                     docs, language, replace_db_id=replace_db_id, before_replace=before_replace,
                 )
+            self._finish_replacement(marker)
+            return result
         return await self._index_schemas(docs, language)
 
     async def _index_schemas(
@@ -291,6 +303,49 @@ class SchemaMetadataRAG:
     def require_refresh(self, db_ids: set[str]) -> None:
         """Block existing contents until a complete replacement or removal succeeds."""
         self._refresh_required_databases.update(db_ids)
+
+    def _marker_path(self, db_id: str) -> Path | None:
+        """Where an in-flight replacement marker lives; ``None`` disables markers."""
+        if self._state_dir is None:
+            return None
+        digest = hashlib.sha256(db_id.encode("utf-8")).hexdigest()[:16]
+        return self._state_dir / f"index-pending-{digest}.json"
+
+    def pending_replacements(self) -> tuple[str, ...]:
+        """Database ids whose last replacement never reported success.
+
+        A marker survives a crash because it is only removed after both backends
+        returned successfully. Seeing one at construction time means the on-disk
+        index may be half-written, so it must not be treated as ready.
+        """
+        if self._state_dir is None or not self._state_dir.is_dir():
+            return ()
+        pending: list[str] = []
+        for path in sorted(self._state_dir.glob("index-pending-*.json")):
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            db_id = payload.get("db_id") if isinstance(payload, dict) else None
+            if isinstance(db_id, str) and db_id:
+                pending.append(db_id)
+        return tuple(sorted(set(pending)))
+
+    def _begin_replacement(self, db_id: str) -> Path | None:
+        marker = self._marker_path(db_id)
+        if marker is None:
+            return None
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.write_text(
+            json.dumps({"db_id": db_id, "started_unix": int(time.time())}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        return marker
+
+    @staticmethod
+    def _finish_replacement(marker: Path | None) -> None:
+        if marker is not None:
+            marker.unlink(missing_ok=True)
 
     def _replace_database(
         self, db_id: str, records: list[dict[str, Any]],

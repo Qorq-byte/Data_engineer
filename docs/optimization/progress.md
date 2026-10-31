@@ -146,3 +146,7 @@
 - 阶段44已合并main：补记提交9f96e36另核验MVP 41182428488与真实双库41182428476均成功（只改文档），随后将main并入分支并快进推送，main=23fc330。阶段41–44全部在main，PR#4原先只覆盖到规划提交7bbed43。
 
 - 2026-10-31 阶段45规模与负载测量：新增scale_probe（合成Schema/文档、最近秩分位、停止策略、并发层级、事件循环滞后与RSS采样）与scale_load CLI（真实SQLite+mock embedding+私有索引目录，pipeline走生产run_query），13项单测。两轮实测（1k表/12000列/1000文档，10k表/120000列/10000文档），各层分母完整、停止线均未触发。结论：吞吐不随并发增长（pipeline 1.22→1.21→1.21rps、1k P50 779→1659→4077ms），10k下pipeline P50 9781ms/P95 11650ms、事件循环滞后P95 4384ms，编排延迟随规模放大12.6倍；瓶颈在单连接lease串行与同步Schema处理，不在内存（峰值703MB/2GiB线）。详见[阶段45](stage-45.md)。无真实模型/embedding调用，不代表端到端容量。
+
+- 阶段45代码23d15da普通推送codex/scale-load，精确SHA的MVP41184662104与真实数据库41184662099均成功；Linux全量通过（含新增13项）与真实82通过。阶段45验收完成，容量结论仍限本机合成输入。
+
+- 2026-10-31 阶段46单worker持久恢复：新增索引替换标记（index_schemas开始时写、两边成功后才删，残留即该库refresh_required、readiness报degraded）、app/recovery.py（VACUUM INTO快照、逐文件SHA-256 manifest、verify只报告不修复、restore先校验后写入、prune保留N份、512MiB/20000文件上限）与scripts/state_backup.py CLI。新增12项测试，含真实子进程重启：正常索引后无标记且计数一致；400文档写入中os._exit(9)后残留标记、新进程启动成功并报degraded。全量本地4248通过/3失败/83跳过，3项为Windows既有平台问题（未改动的阶段44同样失败）；RAG相关924项全通过。LLM设置写中断因依赖外部MySQL明确未验证。详见[阶段46](stage-46.md)与[运行时恢复契约](runtime-recovery.md)。

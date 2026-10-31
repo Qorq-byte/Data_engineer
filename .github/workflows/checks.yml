@@ -27,6 +27,7 @@ jobs:
       - run: mypy --follow-imports=silent app/evaluation/embedding_batch.py app/evaluation/embedding_runtime.py app/evaluation/embedding_rankings.py app/evaluation/embedding_probe.py scripts/run_embedding_acceptance.py
       - run: mypy --follow-imports=silent app/evaluation/nl2sql_batch.py app/evaluation/nl2sql_runtime.py scripts/run_nl2sql_acceptance.py
       - run: mypy --follow-imports=silent app/evaluation/scale_probe.py scripts/scale_load.py
+      - run: mypy --follow-imports=silent app/recovery.py scripts/state_backup.py app/knowledge/retrieval/schema_rag.py app/rag/engine.py
       - run: mypy app/evaluation/predictions.py scripts/export_predictions.py
       - run: mypy app/llm/streaming.py
       - run: mypy app/llm/usage.py app/llm/responses.py
