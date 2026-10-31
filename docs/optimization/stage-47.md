@@ -85,3 +85,7 @@ CI 门禁新增 `mypy app/`（在 `ruff check .` 之后、原有逐文件门禁�
 - 类型清除不等于行为验证：除上述 9 处定性外，本阶段没有新增功能测试；第 1、3、4、5、6、7、8 项的行为变化（新增向量写入、422 校验、显式未实现）都只靠既有 4248 项回归兜底，未做真实环境复核。
 
 关键改动：[`typings/`](../../typings)、[`app/knowledge/retrieval/embedding.py`](../../app/knowledge/retrieval/embedding.py)、[`app/core/performance.py`](../../app/core/performance.py)、[`app/mcp/fastmcp_server.py`](../../app/mcp/fastmcp_server.py)。
+
+## 后续（阶段49）
+
+本文第 9 项的死路径已在[阶段49](stage-49.md)修复：同步调用 + `domain=`，失败写入 metadata 而不是被 `suppress` 吞掉，并补了 5 项能反向捕获该缺陷的测试。依赖快照与告警重新核验也在同一阶段完成（`constraints.txt`、`pip-audit`、`sqlglot` 升级被拒）。本文其余结论保持不变。
