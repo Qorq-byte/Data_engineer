@@ -1,0 +1,12 @@
+{
+  "profile": "synthetic-acceptance-v3",
+  "normalization": "UTF-8 bytes with CRLF normalized to LF",
+  "files": {
+    "sql.json": "627ee4b026c2a9595b775a6daaeb052c7bc6dd4a3616701fc73a7f769f60aca0",
+    "retrieval.json": "16b299e35c1c6ecff0b07d5dd9528445c6c9dfb901c8961520592c7adb0d32fb",
+    "schema.sql": "c2a29d3cd189333e71c06d3190c7684ac151f32058a9ebf65c3b4648c1c1db2d",
+    "base.sql": "96421afdb7855afbba7bea0eff41c1e9d60b2cf4505bebed9abb65d318221fca",
+    "edge.sql": "f15dc4c27591bfad94029b96dd216bcfb224ec1697d0f77317d1c9d9476df96c",
+    "empty.sql": "899eb708648a0364e69408a5d601b582970e96d41871a69dd86ae8461de91d79"
+  }
+}

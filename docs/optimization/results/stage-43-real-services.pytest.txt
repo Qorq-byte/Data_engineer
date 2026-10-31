@@ -1,0 +1,11 @@
+........................................................................ [ 87%]
+..........                                                               [100%]
+============================== warnings summary ===============================
+tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-False-cancel]
+tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-True-cancel]
+tests/real_db/test_acceptance.py::test_close_waits_for_real_inflight_query[mysql]
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\aiomysql\cursors.py:239: Warning: 'INFORMATION_SCHEMA.PROCESSLIST' is deprecated and will be removed in a future release. Please use performance_schema.processlist instead
+    await self._query(query)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+82 passed, 3 warnings in 13.02s

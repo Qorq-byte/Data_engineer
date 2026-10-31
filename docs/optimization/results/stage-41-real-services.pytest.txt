@@ -1,0 +1,22 @@
+............................................................             [100%]
+============================== warnings summary ===============================
+tests/real_db/test_acceptance.py::test_formal_harness_with_synthetic_generation_and_real_execution[postgresql]
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\jieba\__init__.py:44: SyntaxWarning: invalid escape sequence '\.'
+    re_han_default = re.compile("([\u4E00-\u9FD5a-zA-Z0-9+#&\._%\-]+)", re.U)
+
+tests/real_db/test_acceptance.py::test_formal_harness_with_synthetic_generation_and_real_execution[postgresql]
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\jieba\__init__.py:46: SyntaxWarning: invalid escape sequence '\s'
+    re_skip_default = re.compile("(\r\n|\s)", re.U)
+
+tests/real_db/test_acceptance.py::test_formal_harness_with_synthetic_generation_and_real_execution[postgresql]
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\jieba\finalseg\__init__.py:78: SyntaxWarning: invalid escape sequence '\.'
+    re_skip = re.compile("([a-zA-Z0-9]+(?:\.\d+)?%?)")
+
+tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-False-cancel]
+tests/real_db/test_acceptance.py::test_lock_wait_interrupt_releases_resources[mysql-True-cancel]
+tests/real_db/test_acceptance.py::test_close_waits_for_real_inflight_query[mysql]
+  D:\python\data_engineer\.stage41\.venv41\Lib\site-packages\aiomysql\cursors.py:239: Warning: 'INFORMATION_SCHEMA.PROCESSLIST' is deprecated and will be removed in a future release. Please use performance_schema.processlist instead
+    await self._query(query)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+60 passed, 6 warnings in 46.91s

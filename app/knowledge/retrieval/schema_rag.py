@@ -76,6 +76,8 @@ class SchemaSearchResult:
 
     # Full raw dict from the winning backend (for debugging / advanced use)
     raw: dict[str, Any] = field(default_factory=dict, repr=False)
+    # Append provenance to preserve the existing positional constructor contract.
+    schema_name: str | None = None
 
     @property
     def is_table_level(self) -> bool:
@@ -127,6 +129,7 @@ def _row_to_schema_result(row: dict[str, Any]) -> SchemaSearchResult:
         dense_rank=row.get("dense_rank"),
         sparse_rank=row.get("sparse_rank"),
         raw=row,
+        schema_name=row.get("schema_name"),
     )
 
 

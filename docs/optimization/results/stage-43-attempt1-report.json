@@ -1,0 +1,12 @@
+{
+  "profile": "local-embeddinggemma-acceptance-v1",
+  "manifest_sha256": "9660a0a87bb257579055cb2dfc0da0d8164efbdf888c79a239b4d8fdac901e47",
+  "status": "failed",
+  "error_code": "MEASUREMENT_FAILED",
+  "index_ready": false,
+  "embedding_requests_reserved": 0,
+  "unknown_transport_outcomes": 1,
+  "actual_cost_usd": null,
+  "missing_quality_reason": "No validated complete result; do not infer quality.",
+  "cleanup_scope": "Owned worker/clients only; existing Ollama is not terminated."
+}

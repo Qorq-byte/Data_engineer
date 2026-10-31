@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="5" skipped="0" tests="15" time="6.361" timestamp="2026-10-26T14:44:44.484480+08:00" hostname="祺orQ"><properties><property name="server_mysql" value="8.4.13" /></properties><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[1-1000-mysql]" time="2.665"><properties><property name="buffered_rows" value="[1000]" /><property name="fixture_rows" value="1000" /><property name="max_rows" value="1" /></properties><failure message="assert [1000] == [2]&#10;  &#10;  At index 0 diff: 1000 != 2&#10;  Use -v to get more diff">service = Service(kind='mysql', port=56868)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x00000228FB2177A0&gt;)
+large_table = None
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x00000228FB4204A0&gt;
+record_property = &lt;function record_property.&lt;locals&gt;.append_property at 0x00000228FC95CE00&gt;
+size = 1000, maximum = 1
+
+    @pytest.mark.parametrize("size", [1000, 10000])
+    @pytest.mark.parametrize("maximum", [1, 100])
+    async def test_mysql_driver_buffer_is_bounded(service, connection, large_table, monkeypatch,
+                                                 record_property, size, maximum):
+        identity, conn = connection
+        observed = []
+        original = aiomysql.Cursor._do_get_result
+    
+        async def inspect(cursor):
+            await original(cursor)
+            if cursor.description and cursor.description[0][0] == "stage41_id":
+                observed.append(len(cursor._rows))
+    
+        monkeypatch.setattr(aiomysql.Cursor, "_do_get_result", inspect)
+        node = ExecuteSQLNode()
+        output = await node.execute(query(identity, conn,
+            f"SELECT id AS stage41_id,label FROM stage41_rows WHERE id &lt; {size} ORDER BY id",
+            max_rows=maximum))
+        assert output.metadata["status"] == "success"
+        assert output.result["columns"] == ["stage41_id", "label"]
+        assert output.result["row_count"] == maximum and output.result["truncated"]
+        assert output.result["rows"] == [[i, f"row-{i}"] for i in range(maximum)]
+        record_property("buffered_rows", str(observed))
+        record_property("fixture_rows", size)
+        record_property("max_rows", maximum)
+&gt;       assert observed == [maximum + 1]
+E       assert [1000] == [2]
+E         
+E         At index 0 diff: 1000 != 2
+E         Use -v to get more diff
+
+..\..\..\..\tests\real_db\test_mysql_bounded.py:61: AssertionError</failure></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[1-10000-mysql]" time="0.087"><properties><property name="buffered_rows" value="[10000]" /><property name="fixture_rows" value="10000" /><property name="max_rows" value="1" /></properties><failure message="assert [10000] == [2]&#10;  &#10;  At index 0 diff: 10000 != 2&#10;  Use -v to get more diff">service = Service(kind='mysql', port=56868)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x00000228FB420500&gt;)
+large_table = None
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x00000228FB432330&gt;
+record_property = &lt;function record_property.&lt;locals&gt;.append_property at 0x00000228FCAC31A0&gt;
+size = 10000, maximum = 1
+
+    @pytest.mark.parametrize("size", [1000, 10000])
+    @pytest.mark.parametrize("maximum", [1, 100])
+    async def test_mysql_driver_buffer_is_bounded(service, connection, large_table, monkeypatch,
+                                                 record_property, size, maximum):
+        identity, conn = connection
+        observed = []
+        original = aiomysql.Cursor._do_get_result
+    
+        async def inspect(cursor):
+            await original(cursor)
+            if cursor.description and cursor.description[0][0] == "stage41_id":
+                observed.append(len(cursor._rows))
+    
+        monkeypatch.setattr(aiomysql.Cursor, "_do_get_result", inspect)
+        node = ExecuteSQLNode()
+        output = await node.execute(query(identity, conn,
+            f"SELECT id AS stage41_id,label FROM stage41_rows WHERE id &lt; {size} ORDER BY id",
+            max_rows=maximum))
+        assert output.metadata["status"] == "success"
+        assert output.result["columns"] == ["stage41_id", "label"]
+        assert output.result["row_count"] == maximum and output.result["truncated"]
+        assert output.result["rows"] == [[i, f"row-{i}"] for i in range(maximum)]
+        record_property("buffered_rows", str(observed))
+        record_property("fixture_rows", size)
+        record_property("max_rows", maximum)
+&gt;       assert observed == [maximum + 1]
+E       assert [10000] == [2]
+E         
+E         At index 0 diff: 10000 != 2
+E         Use -v to get more diff
+
+..\..\..\..\tests\real_db\test_mysql_bounded.py:61: AssertionError</failure></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[100-1000-mysql]" time="0.053"><properties><property name="buffered_rows" value="[1000]" /><property name="fixture_rows" value="1000" /><property name="max_rows" value="100" /></properties><failure message="assert [1000] == [101]&#10;  &#10;  At index 0 diff: 1000 != 101&#10;  Use -v to get more diff">service = Service(kind='mysql', port=56868)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x00000228FB447500&gt;)
+large_table = None
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x00000228FB448980&gt;
+record_property = &lt;function record_property.&lt;locals&gt;.append_property at 0x00000228FCAC3600&gt;
+size = 1000, maximum = 100
+
+    @pytest.mark.parametrize("size", [1000, 10000])
+    @pytest.mark.parametrize("maximum", [1, 100])
+    async def test_mysql_driver_buffer_is_bounded(service, connection, large_table, monkeypatch,
+                                                 record_property, size, maximum):
+        identity, conn = connection
+        observed = []
+        original = aiomysql.Cursor._do_get_result
+    
+        async def inspect(cursor):
+            await original(cursor)
+            if cursor.description and cursor.description[0][0] == "stage41_id":
+                observed.append(len(cursor._rows))
+    
+        monkeypatch.setattr(aiomysql.Cursor, "_do_get_result", inspect)
+        node = ExecuteSQLNode()
+        output = await node.execute(query(identity, conn,
+            f"SELECT id AS stage41_id,label FROM stage41_rows WHERE id &lt; {size} ORDER BY id",
+            max_rows=maximum))
+        assert output.metadata["status"] == "success"
+        assert output.result["columns"] == ["stage41_id", "label"]
+        assert output.result["row_count"] == maximum and output.result["truncated"]
+        assert output.result["rows"] == [[i, f"row-{i}"] for i in range(maximum)]
+        record_property("buffered_rows", str(observed))
+        record_property("fixture_rows", size)
+        record_property("max_rows", maximum)
+&gt;       assert observed == [maximum + 1]
+E       assert [1000] == [101]
+E         
+E         At index 0 diff: 1000 != 101
+E         Use -v to get more diff
+
+..\..\..\..\tests\real_db\test_mysql_bounded.py:61: AssertionError</failure></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[100-10000-mysql]" time="0.075"><properties><property name="buffered_rows" value="[10000]" /><property name="fixture_rows" value="10000" /><property name="max_rows" value="100" /></properties><failure message="assert [10000] == [101]&#10;  &#10;  At index 0 diff: 10000 != 101&#10;  Use -v to get more diff">service = Service(kind='mysql', port=56868)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x00000228FB45A930&gt;)
+large_table = None
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x00000228FB458860&gt;
+record_property = &lt;function record_property.&lt;locals&gt;.append_property at 0x00000228FCAC3F60&gt;
+size = 10000, maximum = 100
+
+    @pytest.mark.parametrize("size", [1000, 10000])
+    @pytest.mark.parametrize("maximum", [1, 100])
+    async def test_mysql_driver_buffer_is_bounded(service, connection, large_table, monkeypatch,
+                                                 record_property, size, maximum):
+        identity, conn = connection
+        observed = []
+        original = aiomysql.Cursor._do_get_result
+    
+        async def inspect(cursor):
+            await original(cursor)
+            if cursor.description and cursor.description[0][0] == "stage41_id":
+                observed.append(len(cursor._rows))
+    
+        monkeypatch.setattr(aiomysql.Cursor, "_do_get_result", inspect)
+        node = ExecuteSQLNode()
+        output = await node.execute(query(identity, conn,
+            f"SELECT id AS stage41_id,label FROM stage41_rows WHERE id &lt; {size} ORDER BY id",
+            max_rows=maximum))
+        assert output.metadata["status"] == "success"
+        assert output.result["columns"] == ["stage41_id", "label"]
+        assert output.result["row_count"] == maximum and output.result["truncated"]
+        assert output.result["rows"] == [[i, f"row-{i}"] for i in range(maximum)]
+        record_property("buffered_rows", str(observed))
+        record_property("fixture_rows", size)
+        record_property("max_rows", maximum)
+&gt;       assert observed == [maximum + 1]
+E       assert [10000] == [101]
+E         
+E         At index 0 diff: 10000 != 101
+E         Use -v to get more diff
+
+..\..\..\..\tests\real_db\test_mysql_bounded.py:61: AssertionError</failure></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders WHERE 1=0-rows0-False-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 2-rows1-False-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 3-rows2-True-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 1-rows3-False-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 1, 4-rows4-True-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 4 OFFSET 1-rows5-True-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 0-rows6-False-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[WITH chosen AS (SELECT id FROM orders) SELECT id FROM chosen ORDER BY id DESC-rows7-True-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders WHERE id=10 UNION ALL SELECT id FROM orders WHERE id&gt;10 ORDER BY id DESC-rows8-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id; -- trailing comment-rows9-True-mysql]" time="0.004"><failure message="AssertionError: ['Write operation blocked: read_only mode is enabled. Only approved read-only queries may be executed.']&#10;assert 'blocked' == 'success'&#10;  &#10;  - success&#10;  + blocked">service = Service(kind='mysql', port=56868)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x00000228FB476F00&gt;)
+sql = 'SELECT id FROM orders ORDER BY id; -- trailing comment'
+rows = [[10], [20]], truncated = True
+
+    @pytest.mark.parametrize(("sql", "rows", "truncated"), [
+        ("SELECT id FROM orders WHERE 1=0", [], False),
+        ("SELECT id FROM orders ORDER BY id LIMIT 2", [[10], [20]], False),
+        ("SELECT id FROM orders ORDER BY id LIMIT 3", [[10], [20]], True),
+        ("SELECT id FROM orders ORDER BY id LIMIT 1", [[10]], False),
+        ("SELECT id FROM orders ORDER BY id LIMIT 1, 4", [[20], [30]], True),
+        ("SELECT id FROM orders ORDER BY id LIMIT 4 OFFSET 1", [[20], [30]], True),
+        ("SELECT id FROM orders ORDER BY id LIMIT 0", [], False),
+        ("WITH chosen AS (SELECT id FROM orders) SELECT id FROM chosen ORDER BY id DESC",
+         [[50], [40]], True),
+        ("SELECT id FROM orders WHERE id=10 UNION ALL SELECT id FROM orders WHERE id&gt;10 "
+         "ORDER BY id DESC", [[50], [40]], True),
+        ("SELECT id FROM orders ORDER BY id; -- trailing comment", [[10], [20]], True),
+        ("SELECT id FROM orders ORDER BY id /* trailing comment */", [[10], [20]], True),
+    ])
+    async def test_mysql_limit_semantics(service, connection, sql, rows, truncated):
+        identity, conn = connection
+        output = await ExecuteSQLNode().execute(query(identity, conn, sql, max_rows=2))
+&gt;       assert output.metadata["status"] == "success", output.errors
+E       AssertionError: ['Write operation blocked: read_only mode is enabled. Only approved read-only queries may be executed.']
+E       assert 'blocked' == 'success'
+E         
+E         - success
+E         + blocked
+
+..\..\..\..\tests\real_db\test_mysql_bounded.py:84: AssertionError</failure></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id /* trailing comment */-rows10-True-mysql]" time="0.004" /></testsuite></testsuites>

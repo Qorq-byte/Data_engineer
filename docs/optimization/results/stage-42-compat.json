@@ -1,0 +1,63 @@
+{
+  "baseline_commit": "bb316ca128489f9d616c7ecab13f106832afb943",
+  "source_checks": [
+    {
+      "path": "tests/fixtures/retrieval_eval.json",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "5fa0ec23519804ee5bde3e0a12357a3e9a494a41dfe31901401359094e17a3a1"
+    },
+    {
+      "path": "tests/fixtures/test_schema.sql",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "e453667017c6185fd9cefdd40b2fe783314cd83637e2d4ca3b03cdd98ef84b60"
+    },
+    {
+      "path": "tests/fixtures/model_eval_v2/cases.json",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "4abd19fcae2606c064fc3a7eb1d85254ea07d1ae0b936943f7271101c7eddd5e"
+    },
+    {
+      "path": "tests/fixtures/model_eval_v2/schema.sql",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "c85c28966b488820905386259279d3a229a3f98be148d5aace752d738abfbb1b"
+    },
+    {
+      "path": "tests/fixtures/model_eval_v2/base.sql",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "c84d0b374d9cab4ddf9a9a9d832ed9d7af8bd1d1bc653eb3d47161c628c4b0e4"
+    },
+    {
+      "path": "tests/fixtures/model_eval_v2/edge.sql",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "83a6556d41054f04257182c09b4084d26e2a205eb0dbc8376f8be1325b460043"
+    },
+    {
+      "path": "tests/fixtures/model_eval_v2/empty.sql",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "ae501f6bd6ae0d87ec378168cc4ecffddb04fa34d2a50b17079d985c45228f18"
+    },
+    {
+      "path": "app/evaluation/model_batch.py",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "9585e2620befca17c523d9eeb5bde7c27f7cdf9a27419deb34adc60365d132f7"
+    },
+    {
+      "path": "app/evaluation/model_runtime.py",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "9bdee734128fd28fdb670ed6bfead7cf5722f73b1f8eef1ee28e41728b7ff9f1"
+    },
+    {
+      "path": "scripts/run_model_evaluation.py",
+      "normalized_bytes_unchanged": true,
+      "normalized_sha256": "7fd5013b5750490bd0fa5cff8e1d237bc3ba6a11af7ac9e560f33398f598dce6"
+    }
+  ],
+  "v2_contract_report_unchanged": true,
+  "v2_contract_report_sha256": "f10d74bcb598bd9bd62713301cc485a8fb221b985922da774e6881946dd5a564",
+  "v2_max_calls": 4,
+  "stage32_predictions_sha256": "3a3b12662c3d27ebddddee556c805504bba5ddf9adb6f52ae532763b7182d4f8",
+  "stage36_estimate_report_sha256": "5670d9cc3ba4c7d962c79ecc3f37a0a4b7abfcf85b00d614981cf6b2633bc7f1",
+  "legacy_quality_report_unchanged_excluding_latency": true,
+  "legacy_quality_stable_sha256": "8fd21e8090d8b0cdb988f1b2b648c43cbd6c7929ae6b949e221c7f73a648c933",
+  "external_model_calls": 0
+}

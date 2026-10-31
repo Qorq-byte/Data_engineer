@@ -1,0 +1,29 @@
+{
+  "offline_pytest": {
+    "passed": 4204,
+    "skipped": 1,
+    "real_database_deselected": 82
+  },
+  "real_database": {
+    "postgresql": 19,
+    "mysql": 63,
+    "owned_containers_removed": 2
+  },
+  "ruff": "passed",
+  "configured_strict_gates": 16,
+  "type_debt": {
+    "before": 178,
+    "after": 178,
+    "added": 0
+  },
+  "frontend_contracts": 182,
+  "frontend_build": "3 pages/46 files/2043810bytes; repeatability and failed-build preservation passed",
+  "real_embedding": {
+    "authorized_run_manifest_sha256": "2776d64d6e26b829fb663dd412855cf4cd792639e9138e201467f9f47bfe7157",
+    "embedding_posts": 53,
+    "validated_http_requests": 55,
+    "unknown_outcomes_in_successful_run": 0,
+    "real_llm_calls": 0,
+    "actual_cost_usd": null
+  }
+}

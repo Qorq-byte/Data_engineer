@@ -1,0 +1,2363 @@
+{
+  "profile": "local-embeddinggemma-acceptance-v1",
+  "manifest_sha256": "2776d64d6e26b829fb663dd412855cf4cd792639e9138e201467f9f47bfe7157",
+  "status": "completed",
+  "index_ready": true,
+  "model_before": {
+    "model": "embeddinggemma:latest",
+    "digest": "sha256:85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1"
+  },
+  "model_after": {
+    "model": "embeddinggemma:latest",
+    "digest": "sha256:85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1"
+  },
+  "requests": {
+    "http_requests_reserved": 55,
+    "embedding_posts_reserved": 53,
+    "responses_received": 55,
+    "requests_validated": 55,
+    "unknown_transport_outcomes": 0
+  },
+  "vector_artifact_sha256": "9d557b63c9f837ccdf0f03992b246845b7c7e642e0a8004e1d9bde2296ebc909",
+  "uncached_embedding_timings": [
+    {
+      "id": "document/a.orders",
+      "elapsed_ms": 4740.496900049038,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.status",
+      "elapsed_ms": 213.80409999983385,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.join",
+      "elapsed_ms": 195.10920002358034,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.anonymous",
+      "elapsed_ms": 236.32480000378564,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.time",
+      "elapsed_ms": 230.56110000470653,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.refunds",
+      "elapsed_ms": 213.30450003733858,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.net",
+      "elapsed_ms": 232.5563000049442,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.gross",
+      "elapsed_ms": 216.9562000199221,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.count",
+      "elapsed_ms": 234.53979997429997,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.ties",
+      "elapsed_ms": 223.6533000250347,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.users",
+      "elapsed_ms": 185.68880000384524,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.email",
+      "elapsed_ms": 213.20769999874756,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.names",
+      "elapsed_ms": 211.0599000006914,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.products",
+      "elapsed_ms": 230.42229999555275,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.category",
+      "elapsed_ms": 275.85109998472035,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.stock",
+      "elapsed_ms": 233.69500000262633,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.price",
+      "elapsed_ms": 216.38709999388084,
+      "tokens_used": null
+    },
+    {
+      "id": "document/a.ledger",
+      "elapsed_ms": 183.1567999906838,
+      "tokens_used": null
+    },
+    {
+      "id": "document/b.orders",
+      "elapsed_ms": 197.9142000200227,
+      "tokens_used": null
+    },
+    {
+      "id": "document/b.refunds",
+      "elapsed_ms": 181.78919999627396,
+      "tokens_used": null
+    },
+    {
+      "id": "document/b.users",
+      "elapsed_ms": 211.669200041797,
+      "tokens_used": null
+    },
+    {
+      "id": "document/hr.payroll",
+      "elapsed_ms": 222.76760003296658,
+      "tokens_used": null
+    },
+    {
+      "id": "document/platform.trace",
+      "elapsed_ms": 212.4871999840252,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval01",
+      "elapsed_ms": 261.7385999765247,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval02",
+      "elapsed_ms": 150.24690004065633,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval03",
+      "elapsed_ms": 258.56290000956506,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval04",
+      "elapsed_ms": 229.50800001854077,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval05",
+      "elapsed_ms": 270.75530000729486,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval06",
+      "elapsed_ms": 197.1315999981016,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval07",
+      "elapsed_ms": 216.602900007274,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval08",
+      "elapsed_ms": 237.38700000103563,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval09",
+      "elapsed_ms": 241.1304999841377,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval10",
+      "elapsed_ms": 184.268000011798,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval11",
+      "elapsed_ms": 223.7615999765694,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval12",
+      "elapsed_ms": 225.33679998014122,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval13",
+      "elapsed_ms": 181.55809998279437,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval14",
+      "elapsed_ms": 247.05380003433675,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval15",
+      "elapsed_ms": 218.57969998382032,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval16",
+      "elapsed_ms": 212.2889999882318,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval17",
+      "elapsed_ms": 223.13440003199503,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval18",
+      "elapsed_ms": 155.14320001238957,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval19",
+      "elapsed_ms": 272.7924000355415,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval20",
+      "elapsed_ms": 166.18719999678433,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval21",
+      "elapsed_ms": 175.58460001600906,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval22",
+      "elapsed_ms": 219.31439999025315,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval23",
+      "elapsed_ms": 193.9344000420533,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval24",
+      "elapsed_ms": 176.39739997684956,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval25",
+      "elapsed_ms": 175.31149997375906,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval26",
+      "elapsed_ms": 184.6440999652259,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval27",
+      "elapsed_ms": 201.4472999726422,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval28",
+      "elapsed_ms": 232.16870002215728,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval29",
+      "elapsed_ms": 223.29050005646423,
+      "tokens_used": null
+    },
+    {
+      "id": "query/retrieval30",
+      "elapsed_ms": 2551.5062999911606,
+      "tokens_used": null
+    }
+  ],
+  "model_startup_state": "Existing service not reset; model may already be loaded",
+  "measured": {
+    "index_ready": true,
+    "technical_errors": [],
+    "modes": {
+      "bm25": {
+        "split": "all",
+        "k": 3,
+        "query_count": 30,
+        "answerable_count": 24,
+        "no_answer_count": 6,
+        "all_queries_macro": {
+          "recall_at_k": 0.7833333333333333,
+          "precision_at_k": 0.3,
+          "mrr_at_k": 0.8,
+          "ndcg_at_k": 0.7817529590353944
+        },
+        "answerable_macro": {
+          "recall_at_k": 0.9791666666666666,
+          "precision_at_k": 0.375,
+          "mrr_at_k": 1.0,
+          "ndcg_at_k": 0.9771911987942431
+        },
+        "no_answer_correct_empty_count": 6,
+        "no_answer_correct_empty_rate": 1.0,
+        "invalid_ranking_count": 0,
+        "error_counts": {},
+        "prediction_count": 30,
+        "provided_prediction_count": 30,
+        "predictions_sha256": "1c44c72cfbc395aa1631418bd5f52469191e1555da81ac9c3392949ac5933415",
+        "by_split": {
+          "dev": {
+            "query_count": 20,
+            "answerable_count": 16,
+            "no_answer_count": 4,
+            "all_queries_macro": {
+              "recall_at_k": 0.8,
+              "precision_at_k": 0.3,
+              "mrr_at_k": 0.8,
+              "ndcg_at_k": 0.7919720789148188
+            },
+            "answerable_macro": {
+              "recall_at_k": 1.0,
+              "precision_at_k": 0.375,
+              "mrr_at_k": 1.0,
+              "ndcg_at_k": 0.9899650986435234
+            },
+            "no_answer_correct_empty_count": 4,
+            "no_answer_correct_empty_rate": 1.0,
+            "invalid_ranking_count": 0,
+            "error_counts": {}
+          },
+          "holdout": {
+            "query_count": 10,
+            "answerable_count": 8,
+            "no_answer_count": 2,
+            "all_queries_macro": {
+              "recall_at_k": 0.75,
+              "precision_at_k": 0.3,
+              "mrr_at_k": 0.8,
+              "ndcg_at_k": 0.7613147192765458
+            },
+            "answerable_macro": {
+              "recall_at_k": 0.9375,
+              "precision_at_k": 0.375,
+              "mrr_at_k": 1.0,
+              "ndcg_at_k": 0.9516433990956823
+            },
+            "no_answer_correct_empty_count": 2,
+            "no_answer_correct_empty_rate": 1.0,
+            "invalid_ranking_count": 0,
+            "error_counts": {}
+          }
+        },
+        "details": [
+          {
+            "id": "retrieval01",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.orders",
+              "a.gross",
+              "a.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval02",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.status",
+              "a.orders",
+              "a.gross"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval03",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.join",
+              "a.orders",
+              "a.anonymous"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval04",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.anonymous",
+              "a.orders",
+              "a.status"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval05",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.time",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval06",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.refunds",
+              "a.gross",
+              "a.net"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval07",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.net",
+              "a.gross",
+              "a.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.9197207891481876
+          },
+          {
+            "id": "retrieval08",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.gross",
+              "a.refunds",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.9197207891481876
+          },
+          {
+            "id": "retrieval09",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.count",
+              "a.status",
+              "a.gross"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval10",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.ties",
+              "a.refunds",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval11",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.users",
+              "a.email",
+              "a.names"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval12",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.email",
+              "a.users",
+              "a.names"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval13",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.names",
+              "a.users",
+              "a.email"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval14",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.products",
+              "a.stock",
+              "a.price"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval15",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.category",
+              "a.products"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval16",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.stock",
+              "a.products"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval17",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.price",
+              "a.products"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval18",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.ledger"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval19",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "b.orders",
+              "b.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval20",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "b.refunds",
+              "b.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval21",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "b.users"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval22",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "hr.payroll"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval23",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "platform.trace"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval24",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.join",
+              "a.anonymous",
+              "a.count"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0.5,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.6131471927654584
+          },
+          {
+            "id": "retrieval25",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval26",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval27",
+            "split": "holdout",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval28",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval29",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval30",
+            "split": "holdout",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          }
+        ],
+        "metric_policy": "Binary qrels; precision divides by K. Empty qrels rank metrics=0. Missing no-answer predictions are failures. Invalid rankings score0."
+      },
+      "dense": {
+        "split": "all",
+        "k": 3,
+        "query_count": 30,
+        "answerable_count": 24,
+        "no_answer_count": 6,
+        "all_queries_macro": {
+          "recall_at_k": 0.7833333333333333,
+          "precision_at_k": 0.3,
+          "mrr_at_k": 0.8,
+          "ndcg_at_k": 0.7817529590353944
+        },
+        "answerable_macro": {
+          "recall_at_k": 0.9791666666666666,
+          "precision_at_k": 0.375,
+          "mrr_at_k": 1.0,
+          "ndcg_at_k": 0.9771911987942431
+        },
+        "no_answer_correct_empty_count": 2,
+        "no_answer_correct_empty_rate": 0.3333333333333333,
+        "invalid_ranking_count": 0,
+        "error_counts": {},
+        "prediction_count": 30,
+        "provided_prediction_count": 30,
+        "predictions_sha256": "c85b7d2b7ab5c8a3eac98feb74b7efb0eb50ba2139391f27e2d365bb5ee05bf5",
+        "by_split": {
+          "dev": {
+            "query_count": 20,
+            "answerable_count": 16,
+            "no_answer_count": 4,
+            "all_queries_macro": {
+              "recall_at_k": 0.775,
+              "precision_at_k": 0.2833333333333333,
+              "mrr_at_k": 0.8,
+              "ndcg_at_k": 0.7806573596382729
+            },
+            "answerable_macro": {
+              "recall_at_k": 0.96875,
+              "precision_at_k": 0.35416666666666663,
+              "mrr_at_k": 1.0,
+              "ndcg_at_k": 0.9758216995478411
+            },
+            "no_answer_correct_empty_count": 0,
+            "no_answer_correct_empty_rate": 0.0,
+            "invalid_ranking_count": 0,
+            "error_counts": {}
+          },
+          "holdout": {
+            "query_count": 10,
+            "answerable_count": 8,
+            "no_answer_count": 2,
+            "all_queries_macro": {
+              "recall_at_k": 0.8,
+              "precision_at_k": 0.3333333333333333,
+              "mrr_at_k": 0.8,
+              "ndcg_at_k": 0.7839441578296376
+            },
+            "answerable_macro": {
+              "recall_at_k": 1.0,
+              "precision_at_k": 0.41666666666666663,
+              "mrr_at_k": 1.0,
+              "ndcg_at_k": 0.9799301972870469
+            },
+            "no_answer_correct_empty_count": 2,
+            "no_answer_correct_empty_rate": 1.0,
+            "invalid_ranking_count": 0,
+            "error_counts": {}
+          }
+        },
+        "details": [
+          {
+            "id": "retrieval01",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.orders",
+              "a.gross",
+              "a.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval02",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.status",
+              "a.gross",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval03",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.join",
+              "a.orders",
+              "a.count"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval04",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.anonymous",
+              "a.orders",
+              "a.net"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval05",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.time",
+              "a.join",
+              "a.anonymous"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval06",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.refunds",
+              "a.gross",
+              "a.net"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval07",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.net",
+              "a.refunds",
+              "a.gross"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval08",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.gross",
+              "a.net",
+              "a.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0.5,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.6131471927654584
+          },
+          {
+            "id": "retrieval09",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.count",
+              "a.join",
+              "a.status"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.9197207891481876
+          },
+          {
+            "id": "retrieval10",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.ties",
+              "a.orders",
+              "a.count"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval11",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.users",
+              "a.names",
+              "a.email"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval12",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.email",
+              "a.users",
+              "a.names"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval13",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.names",
+              "a.users",
+              "a.email"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval14",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.products",
+              "a.price",
+              "a.stock"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval15",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.category",
+              "a.products",
+              "a.price"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval16",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.stock",
+              "a.products",
+              "a.category"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval17",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.price",
+              "a.products",
+              "a.category"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval18",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.ledger"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval19",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "b.orders",
+              "b.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval20",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "b.refunds",
+              "b.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval21",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "b.users"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval22",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "hr.payroll"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval23",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "platform.trace"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval24",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.join",
+              "a.count",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.9197207891481876
+          },
+          {
+            "id": "retrieval25",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "a.gross",
+              "a.net",
+              "a.ties"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval26",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "a.stock",
+              "a.category",
+              "a.price"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval27",
+            "split": "holdout",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval28",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "b.orders",
+              "b.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval29",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "a.status",
+              "a.count",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval30",
+            "split": "holdout",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          }
+        ],
+        "metric_policy": "Binary qrels; precision divides by K. Empty qrels rank metrics=0. Missing no-answer predictions are failures. Invalid rankings score0."
+      },
+      "hybrid": {
+        "split": "all",
+        "k": 3,
+        "query_count": 30,
+        "answerable_count": 24,
+        "no_answer_count": 6,
+        "all_queries_macro": {
+          "recall_at_k": 0.7666666666666667,
+          "precision_at_k": 0.28888888888888886,
+          "mrr_at_k": 0.8,
+          "ndcg_at_k": 0.7742098128510305
+        },
+        "answerable_macro": {
+          "recall_at_k": 0.9583333333333334,
+          "precision_at_k": 0.3611111111111111,
+          "mrr_at_k": 1.0,
+          "ndcg_at_k": 0.9677622660637882
+        },
+        "no_answer_correct_empty_count": 2,
+        "no_answer_correct_empty_rate": 0.3333333333333333,
+        "invalid_ranking_count": 0,
+        "error_counts": {},
+        "prediction_count": 30,
+        "provided_prediction_count": 30,
+        "predictions_sha256": "bf464f4c743cd46f01d455ff32049e3ad55394b88d40b071b22ec024ee9e912d",
+        "by_split": {
+          "dev": {
+            "query_count": 20,
+            "answerable_count": 16,
+            "no_answer_count": 4,
+            "all_queries_macro": {
+              "recall_at_k": 0.775,
+              "precision_at_k": 0.2833333333333333,
+              "mrr_at_k": 0.8,
+              "ndcg_at_k": 0.7806573596382729
+            },
+            "answerable_macro": {
+              "recall_at_k": 0.96875,
+              "precision_at_k": 0.35416666666666663,
+              "mrr_at_k": 1.0,
+              "ndcg_at_k": 0.9758216995478411
+            },
+            "no_answer_correct_empty_count": 0,
+            "no_answer_correct_empty_rate": 0.0,
+            "invalid_ranking_count": 0,
+            "error_counts": {}
+          },
+          "holdout": {
+            "query_count": 10,
+            "answerable_count": 8,
+            "no_answer_count": 2,
+            "all_queries_macro": {
+              "recall_at_k": 0.75,
+              "precision_at_k": 0.3,
+              "mrr_at_k": 0.8,
+              "ndcg_at_k": 0.7613147192765458
+            },
+            "answerable_macro": {
+              "recall_at_k": 0.9375,
+              "precision_at_k": 0.375,
+              "mrr_at_k": 1.0,
+              "ndcg_at_k": 0.9516433990956823
+            },
+            "no_answer_correct_empty_count": 2,
+            "no_answer_correct_empty_rate": 1.0,
+            "invalid_ranking_count": 0,
+            "error_counts": {}
+          }
+        },
+        "details": [
+          {
+            "id": "retrieval01",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.orders",
+              "a.gross",
+              "a.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval02",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.status",
+              "a.gross",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval03",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.join",
+              "a.orders",
+              "a.count"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval04",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.anonymous",
+              "a.orders",
+              "a.net"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval05",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.time",
+              "a.orders",
+              "a.join"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval06",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.refunds",
+              "a.gross",
+              "a.net"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval07",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.net",
+              "a.refunds",
+              "a.gross"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval08",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.gross",
+              "a.net",
+              "a.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0.5,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.6131471927654584
+          },
+          {
+            "id": "retrieval09",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.count",
+              "a.status",
+              "a.join"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval10",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.ties",
+              "a.orders",
+              "a.count"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval11",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.users",
+              "a.names",
+              "a.email"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval12",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.email",
+              "a.users",
+              "a.names"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval13",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.names",
+              "a.users",
+              "a.email"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval14",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.products",
+              "a.price",
+              "a.stock"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval15",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.category",
+              "a.products",
+              "a.price"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval16",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.stock",
+              "a.products",
+              "a.category"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval17",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "a.price",
+              "a.products",
+              "a.category"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval18",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.ledger"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval19",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "b.orders",
+              "b.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval20",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "b.refunds",
+              "b.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval21",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "b.users"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval22",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "hr.payroll"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval23",
+            "split": "dev",
+            "answerable": true,
+            "retrieved": [
+              "platform.trace"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "retrieval24",
+            "split": "holdout",
+            "answerable": true,
+            "retrieved": [
+              "a.join",
+              "a.count",
+              "a.anonymous"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0.5,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 0.6131471927654584
+          },
+          {
+            "id": "retrieval25",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "a.gross",
+              "a.net",
+              "a.ties"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval26",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "a.stock",
+              "a.category",
+              "a.price"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval27",
+            "split": "holdout",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval28",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "b.orders",
+              "b.refunds"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval29",
+            "split": "dev",
+            "answerable": false,
+            "retrieved": [
+              "a.status",
+              "a.count",
+              "a.orders"
+            ],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": false,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          },
+          {
+            "id": "retrieval30",
+            "split": "holdout",
+            "answerable": false,
+            "retrieved": [],
+            "error_codes": [],
+            "ranking_valid": true,
+            "no_answer_correct": true,
+            "recall_at_k": 0,
+            "precision_at_k": 0.0,
+            "mrr_at_k": 0,
+            "ndcg_at_k": 0
+          }
+        ],
+        "metric_policy": "Binary qrels; precision divides by K. Empty qrels rank metrics=0. Missing no-answer predictions are failures. Invalid rankings score0."
+      }
+    },
+    "index_identity": "e74dcdf9631e7cd10c3a530bbe5c71de95036baa577305cbbbfee440af2197e6",
+    "latency": {
+      "bm25": {
+        "attempts": 90,
+        "failures": 0,
+        "p50_ms": 0.19299995619803667,
+        "p95_ms": 0.4029999836347997,
+        "p99_ms": 2.410899964161217,
+        "samples_ms": [
+          2.410899964161217,
+          0.5162999732419848,
+          0.28139998903498054,
+          0.2734999870881438,
+          0.27379998937249184,
+          0.21580001339316368,
+          0.20730000687763095,
+          0.292200013063848,
+          0.1914000022225082,
+          0.21490000654011965,
+          0.1319999573752284,
+          0.195200031157583,
+          0.20519999088719487,
+          0.179799972102046,
+          0.3212000010535121,
+          0.17169996863231063,
+          0.14630000805482268,
+          0.22899999748915434,
+          0.18049997743219137,
+          0.13920001219958067,
+          0.20559999393299222,
+          0.10910001583397388,
+          0.1501000369898975,
+          0.2364999963901937,
+          0.13099994976073503,
+          0.13450003461912274,
+          0.10710000060498714,
+          0.12250000145286322,
+          0.09970000246539712,
+          0.08430000161752105,
+          0.19559997599571943,
+          0.21000002743676305,
+          0.23369997506961226,
+          0.24999998277053237,
+          0.2518999972380698,
+          0.21299999207258224,
+          0.21309999283403158,
+          0.25530002312734723,
+          0.16769999638199806,
+          0.1938999630510807,
+          0.13180001405999064,
+          0.19200000679120421,
+          0.19589997828006744,
+          0.18099998123943806,
+          0.4029999836347997,
+          0.18209998961538076,
+          0.28770003700628877,
+          0.4387000226415694,
+          0.1818999880924821,
+          0.14259997988119721,
+          0.20260002929717302,
+          0.13159995432943106,
+          0.13760000001639128,
+          0.19530003191903234,
+          0.10280002607032657,
+          0.12320000678300858,
+          0.10629999451339245,
+          0.1514999894425273,
+          0.1240999554283917,
+          0.0771000050008297,
+          0.1936000189743936,
+          0.2090999623760581,
+          0.2201999886892736,
+          0.22520002676174045,
+          0.24099997244775295,
+          0.18809997709468007,
+          0.18830003682523966,
+          0.2600999432615936,
+          0.20530004985630512,
+          0.20780001068487763,
+          0.13509998098015785,
+          0.20140002015978098,
+          0.21430000197142363,
+          0.1846000086516142,
+          0.1960000372491777,
+          0.17829996068030596,
+          0.2677000011317432,
+          0.5555999814532697,
+          0.24049996864050627,
+          0.15480001457035542,
+          0.2166999620385468,
+          0.1086000120267272,
+          0.13190001482143998,
+          0.19299995619803667,
+          0.13190001482143998,
+          0.14449999434873462,
+          0.11169997742399573,
+          0.12600002810359,
+          0.12169999536126852,
+          0.09659997886046767
+        ],
+        "policy": "nearest rank; failed attempt time included"
+      },
+      "dense": {
+        "attempts": 90,
+        "failures": 0,
+        "p50_ms": 10.381400003097951,
+        "p95_ms": 12.01000000583008,
+        "p99_ms": 53.36729995906353,
+        "samples_ms": [
+          53.36729995906353,
+          9.442900016438216,
+          9.148300043307245,
+          10.095200035721064,
+          9.357600007206202,
+          9.552399977110326,
+          9.098999958951026,
+          11.665099998936057,
+          11.305499996524304,
+          9.641599957831204,
+          10.568899975623935,
+          10.055300022941083,
+          9.573400020599365,
+          9.89849999314174,
+          11.227799986954778,
+          10.07329998537898,
+          10.749199951533228,
+          9.56659996882081,
+          9.335799957625568,
+          10.788100014906377,
+          9.88369999686256,
+          10.331100027542561,
+          9.469500044360757,
+          10.443100007250905,
+          10.831299994606525,
+          8.974900003522635,
+          0.03779999678954482,
+          8.703300030902028,
+          10.673700016923249,
+          0.028099981136620045,
+          10.656500002369285,
+          11.20229996740818,
+          10.691599978599697,
+          13.08849995257333,
+          9.665300021879375,
+          10.442800004966557,
+          9.405800024978817,
+          11.942899960558861,
+          10.481100005563349,
+          12.0632000034675,
+          11.213599995244294,
+          11.022699996829033,
+          10.016900021582842,
+          9.953200002200902,
+          11.821799969766289,
+          11.29870000295341,
+          11.552400013897568,
+          10.943600034806877,
+          10.081100044772029,
+          10.07790002040565,
+          10.381400003097951,
+          10.594099992886186,
+          9.964200027752668,
+          10.339500033296645,
+          11.184100003447384,
+          10.447999986354262,
+          0.04139996599406004,
+          10.756100004073232,
+          11.468499957118183,
+          0.0412999652326107,
+          11.51059998665005,
+          12.01000000583008,
+          11.94470003247261,
+          9.887400025036186,
+          9.644000034313649,
+          9.545699984300882,
+          9.640000003855675,
+          10.458400007337332,
+          11.10469998093322,
+          10.513000015635043,
+          10.723999992478639,
+          9.901100012939423,
+          9.608799999114126,
+          10.376499965786934,
+          10.155599971767515,
+          9.856199962086976,
+          10.326399991754442,
+          9.650700027123094,
+          8.86299996636808,
+          11.400699964724481,
+          11.060699995141476,
+          10.44359995285049,
+          11.308299959637225,
+          10.703900014050305,
+          13.746700016781688,
+          11.132000014185905,
+          0.06130000110715628,
+          11.084500001743436,
+          11.477500025648624,
+          0.03530003596097231
+        ],
+        "policy": "nearest rank; failed attempt time included"
+      },
+      "hybrid": {
+        "attempts": 90,
+        "failures": 0,
+        "p50_ms": 10.804999968968332,
+        "p95_ms": 13.711800042074174,
+        "p99_ms": 15.316999983042479,
+        "samples_ms": [
+          15.316999983042479,
+          14.787999971304089,
+          12.431200011633337,
+          13.22490000165999,
+          12.601599970366806,
+          13.025399995967746,
+          13.467599987052381,
+          14.0737000037916,
+          13.507499999832362,
+          14.435800025239587,
+          12.20840000314638,
+          12.387199967633933,
+          12.271300016436726,
+          12.419599981512874,
+          12.04840000718832,
+          11.626599996816367,
+          12.470300018321723,
+          11.43349998164922,
+          12.495199975091964,
+          11.34610001463443,
+          12.643800000660121,
+          11.793099984060973,
+          12.120500032324344,
+          12.41440000012517,
+          11.976600042544305,
+          13.711800042074174,
+          0.3299000090919435,
+          12.590099999215454,
+          11.035899980925024,
+          0.24579995078966022,
+          12.050300021655858,
+          12.390099989715964,
+          11.812600016128272,
+          11.338799959048629,
+          12.459699995815754,
+          11.472199985291809,
+          10.486599989235401,
+          12.10459996946156,
+          11.959699972067028,
+          10.33560000360012,
+          10.267800011206418,
+          9.899500000756234,
+          10.638899984769523,
+          9.816800011321902,
+          11.366499995347112,
+          9.729300043545663,
+          12.032800004817545,
+          10.79490000847727,
+          10.444300016388297,
+          9.816500009037554,
+          10.73130004806444,
+          9.907700004987419,
+          8.31780000589788,
+          9.549299953505397,
+          9.544200031086802,
+          9.466300019994378,
+          0.24799996754154563,
+          10.043199989013374,
+          10.213200002908707,
+          0.16629998572170734,
+          10.875799984205514,
+          9.972199972253293,
+          10.901400004513562,
+          9.792600001674145,
+          10.296799999196082,
+          9.660999989137053,
+          10.074199992232025,
+          8.86739999987185,
+          10.492500034160912,
+          8.109999995213002,
+          9.020900004543364,
+          9.91919997613877,
+          8.938300015870482,
+          11.014399991836399,
+          10.904300026595592,
+          11.189999990165234,
+          10.131499962881207,
+          8.920499996747822,
+          9.67040000250563,
+          9.126999997533858,
+          10.093600023537874,
+          10.466300009284168,
+          10.330700024496764,
+          11.368900013621897,
+          10.79799997387454,
+          11.321199999656528,
+          0.35940000088885427,
+          10.710200003813952,
+          10.804999968968332,
+          0.1889999839477241
+        ],
+        "policy": "nearest rank; failed attempt time included"
+      }
+    },
+    "vector_source": "verified exact-text replay; no embedding HTTP",
+    "bm25_scope": "Shared enriched metadata representation with hybrid; FTS5 also indexes metadata, so not comparable to stage42 scores",
+    "index_counts": {
+      "lancedb_count": 23,
+      "bm25_count": 23
+    },
+    "index_build_ms": 1068.3910000370815,
+    "probe": {
+      "status": "passed",
+      "query_id": "retrieval03",
+      "query_text_sha256": "b74fa76c9aa731cad12b39e8d7be38ace6b46e1878c46627306af2d1b629c913",
+      "plan_sha256": "88fef76c4883f58e22042d4bc0d74c8ccf00ea612c4632ea4a7272c50377269d",
+      "trace_order": [
+        "schema_linking",
+        "generate_sql"
+      ],
+      "node_lifecycle": [
+        "link.setup_input",
+        "link.execute",
+        "link.update_context",
+        "gen.setup_input",
+        "gen.execute",
+        "gen.update_context"
+      ],
+      "link_method": "hybrid",
+      "link_warnings": [],
+      "retrieved_doc_ids": [
+        "a.join",
+        "a.orders",
+        "a.count"
+      ],
+      "retrieved_hit_evidence": [
+        {
+          "doc_id": "a.join",
+          "db_id": "shop_a",
+          "schema_name": "main",
+          "table_name": "orders"
+        },
+        {
+          "doc_id": "a.orders",
+          "db_id": "shop_a",
+          "schema_name": "main",
+          "table_name": "orders"
+        },
+        {
+          "doc_id": "a.count",
+          "db_id": "shop_a",
+          "schema_name": "main",
+          "table_name": "orders"
+        }
+      ],
+      "linked_tables": [
+        "orders",
+        "products",
+        "users"
+      ],
+      "linked_columns": {
+        "orders": [
+          "id",
+          "user_id",
+          "product_id",
+          "amount"
+        ],
+        "products": [
+          "id",
+          "name"
+        ],
+        "users": [
+          "id",
+          "name"
+        ],
+        "unrelated": []
+      },
+      "source_namespace": "main",
+      "prompt_messages_sha256": "dc787a252cda033e9e8d6a80606c272f1fb66b1c1115315f156b6ed45272232c",
+      "relevant_column_markers_in_prompt": true,
+      "unrelated_column_excluded": true,
+      "deterministic_router_calls": 1,
+      "harness_llm_calls_reserved": 1,
+      "real_llm_calls": 0,
+      "actual_cost_usd": null,
+      "artifacts": {
+        "trace": "schema-prompt/workflow-trace.json",
+        "prompt": "schema-prompt/prompt.json"
+      },
+      "measurement_scope": "Fixed Harness schema-context wiring with deterministic Router; not a model quality or production namespace coverage estimate"
+    }
+  },
+  "real_llm_calls": 0,
+  "actual_cost_usd": null,
+  "resource_scope": "Supervised worker600s plus cleanup5s; requests/inputs bounded. Artifact64MiB checked after phases, not a filesystem quota. Existing Ollama CPU/GPU/RSS not hard-limited; startup not reset.",
+  "artifact_bytes_before_report": 1518703
+}

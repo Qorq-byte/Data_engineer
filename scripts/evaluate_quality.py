@@ -23,24 +23,13 @@ from typing import Any
 from app.evaluation.artifacts import protect_inputs, read_json, write_atomic
 from app.evaluation.inputs import evaluation_summary, quality_dataset, sql_cases, text
 from app.evaluation.predictions import validate_exported_predictions
+from app.evaluation.ranking import ranking_metrics as ranking_metrics
 from app.evaluation.sqlite_query import EvaluationQueryError as EvaluationQueryError
 from app.evaluation.sqlite_query import execute_rows
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.llm.completion import IncompleteCompletionError, check_completion
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def ranking_metrics(retrieved: list[str], relevant: set[str], k: int) -> dict[str, float]:
-    hits = [int(doc in relevant) for doc in retrieved[:k]]
-    dcg = sum(hit / math.log2(rank + 2) for rank, hit in enumerate(hits))
-    ideal = sum(1 / math.log2(rank + 2) for rank in range(min(k, len(relevant))))
-    return {
-        "recall_at_k": sum(hits) / len(relevant) if relevant else 0,
-        "precision_at_k": sum(hits) / k,
-        "mrr_at_k": next((1 / (rank + 1) for rank, hit in enumerate(hits) if hit), 0),
-        "ndcg_at_k": dcg / ideal if ideal else 0,
-    }
 
 
 def evaluate(

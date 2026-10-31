@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "services": {
+    "postgresql": {
+      "image": "postgres:16",
+      "image_id": "sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97",
+      "container_id": "62c2c7067170142001cf11469ab84b0d2b45dc8be20006c67e30928a8c2767b9",
+      "port": 53764
+    },
+    "mysql": {
+      "image": "mysql:8.4",
+      "image_id": "sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69",
+      "container_id": "a0d5160b94fe0cf33f9aadc76e26742710bd3ce00f797c93a86634a1d819d926",
+      "port": 53774
+    }
+  },
+  "cleanup": [
+    {
+      "container_id": "a0d5160b94fe0cf33f9aadc76e26742710bd3ce00f797c93a86634a1d819d926",
+      "removed": true
+    },
+    {
+      "container_id": "62c2c7067170142001cf11469ab84b0d2b45dc8be20006c67e30928a8c2767b9",
+      "removed": true
+    }
+  ],
+  "scope": "Disposable synthetic databases; no business or model calls",
+  "pytest_exit_code": 0,
+  "server_versions": {
+    "server_postgresql": "PostgreSQL 16.15 (Debian 16.15-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit",
+    "server_mysql": "8.4.13"
+  },
+  "tests_by_service": {
+    "postgresql": 19,
+    "mysql": 60
+  },
+  "test_count": 79
+}

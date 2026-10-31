@@ -1,0 +1,12 @@
+{
+  "identity": "e74dcdf9631e7cd10c3a530bbe5c71de95036baa577305cbbbfee440af2197e6",
+  "dimension": 768,
+  "model": {
+    "provider": "ollama",
+    "name": "embeddinggemma:latest",
+    "dimension": 768,
+    "digest": "sha256:85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+    "layer_digest": "sha256:0800cbac9c2064dde519420e75e512a83cb360de3ad5df176185dc69652fc515",
+    "layer_bytes": 621867104
+  }
+}

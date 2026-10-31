@@ -321,7 +321,7 @@ def _build_search_query(query: str, sqr: SQR) -> str:
     parts: list[str] = [query]
 
     # Intent hint
-    if sqr.intent.value != "unknown":
+    if sqr.intent.value.lower() != "unknown":
         parts.append(sqr.intent.value)
 
     # Entity names

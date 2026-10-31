@@ -1,0 +1,673 @@
+{
+  "profile": "local-embeddinggemma-acceptance-v1",
+  "run_name": "stage43-embeddinggemma-v3-r2",
+  "model": {
+    "provider": "ollama",
+    "name": "embeddinggemma:latest",
+    "dimension": 768,
+    "digest": "sha256:85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+    "layer_digest": "sha256:0800cbac9c2064dde519420e75e512a83cb360de3ad5df176185dc69652fc515",
+    "layer_bytes": 621867104
+  },
+  "base_url": "http://127.0.0.1:11434",
+  "acceptance_manifest_sha256": "ed4be1acd589350adf428491ae4db542ee686fd3bd212a3f2f3517dca6b45755",
+  "inputs": [
+    {
+      "id": "document/a.orders",
+      "text_sha256": "2c6e1ae2cf46d33aa24ff2a2a5274bffb5e02d5aec3925d17b142f8633df201b",
+      "utf8_bytes": 146
+    },
+    {
+      "id": "document/a.status",
+      "text_sha256": "a7e7889eca6a26c28a7336498dee2d921ff78167a660d5ccde6260e6ff7d2dfd",
+      "utf8_bytes": 135
+    },
+    {
+      "id": "document/a.join",
+      "text_sha256": "5ae1f1b133320e143dbef3e9d9bb489ae7272344d0c3cb8d793bda206bae28d4",
+      "utf8_bytes": 164
+    },
+    {
+      "id": "document/a.anonymous",
+      "text_sha256": "7ad74787297134116914d108ca75abe273c1842a7cb54d1bb3a10cb252df86f9",
+      "utf8_bytes": 165
+    },
+    {
+      "id": "document/a.time",
+      "text_sha256": "cd6b7f735a85d5cc50132c2704b80123f3d3376bde1f59af200031418cc19050",
+      "utf8_bytes": 127
+    },
+    {
+      "id": "document/a.refunds",
+      "text_sha256": "855b7d7efa73fd6f6079d72dbfdce1633be02f64b06f9b3dafb1f3650ef767c2",
+      "utf8_bytes": 154
+    },
+    {
+      "id": "document/a.net",
+      "text_sha256": "9f1b6894e48f69970efb95067d8ab73da2e5b4ccd7a818f6bcbb913e1462f91e",
+      "utf8_bytes": 119
+    },
+    {
+      "id": "document/a.gross",
+      "text_sha256": "d76cfea5a5a63a26ef5445ef1822e9ff77181db4e0710f42579c0b66b1bb2892",
+      "utf8_bytes": 109
+    },
+    {
+      "id": "document/a.count",
+      "text_sha256": "991d59b7a6691f38a7cb2e7106e2ec1253696f45c8dbd9ea99fbc49fc553da08",
+      "utf8_bytes": 132
+    },
+    {
+      "id": "document/a.ties",
+      "text_sha256": "e64698828941d79ae1159c5f2d7679bac96dad8d28e7037ff29ec6e8b502684a",
+      "utf8_bytes": 138
+    },
+    {
+      "id": "document/a.users",
+      "text_sha256": "b10c2d56af22560c4ec43df6a005f6edfeae47ff0c976a9370cd4087ecda0a91",
+      "utf8_bytes": 112
+    },
+    {
+      "id": "document/a.email",
+      "text_sha256": "df38f7961340ae96b24c62b801913809c9b7de23fe8a0c11b5b7ef0582e1acd2",
+      "utf8_bytes": 91
+    },
+    {
+      "id": "document/a.names",
+      "text_sha256": "f27129f00f1b5d38e55d5c5a780c934b1b4262906af0491df2a8f1761d78fbca",
+      "utf8_bytes": 114
+    },
+    {
+      "id": "document/a.products",
+      "text_sha256": "240d73adc0dc549619cd5b1caf8ca001e8b0b5b198ac2ec6e81a4cf6682f8f68",
+      "utf8_bytes": 127
+    },
+    {
+      "id": "document/a.category",
+      "text_sha256": "d2c861c7cfe7523c576d5bc3180eb9f65959d11d77897a9bcc79f873a2dbda06",
+      "utf8_bytes": 116
+    },
+    {
+      "id": "document/a.stock",
+      "text_sha256": "e0c28e9c017ae4f89d5d030fa0f2419dc1d890f026091433b16534fbdc990150",
+      "utf8_bytes": 84
+    },
+    {
+      "id": "document/a.price",
+      "text_sha256": "899cccd506017272044e8a7c2e23fcfbd153fcc444ecf49d8c4e37b1815fe6f5",
+      "utf8_bytes": 112
+    },
+    {
+      "id": "document/a.ledger",
+      "text_sha256": "a6f7227574798d3d711c4da3a313f2944267055e399924d0ccbd104e41997a5c",
+      "utf8_bytes": 148
+    },
+    {
+      "id": "document/b.orders",
+      "text_sha256": "aac01f1fbe2c2a24da7d99108f88597602db8fff563331a5eb97043aa0584809",
+      "utf8_bytes": 153
+    },
+    {
+      "id": "document/b.refunds",
+      "text_sha256": "38a8b124896f1643958c2b82e59e78a9ff5c2bc512b0318d6c8b38f821e537d7",
+      "utf8_bytes": 99
+    },
+    {
+      "id": "document/b.users",
+      "text_sha256": "63025346e7ecdcf73f52a9d0c6c914e4f3f3b228d5315570e3ea9318b081f1fd",
+      "utf8_bytes": 82
+    },
+    {
+      "id": "document/hr.payroll",
+      "text_sha256": "ebfdcb3f8a6bb922d88a193e035e137ea78adedf7277059525faa81cd3948210",
+      "utf8_bytes": 79
+    },
+    {
+      "id": "document/platform.trace",
+      "text_sha256": "3333100f63601d9dfdeb2ab4a8ae6c0ce10b6438d737da79f6e2cc53e7ae4394",
+      "utf8_bytes": 94
+    },
+    {
+      "id": "query/retrieval01",
+      "text_sha256": "e1ff8d14d5cc4edd6962684078f82759bac864558b75e6c1811457ac3c4f072d",
+      "utf8_bytes": 38
+    },
+    {
+      "id": "query/retrieval02",
+      "text_sha256": "65047f575308161e31663c2fa40eed1c7c415ce969e61bde578cb612752dad38",
+      "utf8_bytes": 47
+    },
+    {
+      "id": "query/retrieval03",
+      "text_sha256": "8b92771755dc0031d81593c7d8de03c68962861809fd24c9ffc5ec29a543e393",
+      "utf8_bytes": 33
+    },
+    {
+      "id": "query/retrieval04",
+      "text_sha256": "dbeac39d796f07f0537120c879224715c5741b82be0807626d9d159c963ec2a8",
+      "utf8_bytes": 35
+    },
+    {
+      "id": "query/retrieval05",
+      "text_sha256": "7c27a435f1fe668cbc1a3f063b54009f7e9afcda5f9d6c9bfd4e6132f7fac98e",
+      "utf8_bytes": 39
+    },
+    {
+      "id": "query/retrieval06",
+      "text_sha256": "59e03556b299ca2826a0a18243f26654a01a3246e8303854001b954b1fd3d00f",
+      "utf8_bytes": 33
+    },
+    {
+      "id": "query/retrieval07",
+      "text_sha256": "ceac440c3d498d10ba2aacde9d475f10f1fb2633b4a0015b07c0b9f68ea1850f",
+      "utf8_bytes": 44
+    },
+    {
+      "id": "query/retrieval08",
+      "text_sha256": "2415d08e5a0e0aa2cd3c91066b57b33ac3803043b649888a0da380dd8cfa0d83",
+      "utf8_bytes": 48
+    },
+    {
+      "id": "query/retrieval09",
+      "text_sha256": "76d919be01725888a9944c738941bf4368e20f8e43b61336927a8d2e290a6468",
+      "utf8_bytes": 32
+    },
+    {
+      "id": "query/retrieval10",
+      "text_sha256": "af8ce43983b6d684c0c7570571737d0ea6e6381c7c21f4d253aa44a27ab0d2f0",
+      "utf8_bytes": 33
+    },
+    {
+      "id": "query/retrieval11",
+      "text_sha256": "a24c3aeeda22e7029b8f87f07a214ff161cacd961d7ec9ee3a8cd22cb0faa52e",
+      "utf8_bytes": 30
+    },
+    {
+      "id": "query/retrieval12",
+      "text_sha256": "1de06dd7f49095cc84a17bb4f7d079b5ccb3fe19ccea97ea56507426312c8c98",
+      "utf8_bytes": 33
+    },
+    {
+      "id": "query/retrieval13",
+      "text_sha256": "6d59de3a480d435e2b7faab42652ce34f0bf54fff4808a40868d0ebb19bacd2d",
+      "utf8_bytes": 35
+    },
+    {
+      "id": "query/retrieval14",
+      "text_sha256": "8a02c6717e85816ff4773213245d6087212513809415314faf4402a590ccdee5",
+      "utf8_bytes": 39
+    },
+    {
+      "id": "query/retrieval15",
+      "text_sha256": "a0907f425aa5a777a181f9bfbc4939ddc69c3ede11dcf15dec9faf852b42793d",
+      "utf8_bytes": 48
+    },
+    {
+      "id": "query/retrieval16",
+      "text_sha256": "5ceda81edaee095d41833361323c0fecba765fc01faa17f28798622491a56504",
+      "utf8_bytes": 23
+    },
+    {
+      "id": "query/retrieval17",
+      "text_sha256": "174362b8c7173643a3c71409eded955bcdf99f30e7aa86c9d2c4ee9977d5b2fd",
+      "utf8_bytes": 32
+    },
+    {
+      "id": "query/retrieval18",
+      "text_sha256": "8953baf64e2b9f634312d5bcb6f47fec15253ac447293b6faf440ca056c5a494",
+      "utf8_bytes": 45
+    },
+    {
+      "id": "query/retrieval19",
+      "text_sha256": "7141f301d2f61ff8d7840d8f73c324772e4362d0624e929abaa6762f572a42c2",
+      "utf8_bytes": 27
+    },
+    {
+      "id": "query/retrieval20",
+      "text_sha256": "00c2bb8c2a784fc9964bb9c91b5ea452b4b19f38dbd7f0b89f7e0989b5ca3ea4",
+      "utf8_bytes": 32
+    },
+    {
+      "id": "query/retrieval21",
+      "text_sha256": "3de502222a2e9a319606056794f5fff02c6aeebf3c889e583909e9c0eb5ad667",
+      "utf8_bytes": 33
+    },
+    {
+      "id": "query/retrieval22",
+      "text_sha256": "45c0f2ed9c227d0fd657d87c2ce018ce15715c8303756ead2442716dc8c6b282",
+      "utf8_bytes": 30
+    },
+    {
+      "id": "query/retrieval23",
+      "text_sha256": "46412282cb6d83e4b4baf1e41c91c4dc79336c4edf4f04efaa214a407225c144",
+      "utf8_bytes": 29
+    },
+    {
+      "id": "query/retrieval24",
+      "text_sha256": "8385b960d959afcebcb4c785d4f2343b3082c2ac1288de1deb69bebb95c03d75",
+      "utf8_bytes": 44
+    },
+    {
+      "id": "query/retrieval25",
+      "text_sha256": "207ef232a177288e0c77280f31529f8e9bb2daccf69c504ffa8c457d5508ba30",
+      "utf8_bytes": 22
+    },
+    {
+      "id": "query/retrieval26",
+      "text_sha256": "0f8175fa34b7de597a013f2abf74da13a026a9dc05f5883741aba978d75d20b7",
+      "utf8_bytes": 26
+    },
+    {
+      "id": "query/retrieval27",
+      "text_sha256": "8bdf11794d93969149a2c221ad222b3cab1f6adb0717b7939b64634099533883",
+      "utf8_bytes": 22
+    },
+    {
+      "id": "query/retrieval28",
+      "text_sha256": "803af7d0173fb864b114b5cab0214fe47a5da6ec14466f9a39af96424cb63a7f",
+      "utf8_bytes": 28
+    },
+    {
+      "id": "query/retrieval29",
+      "text_sha256": "1ca8d6009533e83ea872e832f5e27bb9fb4e0933038aa5876bb0c59d4f65bf11",
+      "utf8_bytes": 30
+    },
+    {
+      "id": "query/retrieval30",
+      "text_sha256": "03c28b54e132dd34b33b1d7f0ee00dbb2f12a75fc178217a3b0b4838be1c6adf",
+      "utf8_bytes": 13
+    }
+  ],
+  "runtime": {
+    "python": "3.12.13",
+    "lancedb": "0.40.0",
+    "pyarrow": "26.0.0",
+    "httpx": "0.28.1",
+    "jieba": "0.42.1",
+    "sqlglot": "30.18.0"
+  },
+  "source_sha256": {
+    "app/evaluation/embedding_batch.py": "3cbbfcf11297a7d70eb17f9fc29795c14513562eceb01cfb2c4cdb914c0eefd3",
+    "app/evaluation/embedding_runtime.py": "ec4a591db933bacdff3e3a95539dbcae512e3cb3f4042edf0ae699eab48e5b91",
+    "app/evaluation/embedding_rankings.py": "9e04a4e5d88cf44de979fc8bb70bd152d97d8d00724d473878aa585dd2b4646f",
+    "app/evaluation/embedding_probe.py": "c916ad6b8ac07ea67c461c809f217138308259a1291a64182a5b4a1e0e042e4c",
+    "scripts/run_embedding_acceptance.py": "b1590266ff1326b557f31507c27a0e316baec32821451f625cfcb9b3ed5b6c17",
+    "tests/fixtures/embedding_acceptance/schema_prompt.yml": "5f9d764d4e6deac7412474af88fcc15b9be3424ce8c551713e63b60e139243c2",
+    "app/knowledge/retrieval/embedding.py": "934ad02ecc51d5dad68053670eacbbe1ed144935f60ad57373b239d9f7acbbbc",
+    "app/knowledge/retrieval/schema_rag.py": "bf10c719ffe35805d8108af8c5d140c59c6f04e09d0194fb51aaa9a390646edb",
+    "app/knowledge/retrieval/lancedb_store.py": "4f7d1fd23251fe3b2b8dda4eb1552c9653020a05472726d77c691cfea1959012",
+    "app/knowledge/retrieval/bm25_index.py": "293ac727e7e3bdcee4c74a8a18d7699b388224d38df8b2be6849337e7a4ca3b9",
+    "app/knowledge/retrieval/rrf_fusion.py": "d46631d57650ccde2d704c10e59eeafcef1726f2dfe83bc91a7d035919fd5cf8",
+    "app/knowledge/schema_retriever.py": "c7b7926a9dd5fe83d6aff4ec77a54f483c33bc6d009e745c223a120e062797ba",
+    "app/nodes/schema_linking.py": "3589a9f0d6fdd35a55c8b2b618b2391819c51c7ed17631b52529416c4983d634",
+    "app/nodes/generate_sql.py": "aa2f14de81e839877efa813a1ddedce02c5bc5afe538f0fc0fe62d854748f8fe",
+    "app/nodes/base.py": "c4a9a608127e19893e630ec4cac2ff2788fb2c53caf707c135961c8ce39054a5",
+    "app/nodes/registry.py": "84c71f7bffb305a065f9ab103f61cc616df43bcdce9671ea12d80a8f9b14f5df",
+    "app/harness/runner.py": "a284951420abc59671ab880b8a77aed74c8f0a9e5c7167a1b851eaee709f0c7e",
+    "app/harness/plan_loader.py": "6ba2d25c2f36fd58d9ad96bc1e587402b5d0b7490bb1027800116e0800149f74",
+    "app/evaluation/acceptance_data.py": "b2ab4db9c95595cb7899f0487c62778887590bb62b0537116e02cf1cd15af4c1",
+    "app/evaluation/acceptance_retrieval.py": "eca31ffbefee20af807ed08575ff49eb6abdb7c66c7cb1719792e191f6872ecd",
+    "tests/fixtures/acceptance_v3/sql.json": "627ee4b026c2a9595b775a6daaeb052c7bc6dd4a3616701fc73a7f769f60aca0",
+    "tests/fixtures/acceptance_v3/retrieval.json": "16b299e35c1c6ecff0b07d5dd9528445c6c9dfb901c8961520592c7adb0d32fb",
+    "tests/fixtures/acceptance_v3/schema.sql": "c2a29d3cd189333e71c06d3190c7684ac151f32058a9ebf65c3b4648c1c1db2d",
+    "tests/fixtures/acceptance_v3/base.sql": "96421afdb7855afbba7bea0eff41c1e9d60b2cf4505bebed9abb65d318221fca",
+    "tests/fixtures/acceptance_v3/edge.sql": "f15dc4c27591bfad94029b96dd216bcfb224ec1697d0f77317d1c9d9476df96c",
+    "tests/fixtures/acceptance_v3/empty.sql": "899eb708648a0364e69408a5d601b582970e96d41871a69dd86ae8461de91d79",
+    "tests/fixtures/acceptance_v3/manifest.json": "dd0ff42ed7ee4ac534a6d0ebe3e5ed40e3461680b77e77295e51f12c7762cebb"
+  },
+  "limits": {
+    "embedding_posts": 53,
+    "metadata_gets": 2,
+    "http_requests": 55,
+    "concurrency": 1,
+    "retries": 0,
+    "request_seconds": 30,
+    "metadata_seconds": 10,
+    "run_seconds": 600,
+    "input_utf8_bytes": 3803,
+    "max_text_bytes": 165,
+    "max_response_bytes": 262144,
+    "max_artifact_bytes": 67108864,
+    "float32_vector_payload_bytes": 162816
+  },
+  "retrieval": {
+    "k": 3,
+    "rrf_k": 60,
+    "alpha": 0.7,
+    "warm_repetitions": 3,
+    "corpus": "one shared 23-document corpus",
+    "domain_filter": "frozen document IDs and sparse metadata; not native domain API"
+  },
+  "requests": [
+    {
+      "kind": "model_before",
+      "method": "GET",
+      "path": "/api/tags"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.orders"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.status"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.join"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.anonymous"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.time"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.refunds"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.net"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.gross"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.count"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.ties"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.users"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.email"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.names"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.products"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.category"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.stock"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.price"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/a.ledger"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/b.orders"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/b.refunds"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/b.users"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/hr.payroll"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "document/platform.trace"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval01"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval02"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval03"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval04"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval05"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval06"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval07"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval08"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval09"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval10"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval11"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval12"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval13"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval14"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval15"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval16"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval17"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval18"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval19"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval20"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval21"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval22"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval23"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval24"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval25"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval26"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval27"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval28"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval29"
+    },
+    {
+      "kind": "embedding",
+      "method": "POST",
+      "path": "/api/embeddings",
+      "input_id": "query/retrieval30"
+    },
+    {
+      "kind": "model_after",
+      "method": "GET",
+      "path": "/api/tags"
+    }
+  ],
+  "resource_scope": "Supervised worker600s plus cleanup5s; requests/inputs bounded. Artifact64MiB checked after phases, not a filesystem quota. Existing Ollama CPU/GPU/RSS not hard-limited; startup not reset.",
+  "actual_cost_usd": null
+}

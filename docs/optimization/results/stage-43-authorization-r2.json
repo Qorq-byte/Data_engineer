@@ -1,0 +1,6 @@
+{
+  "date": "2026-10-28",
+  "manifest_sha256": "2776d64d6e26b829fb663dd412855cf4cd792639e9138e201467f9f47bfe7157",
+  "user_answer": "授权启动服务并按新清单执行一次",
+  "scope": "One new run plus owned loopback Ollama startup30s and cleanup; fixed cached model/no cloud/no download/no HTTP retry"
+}

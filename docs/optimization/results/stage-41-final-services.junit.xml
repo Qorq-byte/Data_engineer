@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="75" time="22.564" timestamp="2026-10-26T14:52:56.236194+08:00" hostname="祺orQ"><properties><property name="server_postgresql" value="PostgreSQL 16.15 (Debian 16.15-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit" /><property name="server_mysql" value="8.4.13" /></properties><testcase classname="tests.real_db.test_acceptance" name="test_real_schema_keys_and_namespace[postgresql]" time="0.188" /><testcase classname="tests.real_db.test_acceptance" name="test_composite_foreign_keys_keep_column_pairing[postgresql]" time="0.060" /><testcase classname="tests.real_db.test_acceptance" name="test_empty_result_keeps_columns[postgresql]" time="0.013" /><testcase classname="tests.real_db.test_acceptance" name="test_results_null_decimal_and_limit[postgresql]" time="0.015" /><testcase classname="tests.real_db.test_acceptance" name="test_application_policy_remains_read_only[postgresql-DELETE FROM orders]" time="0.013" /><testcase classname="tests.real_db.test_acceptance" name="test_application_policy_remains_read_only[postgresql-SELECT id FROM orders; DELETE FROM orders]" time="0.013" /><testcase classname="tests.real_db.test_acceptance" name="test_reader_account_cannot_write_without_application_guard[postgresql]" time="0.012" /><testcase classname="tests.real_db.test_acceptance" name="test_explain_uses_async_driver_and_returns_plan[postgresql]" time="0.015" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[postgresql-False-timeout]" time="0.233" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[postgresql-False-cancel]" time="0.026" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[postgresql-True-timeout]" time="0.235" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[postgresql-True-cancel]" time="0.028" /><testcase classname="tests.real_db.test_acceptance" name="test_explain_failure_preserves_session[postgresql]" time="0.015" /><testcase classname="tests.real_db.test_acceptance" name="test_reconnect_never_redirects_captured_target[postgresql]" time="0.067" /><testcase classname="tests.real_db.test_acceptance" name="test_concurrent_queries_on_single_handle_are_serialized[postgresql]" time="0.018" /><testcase classname="tests.real_db.test_acceptance" name="test_close_clears_registry_cache_and_pool[postgresql]" time="0.056" /><testcase classname="tests.real_db.test_acceptance" name="test_close_waits_for_real_inflight_query[postgresql]" time="0.087" /><testcase classname="tests.real_db.test_acceptance" name="test_cancelled_reconnect_disposes_unpublished_connection[postgresql]" time="0.020" /><testcase classname="tests.real_db.test_acceptance" name="test_formal_harness_with_synthetic_generation_and_real_execution[postgresql]" time="2.055" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[1-1000-mysql]" time="0.130"><properties><property name="buffered_rows" value="[2]" /><property name="fixture_rows" value="1000" /><property name="max_rows" value="1" /></properties></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[1-10000-mysql]" time="0.065"><properties><property name="buffered_rows" value="[2]" /><property name="fixture_rows" value="10000" /><property name="max_rows" value="1" /></properties></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[100-1000-mysql]" time="0.052"><properties><property name="buffered_rows" value="[101]" /><property name="fixture_rows" value="1000" /><property name="max_rows" value="100" /></properties></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_driver_buffer_is_bounded[100-10000-mysql]" time="0.060"><properties><property name="buffered_rows" value="[101]" /><property name="fixture_rows" value="10000" /><property name="max_rows" value="100" /></properties></testcase><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders WHERE 1=0-rows0-False-mysql]" time="0.006" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 2-rows1-False-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 3-rows2-True-mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 1-rows3-False-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 1, 4-rows4-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 4 OFFSET 1-rows5-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id LIMIT 0-rows6-False-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[WITH chosen AS (SELECT id FROM orders) SELECT id FROM chosen ORDER BY id DESC-rows7-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders WHERE id=10 UNION ALL SELECT id FROM orders WHERE id&gt;10 ORDER BY id DESC-rows8-True-mysql]" time="0.006" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id; -- trailing comment-rows9-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders ORDER BY id /* trailing comment */-rows10-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[(SELECT id FROM orders ORDER BY id LIMIT 4)-rows11-True-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM (SELECT id FROM orders ORDER BY id LIMIT 1) AS chosen-rows12-False-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_limit_semantics[SELECT id FROM orders WHERE id=10 UNION ALL (SELECT id FROM orders WHERE id&gt;10 ORDER BY id LIMIT 1)-rows13-False-mysql]" time="0.006" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_implicit_labels_and_global_cap[mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_interrupted_cleanup[cancel-fetch-mysql]" time="0.008" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_interrupted_cleanup[cancel-close-mysql]" time="0.008" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_interrupted_cleanup[cancel-restore-mysql]" time="0.008" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_interrupted_cleanup[timeout-fetch-mysql]" time="0.221" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_interrupted_cleanup[timeout-close-mysql]" time="0.217" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_interrupted_cleanup[timeout-restore-mysql]" time="0.202" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_cleanup_failure_discards_session[close-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_cleanup_failure_discards_session[restore-mysql]" time="0.005" /><testcase classname="tests.real_db.test_mysql_bounded" name="test_mysql_select_has_no_note_setting_side_effect[mysql]" time="0.004" /><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_result_and_usage_contract[False-json-mysql]" time="0.032"><failure message="KeyError: 'sql'">service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x000002C002781BE0&gt;)
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002C002781C40&gt;
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and0')
+protocol = 'json', truncated = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+&gt;       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError</failure></testcase><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_result_and_usage_contract[False-sse-mysql]" time="0.033"><failure message="KeyError: 'sql'">service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x000002C002782D20&gt;)
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002C0027832F0&gt;
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and1')
+protocol = 'sse', truncated = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+&gt;       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError</failure></testcase><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_result_and_usage_contract[False-mcp-mysql]" time="11.192"><failure message="KeyError: 'sql'">service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x000002C002780170&gt;)
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002C002781220&gt;
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and2')
+protocol = 'mcp', truncated = False
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+&gt;       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError</failure></testcase><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_result_and_usage_contract[True-json-mysql]" time="0.034"><failure message="KeyError: 'sql'">service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x000002C004B66B40&gt;)
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002C002782090&gt;
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and3')
+protocol = 'json', truncated = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+&gt;       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError</failure></testcase><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_result_and_usage_contract[True-sse-mysql]" time="0.035"><failure message="KeyError: 'sql'">service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x000002C004A3B500&gt;)
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002C004A3B710&gt;
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and4')
+protocol = 'sse', truncated = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+&gt;       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError</failure></testcase><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_result_and_usage_contract[True-mcp-mysql]" time="0.050"><failure message="KeyError: 'sql'">service = Service(kind='mysql', port=58810)
+connection = ('stage40-mysql', &lt;aiomysql.connection.Connection object at 0x000002C004A79C10&gt;)
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x000002C004A79E80&gt;
+tmp_path = WindowsPath('C:/Temp/pytest-of-31459/pytest-168/test_mysql_protocol_result_and5')
+protocol = 'mcp', truncated = True
+
+    @pytest.mark.parametrize("protocol", ["json", "sse", "mcp"])
+    @pytest.mark.parametrize("truncated", [False, True])
+    async def test_mysql_protocol_result_and_usage_contract(service, connection, monkeypatch,
+                                                           tmp_path, protocol, truncated):
+        identity, _ = connection
+        sql = "SELECT id FROM orders" + (" ORDER BY id" if truncated else " WHERE id=10")
+        monkeypatch.setenv("DE_TRACE_DIR", str(tmp_path))
+        monkeypatch.setattr(settings, "max_result_rows", 1)
+        monkeypatch.setattr(query, "get_default_router", lambda: router(sql))
+        result = await request(protocol, identity)
+        assert result["status"] == "completed", result
+        execution = result if protocol == "mcp" else result["execution"]
+        assert execution["rows"] == [[10]] and execution["row_count"] == 1
+        assert execution["truncated"] is truncated
+        assert (result["sql"] if protocol == "mcp" else result["primary_sql"]) == sql
+        assert result["llm_calls"] == 1
+        assert result["llm_usage"]["attempt_count"] == 1
+        assert result["llm_usage"]["missing_usage_count"] == 1
+        assert result["llm_usage"]["usage_coverage"] == 0
+        assert result["llm_usage"]["attempts"][0]["prompt_tokens"] is None
+        candidate = result["candidates"][0]
+&gt;       assert candidate["sql"] == sql  # Execution cap never changes candidate identity/evidence.
+               ^^^^^^^^^^^^^^^^
+E       KeyError: 'sql'
+
+..\..\..\..\tests\real_db\test_mysql_protocols.py:74: KeyError</failure></testcase><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_cancel_drains_execution[json-mysql]" time="0.033" /><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_cancel_drains_execution[sse-mysql]" time="0.033" /><testcase classname="tests.real_db.test_mysql_protocols" name="test_mysql_protocol_cancel_drains_execution[mcp-mysql]" time="0.041" /><testcase classname="tests.real_db.test_acceptance" name="test_real_schema_keys_and_namespace[mysql]" time="0.020" /><testcase classname="tests.real_db.test_acceptance" name="test_composite_foreign_keys_keep_column_pairing[mysql]" time="0.020" /><testcase classname="tests.real_db.test_acceptance" name="test_empty_result_keeps_columns[mysql]" time="0.005" /><testcase classname="tests.real_db.test_acceptance" name="test_results_null_decimal_and_limit[mysql]" time="0.006" /><testcase classname="tests.real_db.test_acceptance" name="test_application_policy_remains_read_only[mysql-DELETE FROM orders]" time="0.005" /><testcase classname="tests.real_db.test_acceptance" name="test_application_policy_remains_read_only[mysql-SELECT id FROM orders; DELETE FROM orders]" time="0.005" /><testcase classname="tests.real_db.test_acceptance" name="test_reader_account_cannot_write_without_application_guard[mysql]" time="0.004" /><testcase classname="tests.real_db.test_acceptance" name="test_explain_uses_async_driver_and_returns_plan[mysql]" time="0.007" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[mysql-False-timeout]" time="0.226" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[mysql-False-cancel]" time="0.081" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[mysql-True-timeout]" time="0.227" /><testcase classname="tests.real_db.test_acceptance" name="test_lock_wait_interrupt_releases_resources[mysql-True-cancel]" time="0.080" /><testcase classname="tests.real_db.test_acceptance" name="test_explain_failure_preserves_session[mysql]" time="0.008" /><testcase classname="tests.real_db.test_acceptance" name="test_reconnect_never_redirects_captured_target[mysql]" time="0.023" /><testcase classname="tests.real_db.test_acceptance" name="test_concurrent_queries_on_single_handle_are_serialized[mysql]" time="0.008" /><testcase classname="tests.real_db.test_acceptance" name="test_close_clears_registry_cache_and_pool[mysql]" time="0.019" /><testcase classname="tests.real_db.test_acceptance" name="test_close_waits_for_real_inflight_query[mysql]" time="0.136" /><testcase classname="tests.real_db.test_acceptance" name="test_cancelled_reconnect_disposes_unpublished_connection[mysql]" time="0.006" /><testcase classname="tests.real_db.test_acceptance" name="test_formal_harness_with_synthetic_generation_and_real_execution[mysql]" time="0.031" /></testsuite></testsuites>

@@ -134,8 +134,10 @@ def main(argv: list[str] | None = None) -> int:
                                      for p in xml.findall(".//property")
                                      if p.attrib.get("name", "").startswith("server_")}
         cases = xml.findall(".//testcase")
-        report["tests_by_service"] = {kind: sum(f"[{kind}" in c.attrib.get("name", "")
-                                               for c in cases) for kind in IMAGES}
+        report["tests_by_service"] = {
+            kind: sum(bool(re.search(rf"(?:\[|-){kind}(?:-|\])", c.attrib.get("name", "")))
+                      for c in cases) for kind in IMAGES
+        }
         report["test_count"] = len(cases)
     except (Exception, KeyboardInterrupt):
         report["status"] = "stopped"

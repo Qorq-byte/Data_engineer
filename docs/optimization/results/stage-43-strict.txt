@@ -1,0 +1,51 @@
+mypy scripts/evaluate_quality.py
+Success: no issues found in 1 source file
+
+mypy app/evaluation/acceptance_data.py app/evaluation/acceptance_sql.py app/evaluation/acceptance_retrieval.py app/evaluation/acceptance_suite.py app/evaluation/ranking.py scripts/evaluate_acceptance.py
+Success: no issues found in 6 source files
+
+mypy --follow-imports=silent app/evaluation/embedding_batch.py app/evaluation/embedding_runtime.py app/evaluation/embedding_rankings.py app/evaluation/embedding_probe.py scripts/run_embedding_acceptance.py
+Success: no issues found in 5 source files
+
+mypy app/evaluation/predictions.py scripts/export_predictions.py
+Success: no issues found in 2 source files
+
+mypy app/llm/streaming.py
+Success: no issues found in 1 source file
+
+mypy app/llm/usage.py app/llm/responses.py
+Success: no issues found in 2 source files
+
+mypy app/audit/store.py app/workflow/query_audit.py
+Success: no issues found in 2 source files
+
+mypy app/audit/candidates.py
+Success: no issues found in 1 source file
+
+mypy app/evaluation/artifacts.py app/evaluation/usage_costs.py scripts/estimate_usage_cost.py
+Success: no issues found in 3 source files
+
+mypy app/evaluation/inputs.py
+Success: no issues found in 1 source file
+
+mypy app/evaluation/model_batch.py
+Success: no issues found in 1 source file
+
+mypy app/evaluation/sqlite_query.py app/evaluation/contract_suite.py scripts/evaluate_sql_contracts.py
+Success: no issues found in 3 source files
+
+mypy --follow-imports=silent app/evaluation/model_runtime.py scripts/run_model_evaluation.py
+Success: no issues found in 2 source files
+
+mypy --follow-imports=silent scripts/evaluate_schema_linking.py scripts/evaluate_sql_validation.py
+Success: no issues found in 2 source files
+
+mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py
+Success: no issues found in 36 source files
+
+mypy scripts/run_real_db_tests.py
+Success: no issues found in 1 source file
+
+
+Final post-lock-fix embedding gate:
+Success: no issues found in 5 source files

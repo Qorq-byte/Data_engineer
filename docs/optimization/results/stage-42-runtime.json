@@ -1,0 +1,11 @@
+{
+  "python": "3.12.13",
+  "system": "Windows",
+  "sqlite": "3.50.4",
+  "jieba": "0.42.1",
+  "sqlglot": "30.18.0",
+  "aiomysql": "0.3.2",
+  "asyncpg": "0.32.0",
+  "lexical_rank": "SQLite FTS5 default rank with db_id/domain predicates before LIMIT",
+  "latency_scope": "No embedding latency benchmark in stage42"
+}
