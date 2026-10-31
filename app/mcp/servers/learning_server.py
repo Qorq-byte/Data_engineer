@@ -214,28 +214,22 @@ async def handle_approve_rule(rule_id: str) -> dict[str, Any]:
     if target is None:
         return {"success": False, "error": f"Rule '{rule_id}' not found"}
 
-    target.status = "approved"
-    # Persist to rule engine
-    try:
-        from app.knowledge.domain_manager import domain_manager
-        from app.knowledge.rule_engine import RuleEngine
-        from app.models.domain import BusinessRule
-
-        engine = RuleEngine(domain_manager=domain_manager)
-        engine.load_from_domains()
-        rule = BusinessRule(
-            id=target.suggested_rule_name,
-            name=target.suggested_rule_name,
-            description=target.pattern_description,
-            pattern=target.suggested_pattern,
-            enforcement=target.suggested_enforcement,
-            domain=target.domain_id,
-        )
-        engine.add(rule, domain=target.domain_id)
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-    return {"success": True, "rule_id": rule_id}
+    # Persisting an approved candidate needs two pieces that do not exist yet: a
+    # writer that appends the rule to the domain YAML, and a mapping from the
+    # analyzer's dict-shaped ``suggested_enforcement`` to ``BusinessRule.enforce``.
+    # Reporting that beats the previous code, which imported a non-existent
+    # ``domain_manager`` singleton and raised TypeError on keyword arguments that
+    # BusinessRule does not accept, then returned the raw exception text. The old
+    # ``target.status = "approved"`` mutation is gone too: analyze() rebuilds the
+    # candidates on every call, so it was never observable.
+    return {
+        "success": False,
+        "rule_id": rule_id,
+        "error": (
+            "rule persistence is not implemented: no domain YAML writer and no "
+            "BusinessRule mapping for suggested_enforcement"
+        ),
+    }
 
 
 async def handle_get_evolution_stats() -> dict[str, Any]:

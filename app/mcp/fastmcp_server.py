@@ -30,7 +30,11 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from fastmcp import FastMCP
+    from fastmcp.server.server import Transport
 
 _APP_ROOT = Path(__file__).resolve().parents[1]
 
@@ -60,7 +64,7 @@ def create_nl2sql_server(
 
         async def run_async(
             self,
-            transport: str | None = None,
+            transport: Transport | None = None,
             show_banner: bool | None = None,
             **transport_kwargs: Any,
         ) -> None:
@@ -101,7 +105,7 @@ def create_nl2sql_server(
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _register_nl_query(mcp: Any) -> None:
+def _register_nl_query(mcp: FastMCP) -> None:
     """Register the nl_query tool — NL → SQL → execute."""
 
     @mcp.tool(
@@ -198,7 +202,7 @@ def _register_nl_query(mcp: Any) -> None:
             }
 
 
-def _register_explain_sql(mcp: Any) -> None:
+def _register_explain_sql(mcp: FastMCP) -> None:
     """Register the explain_sql tool — EXPLAIN + interpretation."""
 
     @mcp.tool(
@@ -246,7 +250,7 @@ def _register_explain_sql(mcp: Any) -> None:
             }
 
 
-def _register_translate_sql(mcp: Any) -> None:
+def _register_translate_sql(mcp: FastMCP) -> None:
     """Register the translate_sql tool — dialect translation."""
 
     @mcp.tool(
@@ -299,7 +303,7 @@ def _register_translate_sql(mcp: Any) -> None:
             }
 
 
-def _register_validate_sql(mcp: Any) -> None:
+def _register_validate_sql(mcp: FastMCP) -> None:
     """Register the validate_sql tool — syntax + schema validation."""
 
     @mcp.tool(
@@ -336,7 +340,7 @@ def _register_validate_sql(mcp: Any) -> None:
         }
 
 
-def _register_search_schema(mcp: Any) -> None:
+def _register_search_schema(mcp: FastMCP) -> None:
     """Register the search_schema tool — keyword schema search."""
 
     @mcp.tool(
@@ -393,7 +397,7 @@ def _register_search_schema(mcp: Any) -> None:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _register_schema_resource(mcp: Any) -> None:
+def _register_schema_resource(mcp: FastMCP) -> None:
     """Register the schema resource — database schema snapshot."""
 
     @mcp.resource(
@@ -418,7 +422,7 @@ def _register_schema_resource(mcp: Any) -> None:
             return json.dumps({"error": str(exc), "db_id": db_id})
 
 
-def _register_domains_resource(mcp: Any) -> None:
+def _register_domains_resource(mcp: FastMCP) -> None:
     """Register the domains resource — all domain configurations."""
 
     @mcp.resource(
@@ -447,7 +451,7 @@ def _register_domains_resource(mcp: Any) -> None:
             return json.dumps({"error": str(exc), "domains": []})
 
 
-def _register_nodes_resource(mcp: Any) -> None:
+def _register_nodes_resource(mcp: FastMCP) -> None:
     """Register the nodes resource — list of registered nodes."""
 
     @mcp.resource(
@@ -477,7 +481,7 @@ def _register_nodes_resource(mcp: Any) -> None:
             return json.dumps({"error": str(exc), "nodes": []})
 
 
-def _register_workflows_resource(mcp: Any) -> None:
+def _register_workflows_resource(mcp: FastMCP) -> None:
     """Register the workflows resource — available workflow plans."""
 
     @mcp.resource(
@@ -539,9 +543,9 @@ def _extract_sql_from_response(response: Any) -> str:
     if isinstance(response, str):
         text = response
     elif isinstance(response, dict):
-        text = response.get("content", response.get("text", ""))
+        text = str(response.get("content", response.get("text", "")))
     else:
-        text = getattr(response, "content", getattr(response, "text", ""))
+        text = str(getattr(response, "content", getattr(response, "text", "")))
 
     # Strip markdown fences
     import re
