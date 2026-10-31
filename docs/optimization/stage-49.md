@@ -94,3 +94,16 @@ matched_rules = await self._rules.match(sqr.raw_text, domain_id=domain_id)
 - 完整从零按 `constraints.txt` 安装一个新环境（卡在下载，未跑完）。
 - 把 `constraints.txt` 接进 CI 的 `pip install`（CI 是 Linux，快照来自 Windows，强套会把平台差异变成构建失败）。
 - 重新在 pydantic 2.14.2 / litellm 1.106.6 上跑阶段44 的 30 题批次。快照解决了"装到什么版本"，但没有解决"这个版本组合是否被真实评测覆盖"。
+
+## 6. 远程验收
+
+两个提交各自核验，精确 SHA 双工作流：
+
+| 提交 | 内容 | MVP checks | Real database acceptance |
+|---|---|---|---|
+| `565f687` | Agent 匹配修复 + 5 项测试 | 41195965497 | 41195965451 |
+| `dd6cd15` | `constraints.txt` + 文档 | 41198805247 | 41198805166 |
+
+两轮均 success。记录见 [stage-49-ci.json](results/stage-49-ci.json)。
+
+需要注意这条印记的含义：CI 按 `pyproject.toml` 安装、**不带** `constraints.txt`，所以绿色只证明代码改动没问题，不证明"快照组合被 CI 覆盖"。快照的证据是本地 dry-run 与在阶段48 干净环境的真装。`sqlglot` 那次尝试在提交前就回退了，没有任何 CI 跑过它。

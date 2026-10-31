@@ -1,0 +1,38 @@
+{
+  "stage": 49,
+  "branch": "codex/agent-and-deps",
+  "base_commit": "b4fef8f",
+  "head_sha": "dd6cd15b92e0568035bb05ee4e1df417e3b7ba08",
+  "head_sha_short": "dd6cd15",
+  "commits": [
+    {
+      "sha": "565f687",
+      "full_sha": "565f687c0c974f83df719fb44e5264006b167da8",
+      "subject": "fix(agents): stop swallowing glossary and rule matching failures",
+      "scope": "app/agents/schema_retriever.py + 5 tests",
+      "ci": {
+        "MVP checks": 41195965497,
+        "Real database acceptance": 41195965451,
+        "conclusion": "success"
+      }
+    },
+    {
+      "sha": "dd6cd15",
+      "full_sha": "dd6cd15b92e0568035bb05ee4e1df417e3b7ba08",
+      "subject": "chore(deps): pin the verified runtime combination and re-audit it",
+      "scope": "constraints.txt + docs only, no source change",
+      "ci": {
+        "MVP checks": 41198805247,
+        "Real database acceptance": 41198805166,
+        "conclusion": "success"
+      }
+    }
+  ],
+  "observed_at_utc": "2026-10-31T12:05:00Z",
+  "notes": [
+    "Only workflow conclusions and head SHAs are claimed; per-job pass counts were not transcribed from the CI logs.",
+    "CI installs from pyproject.toml without constraints.txt by design: the snapshot was resolved on Windows and forcing it on a Linux runner would turn platform differences into build failures.",
+    "A green CI run therefore confirms the code change, not the pinned combination; the combination evidence is the local dry run plus the install onto the stage 48 clean-room venv.",
+    "The sqlglot 30.27.0 attempt was rolled back before either commit, so no CI run covers it; its evidence is the local 350-failure run recorded in stage-49.md."
+  ]
+}
