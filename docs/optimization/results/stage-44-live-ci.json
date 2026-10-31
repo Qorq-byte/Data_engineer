@@ -1,0 +1,33 @@
+{
+  "stage": 44,
+  "scope": "live thirty-case NL2SQL acceptance documentation",
+  "head_sha": "e3bffca25d21ce4127c6d39e2890e792a33cd384",
+  "head_sha_short": "e3bffca",
+  "branch": "codex/nl2sql-acceptance",
+  "workflows": [
+    {
+      "name": "MVP checks",
+      "run_id": 41181952078,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41181952078",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "e3bffca25d21ce4127c6d39e2890e792a33cd384"
+    },
+    {
+      "name": "Real database acceptance",
+      "run_id": 41181952080,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41181952080",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "e3bffca25d21ce4127c6d39e2890e792a33cd384"
+    }
+  ],
+  "observed_at_utc": "2026-10-31T07:56:00Z",
+  "notes": [
+    "Both workflows ran on the exact documentation commit that records the live batch.",
+    "Only documentation and a redacted JSON summary changed in this commit; no application source, manifest or prompt was modified.",
+    "Per-job pass counts were not transcribed from CI logs in this record; only workflow conclusions and head SHA are claimed."
+  ]
+}

@@ -36,4 +36,6 @@ prepare仅本地读文件/依赖版本并生成清单，不导入SDK或初始化
 
 代码提交 `9eae3ea28556f9c43c662a4494bf9e6765869dce` 的[常规CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/40668363089)和[真实双库CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/40668363123)均成功，headSha精确一致。Linux离线4227项、真实双库82项；17项strict、Ruff、前端182契约/构建通过。见[代码CI证据](results/stage-44-code-ci.json)。本次文档补记也另核验精确SHA双CI。
 
-已交付阶段44的计划、离线工具、提示词/执行清单和门禁，真实30题付费批次尚未执行。本阶段不能标为真实质量验收完成，也不推进阶段45。用户确认清单bdf95e0f后才能执行一次；旧4题和阶段43的授权均不外推到此批。原始响应、候选SQL、审计、trace仍只在成功执行后的私有运行目录保留，公开只有摘要。
+真实批次记录提交 `e3bffca25d21ce4127c6d39e2890e792a33cd384` 的[常规CI 41181952078](https://github.com/Qorq-byte/Data_engineer/actions/runs/41181952078)与[真实双库CI 41181952080](https://github.com/Qorq-byte/Data_engineer/actions/runs/41181952080)均成功，headSha精确一致，见[批次文档CI证据](results/stage-44-live-ci.json)。该提交只改文档与脱敏摘要，未改动应用源码、清单或提示词；本记录只声明工作流结论与 headSHA，不复述未经核对的单 job 通过数。
+
+阶段44现完成两件事：离线工具与门禁验收（9eae3ea/5141b61），以及真实30题批次的一次执行（e3bffca）。真实批次的结论仅在合成题集、n=1、该模型别名下成立，不构成业务准确率、生产SLO 或阶段43检索对照。原始响应、候选SQL、审计、trace仍只在私有运行目录保留，公开只有摘要。阶段45及后续未在本阶段实施。
