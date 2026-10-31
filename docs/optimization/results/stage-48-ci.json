@@ -1,0 +1,69 @@
+{
+  "stage": 48,
+  "scope": "release checklist, clean-room deployment/upgrade/rollback, backup retention fix, browser main-path check",
+  "head_sha": "b1452d197a718540f42c05562b09798b08c03c94",
+  "head_sha_short": "b1452d1",
+  "branch": "codex/release-trial",
+  "commits": [
+    {
+      "sha": "dcc2888",
+      "subject": "fix(recovery): let prune run from --backup-root alone",
+      "ci": {
+        "MVP checks": 41193323425,
+        "Real database acceptance": 41193323461,
+        "conclusion": "success"
+      },
+      "full_sha": "dcc28882457e8e287dfaf844d44800b9b7f684ae"
+    },
+    {
+      "sha": "233cc53",
+      "subject": "docs(stage-48): freeze trial scope and record clean-room deployment drill",
+      "ci": {
+        "MVP checks": 41193323425,
+        "Real database acceptance": 41193323461,
+        "conclusion": "success",
+        "note": "same run pair as dcc2888; the docs commit was the pushed head at that point"
+      },
+      "full_sha": "233cc53d4c69176fd433818172f82d25d3ef91dc"
+    },
+    {
+      "sha": "b1452d1",
+      "subject": "test(browser): check the stage 48 main path and make the harness runnable again",
+      "ci": {
+        "MVP checks": 41194129893,
+        "Real database acceptance": 41194129866,
+        "conclusion": "success"
+      },
+      "full_sha": "b1452d197a718540f42c05562b09798b08c03c94"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "MVP checks",
+      "run_id": 41194129893,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41194129893",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha_short": "b1452d1",
+      "head_sha": "b1452d197a718540f42c05562b09798b08c03c94"
+    },
+    {
+      "name": "Real database acceptance",
+      "run_id": 41194129866,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41194129866",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha_short": "b1452d1",
+      "head_sha": "b1452d197a718540f42c05562b09798b08c03c94"
+    }
+  ],
+  "observed_at_utc": "2026-10-31T10:58:00Z",
+  "notes": [
+    "Only workflow conclusions and head SHAs are claimed here; per-job pass counts were not transcribed from the CI logs.",
+    "The browser QA scripts are not part of CI (they need Windows plus a Chromium-driving binary), so their green result exists only as the local run recorded in stage-48.md and stage-48-clean-room.json.",
+    "Local recovery suite after the prune fix: 13 passed.",
+    "No dependency version was changed in this stage; Python dependency upgrade and the advisory re-verification remain open."
+  ]
+}

@@ -157,3 +157,5 @@ python -m scripts.state_backup --action prune --backup-root .state_backups --kee
 ## 10. 结论
 
 阶段41–47的证据可以支撑**私有单实例、白名单操作者、每库 ≤1000 表、单进程**的受限试用；部署、readiness、备份恢复、升级回退都在干净环境跑通并被记录。不能支撑多租户、多 worker、7 种未实测方言、任何业务准确率或生产 SLO。实际发布与扩大访问面按届时明确指令处理。
+
+远程验收：`dcc2888` / `233cc53` 推送后，精确 SHA 的 MVP checks `41193323425` 与 Real database acceptance `41193323461` 均 success；浏览器脚本提交 `b1452d1` 另核验 MVP `41194129893` 与真实数据库 `41194129866` 均 success。三个提交只动运维脚本、测试脚本与文档，没有业务逻辑改动。记录见 [stage-48-ci.json](results/stage-48-ci.json)。
