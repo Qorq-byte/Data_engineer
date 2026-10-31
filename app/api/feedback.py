@@ -44,12 +44,15 @@ async def submit_feedback(body: FeedbackRequest) -> dict[str, Any]:
         "created_at": datetime.now().isoformat(),
     }
     _feedback_store.append(record)
+    storage = "process_memory"
     try:
         store = get_store()
         if store is not None:
             await store.save_feedback(record)
+            storage = "mysql"
     except Exception as e:
         logger.warning("MySQL store unavailable: %s", e)
+    learning = False
     try:
         from app.learning.feedback_collector import feedback_collector
 
@@ -88,12 +91,22 @@ async def submit_feedback(body: FeedbackRequest) -> dict[str, Any]:
             diff_operations=diff_operations,
             domain_id=body.domain or None,
         )
+        learning = True
     except Exception as e:
         logger.warning("Feedback collector unavailable: %s", e)
+    if storage == "mysql" and learning:
+        message = "感谢您的反馈！反馈已写入 MySQL 并进入学习队列。"
+    elif learning:
+        message = "感谢您的反馈！反馈已进入学习队列，但未写入 MySQL（仅进程内保留）。"
+    else:
+        message = "感谢您的反馈！MySQL 与学习队列当前均不可用，反馈仅在进程内保留。"
     return {
         "status": "recorded",
         "feedback_id": record["id"],
-        "message": "感谢您的反馈！反馈已记录至学习库。",
+        "storage": storage,
+        "persisted": storage == "mysql",
+        "learning": learning,
+        "message": message,
     }
 
 

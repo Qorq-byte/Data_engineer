@@ -1,15 +1,18 @@
-"""Feedback Agent — collects user feedback and triggers learning pipeline.
+"""Feedback Agent — validates feedback and writes it to the same store as the REST route.
 
-See SPEC §4.11.2 (agent role: Feedback) and implementation plan §4.13.1.
-
-Phase 4: stub — validates and acknowledges feedback payloads.
-Full persistence and learning pipeline trigger deferred to Phase 5.
+The REST route ``POST /api/v1/feedback`` persists to MySQL (with an in-memory
+fallback) and feeds the learning collector. This agent shares the MySQL write so
+the two paths cannot disagree about whether feedback was stored; it does not run
+the learning collector, because it has no NL input or session context to build a
+usable sample from. The result reports ``storage`` and ``persisted`` instead of
+implying success either way.
 """
 
 from __future__ import annotations
 
 import difflib
 import time
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,7 +21,7 @@ from app.agents.base import AgentResult, BaseAgent
 
 @dataclass
 class FeedbackRecord:
-    """A single user feedback entry (Phase 4: in-memory only)."""
+    """A single user feedback entry, as validated by the agent."""
 
     turn_id: str = ""
     rating: int = 0  # 1–5
@@ -33,8 +36,12 @@ class FeedbackRecord:
 class FeedbackAgent(BaseAgent):
     """Agent that collects, validates, and stores user feedback.
 
-    Phase 4: validates payload format and returns acknowledgment.
-    Phase 5: persists to ``feedback_log`` table + triggers learning pipeline.
+    Validates the payload, writes the record to the same MySQL store the REST
+    route uses when one is configured, and always keeps a process-local copy.
+    The learning pipeline (collector → pattern analyzer → rule candidates) only
+    runs on the REST path, which has the NL input and session context to build a
+    usable sample; this agent reports ``learning_pipeline=False`` rather than
+    implying it ran.
 
     Usage::
 
@@ -48,13 +55,13 @@ class FeedbackAgent(BaseAgent):
 
     name = "feedback_processor"
     description = (
-        "Collect user feedback (rating, comments, SQL diffs) and "
-        "trigger the continuous learning pipeline."
+        "Collect user feedback (rating, comments, SQL diffs) and persist it to the "
+        "shared feedback store; the learning pipeline itself runs on the REST path."
     )
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         super().__init__(config)
-        self._records: list[FeedbackRecord] = []  # Phase 4: in-memory only
+        self._records: list[FeedbackRecord] = []  # per-agent copy, lost on restart
 
     async def execute(self, input: Any, context: dict[str, Any]) -> AgentResult:
         """Validate and record feedback.
@@ -69,7 +76,10 @@ class FeedbackAgent(BaseAgent):
             context: Shared dict (session_id, domain_id, etc.).
 
         Returns:
-            AgentResult.data = {"acknowledged": True, "record_count": N}
+            AgentResult.data = {"acknowledged": True, "record_count": N,
+            "storage": "mysql" | "process_memory", "persisted": bool}.
+            ``persisted`` is False whenever no MySQL store was reachable, so a
+            caller can tell an acknowledged-but-ephemeral record from a stored one.
         """
         t0 = time.perf_counter()
         try:
@@ -108,15 +118,33 @@ class FeedbackAgent(BaseAgent):
             )
             self._records.append(record)
 
+            # Same store the REST route writes to; a missing store is reported,
+            # not papered over with an unconditional "recorded".
+            storage = "process_memory"
+            persist_error: str | None = None
+            try:
+                from app.storage.mysql_store import get_store
+
+                store = get_store()
+                if store is not None:
+                    await store.save_feedback(self._store_row(record, context))
+                    storage = "mysql"
+            except Exception as exc:  # noqa: BLE001 - memory fallback must not fail the call
+                persist_error = f"{type(exc).__name__}: {exc}"
+
             elapsed = (time.perf_counter() - t0) * 1000
             return self._ok(
                 {
                     "acknowledged": True,
                     "rating": rating,
                     "record_count": len(self._records),
+                    "storage": storage,
+                    "persisted": storage == "mysql",
                 },
                 latency_ms=round(elapsed, 2),
                 has_diff=len(diff_ops) > 0,
+                persist_error=persist_error,
+                learning_pipeline=False,
             )
         except Exception as exc:
             elapsed = (time.perf_counter() - t0) * 1000
@@ -149,6 +177,22 @@ class FeedbackAgent(BaseAgent):
         return self._compute_diff(original_sql, final_sql)
 
     # ── helpers ────────────────────────────────────────────────────────
+
+    def _store_row(self, record: FeedbackRecord, context: dict[str, Any]) -> dict[str, Any]:
+        """Map the agent record onto the shape ``MySQLStore.save_feedback`` reads."""
+        return {
+            # Primary key: a per-process counter would collide after a restart,
+            # so the suffix is random.
+            "feedback_id": f"fb_agent_{uuid.uuid4().hex[:16]}",
+            "query_id": record.turn_id,
+            "session_id": str(context.get("session_id", "")),
+            "nl_input": str(context.get("nl_input", "")),
+            "sql_generated": record.original_sql,
+            "sql_final": record.final_sql,
+            "rating": record.rating,
+            "feedback_text": record.comment,
+            "domain": record.domain_id,
+        }
 
     @staticmethod
     def _compute_diff(original: str, revised: str) -> list[dict[str, str]]:
