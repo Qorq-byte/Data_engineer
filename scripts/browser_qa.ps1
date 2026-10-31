@@ -1,10 +1,25 @@
 param([string]$BrowseExe = (Join-Path $env:USERPROFILE ".agents/skills/gstack/browse/dist/browse.exe"))
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell 5.1 strips embedded double quotes when handing arguments to a
+# native exe, which turns `js 'fetch("/qa-counts")'` into a bare `/qa-counts` and
+# fails as a regex. Standard passing keeps the quotes; on 5.1 this is an inert
+# variable, so run this script with pwsh 7.3+ (see docs/optimization/stage-48.md).
+$PSNativeCommandArgumentPassing = 'Standard'
+# browse.exe writes UTF-8; a GBK console decodes it into mojibake and every
+# AssertText then compares against the wrong bytes.
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 $env:BROWSE_PARENT_PID = '0'
 $browser = $BrowseExe
 if (!(Test-Path -LiteralPath $browser)) { throw "Supply -BrowseExe with the installed gstack /browse binary" }
 function B {
-    $result = & $browser @args
+    # Newer browse builds log "[browse] Starting server..." to stderr on every cold
+    # call; under $ErrorActionPreference='Stop' that stderr line aborted the whole
+    # script before the exit code could be inspected. Keep Stop for cmdlets, but
+    # let the native call run and decide by exit code alone.
+    $previous = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { $result = & $browser @args 2>&1 } finally { $ErrorActionPreference = $previous }
     if ($LASTEXITCODE -ne 0) { throw ($result -join "`n") }
     $result
 }

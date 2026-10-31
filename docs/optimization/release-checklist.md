@@ -87,6 +87,7 @@
 - [ ] `/assets/` 下任取一文件 200 且摘要与 manifest 一致。
 - [ ] 未带令牌访问 `/api/v1/schema/databases` 返回 401；换非白名单账号返回 403。
 - [ ] 停服窗口内跑一次 `--action backup`，再用 `--action verify` 得到 `ok: true`。
+- [ ] 浏览器主路径（连接→查询→结果/错误→重试→历史，桌面与手机宽度）已核对：`pwsh -NoProfile -File scripts/browser_qa.ps1` 与 `scripts/browser_qa_main_path.ps1` 均以退出码 0 结束。两者需先启动 `python -m scripts.browser_qa_server`；它只绑 127.0.0.1:8018 且用临时密钥，**不是生产服务**。
 
 ## 4. 升级与回退
 
@@ -130,6 +131,7 @@
 | 无业务标注 | 无法给出任何业务准确率 | 需要真实业务问题与人工标注 |
 | 无真实模型/真实 embedding 的容量数据 | 阶段45 是 mock 编排容量 | 需要真实提供商配额与影子流量 |
 | MySQL 侧 readiness 未在干净环境验证 | 只看到降级态 | 在有 MySQL 的环境重复检查单 |
+| 浏览器主路径只在合成夹具上验证 | 临时 JWT、内存 SQLite、脚本化模型，没接真实库与真实模型 | 在有真实库/模型的环境重跑同一批脚本 |
 | 7 种方言无真实连接验收 | 只能按"未验证"对待 | 逐个连接真实实例跑 `tests/real_db` 等价用例 |
 | 前端构建依赖审计口径不稳 | 同一 lockfile 在 10-23 报 7 项、10-31 报 0 项，差异来自注册表侧数据 | 只能按"构建工具链风险未消除"表述，不能宣称已清理 |
 | 阶段47 遗留：`agents/schema_retriever.py` 术语/规则匹配死路径 | 该分支异常被 `contextlib.suppress` 吞掉，术语/规则增强实际未生效 | 单独改动并验证 Agent 输出，不与发布绑定 |

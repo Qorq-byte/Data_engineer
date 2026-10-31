@@ -88,7 +88,36 @@ python -m scripts.state_backup --action prune --backup-root .state_backups --kee
 
 双向可用，备份格式在两个相邻版本间兼容。**未覆盖**：跨越多版本的回退、回退时静态资源内容不同的情形（本次两版本前端一致，无法验证"只回退 HTML"的错误做法会造成什么后果）。
 
-## 6. 阶段47遗留：依赖告警重新核验
+## 6. 浏览器主路径核对
+
+用 `scripts/browser_qa_server`（127.0.0.1:8018 的合成夹具：临时 JWT、内存 SQLite、脚本化模型）配 gstack `browse` 驱动真实 Chromium，桌面 1280×800、手机 375×812。
+
+既有 `scripts/browser_qa.ps1` 覆盖：正常查询（3 行）、空结果、错误查询、慢查询中途取消且新对话不残留结果、恰好 4 次 stream 请求 0 次 JSON 重放、手机端无横向溢出且发送按钮在视口内、模态框焦点与 Escape、离线 Schema 不伪造连接、注册邀请码与隐藏表单 inert。
+
+本阶段新增 `scripts/browser_qa_main_path.ps1` 补齐规划要求的"连接→查询→结果/错误→重试→历史"：
+
+| 路径 | 断言 |
+|---|---|
+| 连接（查询范围） | 选择器列出 `qa-fixture`，可把范围固定到单个库，运行后范围标签仍在 |
+| 结果 | `查询执行完成 · 3 行` |
+| 错误 | `查询失败`，且不被渲染成成功 |
+| 重试 | 失败后同一输入可再次提交并成功 |
+| 历史 | 面板列出 4 条，点最新一条恢复消息；面板重开仍可用 |
+| 手机 + 历史 | 375×812 下历史面板打开也无横向溢出 |
+
+两个脚本在同一夹具上都以退出码 0 结束。截图：[桌面](results/stage-48-desktop-history.png)、[手机](results/stage-48-mobile-history.png)。
+
+**两个观察，都不算缺陷**：点击历史条目后 UI 会关闭历史面板（断言改为"选择后关闭"而非"保持打开"）；夹具的 readiness 不是 ready，所以页面顶部那条"生产查询尚未就绪"的黄色提示是预期的。
+
+**执行环境本身需要三处修正**，否则脚本在当前工具链下根本跑不起来：
+
+1. browse 每次冷启动都往 stderr 写 `[browse] Starting server...`，而脚本用 `$ErrorActionPreference='Stop'`，该行会被当成致命错误在读取退出码前中断整个脚本；改为只在 `B` 内部放宽并靠退出码判断。
+2. Windows PowerShell 5.1 把参数交给原生 exe 时会丢掉内嵌双引号，`fetch("/qa-counts")` 变成 `/qa-counts` 被当正则解析而报 `Invalid regular expression: missing /`；改为 `$PSNativeCommandArgumentPassing='Standard'` 并标注需用 pwsh 7.3+ 运行。
+3. GBK 控制台把 browse 的 UTF-8 输出解成乱码，`AssertText` 拿正确的中文去比对乱码字符串必然失败；改为强制 UTF-8 输出编码。
+
+这三条是脚本与工具版本/区域设置的不兼容，与产品行为无关，但会让人误判成页面缺陷。
+
+## 7. 阶段47遗留：依赖告警重新核验
 
 同一份 `package-lock.json`（最后改动 `1510dd5`，2026-10-23）在两个时间点得到不同结论：
 
@@ -101,7 +130,7 @@ python -m scripts.state_backup --action prune --backup-root .state_backups --kee
 
 因此**不能**把 0 当成"构建工具链已清理"的证据。对外仍按阶段21口径表述：这些依赖只在构建期执行、不进入浏览器包、不被 Python 服务执行，构建不可信提交仍有构建期拒绝服务风险，只能在隔离且资源受限的可信环境构建。Python 依赖升级本身仍未开始，按规划与类型修复分开处理。
 
-## 7. 运行时版本漂移
+## 8. 运行时版本漂移
 
 `pyproject.toml` 只写了下界（`fastapi>=0.115.0` 等），没有 Python 锁文件。干净环境解析到：
 
@@ -117,13 +146,14 @@ python -m scripts.state_backup --action prune --backup-root .state_backups --kee
 
 离线也验证了：litellm 连续三次抓取远程价格表失败后保留本地副本并继续运行，服务不受影响，只是日志有告警。
 
-## 8. 未执行
+## 9. 未执行
 
 - MySQL 可达时的 `storage`/`auth` ready 路径（干净环境无 MySQL）。
+- 浏览器主路径只在合成夹具上跑过：临时 JWT、内存 SQLite、脚本化模型，没接真实 MySQL、真实模型或真实业务库。
 - 多 worker / 多副本。
 - 服务运行中原地重建前端。
 - Python 依赖升级、真实模型与真实 embedding 的容量测量、业务标注。
 
-## 9. 结论
+## 10. 结论
 
 阶段41–47的证据可以支撑**私有单实例、白名单操作者、每库 ≤1000 表、单进程**的受限试用；部署、readiness、备份恢复、升级回退都在干净环境跑通并被记录。不能支撑多租户、多 worker、7 种未实测方言、任何业务准确率或生产 SLO。实际发布与扩大访问面按届时明确指令处理。

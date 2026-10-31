@@ -148,6 +148,35 @@
     "consequence": "the stage 44 30-case result was produced on 1.106.4 / 2.14.1 and was not rerun on this combination"
   },
   "offline_note": "litellm tried three times to fetch its remote model cost map and fell back to the bundled copy; a deployment without egress stays functional but logs the warnings",
+  "browser_main_path": {
+    "fixture": "scripts.browser_qa_server on 127.0.0.1:8018 (synthetic JWT, in-memory SQLite, scripted router)",
+    "driver": "gstack browse.exe 2026-08 build, run through pwsh 7.6.9",
+    "scripts": ["scripts/browser_qa.ps1", "scripts/browser_qa_main_path.ps1"],
+    "desktop_viewport": "1280x800",
+    "mobile_viewport": "375x812",
+    "passed": [
+      "query scope selector offers qa-fixture and applies a single db_id",
+      "normal query reaches 查询执行完成 · 3 行 and the scope label survives the run",
+      "error case reports 查询失败 and is not shown as success",
+      "retry after failure succeeds",
+      "history panel lists 4 runs, reopens the newest one, and the reopened panel works",
+      "cancel then new conversation keeps no leaked result; exactly 4 stream requests, 0 JSON replays",
+      "mobile 375x812: no horizontal overflow, send button inside the viewport, history panel readable",
+      "modal: initial focus inside the dialog, Tab cycles to the close control, typing keeps focus, Escape closes",
+      "offline schema shows 数据库信息不可用 with no fabricated connections",
+      "invitation field present, hidden login inputs inert, X-Registration-Token forwarded (intercepted UI only)"
+    ],
+    "observations": [
+      "selecting a history entry closes the panel by design; the script asserts the closed state instead of treating it as a regression",
+      "the fixture reports readiness not ready, so the amber 生产查询尚未就绪 banner is expected in these screenshots"
+    ],
+    "screenshots": ["results/stage-48-desktop-history.png", "results/stage-48-mobile-history.png"],
+    "harness_fixes": [
+      "browse writes [browse] Starting server... to stderr on every cold start; under ErrorActionPreference=Stop that aborted the script before the exit code was read",
+      "Windows PowerShell 5.1 drops embedded double quotes when passing arguments to a native exe, turning fetch(\"/qa-counts\") into /qa-counts and failing as a regex; the script now sets PSNativeCommandArgumentPassing=Standard and must run under pwsh 7.3+",
+      "a GBK console decoded browse's UTF-8 output into mojibake, so every AssertText compared against the wrong bytes; the script now forces UTF-8 output encoding"
+    ]
+  },
   "not_exercised": [
     "MySQL-backed storage/auth readiness (no MySQL in the clean room)",
     "multi-worker or multi-process deployment",
