@@ -69,6 +69,8 @@
 | `ruff check app tests scripts typings` | 全通过 |
 | 本地全量 `pytest` | **4248 通过 / 3 失败 / 83 跳过**，与阶段46 完全一致 |
 
+远程验收：`179f177` 的 MVP checks（41190943213）与 Real database acceptance（41190943113）均 success，head SHA 一致，证据见 [results/stage-47-ci.json](results/stage-47-ci.json)。该提交里 MVP 工作流已包含 `mypy app/` 门禁，因此远程绿灯即代表整个 `app/` 在 CI 环境同样 strict 全清；只声明工作流结论与 SHA，没有转录逐项通过数。
+
 3 项失败仍是 Windows 平台既有问题，与本次改动无关：`test_cli_refuses_hardlink_input_alias`、`test_concurrent_writers_do_not_mix_records`、`test_concurrent_request_audits_keep_their_own_tokens`（阶段46 已用未改动工作区复现）。
 
 本地环境仍需 `tzdata` 才能跑 RAG 相关用例（Windows 上 `pyarrow` 报 `ArrowInvalid: The zoneinfo module or pytz package must be installed`）。未改依赖声明，Linux CI 自带系统时区数据。

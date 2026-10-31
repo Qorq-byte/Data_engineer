@@ -1,0 +1,34 @@
+{
+  "stage": 47,
+  "scope": "type-debt cleanup of app/ plus CI gate on mypy app/",
+  "head_sha": "179f1770c4cc5deffce1d81565a932aec323f713",
+  "head_sha_short": "179f177",
+  "branch": "codex/type-debt-cleanup",
+  "workflows": [
+    {
+      "name": "MVP checks",
+      "run_id": 41190943213,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41190943213",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "179f1770c4cc5deffce1d81565a932aec323f713"
+    },
+    {
+      "name": "Real database acceptance",
+      "run_id": 41190943113,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41190943113",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "179f1770c4cc5deffce1d81565a932aec323f713"
+    }
+  ],
+  "observed_at_utc": "2026-10-31T10:06:00Z",
+  "notes": [
+    "The MVP workflow now runs 'mypy app/' as a gate, so a green run on this SHA means the whole app package is strict-clean in CI, not only locally.",
+    "Per-job pass counts were not transcribed from the CI logs in this record; only the workflow conclusions and the head SHA are claimed.",
+    "Local Windows results for the same tree: mypy app/ 0 errors in 191 files, ruff clean, 4248 passed / 3 failed / 83 skipped. The three failures reproduce on the untouched stage 44 worktree and are platform limitations.",
+    "Dependency upgrades and dependency-advisory re-verification are not part of this stage and are still open."
+  ]
+}
