@@ -59,6 +59,8 @@
 
 新增 12 项测试。全量本地：**4248 通过 / 3 失败 / 83 跳过**。
 
+远程验收：合并提交 `763a04e` 的 MVP checks（41186153521）与 Real database acceptance（41186153428）均 success，head SHA 一致，证据见 [results/stage-46-ci.json](results/stage-46-ci.json)。只声明工作流结论与 SHA，没有转录逐项通过数。
+
 3 项失败是 Windows 平台既有问题，与本次改动无关：`test_cli_refuses_hardlink_input_alias`、`test_concurrent_writers_do_not_mix_records`、`test_concurrent_request_audits_keep_their_own_tokens`。已用未改动的阶段44 工作区复现同样 3 项失败。RAG 相关 924 项全通过。
 
 本地环境另有一处非代码问题：Windows 上 `pyarrow` 需要 `tzdata`，缺失时 140 项 RAG 测试报 `ArrowInvalid: The zoneinfo module or pytz package must be installed`。安装 `tzdata` 后恢复。**未修改依赖声明**，因为 Linux CI 自带系统时区数据。

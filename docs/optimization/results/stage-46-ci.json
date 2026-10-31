@@ -1,0 +1,33 @@
+{
+  "stage": 46,
+  "scope": "single-worker crash visibility and state backup/restore",
+  "head_sha": "763a04e38e47e23b012ae1eb84f7a8b962227c93",
+  "head_sha_short": "763a04e",
+  "branch": "codex/single-worker-recovery",
+  "workflows": [
+    {
+      "name": "MVP checks",
+      "run_id": 41186153521,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41186153521",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "763a04e38e47e23b012ae1eb84f7a8b962227c93"
+    },
+    {
+      "name": "Real database acceptance",
+      "run_id": 41186153428,
+      "url": "https://github.com/Qorq-byte/Data_engineer/actions/runs/41186153428",
+      "event": "push",
+      "status": "completed",
+      "conclusion": "success",
+      "head_sha": "763a04e38e47e23b012ae1eb84f7a8b962227c93"
+    }
+  ],
+  "observed_at_utc": "2026-10-31T09:02:00Z",
+  "notes": [
+    "Both workflows ran on the merge commit that carries the recovery code and its twelve tests.",
+    "Per-job pass counts were not transcribed from the CI logs in this record; only the workflow conclusions and the head SHA are claimed.",
+    "Local Windows results for the same tree were 4248 passed / 3 failed / 83 skipped; the three failures reproduce on the untouched stage 44 worktree and are platform limitations, not regressions from this stage."
+  ]
+}
