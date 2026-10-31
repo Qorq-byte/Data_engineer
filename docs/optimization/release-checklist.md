@@ -67,6 +67,7 @@
 4. MySQL 用于业务存储与账号；不可达时 `storage`/`auth` 为 `false`、`/health/ready` 返回 503，`/health` 仍 200。这是**降级而非崩溃**，但不能当作可用。
 5. 前端：`npm ci --ignore-scripts && npm run build:frontend`，产物与源码同版本一起发布。
 6. 端口：默认 8001，`APP_PORT` 覆盖。验证时注意本机代理会拦截 127.0.0.1（用 `curl --noproxy '*'`）。
+7. 安装依赖时带快照：`python -m pip install -e . -c constraints.txt`。不带的话会解析到与本轮验收不同的版本（阶段48 已实测到 pydantic/litellm 漂移），详见[依赖快照与升级口径](dependency-lock.md)。
 
 ## 3. 发布检查单
 
@@ -127,7 +128,9 @@
 
 | 缺口 | 影响 | 补齐方式 |
 |---|---|---|
-| 无 Python 依赖锁文件 | 干净环境解析到 pydantic 2.14.2 / litellm 1.106.6，而阶段44清单冻结的是 2.14.1 / 1.106.4；新组合未重跑真实评测 | 加约束或锁文件，或在新组合上重跑 30 题批次 |
+| Python 依赖已有 `constraints.txt` 快照，但未在新组合上重跑真实评测 | 阶段44 的 26/30 仍只对应 pydantic 2.14.1 / litellm 1.106.4；快照解决"装到什么版本"，不解决"这个组合是否被评测覆盖" | 在新快照上重跑 30 题批次 |
+| `filelock` 3.32.7 有 13 项 CVE（修复在 4.0.9+），但装不上 | 最新 litellm 1.106.6 硬性要求 `filelock<4.0`，filelock 也没有 3.x 回移修复；项目不直接 import filelock | 等上游放开约束；多用户主机上不要把锁目录暴露给不可信本地用户 |
+| `sqlglot` 不能跟随新版本 | 30.27.0 移除了 `qualify(infer_schema=)`，实测 350 项测试失败，已回退并保持 30.18.0 | 要升级必须先改 `app/core/schema_validation.py` 并验证列限定行为等价 |
 | 无业务标注 | 无法给出任何业务准确率 | 需要真实业务问题与人工标注 |
 | 无真实模型/真实 embedding 的容量数据 | 阶段45 是 mock 编排容量 | 需要真实提供商配额与影子流量 |
 | MySQL 侧 readiness 未在干净环境验证 | 只看到降级态 | 在有 MySQL 的环境重复检查单 |

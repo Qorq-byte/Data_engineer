@@ -1,0 +1,65 @@
+# Verified dependency versions for the private trial deployment.
+#
+# Scope: the direct runtime dependencies declared in pyproject.toml plus the
+# dev tooling that produced the stage 41-48 evidence. Transitive packages are
+# intentionally NOT pinned here -- pinning them would bake one platform's
+# resolution (Windows wheels, tzdata, pywin32) into every install.
+#
+# Usage:
+#   python -m pip install -e . -c constraints.txt
+#   python -m pip install -e '.[dev]' -c constraints.txt
+#
+# The versions below were resolved on CPython 3.12.13 / Windows 11 on
+# 2026-10-31 and are the exact combination used for the stage 48 clean-room
+# deployment and the stage 49 verification run. See
+# docs/optimization/dependency-lock.md before changing any line.
+
+# ── web framework ────────────────────────────────────────────────────
+fastapi==0.162.0
+uvicorn==0.54.0
+sse-starlette==3.6.0
+
+# ── LLM routing ──────────────────────────────────────────────────────
+litellm==1.106.6
+
+# ── MCP ──────────────────────────────────────────────────────────────
+fastmcp==4.1.4
+mcp==2.3.0
+
+# ── vector search ────────────────────────────────────────────────────
+lancedb==0.41.0
+
+# ── database drivers ─────────────────────────────────────────────────
+duckdb==2.0.0
+asyncpg==0.32.0
+psycopg2-binary==2.9.13
+aiomysql==0.3.2
+pymysql==1.2.3
+
+# ── SQL parsing ──────────────────────────────────────────────────────
+sqlglot==30.18.0
+sqlparse==0.6.0
+
+# ── data & validation ────────────────────────────────────────────────
+pydantic==2.14.2
+pydantic-settings==2.16.2
+sqlalchemy==2.1.6
+
+# ── other runtime ────────────────────────────────────────────────────
+jieba==0.42.1
+pyyaml==6.0.3
+bcrypt==5.0.0
+pyjwt==2.15.1
+cryptography==50.0.2
+httpx==0.28.1
+python-dateutil==2.9.0.post0
+structlog==26.1.0
+
+# ── dev tooling (matches pyproject [dev] pins) ───────────────────────
+pytest==9.2.0
+pytest-asyncio==1.4.1
+pytest-cov==7.1.0
+ruff==0.17.1
+mypy==2.4.0
+types-PyYAML==6.0.12.20260906
+asyncpg-stubs==0.32.0

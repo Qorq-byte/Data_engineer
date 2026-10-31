@@ -1,0 +1,128 @@
+{
+  "stage": 49,
+  "date": "2026-10-31",
+  "branch": "codex/agent-and-deps",
+  "baseline_commit": "b4fef8f",
+  "scope": [
+    "fix the glossary/rule matching dead path in SchemaRetrievalAgent",
+    "freeze a verified dependency snapshot and re-verify advisories instead of reusing the old count"
+  ],
+  "agent_fix": {
+    "file": "app/agents/schema_retriever.py",
+    "commit": "565f687",
+    "defect": "awaited two synchronous matchers and passed domain_id where the keyword is domain; both TypeErrors were swallowed by contextlib.suppress, so terms and rules were always empty",
+    "change": "call GlossaryManager.match / RuleEngine.match synchronously with domain=; replace suppress with explicit capture into metadata term_match_error / rule_match_error",
+    "tests_added": 5,
+    "tests": [
+      "test_glossary_terms_reach_the_result",
+      "test_rules_reach_the_result",
+      "test_domain_id_is_actually_forwarded",
+      "test_global_terms_match_without_a_domain",
+      "test_matching_failure_is_reported_not_swallowed"
+    ],
+    "before_fix": "5 failed, 10 passed (verified by stashing the source change and rerunning the same file)",
+    "after_fix": "15 passed",
+    "local_full_suite_after_fix": {
+      "command": "pytest -m 'not real_database' -q",
+      "result": "4254 passed, 3 failed, 1 skipped, 82 deselected",
+      "known_failures": [
+        "tests/test_evaluation/test_acceptance_v3.py::test_cli_refuses_hardlink_input_alias",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_writers_do_not_mix_records",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_request_audits_keep_their_own_tokens"
+      ],
+      "known_failures_reproduce_on_untouched_tree": true
+    },
+    "downstream": "terms/rules are only forwarded into orchestrator/collaboration output; prompt building uses a character budget of the same name, so the prompt text does not change",
+    "ci": {
+      "MVP checks": 41195965497,
+      "Real database acceptance": 41195965451,
+      "conclusion": "success"
+    }
+  },
+  "dependency_snapshot": {
+    "file": "constraints.txt",
+    "scope": "25 direct runtime dependencies + 7 dev tools; transitive packages intentionally not pinned",
+    "rationale": "pinning transitive packages would bake Windows-specific resolution (tzdata, pywin32) into every install",
+    "resolved_by": "uv 0.12.1, CPython 3.12.13, Windows 11, 2026-10-31",
+    "dry_run": {
+      "command": "uv pip install -e '.[dev]' -c constraints.txt --dry-run",
+      "resolved_packages": 138,
+      "constrained_entries": 32,
+      "mismatch": [],
+      "missing": []
+    },
+    "real_install": {
+      "command": "uv pip install -e '.[dev]' -c constraints.txt (on the stage 48 clean-room venv)",
+      "result": "success, 124 -> 138 packages, no runtime version changed",
+      "kept": {
+        "pydantic": "2.14.2",
+        "litellm": "1.106.6",
+        "fastapi": "0.162.0",
+        "lancedb": "0.41.0",
+        "duckdb": "2.0.0",
+        "sqlglot": "30.18.0 (before the separate upgrade attempt)"
+      }
+    },
+    "not_pinned_risk": "transitive packages still float; the snapshot removes the largest drift source, not all of it"
+  },
+  "advisory_audit": {
+    "tool": "pip-audit (installed into the verification venv, not a project dependency)",
+    "date": "2026-10-31",
+    "packages_scanned": 138,
+    "vulnerable_packages": 1,
+    "findings": {
+      "package": "filelock",
+      "installed": "3.32.7",
+      "advisories": 13,
+      "ids": [
+        "CVE-2026-112940",
+        "CVE-2026-112913",
+        "CVE-2026-112907",
+        "CVE-2026-112938",
+        "CVE-2026-112936",
+        "CVE-2026-112910",
+        "CVE-2026-112909",
+        "CVE-2026-112911",
+        "CVE-2026-112939",
+        "CVE-2026-112915",
+        "CVE-2026-112935",
+        "CVE-2026-112912",
+        "CVE-2026-112908"
+      ],
+      "fix_versions": ["4.0.9", "4.2.1"],
+      "class": "lock-path handling on local filesystems: symlinks, ignored mode, marker files, SQLite-backed read/write locks"
+    },
+    "blocker": {
+      "reason": "litellm requires filelock>=3.16.1,<4.0 and the latest published litellm (1.106.6) still does so",
+      "verified": "PyPI metadata for litellm 1.106.6: requires_dist contains 'filelock<4.0,>=3.16.1'",
+      "consequence": "the fix cannot be installed without dropping or downgrading litellm; no 3.x backport of the fixes exists",
+      "exposure": "the project never imports filelock directly; it is reached only through litellm (and a >=3.10 constraint from huggingface_hub). Preconditions in the advisories are a local attacker able to plant files or symlinks in the lock directory, which the single-host private deployment does not provide by default"
+    },
+    "not_a_fix": "no advisory was ignored or suppressed; the count above is the measured result for this snapshot, not a reused historical figure"
+  },
+  "dependency_upgrade_attempt": {
+    "sqlglot": {
+      "from": "30.18.0",
+      "to": "30.27.0",
+      "reason": "direct dependency, exact pin, largest gap among directly pinned packages",
+      "verification": {
+        "method": "installed 30.27.0 into the verification venv and ran pytest -m 'not real_database'",
+        "result": "rejected",
+        "failures": 350,
+        "passed": 3907,
+        "root_cause": "sqlglot 30.27.0 no longer accepts qualify(infer_schema=...); app/core/schema_validation.py:56 passes infer_schema=False and on_qualify=..., so every schema-validation path raises TypeError",
+        "sample_error": "TypeError: qualify() got an unexpected keyword argument 'infer_schema'",
+        "rollback": "reinstalled 30.18.0; tests/test_core went from 383 passed + 330 failed back to 713 passed"
+      },
+      "decision": "keep 30.18.0; adapting to the new qualify() signature is a code change with its own verification, not a version bump"
+    },
+    "outdated_but_not_upgraded": [
+      {"package": "openai", "from": "2.54.0", "latest": "3.42.0", "reason": "transitive through litellm; a major bump must come from litellm"},
+      {"package": "python-dateutil", "from": "2.9.0.post0", "latest": "3.0.0", "reason": "major bump with no reported advisory driving it; not verified on this tree"},
+      {"package": "huggingface-hub", "from": "1.33.0", "latest": "2.4.0", "reason": "transitive, major bump, only used by the vector stack"},
+      {"package": "filelock", "from": "3.32.7", "latest": "4.2.5", "reason": "blocked by litellm <4.0 constraint"},
+      {"package": "mypy", "from": "2.4.0", "latest": "2.4.1", "reason": "pinned in pyproject [dev]; patch bump not yet re-verified"},
+      {"package": "ruff", "from": "0.17.1", "latest": "0.17.3", "reason": "pinned in pyproject [dev]; patch bump not yet re-verified"}
+    ]
+  }
+}
