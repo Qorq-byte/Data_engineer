@@ -137,3 +137,16 @@ assert user_idx.is_unique is False
 - **字段集没有统一**：collector 的 SQLite 表有 `diff_count`/`diff_summary`/`execution_success`，MySQL 的 `feedback` 表没有；agent 算出的 diff 只进 metadata 的 `has_diff`，不落任何库。两边"字段一致"无从谈起，只是"能被同一张表写入"。
 - **REST 的 `feedback_id` 仍是 `fb_{n}_{秒级时间戳}`**：进程内 n 递增，跨重启 + 同一秒理论上会撞键。本次没改，因为改它要动前端展示的 id 形态。
 - 7 种方言、真实模型容量、业务准确率等与前一阶段相同的缺口没有变化，见[发布检查单](release-checklist.md)。
+
+## 7. 远程验收
+
+`5faadb22d498663d380d02171ce2ef2059cb6004` 普通推送到 `codex/stub-consistency`，两个工作流在该 SHA 上均成功：
+
+| 工作流 | run id | 结论 | 关键步骤 |
+|---|---|---|---|
+| MVP checks | 41203016887 | success | `ruff check .`、`mypy app/`、`pytest -m 'not real_database'`、前端契约与构建 |
+| Real database acceptance | 41203016855 | success | `pytest tests/real_db -q --strict-markers`（postgres:16 + mysql:8.4 服务） |
+
+**"索引列已修好"这句的证据只在这里**：本地的 `tests/test_db` 不开真实 PG 连接，新查询与 `columns == ["user_id"]` 断言是在 `41203016855` 的 postgres:16 上第一次真正执行并通过的。
+
+一处如实记录的读取限制：本轮无法拉取作业日志逐条数（`/actions/jobs/{id}/logs` 返回 403 `Must have admin rights to Repository`），所以只有工作流级与步骤级的 success，没有"PG 19 通过 / MySQL 63 通过"这类逐项计数。上一阶段能给出计数，是因为当时能读到日志；这次读不到就不写数字。

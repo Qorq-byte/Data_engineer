@@ -105,8 +105,24 @@
     "the seven dialect adapters, real-model capacity, and business accuracy gaps from stages 44-49 are unchanged"
   ],
   "ci": {
-    "MVP checks": null,
-    "Real database acceptance": null,
-    "conclusion": "pending"
+    "sha": "5faadb22d498663d380d02171ce2ef2059cb6004",
+    "MVP checks": {
+      "run_id": 41203016887,
+      "conclusion": "success",
+      "steps_verified": [
+        "npm run check:frontend",
+        "npm run check:frontend:build",
+        "ruff check .",
+        "mypy app/",
+        "pytest -m 'not real_database'"
+      ]
+    },
+    "Real database acceptance": {
+      "run_id": 41203016855,
+      "conclusion": "success",
+      "steps_verified": ["pytest tests/real_db -q --strict-markers"],
+      "note": "this is the only place the new pg_get_indexdef query and the strengthened orders_user_idx assertion actually ran against PostgreSQL 16 and MySQL 8.4"
+    },
+    "unavailable": "per-test counts could not be read this round: the job-log endpoint answered 403 'Must have admin rights to Repository' while the workflow-level conclusion and every step conclusion are success"
   }
 }
