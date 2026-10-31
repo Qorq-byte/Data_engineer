@@ -9,7 +9,6 @@ terms, and applicable business rules.
 
 from __future__ import annotations
 
-import contextlib
 import time
 from typing import Any
 
@@ -63,8 +62,12 @@ class SchemaRetrievalAgent(BaseAgent):
             AgentResult.data = dict with keys:
               - ``filtered_schema``: SchemaSnapshot of candidate tables
               - ``tables``: list[str] of matched table names
-              - ``terms``: list[GlossaryTerm] matched business terms
-              - ``rules``: list[BusinessRule] matched rules
+              - ``terms``: list[tuple[str, GlossaryTerm, float]] of (matched term, term, score)
+              - ``rules``: list[RuleMatch] matched rules with scores
+
+            AgentResult.metadata records ``term_count`` / ``rule_count`` plus
+            ``term_match_error`` / ``rule_match_error``; the latter stay ``None``
+            unless the glossary or rule engine raised.
         """
         t0 = time.perf_counter()
         sqr = self._coerce_sqr(input)
@@ -86,20 +89,26 @@ class SchemaRetrievalAgent(BaseAgent):
                 tables = result.tables
 
             # ── Glossary matching ─────────────────────────────────
+            # GlossaryManager.match is synchronous; the previous `await ... domain_id=`
+            # call raised TypeError on both counts and contextlib.suppress turned it
+            # into a permanently empty term list. Failures are surfaced in metadata
+            # instead of being swallowed, but still must not abort retrieval.
             terms: list[tuple[str, GlossaryTerm, float]] = []
+            term_match_error: str | None = None
             if self._glossary is not None and sqr is not None:
-                with contextlib.suppress(Exception):
-                    terms = await self._glossary.match(
-                        sqr.raw_text, domain_id=domain_id
-                    )
+                try:
+                    terms = self._glossary.match(sqr.raw_text, domain=domain_id or None)
+                except Exception as exc:  # noqa: BLE001 - a broken glossary must not abort retrieval
+                    term_match_error = f"{type(exc).__name__}: {exc}"
 
             # ── Rule matching ─────────────────────────────────────
             matched_rules: list[RuleMatch] = []
+            rule_match_error: str | None = None
             if self._rules is not None and sqr is not None:
-                with contextlib.suppress(Exception):
-                    matched_rules = await self._rules.match(
-                        sqr.raw_text, domain_id=domain_id
-                    )
+                try:
+                    matched_rules = self._rules.match(sqr.raw_text, domain=domain_id or None)
+                except Exception as exc:  # noqa: BLE001 - a broken rule engine must not abort retrieval
+                    rule_match_error = f"{type(exc).__name__}: {exc}"
 
             elapsed = (time.perf_counter() - t0) * 1000
             return self._ok(
@@ -113,6 +122,8 @@ class SchemaRetrievalAgent(BaseAgent):
                 table_count=len(tables),
                 term_count=len(terms),
                 rule_count=len(matched_rules),
+                term_match_error=term_match_error,
+                rule_match_error=rule_match_error,
             )
 
         except Exception as exc:
