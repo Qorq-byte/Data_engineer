@@ -1,0 +1,112 @@
+{
+  "stage": 50,
+  "date": "2026-10-31",
+  "branch": "codex/stub-consistency",
+  "baseline_commit": "962daa4",
+  "scope": [
+    "tool_executor must not report success when no MCP client is configured",
+    "PostgreSQL indexes must report their key columns instead of an empty list",
+    "FeedbackAgent and POST /api/v1/feedback must agree on where feedback is stored",
+    "a skipped tool step must not be routed into execution_result"
+  ],
+  "item_1_tool_executor": {
+    "file": "app/agents/tool_executor.py",
+    "defect": "without an MCP client the agent returned _ok({'stub': True, ...}) with status=DONE, so a caller could not tell an unexecuted tool from a completed one",
+    "change": "_error('No MCP client configured; {server}.{tool} was not called') with server/tool in metadata; data stays None so no later layer can read it as a result",
+    "not_added": "no structured error code — AgentResult only carries errors: list[str], adding a code field would change every agent's serialisation",
+    "tests_file": "tests/test_agents/test_tool_executor.py",
+    "tests_rewritten": [
+      "test_execute_mcp_tool_without_client_is_an_error",
+      "test_convenience_call_mcp_tool_without_client_reports_failure"
+    ],
+    "suite": "14 passed"
+  },
+  "item_2_postgres_indexes": {
+    "file": "app/db/schema_extractor.py",
+    "defect": "indexes were read from pg_indexes.indexdef; is_unique was guessed from the text and columns was hardcoded to [] with the comment 'Parsing indexdef is complex; stub for now'",
+    "change": "query pg_index, join pg_class/pg_namespace, CROSS JOIN LATERAL generate_series(1, ix.indnkeyatts), array_agg(pg_get_indexdef(ix.indexrelid, k.ord, true) ORDER BY k.ord) as columns, ix.indisunique as is_unique",
+    "boundaries": [
+      "key columns only (indnkeyatts); INCLUDE columns are excluded",
+      "expression indexes return the expression text, not a bare column name",
+      "public schema only, matching the previous WHERE clause"
+    ],
+    "real_db_assertion": {
+      "file": "tests/real_db/test_acceptance.py",
+      "assertion": "orders_user_idx.columns == ['user_id'] and is_unique is False, for both PostgreSQL and MySQL fixtures"
+    },
+    "local_evidence": {
+      "command": "pytest tests/test_db -q",
+      "result": "140 passed, 1 skipped",
+      "limitation": "tests/test_db does not open a real PostgreSQL connection, so the new SQL is not exercised locally"
+    },
+    "ci_evidence": "produced only by the Real database acceptance workflow (postgres:16 service)"
+  },
+  "item_3_feedback_paths": {
+    "files": ["app/agents/feedback.py", "app/api/feedback.py"],
+    "defect": "the REST route wrote to MySQL and fed the learning collector while the agent only appended to a process-local list; both answered 'recorded', and the agent docstring still said 'Phase 4: stub'",
+    "change": {
+      "agent": "writes through MySQLStore.save_feedback with a 9-field row mapping identical to the REST route, reports storage/persisted, records persist_error, sets learning_pipeline=False",
+      "rest": "response gains storage/persisted/learning and a message chosen from the actual storage x learning combination",
+      "feedback_id": "agent rows use fb_agent_{uuid4 hex[:16]} because a per-process counter restarts at zero and would violate uk_feedback_id"
+    },
+    "deliberately_unchanged": "status stays 'recorded' — the in-process list really does hold the record, /feedback/stats and /feedback/recent read from it, and the workspace page branches on res.status === 'recorded' in three places",
+    "tests_added": 8,
+    "tests": {
+      "tests/test_agents/test_feedback.py": [
+        "test_no_store_reports_process_memory",
+        "test_store_receives_rest_shaped_row",
+        "test_store_failure_keeps_record_and_reports_error",
+        "test_feedback_ids_are_unique_across_agents"
+      ],
+      "tests/test_api/test_feedback_api.py": [
+        "test_response_reports_process_memory_when_no_store",
+        "test_response_reports_mysql_and_row_shape",
+        "test_store_failure_degrades_instead_of_claiming_success",
+        "test_collector_failure_is_reported"
+      ]
+    },
+    "before_fix": "8 failed, 14 passed (verified by stashing both source files and rerunning the same two files)",
+    "after_fix": "22 passed"
+  },
+  "item_4_skip_routing": {
+    "files": ["app/agents/collaboration.py", "app/agents/orchestrator.py"],
+    "defect": "_stub_result returned status=DONE with {'stub': True}, and _synthesize stored any dict under execution_result — which nodes/respond.py reads as has_result",
+    "change": "_stub_result -> _skip_result with {'skipped': True, 'reason': ...}; _synthesize routes skip markers to tool_skipped and only real results to execution_result",
+    "not_changed": "no SKIPPED member added to AgentStatus — SPEC §4.11.3 defines only IDLE/BUSY/DONE/ERROR and adding a member is a contract change",
+    "tests_added": 3,
+    "before_fix": "2 of 3 fail on the old tree (the third fails as ImportError because _skip_result does not exist there)",
+    "after_fix": "31 passed in tests/test_agents/test_orchestrator.py"
+  },
+  "verification": {
+    "ruff": "ruff check app/ tests/ -> All checks passed",
+    "mypy": "mypy app/ -> no issues in 191 source files (strict unchanged)",
+    "targeted": {
+      "tests/test_agents": "194 passed",
+      "tests/test_db": "140 passed, 1 skipped",
+      "tests/test_agents/test_feedback.py + tests/test_api/test_feedback_api.py": "22 passed"
+    },
+    "full_suite": {
+      "command": "pytest -m 'not real_database' -q",
+      "result": "4265 passed, 3 failed, 1 skipped, 82 deselected",
+      "duration_s": 371.28,
+      "known_failures": [
+        "tests/test_evaluation/test_acceptance_v3.py::test_cli_refuses_hardlink_input_alias",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_writers_do_not_mix_records",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_request_audits_keep_their_own_tokens"
+      ],
+      "known_failures_reproduce_on_untouched_tree": true
+    }
+  },
+  "not_covered": [
+    "the feedback MySQL write has not been exercised against a real MySQL server — tests use a fake store, and the Real database acceptance workflow covers tests/real_db, not the feedback endpoint",
+    "the learning pipeline still runs only on the REST path; the agent reports learning_pipeline=False instead of running it",
+    "field sets are not unified: the collector's SQLite table has diff_count/diff_summary/execution_success, the MySQL feedback table has none of them, and the agent's computed diff only reaches metadata",
+    "the REST route still builds feedback_id from a process counter plus a second-resolution timestamp",
+    "the seven dialect adapters, real-model capacity, and business accuracy gaps from stages 44-49 are unchanged"
+  ],
+  "ci": {
+    "MVP checks": null,
+    "Real database acceptance": null,
+    "conclusion": "pending"
+  }
+}

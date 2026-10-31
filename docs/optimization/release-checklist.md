@@ -139,3 +139,5 @@
 | 前端构建依赖审计口径不稳 | 同一 lockfile 在 10-23 报 7 项、10-31 报 0 项，差异来自注册表侧数据 | 只能按"构建工具链风险未消除"表述，不能宣称已清理 |
 
 阶段47 曾把 `agents/schema_retriever.py` 的术语/规则匹配死路径留作"待修"，该项已在阶段49修复（同步调用 + 失败写入 metadata，5 项回归测试，见[阶段49](stage-49.md)）。
+
+阶段50 把三处"看起来成功"改成显式失败或显式降级：`tool_executor` 在没有 MCP 客户端时返回 `ERROR`，不再用 `{"stub": True}` 加 `status=ok` 冒充执行完成；PostgreSQL 索引列改由 `pg_index` + `pg_get_indexdef` 取真实列名与顺序，不再是 `columns=[]`；`FeedbackAgent` 与 `POST /api/v1/feedback` 共用同一个 MySQL 写入并回报 `storage` / `persisted`，不再一边不问就答"已记录"。仍未覆盖的两点照旧记在这里：反馈写入没有对真实 MySQL 做验收（用例用的是 fake store），agent 也不触发学习管线（明确返回 `learning_pipeline=False`）。详见[阶段50](stage-50.md)。
