@@ -27,7 +27,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pyarrow as pa
 
@@ -367,7 +367,7 @@ class LanceDBStore:
         query = table.search(vector).metric("cosine").limit(top_k)
         if filter_expr:
             query = query.where(filter_expr, prefilter=True)
-        return query.to_list()
+        return cast("list[dict[str, Any]]", query.to_list())
 
     def delete(self, namespace: str, where: str) -> int:
         """Delete records from a namespace matching a filter expression.
@@ -380,15 +380,15 @@ class LanceDBStore:
             Number of records deleted.
         """
         table = self.ensure_namespace(namespace)
-        count_before = table.count_rows()
+        count_before = int(table.count_rows())
         table.delete(where)
-        count_after = table.count_rows()
+        count_after = int(table.count_rows())
         return count_before - count_after
 
     def count(self, namespace: str) -> int:
         """Return the number of rows in a namespace."""
         table = self.ensure_namespace(namespace)
-        return table.count_rows()
+        return int(table.count_rows())
 
     def snapshot_database(
         self, namespace: str, db_id: str, *, new_doc_ids: list[str] | None = None,

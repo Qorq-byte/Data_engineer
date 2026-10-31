@@ -728,9 +728,9 @@ class EvolvableContext:
         Returns:
             ``True`` if changes were detected and ingested.
         """
-        from app.rag.index_refresher import index_refresher
+        from app.rag import get_index_refresher
 
-        changed = index_refresher.check_schema_version(db_id, schema_snapshot)
+        changed: bool = get_index_refresher().check_schema_version(db_id, schema_snapshot)
         if changed:
             self.ingest_schema(
                 schema_snapshot,

@@ -123,7 +123,7 @@ class IndexRefresher:
                 results[db_id] = await self.refresh(db_id)
         return results
 
-    def schedule_refresh(self, interval_minutes: int = 60) -> asyncio.Task | None:
+    def schedule_refresh(self, interval_minutes: int = 60) -> asyncio.Task[None] | None:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:

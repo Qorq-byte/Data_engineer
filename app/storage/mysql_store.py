@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 import aiomysql
 
@@ -370,19 +370,23 @@ class MySQLStore:
         MySQLStore._instance = None
         logger.info("MySQLStore connection pool closed")
 
-    async def _execute(self, sql: str, params: tuple | None = None) -> int:
+    async def _execute(self, sql: str, params: tuple[Any, ...] | None = None) -> int:
         """Execute a write SQL statement, returning affected row count."""
         async with self._pool.acquire() as conn, conn.cursor() as cur:
             await cur.execute(sql, params)
             return cur.rowcount
 
-    async def _fetchone(self, sql: str, params: tuple | None = None) -> dict | None:
+    async def _fetchone(
+        self, sql: str, params: tuple[Any, ...] | None = None
+    ) -> dict[str, Any] | None:
         """Fetch a single row as dict."""
         async with self._pool.acquire() as conn, conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(sql, params)
             return await cur.fetchone()
 
-    async def _fetchall(self, sql: str, params: tuple | None = None) -> list[dict]:
+    async def _fetchall(
+        self, sql: str, params: tuple[Any, ...] | None = None
+    ) -> list[dict[str, Any]]:
         """Fetch all rows as list of dicts."""
         async with self._pool.acquire() as conn, conn.cursor(aiomysql.DictCursor) as cur:
             await cur.execute(sql, params)
@@ -434,7 +438,9 @@ class MySQLStore:
         if row is None:
             return None
         config = row["config"]
-        return json.loads(config) if isinstance(config, str) else config
+        if isinstance(config, str):
+            return cast("dict[str, Any]", json.loads(config))
+        return cast("dict[str, Any]", config)
 
     async def save_setting(self, section: str, config: dict[str, Any]) -> None:
         """Save or update a settings section."""
@@ -507,7 +513,7 @@ class MySQLStore:
         rows = await self._fetchall("SELECT * FROM datasource_connections ORDER BY updated_at DESC")
         return rows
 
-    async def get_connection(self, db_id: str) -> dict | None:
+    async def get_connection(self, db_id: str) -> dict[str, Any] | None:
         """Get a single connection profile."""
         return await self._fetchone(
             "SELECT * FROM datasource_connections WHERE db_id = %s", (db_id,)
@@ -527,7 +533,7 @@ class MySQLStore:
                 row["keywords"] = json.loads(row["keywords"])
         return rows
 
-    async def get_domain(self, name: str) -> dict | None:
+    async def get_domain(self, name: str) -> dict[str, Any] | None:
         """Get a single domain by name."""
         row = await self._fetchone("SELECT * FROM domains WHERE name = %s", (name,))
         if row and isinstance(row.get("keywords"), str):

@@ -27,7 +27,7 @@ try:
 
     _OPENAI_AVAILABLE = True
 except ImportError:
-    AsyncOpenAI = None  # type: ignore[assignment]
+    AsyncOpenAI = None  # type: ignore[misc, assignment]
     _OPENAI_AVAILABLE = False
 
 
@@ -248,9 +248,8 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         client: Any = None,
     ):
         self._model = model or os.getenv("OLLAMA_EMBEDDING_MODEL", self.DEFAULT_MODEL)
-        self._base_url = (
-            base_url or os.getenv("OLLAMA_BASE_URL", self.DEFAULT_BASE_URL)
-        ).rstrip("/")
+        resolved_base = base_url or os.getenv("OLLAMA_BASE_URL") or self.DEFAULT_BASE_URL
+        self._base_url = resolved_base.rstrip("/")
         raw_dim = (dimension if dimension is not None else
                    int(os.getenv("OLLAMA_EMBEDDING_DIM", str(self.DEFAULT_DIM))))
         if type(raw_dim) is not int or not 1 <= raw_dim <= 65536:
@@ -438,3 +437,36 @@ class EmbeddingGenerator:
     @property
     def dimension(self) -> int:
         return self.provider.dimension
+
+
+# ── Provider selection ────────────────────────────────────────────────
+
+
+def create_embedding_provider() -> EmbeddingProvider:
+    """Pick an embedding provider from ``RAG_EMBEDDING_PROVIDER`` / settings.
+
+    Reads the same switch as the RAG engine startup so every consumer of
+    embeddings (schema, metrics, documents, learning) resolves one provider:
+
+    - ``"ollama"`` → :class:`OllamaEmbeddingProvider` (local, no API key)
+    - ``"openai"`` → :class:`OpenAIEmbeddingProvider` (needs ``OPENAI_API_KEY``)
+    - ``"bge"`` → :class:`BGEEmbeddingProvider` (needs ``sentence-transformers``)
+    - ``"mock"`` or unset → :class:`MockEmbeddingProvider` (deterministic, no deps)
+    """
+    from app.config.settings import settings
+
+    provider_name = (
+        (os.getenv("RAG_EMBEDDING_PROVIDER", "") or settings.rag_embedding_provider).lower().strip()
+    )
+
+    if provider_name == "ollama":
+        return OllamaEmbeddingProvider(
+            model=settings.ollama_embedding_model,
+            base_url=settings.ollama_base_url,
+            dimension=settings.ollama_embedding_dim,
+        )
+    if provider_name == "openai" and os.getenv("OPENAI_API_KEY"):
+        return OpenAIEmbeddingProvider()
+    if provider_name == "bge":
+        return BGEEmbeddingProvider()
+    return MockEmbeddingProvider(dimension=MOCK_EMBEDDING_DIM)

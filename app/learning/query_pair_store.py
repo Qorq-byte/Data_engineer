@@ -113,9 +113,12 @@ class QueryPairStore:
     def _get_embedding_generator(self) -> Any:
         if self._embedding_gen is None:
             try:
-                from app.knowledge.retrieval.embedding import EmbeddingGenerator
+                from app.knowledge.retrieval.embedding import (
+                    EmbeddingGenerator,
+                    create_embedding_provider,
+                )
 
-                self._embedding_gen = EmbeddingGenerator()
+                self._embedding_gen = EmbeddingGenerator(provider=create_embedding_provider())
             except Exception:
                 self._embedding_gen = False  # sentinel: embedding unavailable
         return self._embedding_gen if self._embedding_gen is not False else None

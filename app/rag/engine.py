@@ -23,11 +23,8 @@ from typing import Any
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.document_store import DocumentStore
 from app.knowledge.retrieval.embedding import (
-    BGEEmbeddingProvider,
     EmbeddingGenerator,
-    MockEmbeddingProvider,
-    OllamaEmbeddingProvider,
-    OpenAIEmbeddingProvider,
+    create_embedding_provider,
 )
 from app.knowledge.retrieval.lancedb_store import LanceDBStore
 from app.knowledge.retrieval.metric_rag import MetricRAG
@@ -149,33 +146,13 @@ def get_index_refresher() -> Any:
 
 
 def _create_embedding_provider() -> Any:
-    """Pick an embedding provider based on environment and settings.
+    """Pick the embedding provider for engine startup.
 
-    Reads ``RAG_EMBEDDING_PROVIDER`` (Settings / env):
-        - ``"ollama"`` → OllamaEmbeddingProvider (local, no API key;
-          default model ``embeddinggemma`` via ``OLLAMA_EMBEDDING_MODEL``)
-        - ``"openai"`` → OpenAIEmbeddingProvider (needs OPENAI_API_KEY)
-        - ``"bge"`` → BGEEmbeddingProvider (needs sentence-transformers)
-        - ``"mock"`` or unset → MockEmbeddingProvider (deterministic, no deps)
+    Delegates to :func:`app.knowledge.retrieval.embedding.create_embedding_provider`
+    so startup and the learning store resolve the same provider; kept as a
+    module attribute because tests substitute it.
     """
-    from app.config.settings import settings
-
-    provider_name = (
-        (os.getenv("RAG_EMBEDDING_PROVIDER", "") or settings.rag_embedding_provider).lower().strip()
-    )
-
-    if provider_name == "ollama":
-        return OllamaEmbeddingProvider(
-            model=settings.ollama_embedding_model,
-            base_url=settings.ollama_base_url,
-            dimension=settings.ollama_embedding_dim,
-        )
-    elif provider_name == "openai" and os.getenv("OPENAI_API_KEY"):
-        return OpenAIEmbeddingProvider()
-    elif provider_name == "bge":
-        return BGEEmbeddingProvider()
-    else:
-        return MockEmbeddingProvider(dimension=256)
+    return create_embedding_provider()
 
 
 def _read_rag_settings() -> dict[str, Any]:
