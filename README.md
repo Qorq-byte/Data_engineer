@@ -115,8 +115,8 @@ python -m venv .venv
 # macOS/Linux
 source .venv/bin/activate
 
-# 安装依赖
-pip install -e ".[dev]"
+# 安装依赖（-c 使用已验证的版本快照，避免装到与本轮验收不同的版本）
+pip install -e ".[dev]" -c constraints.txt
 
 # 构建三页及本地 JS/CSS/字体（首次安装需要 npm 注册表或缓存）
 npm ci --ignore-scripts
@@ -609,7 +609,7 @@ MIT
 ### 可复现的本地检查与 CI
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev]" -c constraints.txt
 npm ci --ignore-scripts
 npm run check:frontend
 LITELLM_LOCAL_MODEL_COST_MAP=True RAG_EMBEDDING_PROVIDER=mock pytest
