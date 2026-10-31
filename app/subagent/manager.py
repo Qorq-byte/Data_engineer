@@ -296,24 +296,23 @@ class SubagentManager:
             Single metrics dict (if name given) or list of all metrics dicts.
         """
         if subagent_name:
-            m = self._usage_stats.get(subagent_name, {})
-            latencies = m.get("latencies", [])
-            return {
-                "subagent_name": subagent_name,
-                "total_invocations": m.get("total", 0),
-                "success_count": m.get("success", 0),
-                "avg_latency_ms": round(sum(latencies) / len(latencies), 1)
-                if latencies
-                else 0.0,
-                "last_100_success_rate": self.get_effectiveness_score(subagent_name),
-                "top_errors": m.get("errors", [])[-5:],
-                "suggested_adjustments": self.suggest_config_changes(subagent_name),
-            }
+            return self._metrics_for(subagent_name)
 
-        return [
-            self.get_metrics(name)  # type: ignore[arg-type]
-            for name in self._instances
-        ]
+        return [self._metrics_for(name) for name in self._instances]
+
+    def _metrics_for(self, subagent_name: str) -> dict[str, Any]:
+        """Usage metrics for a single subagent."""
+        m = self._usage_stats.get(subagent_name, {})
+        latencies = m.get("latencies", [])
+        return {
+            "subagent_name": subagent_name,
+            "total_invocations": m.get("total", 0),
+            "success_count": m.get("success", 0),
+            "avg_latency_ms": round(sum(latencies) / len(latencies), 1) if latencies else 0.0,
+            "last_100_success_rate": self.get_effectiveness_score(subagent_name),
+            "top_errors": m.get("errors", [])[-5:],
+            "suggested_adjustments": self.suggest_config_changes(subagent_name),
+        }
 
     # ── Housekeeping ──────────────────────────────────────────────────
 

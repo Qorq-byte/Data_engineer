@@ -22,8 +22,8 @@ from __future__ import annotations
 
 import functools
 import time
-from collections.abc import Callable
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, ParamSpec
 
 
 class PerformanceStore:
@@ -93,27 +93,33 @@ _store = PerformanceStore()
 # ── public API ─────────────────────────────────────────────────────────────
 
 
-def track_latency(name: str):
+_P = ParamSpec("_P")
+
+
+def track_latency(name: str) -> Callable[[Callable[_P, Any]], Callable[_P, Any]]:
     """Decorator: record function wall-clock latency.
 
-    Works with both sync and async functions.
+    Works with both sync and async functions; the wrapped signature is kept and
+    only the return value is widened to ``Any`` because the wrapper branches on
+    coroutine-ness at runtime.
 
     Args:
         name: Metric name for this operation (e.g. ``"generate_sql"``).
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[_P, Any]) -> Callable[_P, Any]:
         @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             start = time.perf_counter()
             try:
-                return await func(*args, **kwargs)
+                awaited: Awaitable[Any] = func(*args, **kwargs)
+                return await awaited
             finally:
                 elapsed = time.perf_counter() - start
                 _store.record_latency(name, elapsed)
 
         @functools.wraps(func)
-        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+        def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             start = time.perf_counter()
             try:
                 return func(*args, **kwargs)
@@ -130,23 +136,24 @@ def track_latency(name: str):
     return decorator
 
 
-def count_calls(name: str):
+def count_calls(name: str) -> Callable[[Callable[_P, Any]], Callable[_P, Any]]:
     """Decorator: increment a counter each time the function is called.
 
     Args:
         name: Counter name (e.g. ``"cache_lookup"``).
     """
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[_P, Any]) -> Callable[_P, Any]:
         @functools.wraps(func)
-        def wrapper(*args: Any, **kwargs: Any) -> Any:
+        def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             _store.increment(name)
             return func(*args, **kwargs)
 
         @functools.wraps(func)
-        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> Any:
             _store.increment(name)
-            return await func(*args, **kwargs)
+            awaited: Awaitable[Any] = func(*args, **kwargs)
+            return await awaited
 
         import asyncio
 

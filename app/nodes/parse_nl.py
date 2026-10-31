@@ -11,6 +11,8 @@ from the shared workflow context.
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.core.nlp_parser import NLParser
 from app.nodes.base import BaseNode, NodeInput, NodeOutput
 
@@ -103,8 +105,8 @@ class ParseNLNode(BaseNode):
         )
 
     async def update_context(
-        self, output: NodeOutput, shared_context: dict
-    ) -> dict:
+        self, output: NodeOutput, shared_context: dict[str, Any]
+    ) -> dict[str, Any]:
         """Merge the parsed SQR into the shared workflow context.
 
         The SQR is stored under the key ``"sqr"`` so downstream nodes

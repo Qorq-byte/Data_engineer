@@ -600,22 +600,24 @@ def _match_schema(
         kind = candidate["kind"]
 
         if kind == "table":
-            all_matches = _all_table_matches(name, schema, threshold)
-            for t_name, t_conf in all_matches:
+            table_matches = _all_table_matches(name, schema, threshold)
+            for t_name, t_conf in table_matches:
                 if t_name not in matched_tables or t_conf > matched_tables[t_name]:
                     matched_tables[t_name] = t_conf
 
         elif kind == "column":
-            all_matches = _all_column_matches(name, schema, threshold)
-            if all_matches:
+            column_matches = _all_column_matches(name, schema, threshold)
+            if column_matches:
                 # Best match determines the primary table
-                best_tbl, best_col, best_conf = all_matches[0]
+                best_tbl, best_col, best_conf = column_matches[0]
                 key = f"{best_tbl}.{best_col}" if best_tbl else best_col
                 # Only include tables with HIGH confidence (>= 0.8) in
                 # all_tables.  Substring matches (0.65/0.6) produce too
                 # many false positives — e.g. "name" matching "username"
                 # in knowledge_base, model_configs, etc.
-                all_tables = list(dict.fromkeys(m[0] for m in all_matches if m[0] and m[2] >= 0.8))
+                all_tables = list(
+                    dict.fromkeys(m[0] for m in column_matches if m[0] and m[2] >= 0.8)
+                )
                 if key not in matched_columns or best_conf > matched_columns[key]["confidence"]:
                     matched_columns[key] = {
                         "name": best_col,

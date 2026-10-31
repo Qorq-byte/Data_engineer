@@ -4,6 +4,7 @@ See SPEC §4.5.3 for the Dialect Adapter specification.
 """
 
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -330,7 +331,9 @@ class DialectAdapter:
         return cls(config)
 
     @classmethod
-    def validate_translation(cls, sql: str, source_dialect: str, target_dialect: str) -> dict:
+    def validate_translation(
+        cls, sql: str, source_dialect: str, target_dialect: str
+    ) -> dict[str, Any]:
         """Translate then validate SQL via sqlglot parse in the target dialect.
 
         Args:
@@ -342,7 +345,7 @@ class DialectAdapter:
             Dict with ``valid`` (bool), ``translated_sql`` (str), ``error`` (str or None).
         """
         adapter = cls.get_adapter(source_dialect)
-        result: dict = {"valid": True, "translated_sql": sql, "error": None}
+        result: dict[str, Any] = {"valid": True, "translated_sql": sql, "error": None}
         try:
             translated = adapter.translate(sql, target_dialect)
             result["translated_sql"] = translated

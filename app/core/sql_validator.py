@@ -76,7 +76,7 @@ class SQLValidator:
         schema: SchemaSnapshot | None = None,
         business_rules: list[Any] | None = None,
         *,
-        rules: list | None = None,
+        rules: list[Any] | None = None,
         skip_syntax: bool = False,
         skip_schema: bool = False,
         skip_types: bool = False,
@@ -424,8 +424,8 @@ class SQLValidator:
             return None
 
         # Unqualified column
-        col = columns.get(clean)
-        return col.type if col else None
+        matched = columns.get(clean)
+        return matched.type if matched else None
 
     def _extract_comparisons(self, sql: str) -> list[tuple[str, str, str]]:
         """Extract binary comparisons from WHERE / JOIN ON clauses.
@@ -558,7 +558,7 @@ class SQLValidator:
         return warnings
 
     @staticmethod
-    def _has_star_projection(statement: exp.Expression) -> bool:
+    def _has_star_projection(statement: exp.Expr) -> bool:
         """True if any SELECT in the statement projects ``*`` or ``t.*``."""
         for select in statement.find_all(exp.Select):
             for projection in select.expressions:

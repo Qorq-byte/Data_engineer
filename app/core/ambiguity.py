@@ -9,6 +9,7 @@ Resolution is deferred to the clarification phase (Phase 3 multi-agent).
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from app.models.query import Ambiguity, IntentType
 
@@ -283,7 +284,7 @@ class AmbiguityDetector:
         self,
         nl_text: str,
         intent: IntentType,
-        context: dict | None = None,  # noqa: ARG002  reserved for Phase 3
+        context: dict[str, Any] | None = None,  # noqa: ARG002  reserved for Phase 3
     ) -> list[Ambiguity]:
         """Detect ambiguity signals in *nl_text*.
 

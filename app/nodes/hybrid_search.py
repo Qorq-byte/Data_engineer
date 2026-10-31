@@ -63,17 +63,19 @@ class HybridSearchOutput:
     @property
     def best_table(self) -> str | None:
         """Return the most relevant table name from schema results, if any."""
-        for r in self.schema_results:
-            if getattr(r, "table_name", None):
-                return r.table_name
+        for result in self.schema_results:
+            table_name = getattr(result, "table_name", None)
+            if isinstance(table_name, str) and table_name:
+                return table_name
         return None
 
     @property
     def best_metric(self) -> str | None:
         """Return the most relevant metric name, if any."""
-        for r in self.metric_results:
-            if getattr(r, "name", None):
-                return r.name
+        for result in self.metric_results:
+            metric_name = getattr(result, "name", None)
+            if isinstance(metric_name, str) and metric_name:
+                return metric_name
         return None
 
 

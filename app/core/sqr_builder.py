@@ -9,6 +9,7 @@ Schema-aware column/table resolution is deferred to SchemaLinkingNode (Task 2.11
 from __future__ import annotations
 
 import re
+from typing import Any
 
 from app.models.query import (
     SQR,
@@ -152,7 +153,7 @@ class SQRBuilder:
         time_range: TimeRange | None = None,
         ambiguities: list[Ambiguity] | None = None,
         entities: list[Entity] | None = None,
-        context: dict | None = None,  # noqa: ARG002  reserved for Phase 3
+        context: dict[str, Any] | None = None,  # noqa: ARG002  reserved for Phase 3
     ) -> SQR:
         """Assemble the final SQR from all parsed components.
 

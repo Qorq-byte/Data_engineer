@@ -12,6 +12,8 @@ Pipeline:
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.core.ambiguity import AmbiguityDetector
 from app.core.intent_classifier import IntentClassifier
 from app.core.language_detector import LanguageDetector
@@ -60,7 +62,7 @@ class NLParser:
     # Public API
     # ------------------------------------------------------------------
 
-    async def parse(self, nl_text: str, context: dict | None = None) -> SQR:
+    async def parse(self, nl_text: str, context: dict[str, Any] | None = None) -> SQR:
         """Run the full 5-step NL→SQR pipeline.
 
         Args:
