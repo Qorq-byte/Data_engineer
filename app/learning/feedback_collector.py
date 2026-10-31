@@ -121,14 +121,14 @@ class FeedbackCollector:
         query_id: str,
         nl_input: str,
         sql_generated: str,
-        sql_final: str = "",
+        sql_final: str | None = "",
         rating: int = 0,
-        feedback_text: str = "",
+        feedback_text: str | None = "",
         diff_operations: list[DiffOp] | None = None,
         execution_success: bool = False,
         execution_time_ms: int = 0,
         user_cancelled: bool = False,
-        domain_id: str = "",
+        domain_id: str | None = "",
     ) -> str:
         """Persist a feedback record and return its unique ID.
 

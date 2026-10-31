@@ -30,7 +30,7 @@ _feedback_store: list[dict[str, Any]] = []
 
 
 @router.post("/feedback")
-async def submit_feedback(body: FeedbackRequest) -> dict:
+async def submit_feedback(body: FeedbackRequest) -> dict[str, Any]:
     record = {
         "id": f"fb_{len(_feedback_store) + 1}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
         "query_id": body.query_id,
@@ -46,7 +46,8 @@ async def submit_feedback(body: FeedbackRequest) -> dict:
     _feedback_store.append(record)
     try:
         store = get_store()
-        await store.save_feedback(record)
+        if store is not None:
+            await store.save_feedback(record)
     except Exception as e:
         logger.warning("MySQL store unavailable: %s", e)
     try:
@@ -97,10 +98,11 @@ async def submit_feedback(body: FeedbackRequest) -> dict:
 
 
 @router.get("/feedback/stats")
-async def feedback_stats() -> dict:
+async def feedback_stats() -> dict[str, Any]:
     try:
         store = get_store()
-        return await store.get_feedback_stats()
+        if store is not None:
+            return await store.get_feedback_stats()
     except Exception as e:
         logger.warning("MySQL store unavailable, falling back to in-memory: %s", e)
     if not _feedback_store:
@@ -118,11 +120,12 @@ async def feedback_stats() -> dict:
 
 
 @router.get("/feedback/recent")
-async def recent_feedback(limit: int = 20) -> dict:
+async def recent_feedback(limit: int = 20) -> dict[str, Any]:
     try:
         store = get_store()
-        records = await store.get_recent_feedback(limit)
-        return {"records": records, "total": len(records)}
+        if store is not None:
+            records = await store.get_recent_feedback(limit)
+            return {"records": records, "total": len(records)}
     except Exception as e:
         logger.warning("MySQL store unavailable, falling back to in-memory: %s", e)
     records = _feedback_store[-limit:] if _feedback_store else []

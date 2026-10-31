@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -27,7 +28,7 @@ router = APIRouter()
 
 
 @router.get("/databases")
-async def list_databases() -> dict:
+async def list_databases() -> dict[str, Any]:
     """List all connected databases."""
     connections = ConnectionFactory.list_all()
     return {
@@ -46,7 +47,7 @@ async def list_databases() -> dict:
 
 
 @router.post("/databases/test")
-async def test_connection(body: dict) -> dict:
+async def test_connection(body: dict[str, Any]) -> dict[str, Any]:
     """Test a database connection without storing it.
 
     Request body:
@@ -84,7 +85,7 @@ async def test_connection(body: dict) -> dict:
             finally:
                 await cursor.close()
         await ConnectionFactory.aclose("test_probe")
-        result: dict = {
+        result: dict[str, Any] = {
             "status": "ok",
             "message": f"Successfully connected to {db_type_str}",
         }
@@ -98,7 +99,7 @@ async def test_connection(body: dict) -> dict:
 
 
 @router.post("/databases/connect")
-async def connect_database(body: dict) -> dict:
+async def connect_database(body: dict[str, Any]) -> dict[str, Any]:
     """Add a new database connection (persisted for the session).
 
     Request body:
@@ -146,7 +147,7 @@ async def connect_database(body: dict) -> dict:
 
 
 @router.get("/schema/{db_id}")
-async def get_schema(db_id: str) -> dict:
+async def get_schema(db_id: str) -> dict[str, Any]:
     """Get the full schema snapshot for a connected database."""
     try:
         conn = ConnectionFactory.get(db_id)
@@ -211,7 +212,7 @@ async def get_schema(db_id: str) -> dict:
 
 
 @router.post("/schema/{db_id}/refresh")
-async def refresh_schema(db_id: str) -> dict:
+async def refresh_schema(db_id: str) -> dict[str, Any]:
     """Refresh the schema cache for a connected database.
 
     Re-extracts the full schema snapshot from the live database connection.
@@ -270,7 +271,7 @@ async def search_schema(
     search_columns: bool = Query(default=True, description="Include column names in search"),
     search_comments: bool = Query(default=True, description="Include comments in search"),
     limit: int = Query(default=20, ge=1, le=100, description="Max results"),
-) -> dict:
+) -> dict[str, Any]:
     """Search tables and columns in a database schema by keyword.
 
     Performs case-insensitive substring matching against table names,
@@ -296,7 +297,7 @@ async def search_schema(
         raise HTTPException(status_code=500, detail=f"Schema extraction failed: {e}") from e
 
     query_lower = q.strip().lower()
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
 
     for table_name, table in snapshot.tables.items():
         table_match = False
@@ -310,7 +311,7 @@ async def search_schema(
             table_match = True
 
         # Check column matches
-        matched_columns: list[dict] = []
+        matched_columns: list[dict[str, Any]] = []
         for col in table.columns:
             col_match = False
             if search_columns and query_lower in col.name.lower():
@@ -353,7 +354,7 @@ async def search_schema(
 
 
 @router.delete("/databases/{db_id}")
-async def disconnect_database(db_id: str) -> dict:
+async def disconnect_database(db_id: str) -> dict[str, Any]:
     """Remove and close a database connection."""
     try:
         info = ConnectionFactory.get_info(db_id)
@@ -402,7 +403,7 @@ async def disconnect_database(db_id: str) -> dict:
 
 
 @router.get("/databases/{db_id}/catalogs")
-async def list_catalogs(db_id: str) -> dict:
+async def list_catalogs(db_id: str) -> dict[str, Any]:
     """List available databases/catalogs on a connected server.
 
     For MySQL: runs ``SHOW DATABASES``.
@@ -462,7 +463,7 @@ async def list_catalogs(db_id: str) -> dict:
 
 
 @router.get("/schema/{db_id}/pii-summary")
-async def get_pii_summary(db_id: str) -> dict:
+async def get_pii_summary(db_id: str) -> dict[str, Any]:
     """Get a summary of PII (personally identifiable information) columns.
 
     Returns the count of detected PII columns grouped by ``pii_type``,

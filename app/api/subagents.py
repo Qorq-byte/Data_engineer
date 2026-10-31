@@ -5,6 +5,8 @@ See SPEC §4.10.5 (delivery channels) for the full specification.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -17,11 +19,11 @@ class SubagentQueryRequest(BaseModel):
     nl_text: str = Field(..., description="Natural language query text", min_length=1)
     domain: str = Field(default="", description="Domain override")
     database: str = Field(default="", description="Database identifier")
-    context: dict | None = Field(default=None, description="Additional context")
+    context: dict[str, Any] | None = Field(default=None, description="Additional context")
 
 
 @router.post("/subagents/{name}/query")
-async def query_subagent(name: str, body: SubagentQueryRequest) -> dict:
+async def query_subagent(name: str, body: SubagentQueryRequest) -> dict[str, Any]:
     """Execute a natural language query through a specific subagent.
 
     Routes the NL query to the named subagent, which applies its scoped
@@ -51,7 +53,7 @@ async def query_subagent(name: str, body: SubagentQueryRequest) -> dict:
 
 
 @router.get("/subagents")
-async def list_subagents() -> dict:
+async def list_subagents() -> dict[str, Any]:
     """List all registered subagents and their status."""
     from app.subagent.manager import subagent_manager
 
@@ -64,7 +66,7 @@ async def list_subagents() -> dict:
 
 
 @router.get("/subagents/{name}")
-async def get_subagent(name: str) -> dict:
+async def get_subagent(name: str) -> dict[str, Any]:
     """Get details for a specific subagent."""
     from app.subagent.manager import subagent_manager
 

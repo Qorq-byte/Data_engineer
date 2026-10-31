@@ -81,7 +81,7 @@ def record_trace(
 
 
 @router.get("/workflows")
-async def list_workflows() -> dict:
+async def list_workflows() -> dict[str, Any]:
     return {
         "plans": _WORKFLOW_PLANS,
         "total": len(_WORKFLOW_PLANS),
@@ -90,7 +90,7 @@ async def list_workflows() -> dict:
 
 
 @router.get("/workflows/stats")
-async def workflow_stats() -> dict:
+async def workflow_stats() -> dict[str, Any]:
     success_traces = [t for t in _TRACE_STORE if t["status"] == "success"]
     durations = []
     for t in _TRACE_STORE:
@@ -110,7 +110,7 @@ async def workflow_stats() -> dict:
 
 
 @router.get("/workflows/traces")
-async def workflow_traces(limit: int = 20, plan: str = "") -> dict:
+async def workflow_traces(limit: int = 20, plan: str = "") -> dict[str, Any]:
     traces = _TRACE_STORE
     if plan:
         traces = [t for t in traces if t["plan"] == plan]
@@ -118,7 +118,7 @@ async def workflow_traces(limit: int = 20, plan: str = "") -> dict:
 
 
 @router.get("/workflows/{workflow_id}/history")
-async def workflow_history(workflow_id: str, limit: int = 20) -> dict:
+async def workflow_history(workflow_id: str, limit: int = 20) -> dict[str, Any]:
     traces = [t for t in _TRACE_STORE if t["plan"].startswith(workflow_id)]
     if not traces:
         raise HTTPException(
@@ -132,7 +132,7 @@ async def workflow_history(workflow_id: str, limit: int = 20) -> dict:
 
 
 @router.post("/workflows/custom", status_code=201)
-async def create_custom_workflow(body: dict) -> dict:
+async def create_custom_workflow(body: dict[str, Any]) -> dict[str, Any]:
     """Create a custom workflow template.
 
     Request body:
@@ -166,7 +166,7 @@ async def create_custom_workflow(body: dict) -> dict:
 
 
 @router.post("/workflows/simulate")
-async def simulate_routing(body: dict) -> dict:
+async def simulate_routing(body: dict[str, Any]) -> dict[str, Any]:
     """Simulate workflow routing for a given NL query.
 
     Request body: {"nl_text": "...", "domain": "..."}

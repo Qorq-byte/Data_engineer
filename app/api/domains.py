@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from fastapi import APIRouter, HTTPException
@@ -154,7 +154,7 @@ class TermAddRequest(BaseModel):
     term_en: str = Field(default="", description="English term name")
     description: str = Field(default="", description="Term description")
     expression: str = Field(default="", description="SQL expression")
-    mapping_type: str = Field(
+    mapping_type: Literal["derived_column", "filter_condition", "table_ref"] = Field(
         default="derived_column",
         description="Mapping type: derived_column, filter_condition, or table_ref",
     )
@@ -191,9 +191,9 @@ async def list_domains() -> dict[str, Any]:
     if store is not None:
         try:
             mysql_domains = await store.get_domains()
-            domains: list[dict[str, Any]] = []
+            db_domains: list[dict[str, Any]] = []
             for row in mysql_domains:
-                domains.append(
+                db_domains.append(
                     {
                         "name": row.get("name", ""),
                         "label": {"zh": row.get("label_zh", ""), "en": row.get("label_en", "")},
@@ -210,11 +210,11 @@ async def list_domains() -> dict[str, Any]:
                         "is_active": bool(row.get("is_active", False)),
                     }
                 )
-            active_row = next((d for d in domains if d["is_active"]), None)
+            active_row = next((d for d in db_domains if d["is_active"]), None)
             return {
-                "domains": domains,
+                "domains": db_domains,
                 "active": active_row["name"] if active_row else _domain_manager.active_name,
-                "total": len(domains),
+                "total": len(db_domains),
             }
         except Exception:
             pass  # Fall through to YAML
@@ -475,7 +475,7 @@ async def add_glossary_term(domain_id: str, req: TermAddRequest) -> dict[str, An
     if req.expression:
         mapping = TermMapping(
             expression=req.expression,
-            type=req.mapping_type,  # type: ignore
+            type=req.mapping_type,
             table=req.table,
             condition=req.condition,
             precision=req.precision,

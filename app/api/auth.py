@@ -15,7 +15,7 @@ import secrets
 import uuid
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -70,7 +70,7 @@ def _ensure_avatar_dir() -> None:
 # ── Helper: build response from a row ───────────────────────────
 
 
-def _row_to_response(row: dict) -> UserResponse:
+def _row_to_response(row: dict[str, Any]) -> UserResponse:
     """Convert a users table row dict to a UserResponse."""
     return UserResponse(
         id=row["id"],
@@ -83,7 +83,7 @@ def _row_to_response(row: dict) -> UserResponse:
     )
 
 
-def _row_to_token(row: dict) -> TokenResponse:
+def _row_to_token(row: dict[str, Any]) -> TokenResponse:
     """Convert a users table row dict to a TokenResponse with JWT."""
     user_id = row["id"]
     username = row["username"]
@@ -99,7 +99,7 @@ def _row_to_token(row: dict) -> TokenResponse:
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_security)],
-) -> dict:
+) -> dict[str, Any]:
     """FastAPI dependency that validates the Bearer token and returns user info."""
     if credentials is None:
         raise HTTPException(status_code=401, detail="Authentication required")
@@ -199,7 +199,7 @@ async def login(body: LoginRequest) -> TokenResponse:
 
 
 @router.get("/me", response_model=UserResponse)
-async def me(current_user: Annotated[dict, Depends(get_current_user)]) -> UserResponse:
+async def me(current_user: Annotated[dict[str, Any], Depends(get_current_user)]) -> UserResponse:
     """Return the currently authenticated user's profile."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
@@ -222,8 +222,8 @@ async def me(current_user: Annotated[dict, Depends(get_current_user)]) -> UserRe
 @router.put("/password")
 async def change_password(
     body: ChangePasswordRequest,
-    current_user: Annotated[dict, Depends(get_current_user)],
-) -> dict:
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
     """Change the current user's password."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
@@ -258,8 +258,8 @@ async def change_password(
 @router.post("/avatar")
 async def upload_avatar(
     file: Annotated[UploadFile, File()],
-    current_user: Annotated[dict, Depends(get_current_user)],
-) -> dict:
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
     """Upload a new avatar image for the current user."""
     # Validate file type
     allowed_types = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -303,8 +303,8 @@ async def upload_avatar(
 @router.delete("/account")
 async def delete_account(
     body: DeleteAccountRequest,
-    current_user: Annotated[dict, Depends(get_current_user)],
-) -> dict:
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
     """Permanently delete the current user's account."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:

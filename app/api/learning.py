@@ -87,7 +87,7 @@ def record_query(nl_text: str = "", sql_text: str = "", domain: str = "") -> Non
             _learning_store["quality_trends"] = _learning_store["quality_trends"][-90:]
 
 
-def _sync_with_feedback_store():
+def _sync_with_feedback_store() -> None:
     """Sync learning stats from the feedback API store."""
     try:
         from app.api.feedback import _feedback_store
@@ -178,7 +178,7 @@ def _get_fresh_candidates() -> list[dict[str, Any]]:
 
 
 @router.get("/learning/stats")
-async def learning_stats() -> dict:
+async def learning_stats() -> dict[str, Any]:
     """Get learning statistics.
 
     Uses in-memory store (populated by real-time record_query calls) as the
@@ -220,7 +220,9 @@ async def learning_stats() -> dict:
             from app.storage.mysql_store import get_store
 
             store = get_store()
-            mysql_stats = await store.get_learning_stats()
+            mysql_stats: dict[str, Any] | None = None
+            if store is not None:
+                mysql_stats = await store.get_learning_stats()
             if mysql_stats and mysql_stats.get("total_queries", 0) > 0:
                 result.update(mysql_stats)
         except Exception:
@@ -238,7 +240,7 @@ async def learning_stats() -> dict:
 
 
 @router.get("/learning/query-pairs")
-async def query_pairs(limit: int = 20, domain: str = "") -> dict:
+async def query_pairs(limit: int = 20, domain: str = "") -> dict[str, Any]:
     """Get historical NL-SQL query pairs.
 
     Uses in-memory store (populated by real-time record_query calls) as the
@@ -279,7 +281,7 @@ async def query_pairs(limit: int = 20, domain: str = "") -> dict:
 
 
 @router.get("/learning/rule-candidates")
-async def rule_candidates(status: str = "pending_review") -> dict:
+async def rule_candidates(status: str = "pending_review") -> dict[str, Any]:
     """Get rule candidates from feedback patterns."""
     try:
         candidate_dicts = _get_fresh_candidates()
@@ -358,7 +360,7 @@ async def rule_candidates(status: str = "pending_review") -> dict:
 
 
 @router.post("/learning/rule-candidates/review")
-async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict:
+async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict[str, Any]:
     """Approve or reject a rule candidate."""
     if action not in ("approve", "reject"):
         return {"status": "error", "message": f"Invalid action: {action}"}
@@ -457,7 +459,7 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict:
 
 
 @router.get("/learning/quality")
-async def quality_trends(days: int = 30) -> dict:
+async def quality_trends(days: int = 30) -> dict[str, Any]:
     """Get quality trend data.
 
     Uses in-memory store (populated by real-time record_query calls) as the
@@ -550,7 +552,7 @@ async def quality_trends(days: int = 30) -> dict:
 
 
 @router.post("/learning/rag/refresh")
-async def refresh_rag_index(db_id: str | None = None) -> dict:
+async def refresh_rag_index(db_id: str | None = None) -> dict[str, Any]:
     """Manually trigger RAG index refresh for all or a specific database.
 
     Args:
@@ -585,7 +587,7 @@ async def refresh_rag_index(db_id: str | None = None) -> dict:
 
 
 @router.get("/learning/rag/stats")
-async def rag_stats() -> dict:
+async def rag_stats() -> dict[str, Any]:
     """Get RAG index statistics across all namespaces."""
     try:
         from app.rag import get_document_store, get_metric_rag, get_schema_rag
@@ -604,7 +606,7 @@ async def rag_stats() -> dict:
 
 
 @router.get("/learning/rag/status")
-async def rag_status() -> dict:
+async def rag_status() -> dict[str, Any]:
     """Operator-only refresh history and live process-local Schema trust state."""
     try:
         from app.rag import get_index_refresher
@@ -621,7 +623,7 @@ async def rag_status() -> dict:
 
 
 @router.post("/learning/rag/clear")
-async def clear_rag_index(request: Request, body: dict | None = None) -> dict:
+async def clear_rag_index(request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
     """Clear RAG indices to remove stale data from previously-disconnected databases.
 
     Request body (all optional):

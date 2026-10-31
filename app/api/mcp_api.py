@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -93,10 +94,13 @@ class RegisterServerRequest(BaseModel):
     """Request body for POST /api/v1/mcp/servers/register."""
 
     name: str = Field(..., min_length=1, description="MCP server name")
-    server_type: str = Field(
-        default="custom", description="Server type: database, knowledge, vector, learning, custom"
+    server_type: Literal["database", "knowledge", "vector", "learning", "external"] = Field(
+        default="external",
+        description="Server type: database, knowledge, vector, learning or external",
     )
-    transport: str = Field(default="sse", description="Transport: sse or stdio")
+    transport: Literal["sse", "stdio"] = Field(
+        default="sse", description="Transport: sse or stdio"
+    )
     host: str = Field(default="127.0.0.1", description="Server host")
     port: int = Field(default=8080, ge=1, le=65535, description="Server port")
     description: str = Field(default="", description="Server description")
@@ -105,11 +109,11 @@ class RegisterServerRequest(BaseModel):
 class CallToolRequest(BaseModel):
     """Request body for POST /api/v1/mcp/tools/{tool_id}/call."""
 
-    arguments: dict = Field(default_factory=dict, description="Tool arguments")
+    arguments: dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
 
 
 @router.get("/mcp/servers")
-async def list_mcp_servers() -> dict:
+async def list_mcp_servers() -> dict[str, Any]:
     servers = mcp_registry.list_all()
     if not servers:
         # For built-in fallback, respect stopped state
@@ -145,7 +149,7 @@ async def list_mcp_servers() -> dict:
 
 
 @router.get("/mcp/servers/{name}")
-async def get_mcp_server(name: str) -> dict:
+async def get_mcp_server(name: str) -> dict[str, Any]:
     try:
         s = mcp_registry.get(name)
     except KeyError:
@@ -164,7 +168,7 @@ async def get_mcp_server(name: str) -> dict:
 
 
 @router.post("/mcp/servers/register", status_code=201)
-async def register_mcp_server(body: RegisterServerRequest) -> dict:
+async def register_mcp_server(body: RegisterServerRequest) -> dict[str, Any]:
     """Register a new MCP server."""
     from app.models.mcp import MCPServerConfig
 
@@ -195,7 +199,7 @@ async def register_mcp_server(body: RegisterServerRequest) -> dict:
 
 
 @router.delete("/mcp/servers/{name}")
-async def remove_mcp_server(name: str) -> dict:
+async def remove_mcp_server(name: str) -> dict[str, Any]:
     """Remove a registered MCP server."""
     try:
         mcp_registry.get(name)
@@ -209,7 +213,7 @@ async def remove_mcp_server(name: str) -> dict:
 
 
 @router.post("/mcp/servers/{name}/stop")
-async def stop_mcp_server(name: str) -> dict:
+async def stop_mcp_server(name: str) -> dict[str, Any]:
     """Stop a running MCP server. The server remains registered but is marked as stopped."""
     # Check if server exists in registry or built-in list
     try:
@@ -224,7 +228,7 @@ async def stop_mcp_server(name: str) -> dict:
 
 
 @router.post("/mcp/servers/{name}/start")
-async def start_mcp_server(name: str) -> dict:
+async def start_mcp_server(name: str) -> dict[str, Any]:
     """Start a previously stopped MCP server."""
     try:
         mcp_registry.get(name)
@@ -238,7 +242,7 @@ async def start_mcp_server(name: str) -> dict:
 
 
 @router.get("/mcp/servers/{name}/tools")
-async def list_mcp_server_tools(name: str) -> dict:
+async def list_mcp_server_tools(name: str) -> dict[str, Any]:
     """Get available tools for a registered MCP server."""
     try:
         s = mcp_registry.get(name)
@@ -252,7 +256,7 @@ async def list_mcp_server_tools(name: str) -> dict:
 
 
 @router.get("/mcp/servers/{name}/resources")
-async def list_mcp_server_resources(name: str) -> dict:
+async def list_mcp_server_resources(name: str) -> dict[str, Any]:
     """Get available resources for a registered MCP server."""
     try:
         s = mcp_registry.get(name)
@@ -266,7 +270,7 @@ async def list_mcp_server_resources(name: str) -> dict:
 
 
 @router.post("/mcp/tools/{tool_id}/call")
-async def call_mcp_tool(tool_id: str, body: CallToolRequest) -> dict:
+async def call_mcp_tool(tool_id: str, body: CallToolRequest) -> dict[str, Any]:
     """Call a registered MCP tool directly (debugging endpoint)."""
     # Find the tool across all registered servers
     for s in mcp_registry.list_all():
@@ -285,7 +289,7 @@ async def call_mcp_tool(tool_id: str, body: CallToolRequest) -> dict:
 
 
 @router.get("/mcp/resources/{resource_uri:path}")
-async def read_mcp_resource(resource_uri: str) -> dict:
+async def read_mcp_resource(resource_uri: str) -> dict[str, Any]:
     """Read content from a registered MCP resource."""
     # Find the resource across all registered servers
     for s in mcp_registry.list_all():
@@ -304,7 +308,7 @@ async def read_mcp_resource(resource_uri: str) -> dict:
 
 
 @router.post("/mcp/servers/{name}/health")
-async def check_mcp_server_health(name: str) -> dict:
+async def check_mcp_server_health(name: str) -> dict[str, Any]:
     try:
         mcp_registry.get(name)
     except KeyError:

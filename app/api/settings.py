@@ -215,7 +215,7 @@ def _public_settings(value: Any) -> Any:
 
 
 @router.get("/settings")
-async def get_all_settings() -> dict:
+async def get_all_settings() -> dict[str, Any]:
     """Get all system settings."""
     from app.db.runtime import gate
 
@@ -606,7 +606,7 @@ def _rag_settings_view(config: dict[str, Any], source: str) -> dict[str, Any]:
 
 
 @router.get("/settings/available-models")
-async def get_available_models() -> dict:
+async def get_available_models() -> dict[str, Any]:
     """List all available LLM models across all providers.
 
     A model is ``available`` when its provider is enabled and either has a

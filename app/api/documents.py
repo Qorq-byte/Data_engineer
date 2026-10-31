@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 from datetime import datetime
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -38,7 +39,7 @@ class DocumentUploadRequest(BaseModel):
 
 
 @router.post("/documents/upload", status_code=201)
-async def upload_document(body: DocumentUploadRequest) -> dict:
+async def upload_document(body: DocumentUploadRequest) -> dict[str, Any]:
     """Upload a Markdown document for RAG indexing.
 
     Content is automatically chunked (Markdown-aware, ~512 tokens per chunk
@@ -91,7 +92,7 @@ async def upload_document(body: DocumentUploadRequest) -> dict:
 
 
 @router.get("/documents")
-async def list_documents() -> dict:
+async def list_documents() -> dict[str, Any]:
     """Get document index statistics."""
     try:
         from app.rag import get_document_store
@@ -107,7 +108,7 @@ async def list_documents() -> dict:
 
 
 @router.delete("/documents/{doc_id}")
-async def delete_document(doc_id: str) -> dict:
+async def delete_document(doc_id: str) -> dict[str, Any]:
     """Delete an indexed document and all its chunks from both backends."""
     try:
         from app.rag import get_document_store
