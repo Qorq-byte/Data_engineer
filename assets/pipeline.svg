@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="340" viewBox="0 0 960 340" role="img" aria-labelledby="t d">
+  <title id="t">NL2SQL pipeline</title>
+  <desc id="d">Five fixed workflow nodes — parse_nl, schema_linking, generate_sql, validate_sql, execute_sql — driven by the plan YAML, with ConstraintEnforcer and PermissionManager on a side rail.</desc>
+
+  <rect width="960" height="340" fill="#0d1117"/>
+
+  <g font-family="Segoe UI, system-ui, -apple-system, sans-serif">
+    <text x="44" y="30" font-size="11" fill="#c9d1d9">NL2SQL pipeline</text>
+    <text x="916" y="30" font-size="9" fill="#6e7681" text-anchor="end">fixed node_order · WorkflowRunner walks the plan</text>
+    <line x1="44" y1="48" x2="916" y2="48" stroke="#30363d" stroke-width="1"/>
+  </g>
+
+  <!-- side rail: constraint / permission bypass -->
+  <g stroke="#2d343e" stroke-width="1">
+    <line x1="116" y1="196" x2="844" y2="196" stroke-dasharray="5 5"/>
+  </g>
+  <g stroke="#2d343e" stroke-width="1">
+    <line x1="116" y1="152" x2="116" y2="196" stroke="#2ea043"/>
+    <line x1="298" y1="152" x2="298" y2="196" stroke="#2ea043"/>
+    <line x1="480" y1="152" x2="480" y2="196" stroke="#58a6ff"/>
+    <line x1="662" y1="152" x2="662" y2="196"/>
+    <line x1="844" y1="152" x2="844" y2="196"/>
+  </g>
+
+  <!-- nodes -->
+  <g font-family="Segoe UI, system-ui, sans-serif">
+    <!-- 1 done -->
+    <rect x="41" y="76" width="150" height="74" rx="8" fill="#0f2a18" stroke="#2ea043" stroke-width="2"/>
+    <text x="53" y="93" font-size="9" fill="#56d364" font-family="ui-monospace, Consolas, monospace">1</text>
+    <text x="67" y="93" font-size="11" font-weight="600" fill="#7ee787">parse_nl</text>
+    <text x="53" y="116" font-size="9" fill="#56d364">language · intent · time</text>
+    <text x="177" y="93" font-size="9" fill="#7ee787" text-anchor="end" font-family="ui-monospace, Consolas, monospace">✓</text>
+
+    <!-- 2 done -->
+    <rect x="223" y="76" width="150" height="74" rx="8" fill="#0f2a18" stroke="#2ea043" stroke-width="2"/>
+    <text x="235" y="93" font-size="9" fill="#56d364" font-family="ui-monospace, Consolas, monospace">2</text>
+    <text x="249" y="93" font-size="11" font-weight="600" fill="#7ee787">schema_linking</text>
+    <text x="235" y="116" font-size="9" fill="#56d364">tables + columns → context</text>
+    <text x="359" y="93" font-size="9" fill="#7ee787" text-anchor="end" font-family="ui-monospace, Consolas, monospace">✓</text>
+
+    <!-- 3 active -->
+    <rect x="399" y="70" width="162" height="86" rx="11" fill="#173a5e"/>
+    <rect x="403" y="74" width="154" height="78" rx="10" fill="#15375a"/>
+    <rect x="405" y="76" width="150" height="74" rx="8" fill="#132f4c" stroke="#58a6ff" stroke-width="2"/>
+    <text x="417" y="93" font-size="9" fill="#a5d6ff" font-family="ui-monospace, Consolas, monospace">3</text>
+    <text x="431" y="93" font-size="11" font-weight="600" fill="#e6edf3">generate_sql</text>
+    <text x="417" y="116" font-size="9" fill="#a5d6ff">model writes the candidate</text>
+
+    <!-- 4 pending -->
+    <rect x="581" y="76" width="150" height="74" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+    <text x="593" y="93" font-size="9" fill="#6e7681" font-family="ui-monospace, Consolas, monospace">4</text>
+    <text x="607" y="93" font-size="11" font-weight="600" fill="#8b949e">validate_sql</text>
+    <text x="593" y="116" font-size="9" fill="#6e7681">syntax · types · scope</text>
+
+    <!-- 5 pending -->
+    <rect x="763" y="76" width="150" height="74" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+    <text x="775" y="93" font-size="9" fill="#6e7681" font-family="ui-monospace, Consolas, monospace">5</text>
+    <text x="789" y="93" font-size="11" font-weight="600" fill="#8b949e">execute_sql</text>
+    <text x="775" y="116" font-size="9" fill="#6e7681">read-only, row-capped</text>
+  </g>
+
+  <!-- connectors -->
+  <g stroke-width="1.5" fill="none">
+    <line x1="194" y1="113" x2="216" y2="113" stroke="#2ea043" stroke-width="1"/>
+    <path d="M216 109 L223 113 L216 117 Z" fill="#2ea043"/>
+    <line x1="376" y1="113" x2="392" y2="113" stroke="#2ea043" stroke-width="1"/>
+    <path d="M392 109 L399 113 L392 117 Z" fill="#2ea043"/>
+    <line x1="558" y1="113" x2="574" y2="113" stroke="#58a6ff" stroke-width="1"/>
+    <path d="M574 109 L581 113 L574 117 Z" fill="#58a6ff"/>
+    <line x1="734" y1="113" x2="756" y2="113" stroke="#30363d" stroke-width="1"/>
+    <path d="M756 109 L763 113 L756 117 Z" fill="#30363d"/>
+  </g>
+
+  <!-- guard boxes -->
+  <g font-family="Segoe UI, system-ui, sans-serif">
+    <rect x="110" y="216" width="336" height="46" rx="7" fill="#11161d" stroke="#3a4452"/>
+    <text x="122" y="236" font-size="9" fill="#c9d1d9" font-family="ui-monospace, Consolas, monospace">ConstraintEnforcer</text>
+    <text x="122" y="252" font-size="9" fill="#6e7681">read_only · max_rows · max_llm_calls</text>
+
+    <rect x="514" y="216" width="336" height="46" rx="7" fill="#11161d" stroke="#3a4452"/>
+    <text x="526" y="236" font-size="9" fill="#c9d1d9" font-family="ui-monospace, Consolas, monospace">PermissionManager</text>
+    <text x="526" y="252" font-size="9" fill="#6e7681">allow / deny / ask, default deny</text>
+  </g>
+  <g stroke="#3a4452" stroke-width="1" stroke-dasharray="3 3">
+    <line x1="278" y1="199" x2="278" y2="214"/>
+    <line x1="682" y1="199" x2="682" y2="214"/>
+  </g>
+
+  <!-- footer -->
+  <g font-family="Segoe UI, system-ui, sans-serif">
+    <text x="44" y="300" font-size="10" fill="#6e7681">The model never decides which node runs next: the plan YAML does. Every tool call passes the permission check; every row count hits the cap.</text>
+    <text x="916" y="300" font-size="9" fill="#58a6ff" text-anchor="end" font-family="ui-monospace, Consolas, monospace">03 / 05</text>
+  </g>
+</svg>

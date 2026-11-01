@@ -1,664 +1,409 @@
 # NL2SQL Data Engineering Agent
 
-> 优化分支进度与验收见[实施计划](docs/optimization/plan.md)、[阶段记录](docs/optimization/progress.md)。
-> 单进程并发边界、就绪检查、配置与本地负载实测见[运行验证](docs/optimization/runtime-and-load.md)。
-> RAG 索引更新、版本迁移与离线评测见[检索验证说明](docs/optimization/rag-evaluation.md)；真实语义/SQL 质量尚需业务标注与模型预测。
-> 主查询固定走 request_query YAML 与 WorkflowRunner，JSON/SSE/MCP 共用执行服务；字段、失败语义和限制见[查询契约](docs/optimization/query-contract.md)。
-> 当前采用私有管理员共享工作台：必须配置至少32字符的随机JWT_SECRET，注册需REGISTRATION_TOKEN邀请，业务接口仅允许ADMIN_USER_IDS；详见[安全配置](docs/optimization/security.md)。
+**English** | [简体中文](README.zh-CN.md)
 
-面向受信管理员的 NL2SQL MVP。中英输入经固定 `request_query.yml` 和 `WorkflowRunner` 完成理解、Schema 链接、生成、校验与可选只读执行。RAG 已有索引/混合检索与离线评测入口；真实模型的答案正确率、语义召回率和生产容量尚未建立基线。
+An agent harness that turns a natural-language question over a relational database into a
+validated, read-only SQL statement — and tells you honestly when it cannot.
 
-> 版本: v0.1 · 许可证: MIT · Python ≥ 3.12
+Every request walks the same five nodes in the same order. The model writes SQL; the harness
+decides what runs next, what it is allowed to touch, and how many rows come back. Nothing in
+this repository treats "the LLM thought it was a good idea" as a control-flow primitive.
 
----
+<img src="assets/pipeline.gif" width="960" alt="The five-node pipeline: parse_nl, schema_linking, generate_sql, validate_sql, execute_sql, with ConstraintEnforcer and PermissionManager on a side rail">
 
-## 目录
+<br>
 
-- [核心特性](#核心特性)
-- [系统架构](#系统架构)
-- [快速开始](#快速开始)
-- [Web 工作台使用指南](#web-工作台使用指南)
-- [API 调用方式](#api-调用方式)
-- [配置说明](#配置说明)
-- [支持的数据库](#支持的数据库)
-- [支持的 LLM](#支持的-llm)
-- [项目结构](#项目结构)
-- [开发指南](#开发指南)
+[![MVP checks](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml/badge.svg)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml)
+[![Real database acceptance](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml/badge.svg)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](pyproject.toml)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](pyproject.toml)
+[![ruff](https://img.shields.io/badge/lint-ruff%200.17.1-261230.svg)](pyproject.toml)
+[![mypy: strict](https://img.shields.io/badge/mypy-strict%20core%20gate-2A6DB2.svg)](pyproject.toml)
+[![Security policy](https://img.shields.io/badge/security-policy-4B5563.svg)](SECURITY.md)
 
 ---
 
-## 当前能力边界
+## Why this project
 
-工作台显示服务真实阶段与跳过状态；失败不自动重发 JSON，支持取消等待/新对话隔离、历史会话复用、零行结果和 MOCK 警告。`/health` 只说明进程存活；`/health/ready` 检查初始化、认证、真实模型和已登记数据库，不是实时数据库探针。会话只保存在单进程内存；历史在浏览器本地，管理员共享业务数据，暂不提供租户隔离。
+- **The workflow is data, not a prompt.** Each step lives in a YAML plan with an explicit
+  `node_order`; `WorkflowRunner` walks that list. A model cannot insert, skip or retry a step.
+- **Read-only is enforced three times.** A single-statement AST policy rejects writes, the
+  connection layer opens read-only sessions, and `execute_sql` has no write path at all — there is
+  no "confirm and write anyway" mode.
+- **Failures are first-class.** Truncated generations, tool calls disguised as answers and
+  degraded subsystems each produce a distinct status instead of a plausible-looking success.
+- **Local-first, offline-capable.** Embeddings run on local Ollama, indexes are files on disk, and
+  `LLM_MOCK_MODE=1` exercises the whole pipeline with no provider key and no network.
+- **It says what it has not proven.** No accuracy baseline, no recall benchmark, no capacity SLO —
+  the [Roadmap](#roadmap) lists them as open work rather than shipping them as claims.
 
-质量、性能和工程检查的实测范围见[优化报告](docs/optimization/stage-5.md)、[检索评测](docs/optimization/rag-evaluation.md)和[负载实验](docs/optimization/runtime-and-load.md)。下列功能入口与查询示例不是正确率保证；学习模块存在不等于已接入请求工作流自动修复。
+## Core Features
 
-## 核心特性
+Status reflects running code, not design documents. `Implemented` means the path is wired and
+covered by tests; `Partial` means the code exists but a documented part of the surface does not
+work or is not reachable from the request path.
 
-| 特性 | 说明 |
-|------|------|
-| 🌐 中英双语输入 | 自动检测语言，NL 和术语表支持双语 |
-| 🔍 Schema 感知 | 自动读取表结构、注释、外键、类型 |
-| 📖 业务术语表 | 业务术语 → SQL 字段/表达式的映射 |
-| 💬 多轮对话 | 上下文继承，逐步完善的对话式查询 |
-| 🛡️ 只读执行 | AST 与驱动约束；写操作拒绝，不提供确认后写入通道 |
-| 🔁 多候选输出 | 歧义时展示多个候选 SQL |
-| 📊 执行预览 | 生成后自动执行并展示结果预览 |
-| 🧠 持续学习 | 反馈打分 + 查询对存储 + 规则提取 + 质量趋势 |
-| 🧩 数据库连接 | SQLite / DuckDB / PostgreSQL / MySQL 已实现；其余方言支持不等于驱动已实现 |
-| 🔌 多 LLM 提供商 | OpenAI / Claude / Gemini / DeepSeek / Qwen 等 10+（LiteLLM 统一路由） |
-| 🔑 前端切换模型 | 设置面板填 API Key / 选默认模型**即生效**（AES 加密存储），聊天面板每次查询可选模型 |
-| 🧠 本地语义检索 | 默认使用 Ollama `embeddinggemma`（768 维）做向量检索，零 API Key、离线可用 |
-| 🔄 MCP 双重角色 | 既是 MCP Server（对外暴露 NL2SQL），也是 MCP Client（消费外部工具） |
-| 🗃️ MySQL 持久化 | 认证依赖 MySQL；业务持久化失败与降级仍需关注，不承诺零丢失 |
-
----
-
-## 系统架构
-
-### 请求流程
-
-```
-POST /api/v1/query → PlanLoader → WorkflowRunner (node_order)
-  → parse → schema_linking → generate_sql → validate_sql → execute_sql
-  → ConstraintEnforcer + PermissionManager
-  → WorkflowTrace (持久化)
-```
-
-### 核心设计原则
-
-1. **LLM 不决定下一步** — WorkflowRunner 驱动固定的 YAML 节点序列
-2. **只读默认** — SQL 使用单语句 AST 校验与驱动保护，禁止写操作
-3. **权限不可绕过** — 每个工具调用都经过 PermissionManager
-4. **硬性重试/迭代限制** — 每次执行有最大重试和反思轮次
-
-### 分层架构
-
-| 层 | 目录 | 职责 |
+| Feature | Status | Where |
 |---|---|---|
-| **API** | `app/api/` | FastAPI 路由（12 个模块） |
-| **Node** | `app/nodes/` | 计算单元（BaseNode → AgenticNode，12 个内置节点） |
-| **Harness** | `app/harness/` | 运行时引擎（配置、计划、运行器、会话、权限） |
-| **DB** | `app/db/` | ConnectionFactory、SchemaExtractor、DialectAdapter |
-| **Model** | `app/models/` | 纯 `@dataclass` 数据结构 |
-| **MCP** | `app/mcp/` | FastMCP 双重角色（server + client） |
-| **Config** | `app/config/` | YAML 驱动的 Agent 和工作流配置 |
-| **RAG** | `app/rag/` | 混合检索（BM25 + 向量 + RRF 融合） |
-| **Learning** | `app/learning/` | 反馈收集、模式分析、查询对存储 |
-| **Storage** | `app/storage/` | MySQL 持久化（Write-Through 模式） |
+| Fixed five-node NL→SQL pipeline | Implemented | `app/workflow/plans/request_query.yml`, `app/harness/runner.py` |
+| Constraint enforcement (read-only, row cap, LLM call cap) | Implemented | `app/harness/constraint.py` |
+| Per-tool permission gate, default deny | Implemented | `app/harness/permission.py`, `app/config/agent.yml` |
+| Single-statement AST read-only policy | Implemented | `app/security/sql_policy.py` |
+| Schema linking over tables, columns, comments, foreign keys | Implemented | `app/nodes/schema_linking.py`, `app/knowledge/schema_graph.py` |
+| Multi-stage validation (syntax, schema refs, types, plan, business rules) | Implemented | `app/nodes/validate_sql.py`, `app/core/schema_validation.py` |
+| Hybrid retrieval: BM25 + vectors + reciprocal-rank fusion | Implemented | `app/rag/engine.py`, `app/knowledge/retrieval/rrf_fusion.py` |
+| Business glossary and domain rules (YAML per domain) | Implemented | `app/config/domains/` |
+| JWT auth against MySQL, administrator allow-list | Implemented | `app/auth/`, `app/api/auth.py` |
+| MCP in both roles: four servers exposed, external tools consumed | Implemented | `app/mcp/servers/`, `app/mcp/client` |
+| SQL workbench utilities: explain, format, validate, translate | Implemented | `app/api/sql_utils.py`, `app/nodes/` |
+| Request-scoped usage record plus optional SQL-free audit | Implemented | `app/llm/usage.py`, `app/audit/store.py` |
+| Offline evaluation CLIs (SQL contracts, retrieval, NL2SQL batches) | Implemented | `app/evaluation/`, `scripts/` |
+| Automatic plan selection at runtime | **Partial** — `PlanSelector` is built at boot and never consulted by the request path | `main.py:89`, `app/api/query.py:285` |
+| Six template plans besides `request_query` | **Partial** — loaded and listed, but only `request_query` is executable through the API | `app/api/workflows.py:39` |
+| Multi-agent orchestrator / sub-agents | **Partial** — registered at boot; the request path uses the workflow runner | `main.py:105` |
+| Feedback-driven rule learning | **Partial** — collection, review and stats exist; no automatic repair is wired in | `app/learning/` |
+| Seven of eleven declared database dialects | **Declared only** — see [Supported Databases](#supported-databases) | `app/db/connections.py:15` |
+| Multi-tenant isolation | **Not implemented** — one shared administrator workbench | `app/auth/access.py` |
+| Answer-accuracy / recall baseline on real data | **Not established** | see [Roadmap](#roadmap) |
 
----
+## Architecture
 
-## 快速开始
+### The harness invariant
 
-### 环境要求
+> **The model never chooses the next step.** A plan file fixes the node order; `WorkflowRunner`
+> executes it. Nodes never call each other — each one runs `setup_input()` → `execute()` →
+> `update_context()`, and the runner decides what happens next.
 
-- Python 3.12+
-- Node.js 22+：仅前端构建需要；构建后 Python 服务不需要 Node 或 CDN。
-- MySQL 8.0+：浏览器注册/登录所需的认证存储；业务存储也可配置 MySQL。
-- （推荐）Ollama + `embeddinggemma` 模型（RAG 本地语义检索，无需 API Key）：
-  ```bash
-  ollama pull embeddinggemma   # 约 600MB，保持 ollama serve 运行即可
-  ```
+```mermaid
+flowchart LR
+    Q([NL question]) --> P[parse_nl] --> L[schema_linking] --> G[generate_sql] --> V[validate_sql] --> E[execute_sql] --> R([QueryResponse])
 
-### 安装
+    Y[plan YAML node_order] ==> W[WorkflowRunner] ==> P
+    C{{ConstraintEnforcer read_only · max_rows}} -.-> L & G & E
+    M{{PermissionManager allow / deny / ask}} -.-> G
+```
+
+Static version of the hero animation: [`assets/pipeline.svg`](assets/pipeline.svg).
+
+A request enters at `POST /api/v1/query`, where Pydantic validates the body and any `model`
+override must match an enabled provider. `PlanLoader` returns `request_query.yml`, the runner walks
+its `node_order`, constraints and permissions are consulted per step, and one `QueryResponse`
+contract is shared by the JSON, SSE and MCP surfaces before the trace is persisted.
+
+### Layers
+
+| Layer | Directory | Responsibility |
+|---|---|---|
+| **API** | `app/api/` | FastAPI app factory, 13 routers, 93 routes; `/api/v1/*` all require an administrator token |
+| **Node** | `app/nodes/` | Calculation units, `BaseNode` → `AgenticNode`; 12 built-in nodes registered at boot |
+| **Harness** | `app/harness/` | Config and plan loading (hot-reload on mtime), runner, sessions, permissions, constraints, action history |
+| **DB** | `app/db/` | `ConnectionFactory`, schema introspection per dialect, sqlglot-based translation, query targets |
+| **Model** | `app/models/` | Plain dataclasses (Pydantic only at the API boundary and for settings) |
+| **Workflow** | `app/workflow/` | YAML plans, plan selector, query service, response contracts |
+| **RAG** | `app/rag/`, `app/knowledge/` | LanceDB vectors, BM25/FTS5, RRF fusion, schema graph, glossary, metrics |
+| **LLM** | `app/llm/` | LiteLLM router, budgets, completion-status checks, usage accounting, encryption of stored keys |
+| **MCP** | `app/mcp/` | Four FastMCP servers (`db`, `knowledge`, `vector`, `learning`) plus a client |
+| **Evaluation** | `app/evaluation/` | Frozen acceptance sets, contract suites, prediction export, cost estimation |
+
+## Repository Layout
+
+```
+app/api/            13 routers, 93 routes, create_app() factory
+app/auth/           JWT issuing, MySQL user store, administrator gate
+app/agents/         Multi-agent layer — registered at boot, not on the request path
+app/audit/          Optional local usage audit store
+app/config/         agent.yml, domain YAML, sub-agent YAML, pydantic settings
+app/core/           NL parsing, intent classification, SQL generation and validation
+app/db/             Connection factory, schema extraction, dialect adapter
+app/evaluation/     Frozen datasets, acceptance suites, offline evaluation
+app/harness/        Runner, plans, constraints, permissions, sessions
+app/knowledge/      Schema graph, glossary, rule engine, retrieval primitives
+app/learning/       Feedback collection, pattern analysis, query pairs
+app/llm/            Router, budget, completion policy, usage, key crypto
+app/mcp/            Four MCP servers plus a client
+app/models/         Dataclasses for every domain object
+app/nodes/          12 nodes; the five named in request_query are the main path
+app/rag/            Hybrid retrieval engine and index maintenance
+app/security/       Read-only SQL policy, key encryption
+app/storage/        MySQL write-through persistence
+app/subagent/       Domain-scoped sub-agent wrapper
+app/workflow/plans/ 7 YAML plans, 1 executable (request_query)
+assets/             README animation and its static fallback
+docs/optimization/  Design contracts and the per-stage engineering record
+docs/archive/stages/ Timeline index over those stage reports
+frontend_design/    Source pages; compiled into frontend_dist/ by npm
+scripts/            Build, evaluation, load and acceptance entry points
+tests/              155 test modules, 763 test functions
+```
+
+## Quick Start
+
+### Requirements
+
+| Component | Version | Why |
+|---|---|---|
+| Python | 3.12+ | CI runs 3.12; the code uses `StrEnum`, `match`, PEP 604 unions |
+| Node.js | 22+ | Only to build the frontend; the built output needs no Node at runtime |
+| MySQL | 8.0+ | The auth store. Without it every `/api/v1/*` route returns 401 |
+| Ollama *(optional)* | — | Local embeddings; without it set `RAG_EMBEDDING_PROVIDER=mock` |
+| An LLM key *(optional)* | — | Without one the router falls back to mock mode, which yields no usable SQL |
+
+### 1. Install
 
 ```bash
-# 克隆项目
-git clone <repo-url>
-cd data_engineer
+git clone https://github.com/Qorq-byte/Data_engineer.git
+cd Data_engineer
 
-# 创建虚拟环境
 python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 
-# 安装依赖（-c 使用已验证的版本快照，避免装到与本轮验收不同的版本）
+# -c constraints.txt pins the versions this repository was verified against
 pip install -e ".[dev]" -c constraints.txt
+```
 
-# 构建三页及本地 JS/CSS/字体（首次安装需要 npm 注册表或缓存）
+### 2. Build the frontend
+
+```bash
 npm ci --ignore-scripts
 npm run build:frontend
 ```
 
-前端源码在 `frontend_design/`，正式页面只读取生成的 `frontend_dist/`。
-未构建或构建不完整时页面返回 `503 FRONTEND_NOT_BUILT`，API 可独立使用。
-部署时携带整个生成目录，先完成构建再启动/重启服务，不在运行目录内在线重建。
-开发修改页面后需重新构建；完整步骤、许可证和依赖限制见[前端构建与部署](docs/optimization/frontend-build.md)。
+The pages are compiled from `frontend_design/` into `frontend_dist/`, and the server only ever
+serves that directory. If it is missing, page routes return `503 FRONTEND_NOT_BUILT` while the
+API keeps working.
 
-### 配置环境变量
+### 3. Configure
 
 ```bash
-# 复制环境变量模板
 cp .env.example .env
-
-# 编辑 .env：设置随机 JWT_SECRET（至少32字符）、REGISTRATION_TOKEN、ADMIN_USER_IDS
-# 配置 AUTH_MYSQL_*、至少一个真实 LLM API Key，并在工作台连接查询数据库
-# OPENAI_API_KEY=sk-xxx
-# DEEPSEEK_API_KEY=sk-xxx
-# ANTHROPIC_API_KEY=sk-xxx
+python -c "import secrets; print(secrets.token_urlsafe(48))"   # use as JWT_SECRET
 ```
 
-> 开发/离线模式：设置 `LLM_MOCK_MODE=1` 可以使用 Mock LLM 不调用真实 API。
->
-> API Key 也可以在 **Web 工作台 → 系统设置 → LLM** 中配置（加密存 MySQL、保存即生效），
-> 不必写进 `.env`；`.env` 中的 Key 同样会被识别为"已配置"。
-
-### 启动服务
-
-```bash
-# 启动 FastAPI 服务（默认端口 8001）
-python main.py
-
-# 或使用 uvicorn 直接启动（支持热重载）
-uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload
-```
-
-### 访问页面
-
-| 页面 | 地址 | 用途 |
-|------|------|------|
-| 落地页 | http://localhost:8001/ | 项目介绍，导航入口 |
-| 登入/注册 | http://localhost:8001/login | 创建账号或登入 |
-| 工作台 | http://localhost:8001/workspace | 主操作界面 |
-| API 文档 | http://localhost:8001/docs | Swagger 交互式文档 |
-| ReDoc | http://localhost:8001/redoc | 替代 API 文档 |
-
----
-
-## Web 工作台使用指南
-
-工作台是主操作界面，左侧为**可悬停展开的侧边栏**，包含 9 个面板：
-
-### 1. 智能查询（ChatPanel）
-
-核心功能，将自然语言转换为 SQL 并执行。
-
-**操作步骤：**
-1. （可选）在输入框上方的「模型:」下拉选择本次查询使用的大模型（默认"跟随系统设置"，模型列表来自系统设置中已配置 Key 的提供商）
-2. 在底部输入框输入自然语言查询（中文或英文）
-3. 按 `Enter` 或点击发送按钮
-4. 系统逐步执行 Pipeline，实时显示进度
-5. 结果展示：SQL 代码、执行结果表格、验证报告
-
-**模型选择说明：** 聊天面板的模型下拉与「系统设置 → LLM」联动——只有在设置中启用并配置了有效 API Key 的提供商模型才会出现在列表中；未配置任何 Key 时提示"未配置可用模型"。
-
-**查询示例：**
-
-| 输入 | 系统处理 |
-|------|---------|
-| "上个月销售额最高的 10 个产品" | 时间解析 → 聚合 SUM → 关联 products/orders |
-| "每个用户的平均客单价" | 术语"客单价" → AVG(orders.amount) |
-| "Show me top 5 products by revenue" | 英文识别 → 聚合排序 |
-
-**结果卡片包含：** 原始输入回显、语言/意图/置信度、关联表、生成的 SQL、验证报告（语法/类型/语义）、执行结果表格。
-
----
-
-### 2. 数据 Schema（SchemaPanel）
-
-浏览已连接数据库的表结构。
-
-- 自动加载已连接数据库列表
-- 点击数据库展开完整表结构（表名、注释、列信息、外键关系）
-- 支持搜索框关键词筛选表/列
-
----
-
-### 3. 数据库连接（ConnectPanel）
-
-连接外部数据库，支持 MySQL、PostgreSQL、SQLite、DuckDB 等。
-
-- 填写连接信息（主机、端口、用户名、密码、数据库名）
-- 点击"测试连接"验证
-- 连接成功后自动提取 Schema
-
----
-
-### 4. 领域知识（DomainPanel）
-
-管理业务术语和规则。
-
-- **术语表（Glossary）**：业务词汇到 SQL 表达式的映射（如"客单价" → `AVG(orders.amount)`）
-- **业务规则（Rules）**：领域特定的 SQL 约束（如金额精度、时区设置）
-- 支持创建新领域和添加术语
-- 领域自动检测功能
-
----
-
-### 5. SQL 工作台（WorkbenchPanel）
-
-手动编写和执行 SQL 的开发工具。
-
-- SQL 编辑器（语法高亮）
-- 方言选择器（PostgreSQL / MySQL / SQLite / DuckDB 等）
-- 执行 / EXPLAIN / 格式化 / 方言翻译 / 验证 功能
-- 查询结果表格展示
-
----
-
-### 6. MCP 服务（McpPanel）
-
-查看已注册的 MCP 服务器列表。
-
-内置 4 个 MCP Server：
-| Server | 功能 |
-|--------|------|
-| `db_server` | 数据库查询、Explain、表列表 |
-| `knowledge_server` | 术语搜索、规则匹配 |
-| `vector_server` | 混合检索、语义搜索 |
-| `learning_server` | 反馈记录、评分提交、规则提取 |
-
----
-
-### 7. 工作流（WorkflowPanel）
-
-查看工作流模板和执行统计。
-
-**预置 6 个工作流：**
-
-| 工作流 | 节点数 | 用途 |
-|--------|--------|------|
-| 标准 NL→SQL | 4 | 完整 Pipeline（默认） |
-| 快速查询 | 3 | 跳过验证的快速通道 |
-| 反射式生成 | 5 | 生成→执行→反思→修正 |
-| 多轮对话 | 5 | 增量对话查询 |
-| Schema 探索 | 3 | 快速探索数据库 Schema |
-| MetricFlow 指标 | 4 | 语义层指标查询 |
-
-**统计面板：** 总执行次数、成功率、平均耗时，基于真实查询数据实时更新。最近执行追踪列表展示每次查询的详情。
-
----
-
-### 8. 持续学习（LearningPanel）
-
-反馈驱动的规则提取与质量监控。
-
-- **学习统计**：总查询数、反馈记录、平均评分
-- **规则候选**：从反馈模式中自动提取的规则，支持人工审核（通过/拒绝）
-- **质量趋势**：30 天准确率、查询数、反馈数趋势图
-
----
-
-### 9. 系统设置（SettingsPanel）
-
-系统配置管理。
-
-- **LLM 设置**：为各提供商填写 API Key（**AES-256-GCM 加密**存储于 MySQL，任何接口不回显明文，留空则保持原 Key）、选择默认模型与回退模型、启用/停用提供商；支持**添加自定义提供商**（名称 + Key + 模型列表 + 可选 OpenAI 兼容 base_url）；点击"保存配置"后**立即生效**，无需重启
-- **LLM 设置保存与恢复**：候选构建后确认持久化再发布，明确仅内存/未确认，读写失败先重读；提供商删除同步路由，密钥不回显。字段消费与单进程边界见[LLM设置契约](docs/optimization/llm-settings.md)。 输出上限已接通，未实现的路由策略/全局温度只读并拒绝写入，见[输出参数契约](docs/optimization/llm-token-policy.md)。
-- **模型输出完整性**：明确截断、过滤或工具请求的响应不能成为SQL候选；真实模型流须正常结束。部分候选舍弃会告警，全部失败停止执行，兼容限制见[完成状态契约](docs/optimization/llm-completion-policy.md)。
-- **离线SQL评测**：外部预测按完成状态拒绝错误计分，保留全部题目分母；延迟/费用明确reported与覆盖率，缺测不补0。命令、字段、哈希及限制见[评测契约](docs/optimization/sql-evaluation.md)。CI另执行`mypy scripts/evaluate_quality.py`，默认追踪导入。
-- **Harness 约束状态**：只读显示真实计划/运行配置与来源，区分语句超时和请求总时限；旧写接口明确409，历史设置表不生效，不提供关闭只读。详见[状态与部署契约](docs/optimization/harness-settings.md)。
-- **数据库连接能力**：只读报告四类连接实现/七类未实现、驱动模块发现与进程注册数；不等于连接健康或SQL方言能力。旧通用池/超时/开关不生效，写接口409，详见[能力契约](docs/optimization/database-settings.md)。
-- **RAG 检索设置**：向量/BM25权重互补，保存后更新当前进程三个融合器，页面区分编辑/已配置/实际运行值；无存储时明确仅内存生效。Top-K由调用方指定，无全局阈值，Embedding只读显示实际实例，模型变更需部署配置与兼容索引重建。按库维护/文档上传保留，详见[配置生效契约](docs/optimization/rag-settings.md)。
-- **系统状态**：API 在线状态、版本号
-
----
-
-### 页面流
-
-```
-落地页 (/) → 点击"开始体验" → 登入/注册 (/login) → 工作台 (/workspace)
-```
-
----
-
-## API 调用方式
-
-除了 Web 界面，也可以直接通过 HTTP API 使用。完整 API 文档见 `http://localhost:8001/docs`。
-
-业务 API 请求需添加 `Authorization: Bearer <管理员token>`。下方 curl 示例中的 `TOKEN` 应来自真实登录；注册须带管理员发放的邀请令牌。完整错误码与 SSE 事件见[接口契约](docs/optimization/query-contract.md)。
-
-### 核心查询 API
-
-```bash
-# NL → SQL 完整管线（model 参数可选，指定本次查询使用的大模型）
-curl -X POST http://localhost:8001/api/v1/query \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nl_text": "上个月销售额最高的10个产品",
-    "domain": "ecommerce",
-    "dialect": "postgresql",
-    "num_candidates": 1,
-    "execute": false,
-    "validate": true,
-    "link_schema": true,
-    "model": "deepseek-v4-flash"
-  }'
-```
-
-**请求参数：**
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `nl_text` | string | 是 | 自然语言查询文本 |
-| `domain` | string | 否 | 领域名称（默认 `default`） |
-| `dialect` | string | 否 | SQL 方言（默认 `ansi`） |
-| `database` | string | 否 | 数据库标识符 |
-| `num_candidates` | int | 否 | SQL 候选数（1-5，默认 1） |
-| `execute` | bool | 否 | 是否执行 SQL（默认 false） |
-| `validate` | bool | 否 | 是否运行验证（默认 true） |
-| `link_schema` | bool | 否 | 是否运行 Schema 链接（默认 true） |
-| `model` | string | 否 | 本次查询使用的大模型（必须是已启用且配置了 Key 的提供商模型；缺省用系统默认模型，未知模型返回 422） |
-
-### 流式查询（SSE）
-
-```bash
-curl -X POST http://localhost:8001/api/v1/query/stream \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"nl_text": "查询所有用户", "dialect": "postgresql", "model": "deepseek-v4-flash"}'
-```
-
-### LLM 设置（切换模型 / 配置 Key）
-
-```bash
-# 为提供商配置 API Key + 切换默认模型（保存后立即生效，密钥加密存储，接口不回显明文）
-curl -X PUT http://localhost:8001/api/v1/settings/llm \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "default_model": "deepseek-v4-pro",
-    "providers": {
-      "deepseek": {"enabled": true, "api_key": "sk-xxx"},
-      "myproxy": {"enabled": true, "api_key": "sk-xxx",
-                  "models": ["local-model"],
-                  "base_url": "https://proxy.example.com/v1"}
-    }
-  }'
-
-# 查看当前配置（api_key 只返回"是否已配置"布尔值）
-curl http://localhost:8001/api/v1/settings/llm -H "Authorization: Bearer $TOKEN"
-
-# 列出所有可用模型（已启用且配置了 Key 的提供商）
-curl http://localhost:8001/api/v1/settings/available-models -H "Authorization: Bearer $TOKEN"
-```
-
-> 说明：自定义提供商若使用 LiteLLM 已知名称（openai/anthropic/deepseek/google/groq/qwen…）无需 base_url；否则按 **OpenAI 兼容端点**调用，必须提供 `base_url`。API Key 留空表示保持原值；设置保存后立即重建运行中的路由，重启服务后自动从 MySQL 回载。
-
-### 其他 API 端点
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/v1/query` | POST | NL→SQL 完整管线 |
-| `/api/v1/query/stream` | POST | SSE 流式查询 |
-| `/api/v1/query/generate` | POST | 仅生成 SQL（无执行） |
-| `/api/v1/execute` | POST | 直接执行 SQL |
-| `/api/v1/databases` | GET | 已连接数据库列表 |
-| `/api/v1/databases/connect` | POST | 连接数据库 |
-| `/api/v1/schema/{db_id}` | GET | 获取 Schema |
-| `/api/v1/domains` | GET | 领域列表 |
-| `/api/v1/domains/{id}/glossary` | GET | 术语表 |
-| `/api/v1/domains/{id}/rules` | GET | 业务规则 |
-| `/api/v1/workflows` | GET | 工作流模板列表 |
-| `/api/v1/workflows/stats` | GET | 工作流统计 |
-| `/api/v1/workflows/traces` | GET | 执行追踪记录 |
-| `/api/v1/learning/stats` | GET | 学习统计 |
-| `/api/v1/learning/quality` | GET | 质量趋势 |
-| `/api/v1/learning/rule-candidates` | GET | 规则候选 |
-| `/api/v1/feedback` | POST | 提交反馈 |
-| `/api/v1/auth/login` | POST | 用户登入 |
-| `/api/v1/auth/register` | POST | 用户注册 |
-| `/api/v1/settings/rag` | GET/PUT | RAG 设置 |
-| `/api/v1/settings/llm` | GET/PUT | LLM 设置（Key 加密存储、保存即生效） |
-| `/api/v1/settings/available-models` | GET | 可用模型列表 |
-| `/api/v1/sql/explain` | POST | SQL 解释 |
-| `/api/v1/sql/translate` | POST | SQL 方言翻译 |
-| `/api/v1/sql/format` | POST | SQL 格式化 |
-| `/api/v1/sql/validate` | POST | SQL 验证 |
-| `/health` | GET | 健康检查 |
-
----
-
-## 配置说明
-
-### 环境变量（`.env`）
-
-```bash
-# LLM API Keys（至少配置一个）
-OPENAI_API_KEY=sk-xxx
-DEEPSEEK_API_KEY=sk-xxx
-ANTHROPIC_API_KEY=sk-xxx
-GOOGLE_API_KEY=xxx
-
-# DeepSeek 兼容端点（私有部署/代理时覆盖）
-DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
-
-# Mock 模式（开发/离线用，不调用真实 LLM）
-LLM_MOCK_MODE=1
-
-# RAG 语义检索 — 本地 Ollama 嵌入（无需 API Key）
-RAG_EMBEDDING_PROVIDER=ollama       # ollama | openai | bge | mock
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_EMBEDDING_MODEL=embeddinggemma
-OLLAMA_EMBEDDING_DIM=768
-
-# MySQL 用户数据库（用于持久化，可选）
+Three values are mandatory; the app refuses to start without the first.
+
+```ini
+# Startup fails fast if this is shorter than 32 characters or left at the default.
+JWT_SECRET=<at least 32 random characters>
+# Required to create the first account; registration stays closed when empty.
+REGISTRATION_TOKEN=<a one-time invite string>
+ADMIN_USER_IDS=[1]
+# The auth store must be reachable.
 AUTH_MYSQL_HOST=127.0.0.1
 AUTH_MYSQL_PORT=3306
 AUTH_MYSQL_USER=root
 AUTH_MYSQL_PASSWORD=
 AUTH_MYSQL_DATABASE=nl2sql_auth
-
-# JWT 认证
-JWT_SECRET=change-me-in-production
-JWT_ALGORITHM=HS256
-JWT_EXPIRE_MINUTES=1440
 ```
 
-> **本地语义检索(Ollama):** `RAG_EMBEDDING_PROVIDER=ollama`(默认)时,向量检索由本机
-> Ollama 提供(默认模型 `embeddinggemma`,768 维),无需 API Key;首次使用前执行
-> `ollama pull embeddinggemma` 并保持 `ollama serve` 运行。切换不同维度的嵌入
-> 模型时,系统会自动重建 LanceDB 向量表并重新索引。
->
-> 其他可选值:`openai`(需 `OPENAI_API_KEY`)、`bge`(需 `sentence-transformers`)、
-> `mock`(哈希伪向量,无语义,仅开发用)。RAG 为 **BM25 + 向量 + RRF** 混合检索,
-> 向量路径解决同义/跨语言语义匹配(如中文问题匹配英文 Schema),BM25 路径解决字面匹配。
-
-### Agent 配置（`app/config/agent.yml`）
-
-YAML 驱动的 Agent 配置，包含：
-- LLM 提供商和默认模型
-- 默认工作流
-- 约束条件（只读模式等）
-- 重试和超时设置
-
-### 工作流计划（`app/workflow/plans/`）
-
-每个工作流一个 YAML 文件，定义节点顺序和参数。
-
----
-
-## 数据存储架构
-
-项目采用**混合存储**模式，所有数据存储于运行服务器的**本机**。多用户通过浏览器访问同一台服务器，共享同一份数据。
-
-### 存储层次
-
-| 存储类型 | 位置 | 内容 | 重启后 |
-|---------|------|------|--------|
-| **YAML 文件** | `app/config/domains/*.yml` | 领域配置、术语映射、业务规则 | 保留 |
-| **JSON 文件** | `data/mcp_stopped_servers.json` | MCP 服务停止状态 | 保留 |
-| **JSONL 文件** | `data/traces/YYYYMMDD/*.jsonl` | 工作流执行追踪日志（按天归档） | 保留 |
-| **BM25 索引** | `data/bm25.db*` | 关键词检索索引 | 保留 |
-| **LanceDB 向量库** | `data/lancedb/*.lance` | 语义向量检索（schema_metadata, metrics） | 保留 |
-| **用户头像** | `data/avatars/` | 用户上传头像文件 | 保留 |
-| **MySQL 数据库** | 已连接的外部 MySQL 实例 | 领域、术语、规则、查询对、反馈、学习统计、LLM 设置（加密的 API Key） | 保留 |
-| **内存** | 服务器进程 RAM | 数据库连接、学习统计缓存、领域缓存 | **丢失** |
-
-### 关键特性
-
-- **Write-Through 持久化** — 部分路径先写内存再持久化；失败可能降级，不具备跨内存/文件/MySQL 的事务一致性保证。
-- **API Key 加密存储** — 在设置面板配置的 LLM API Key 以 AES-256-GCM 密文写入 MySQL（密钥由 `JWT_SECRET` 派生），任何接口不回显明文；`.env` 中的 Key 同样可用
-- **无用户隔离** — 所有用户共享同一份数据（领域、查询历史、学习数据等）
-- **内存数据易失** — 数据库连接信息（`ConnectionFactory`）、学习统计缓存（`_learning_store`）在服务器重启后清空，需重新连接数据库
-- **认证 MySQL 必需** — 未连通时浏览器登录/注册不可用，readiness 不通过；部分业务存储可降级到 YAML/内存，不等于存在内存认证。
-
----
-
-## 支持的数据库
-
-| 数据库 | 适配器 | 状态 |
-|--------|--------|------|
-| SQLite | `sqlite3` | 完整支持 |
-| DuckDB | `duckdb` | 完整支持 |
-| PostgreSQL | `asyncpg` / `psycopg2` | 完整支持 |
-| MySQL | `aiomysql` / `pymysql` | 完整支持 |
-| Snowflake | `snowflake-connector` | 计划中 |
-| StarRocks | `starrocks` | 计划中 |
-
----
-
-## 支持的 LLM
-
-通过 LiteLLM 统一路由，支持 10+ 提供商：
-
-OpenAI · Anthropic Claude · Google Gemini · DeepSeek · Qwen · 以及任何 OpenAI 兼容端点
-
-模型与 API Key 可在 **Web 工作台 → 系统设置 → LLM** 或 `PUT /api/v1/settings/llm` 动态配置，
-保存后立即生效、重启后保留，无需修改代码。
-
----
-
-## 项目结构
-
-```
-data_engineer/
-├── app/
-│   ├── agents/          # 多 Agent 系统（编排器、理解器、生成器等）
-│   ├── api/             # FastAPI 路由（12 个模块）
-│   ├── auth/            # 用户认证（JWT + MySQL）
-│   ├── cache/           # 查询缓存
-│   ├── config/          # YAML 配置（agent、领域、子代理）
-│   ├── core/            # 核心引擎（NL 解析、意图分类、SQL 生成/验证）
-│   ├── db/              # 数据库连接和 Schema 提取
-│   ├── harness/         # 运行时引擎（计划、运行器、权限、约束）
-│   ├── knowledge/       # 知识引擎（领域管理、术语表、规则引擎、MetricFlow）
-│   ├── learning/        # 持续学习（反馈收集、模式分析、查询对存储）
-│   ├── llm/             # LLM 工厂和路由（LiteLLM）
-│   ├── mcp/             # MCP 服务器和客户端
-│   ├── models/          # 数据模型（dataclass）
-│   ├── nodes/           # 计算节点（12 个内置节点）
-│   ├── rag/             # RAG 引擎（混合检索、索引刷新）
-│   ├── security/        # 密钥加密（AES-256-GCM，API Key 加密存储）
-│   ├── storage/         # MySQL 持久化
-│   ├── subagent/        # 子代理封装系统
-│   ├── web/             # Streamlit Web UI（备用）
-│   └── workflow/        # 工作流计划和选择器
-├── data/                # 运行时数据（trace、索引、头像、MCP 状态）
-│   ├── avatars/         # 用户头像
-│   ├── traces/          # 工作流追踪日志（按天归档）
-│   ├── lancedb/         # 向量检索索引
-│   └── bm25.db*         # 关键词检索索引
-├── docs/                # 文档
-├── frontend_design/     # 前端页面（React + Tailwind）
-├── scripts/             # 工具脚本
-├── tests/               # 测试（单元 + 集成 + E2E）
-├── main.py              # 应用入口
-├── pyproject.toml       # 项目配置
-├── SPEC.md              # 完整技术规格
-└── .env.example         # 环境变量模板
-```
-
----
-
-## 开发指南
-
-### 运行测试
+### 4. Run
 
 ```bash
-# 全部测试
-pytest
-
-# 指定模块
-pytest tests/test_api/
-pytest tests/test_nodes/
-
-# 带覆盖率
-pytest --cov=app --cov-report=html
+python main.py          # listens on http://localhost:8001 (APP_PORT overrides it)
+uvicorn app.api:create_app --host 0.0.0.0 --port 8001 --factory --reload   # dev, hot reload
 ```
 
-### 代码质量
+Interactive API docs are at `/docs`; the MCP server binds port 8080 by default.
+
+### 5. First request
 
 ```bash
-# Lint
-ruff check .
+# a. create the administrator account (only while REGISTRATION_TOKEN is set)
+curl -X POST http://localhost:8001/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","email":"admin@example.com","password":"<strong-password>",
+       "registration_token":"<the value from .env>"}'
+export TOKEN="<access_token>"
 
-# 类型检查
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
-mypy app/                   # 全仓诊断，仍有已知债务
+# b. connect a database — SQLite is the shortest path
+curl -X POST http://localhost:8001/api/v1/databases/connect \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"db_type":"sqlite","config":{"path":"data/app.db"},"alias":"demo"}'
+# → {"status":"connected","db_id":"sqlite_demo_20261101143012", ...}
+
+# c. ask a question (see Usage for the full shape)
+curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nl_text":"how many rows are in each table","database":"sqlite_demo_20261101143012"}'
 ```
 
-### 添加新的工作流节点
+Without an LLM provider key the request still returns a well-formed response, but the "SQL" is a
+`[mock response …]` placeholder and validation flags it. To get real SQL, set one provider key —
+either in `.env` (`DEEPSEEK_API_KEY=…`) or in the workspace under **Settings → LLM**, where keys
+are encrypted before they reach MySQL.
 
-参考 [node-development.md](docs/node-development.md) 了解如何创建自定义节点并注册到 Pipeline。
+## Usage
 
-### 实现计划
+### `POST /api/v1/query`
 
-参考 [implementation-plan.md](docs/implementation-plan.md) 了解各阶段实现进度。
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `nl_text` | string | required | 1–10000 characters, Chinese or English |
+| `session_id` | string | `""` | Reuse to continue a multi-turn session |
+| `domain` | string | `default` | Directory name under `app/config/domains/` |
+| `database` | string | `""` | `db_id` returned by `/api/v1/databases/connect` |
+| `dialect` | string | `ansi` | SQL dialect used for generation and validation |
+| `num_candidates` | int | `3` | 1–5 |
+| `execute` | bool | `false` | Run the statement after validation |
+| `validate` | bool | `true` | Accepted as an alias of `run_validation` |
+| `link_schema` | bool | `true` | Skip only if you know the statement needs no schema |
+| `model` | string | `null` | Must be an enabled provider model, otherwise 422 |
 
----
+```bash
+curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nl_text": "top 10 products by revenue last month",
+    "domain": "ecommerce",
+    "dialect": "postgresql",
+    "database": "postgresql_prod_20261101143012",
+    "num_candidates": 1,
+    "execute": true,
+    "validate": true,
+    "link_schema": true
+  }'
+```
+
+```jsonc
+// Abridged: nested payloads are trimmed to the fields that carry decisions.
+{
+  "query_id": "q_20261101T143012Z_4f1c",
+  "session_id": "",
+  "status": "completed",
+  "plan_id": "request_query",
+  "workflow_ids": ["wf_20261101T143012Z_9a01"],
+  "llm_calls": 2,
+  "nl_text": "top 10 products by revenue last month",
+  "language": "en",
+  "intent": "aggregation",
+  "confidence": 0.82,
+  "primary_sql": "SELECT p.name, SUM(o.amount) AS revenue FROM orders o JOIN products p ON p.id = o.product_id WHERE o.created_at >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') GROUP BY p.name ORDER BY revenue DESC LIMIT 10",
+  "linked_tables": ["orders", "products"],
+  "candidates": [
+    {
+      "id": "cand_1",
+      "sql_text": "SELECT p.name, SUM(o.amount) AS revenue FROM orders o ...",
+      "confidence": 0.82,
+      "generation_mode": "primary",
+      "generation_source": "model_response",
+      "finish_reason": "stop",
+      "execution": { "status": "success", "row_count": 10, "truncated": false }
+    }
+  ],
+  "validation": {
+    "passed": true, "syntax_ok": true, "schema_valid": true,
+    "type_valid": true, "business_valid": true, "score": 0.95
+  },
+  "errors": [],
+  "warnings": []
+}
+```
+
+`status` is `completed` or `failed`; HTTP errors carry a machine-readable `code`
+(`INVALID_SQL`, `TIMEOUT`, `PAYLOAD_TOO_LARGE`, `INTERNAL_ERROR`, …) plus a `Retry-After` header
+when waiting could help. The full contract is in
+[docs/optimization/query-contract.md](docs/optimization/query-contract.md).
+
+### Other endpoints worth knowing
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/v1/query/stream` | POST | Same pipeline over SSE, one event per node |
+| `/api/v1/query/generate` | POST | Generate and validate, never execute |
+| `/api/v1/execute` | POST | Run a SQL string directly, bypassing the NL pipeline |
+| `/api/v1/schema/{db_id}` | GET | Schema snapshot; `/refresh` re-introspects |
+| `/api/v1/settings/llm` | GET/PUT | Providers and default model; keys are never echoed |
+| `/health` `/health/ready` | GET | Liveness vs. readiness (init, auth, real model, databases) |
+
+## Web workspace
+
+Three pages, all served from `frontend_dist/`:
+
+| Page | Path | Purpose |
+|---|---|---|
+| Landing | `/` | What the project is and how to enter |
+| Sign in / register | `/login` | Account creation against the MySQL auth store |
+| Workspace | `/workspace` | The main surface: chat, schema, connections, domains, SQL workbench, MCP, workflows, learning, settings |
+
+The workspace sidebar holds nine panels; the query panel streams node-by-node progress and shows
+the SQL, the validation report and the result table side by side.
+
+## Supported Databases
+
+Eleven dialect names are declared in `DatabaseType`; four have a working connection
+implementation. The other seven are names in an enum — connecting to them raises `501`.
+
+| Dialect | Driver | Status |
+|---|---|---|
+| SQLite | `sqlite3` | **Implemented** — authorizer, progress deadline, schema-version tracking |
+| DuckDB | `duckdb` | **Implemented** — external access disabled, interrupt-based cancel |
+| PostgreSQL | `asyncpg` / `psycopg2` | **Implemented** — verified against PostgreSQL 16 in CI |
+| MySQL | `aiomysql` / `pymysql` | **Implemented** — server-side row cap, verified against MySQL 8.4 in CI |
+| Snowflake, StarRocks, BigQuery, Redshift, ClickHouse, Databricks, Trino | — | **Declared only** — no connection path, no schema extraction |
+
+## Supported LLMs
+
+Routing goes through LiteLLM, so any OpenAI-compatible endpoint works:
+
+- **Providers with first-class settings:** OpenAI, Anthropic, Google, DeepSeek, Qwen
+- **Anything else:** register it as a custom provider with a `base_url` in the workspace or via
+  `PUT /api/v1/settings/llm`; keys are AES-GCM encrypted before being stored in MySQL
+- **No key at all:** `LLM_MOCK_MODE=1` returns placeholders so you can exercise the harness
+
+Keys configured through the API take effect immediately and survive restarts. Keys in `.env` are
+read at startup and never written back.
+
+## Testing & Quality Gates
+
+```bash
+pytest -m "not real_database"     # the CI suite: 763 tests across 155 modules
+pytest tests/test_nodes/          # one directory
+ruff check .                      # line length 100, target py312
+mypy app/                         # full-repo diagnosis; known debt remains
+npm run check:frontend            # page contracts + refresh/maintenance handlers
+npm run check:frontend:build      # reproducible build, keeps the old artefact on failure
+```
+
+`checks.yml` runs: install → `npm ci` → both frontend checks → `ruff check .` → **20 separate
+`mypy` gates** (strict core set, evaluation modules, audit store, streaming, usage) →
+`pytest -m 'not real_database'`.
+
+`real-databases.yml` spins up PostgreSQL 16 and MySQL 8.4 service containers and runs
+`pytest tests/real_db` against them with a mock model; the job fails if the JUnit report is missing.
+
+Tests use real SQLite, DuckDB, LanceDB and FTS5 rather than mocks; the shared fixture builds an
+e-commerce schema (`users`, `products`, `orders`) from `tests/fixtures/test_schema.sql`.
+
+## Roadmap
+
+Open work, stated as gaps rather than features:
+
+- **No answer-accuracy baseline.** The 30-question NL2SQL suite is synthetic and scores contract
+  matching inside the question set — not business accuracy, and this README will not call it that.
+- **No semantic-recall baseline.** Retrieval has frozen qrels and an offline runner, but nothing
+  measured against real user questions.
+- **No capacity SLO.** Four worker processes reach roughly 3.1–3.2× the single-process throughput
+  on 1k and 10k table schemas; in-process asyncio concurrency does not help, because the
+  bottleneck is Python CPU. Production sizing is unproven.
+- **Plan selection is not wired.** The request path always uses `request_query`; the other six
+  plans are templates, not behaviours.
+- **Seven dialects are names only**, and there is **no tenant isolation** — one administrator
+  group shares one data set.
+- **Learning does not close the loop.** Feedback is collected and reviewed; nothing feeds it back
+  into generation automatically.
+
+## Contributing
+
+Environment setup, the branch model, commit conventions and copy-paste skeletons for adding a
+node or a workflow plan are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Security
+
+Supported versions, the private disclosure channel, response targets and the rule that secrets
+must never appear in an issue are in [SECURITY.md](SECURITY.md). If you find a credential in this
+repository's history, treat it as already leaked, rotate it first, and then report.
 
 ## License
 
-MIT
-
-### 可复现的本地检查与 CI
-
-```bash
-pip install -e ".[dev]" -c constraints.txt
-npm ci --ignore-scripts
-npm run check:frontend
-LITELLM_LOCAL_MODEL_COST_MAP=True RAG_EMBEDDING_PROVIDER=mock pytest
-ruff check .
-mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py  # strict核心门禁，默认导入追踪
-mypy app/                   # 全仓诊断，仍有已知债务
-```
-
-PowerShell 请用 `$env:变量='值'` 设置测试变量。测试的 mock 模型不会访问真实 LLM；SQLite/DuckDB/LanceDB/FTS5 回归使用实际本地实现。CI 对 Python 3.12/Node 22 执行安装、前端编译、全量 pytest、全仓 `ruff check .` 和核心 `mypy app/harness app/models app/nodes/execute_sql.py app/nodes/generate_sql.py app/llm/budget.py app/llm/completion.py app/workflow/contracts.py app/knowledge/schema_graph.py app/core/schema_validation.py app/db/query_targets.py app/db/sqlite_source.py app/db/duckdb_source.py app/db/schema_refresh.py`；本轮本机为 Python 3.13.9/Node 24。阶段6全仓 Ruff 已清零，并用已验证的0.17.1作为CI阻断门禁，未放宽规则；阶段7核心strict检查在默认导入追踪下已通过，全仓同版本新基线272→230项，仍未通过；补充正式/本地驱动声明并明确其边界，见[阶段7报告](docs/optimization/stage-7.md)。生产前端已由阶段21改为本地静态构建与同源资源，源码中的CDN/JSX只作为构建输入，详见[构建说明](docs/optimization/frontend-build.md)。
-
-阶段8进一步将生成/执行节点与预算适配器纳入上述strict门禁，保持默认导入追踪。全仓诊断230→201仍未通过，实施、验证和限制见[阶段8报告](docs/optimization/stage-8.md)。
-
-阶段9统一JSON/SSE的QueryResponse校验与JSON序列化，MCP nl_query新增状态、错误码和查询标识；截止/容量/内部错误分类共享，业务失败语义保留。全仓类型仍201项，详见[查询契约](docs/optimization/query-contract.md)和[阶段9报告](docs/optimization/stage-9.md)。
-
-阶段10将Schema Linking的FK扩展明确为源候选双向一跳，校验检索命中的库/表/列，并将无效匹配/异常回退警告传到JSON/SSE/MCP。合成边界评测与兼容取舍见[阶段10报告](docs/optimization/stage-10.md)；该评测不代表真实业务准确率。
-
-阶段11采用已验证的SQLGlot30.18.0（依赖锁定）做私有AST作用域校验，复用强制只读策略，改进候选响应隔离与SQL评测错误分类。兼容范围、skip_syntax收窄、命名空间限制和实测见[阶段11报告](docs/optimization/stage-11.md)。
-
-阶段12补齐来源命名空间元数据，修复SQLite临时表遮蔽内省、DuckDB挂载库同名表混合，限定名按已知来源校验。RAG旧public索引需按db_id刷新，在线多方言与search_path限制见[阶段12报告](docs/optimization/stage-12.md)及[查询契约](docs/optimization/query-contract.md)。
-
-阶段13将Schema与原生连接句柄固定为同一查询目标，重连/断开后旧请求明确失败，不会切到新库执行；新请求可显式使用新目标。实现、三协议回归和限制见[阶段13报告](docs/optimization/stage-13.md)。
-
-阶段14使SQLite Schema缓存按main.schema_version感知DDL，过期请求明确失败，带来源版本的执行与EXPLAIN拒绝临时同名表遮蔽。验证、旧快照/直接SQL兼容及其他方言限制见[阶段14报告](docs/optimization/stage-14.md)。
-
-阶段15为DuckDB保存并核对原生namespace身份、search_path与用户临时对象状态，防止同句柄切库后复用旧来源；绑定EXPLAIN使用原会话。保守main/no-temp范围、DDL与索引限制及实测见[阶段15报告](docs/optimization/stage-15.md)。
-
-阶段16统一Schema/RAG刷新并在索引删除前核对来源；冲突HTTP409、旧索引保留，前端按实际业务字段统计成功。四条写入口、取消/失败和双后端部分写限制见[阶段16报告](docs/optimization/stage-16.md)。check:frontend同时执行实际页面刷新处理函数的12项契约场景。
-
-阶段29新增请求级 `llm_usage`：JSON、SSE done、MCP 共用隔离摘要；逐次尝试、缺测和覆盖率语义见[用量契约](docs/optimization/request-llm-usage.md)，验收见[阶段29报告](docs/optimization/stage-29.md)。不提供费用估算或持久账本。新增模块类型门禁：`mypy app/llm/usage.py`。Windows 本地验证需可用的时区数据库（如 `tzdata`）。
-
-阶段30修复原生LiteLLM SDK对象响应兼容，异常映射前保留可用usage，逐次usage_basis区分SDK归一化来源（SDK可能补零，不能据此证明原始报告完整）。检查命令：`mypy app/llm/usage.py app/llm/responses.py`；详见[阶段30报告](docs/optimization/stage-30.md)及[计划](docs/optimization/stage-30-plan.md)。
-
-阶段31新增可选本机用量审计：默认关闭，设置`LLM_AUDIT_PATH=data/llm_usage.sqlite3`后重启启用；`LLM_AUDIT_MAX_RECORDS=1000`控制逻辑保留条数。检查响应`llm_audit.status`，管理员通过`GET /api/v1/usage-audits/{query_id}`读取，详见[审计契约](docs/optimization/usage-audit.md)。不保存问题/SQL，取消/写失败和SDK缺测限制仍适用；新strict门禁`mypy app/audit/store.py app/workflow/query_audit.py`。
-[阶段31报告](docs/optimization/stage-31.md)记录真实SQLite验证、取消/审计失败处理及已知边界。
-
-阶段32新增`python -m scripts.export_predictions`，按显式案例/查询/候选/数据库绑定导出保存的QueryResponse，供既有离线SQL评测器消费。可选只读审计核对，缺生成耗时/费用保留null；不发模型请求、不从审计还原SQL。用法及合成重跑样例见[预测导出契约](docs/optimization/prediction-export.md)。
-
-阶段33在JSON/SSE/MCP候选中保留`generation_source`和`finish_reason`，导出只用所选候选证据，拒绝系统预制SQL。缺完成标记或纯文本流仍未知，不从请求用量猜测。见[阶段33计划](docs/optimization/stage-33-plan.md)及[查询契约](docs/optimization/query-contract.md)。
-
-阶段34新增可选结构化流接口：完整消费并校验原生流后，候选保留`model_stream/stop`；旧文本接口和Mock仍兼容且保留未知。预算/用量不重复计数，取消/超时/非法尾部不产出完成候选。公开SSE仍是工作流事件流。见[流事件契约](docs/optimization/stream-completion.md)。
-
-阶段35新增默认关闭的`LLM_AUDIT_CANDIDATE_DIGESTS`：审计启用后可保存候选摘要以核对SQL与完成信息；不存SQL原文，摘要不是加密或签名。导出可用`--require-candidate-audit`强制成功SQL绑定，旧v1兼容。见[候选摘要绑定契约](docs/optimization/candidate-audit-binding.md)。
-
-阶段36新增`python -m scripts.estimate_usage_cost`：只读明确选择的审计请求，使用操作者提供的平坦价格表生成独立估算报告。无默认真实价格、不联网，缺测不补0，合法0保留；不回填预测cost_usd或改在线响应。参数、范围与合成样例见[用量估算契约](docs/optimization/usage-cost-estimates.md)。
-
-阶段37统一三个离线评测CLI的严格JSON、输入路径保护和原子报告写入，预检先于索引/节点评测；SQL验证支持显式`--dataset`。输入/IO错误统一退出2，stdout只给计数/哈希，详细报告格式不变。见[评测文件边界](docs/optimization/evaluation-artifact-boundaries.md)。
-
-阶段38新增 `python -m scripts.run_model_evaluation`：默认显式prepare生成无凭据清单，execute须匹配SHA并使用新运行目录；固定4题公开合成SQLite、每题1次、禁重试/fallback，走正式Harness及v2候选审计绑定。费用未知不补0，结果只表示合成冒烟；用法与边界见[受控模型验收](docs/optimization/controlled-model-evaluation.md)。
-
-阶段39新增独立的合成SQL输出契约v2：4个明确问题、base/edge/empty三组SQLite、手写标签与gold交叉自检；同一预测在三库检查列名/列序、结果及最外层排序，完整4题分母。离线入口 `python -m scripts.evaluate_sql_contracts`；受控模型准备可显式 `--profile synthetic-sqlite-model-v2`，仍最多4次调用，费用未知。旧v1及历史分数保持，两个版本不能直接比较。详见[SQL输出契约](docs/optimization/sql-output-contracts.md)。
-
-阶段40增加真实PostgreSQL16/MySQL8.4验收：`python -m scripts.run_real_db_tests` 使用专用受限临时容器、只读账号和真实驱动，finally核对所有权后清理；普通离线命令 `pytest -m "not real_database"`，独立真实服务CI必须同时通过。修复PG只读角色约束/空结果列、异步EXPLAIN和取消重连候选清理，不调用真实LLM。准备镜像、实测边界见[真实数据库验收](docs/optimization/real-database-acceptance.md)。
+MIT — see [LICENSE](LICENSE). Copyright (c) 2026 Majiaqi.
