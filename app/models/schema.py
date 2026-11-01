@@ -3,9 +3,23 @@
 See SPEC §4.3.2 for the full specification.
 """
 
+from __future__ import annotations
+
+import copy
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
+
+
+def _clone_leaf(value: Any) -> Any:
+    """Copy a leaf value without paying deepcopy's per-object overhead.
+
+    Scalars are immutable and shared; anything else (dicts, lists, custom
+    objects) still goes through ``copy.deepcopy`` so the clone cannot alias them.
+    """
+    if isinstance(value, str | int | float | bool | bytes | type(None)):
+        return value
+    return copy.deepcopy(value)
 
 
 @dataclass
@@ -27,6 +41,23 @@ class ColumnSchema:
     is_pii: bool = False
     pii_type: str = ""  # "phone" | "email" | "id_card" | "name" | "address" | "other"
 
+    def clone(self) -> ColumnSchema:
+        """Copy this column and its mutable leaf values (see SchemaSnapshot.clone)."""
+        return ColumnSchema(
+            name=self.name,
+            type=self.type,
+            nullable=self.nullable,
+            is_primary_key=self.is_primary_key,
+            is_foreign_key=self.is_foreign_key,
+            references=self.references,
+            default=_clone_leaf(self.default),
+            comment=self.comment,
+            enum_values=None if self.enum_values is None else list(self.enum_values),
+            sample_values=[_clone_leaf(value) for value in self.sample_values],
+            is_pii=self.is_pii,
+            pii_type=self.pii_type,
+        )
+
 
 @dataclass
 class IndexInfo:
@@ -37,6 +68,14 @@ class IndexInfo:
     is_unique: bool = False
     method: str = "btree"
 
+    def clone(self) -> IndexInfo:
+        return IndexInfo(
+            name=self.name,
+            columns=list(self.columns),
+            is_unique=self.is_unique,
+            method=self.method,
+        )
+
 
 @dataclass
 class ForeignKey:
@@ -46,6 +85,14 @@ class ForeignKey:
     column: str
     ref_table: str
     ref_column: str
+
+    def clone(self) -> ForeignKey:
+        return ForeignKey(
+            name=self.name,
+            column=self.column,
+            ref_table=self.ref_table,
+            ref_column=self.ref_column,
+        )
 
 
 @dataclass
@@ -80,6 +127,19 @@ class TableSchema:
                 return c
         return None
 
+    def clone(self) -> TableSchema:
+        """Copy this table and everything mutable below it."""
+        return TableSchema(
+            name=self.name,
+            comment=self.comment,
+            columns=[column.clone() for column in self.columns],
+            row_count_estimate=self.row_count_estimate,
+            indexes=[index.clone() for index in self.indexes],
+            foreign_keys=[key.clone() for key in self.foreign_keys],
+            schema_name=self.schema_name,
+            catalog_name=self.catalog_name,
+        )
+
 
 @dataclass(frozen=True)
 class DuckDBSourceState:
@@ -108,6 +168,27 @@ class SchemaSnapshot:
 
     def get_table(self, name: str) -> TableSchema | None:
         return self.tables.get(name)
+
+    def clone(self) -> SchemaSnapshot:
+        """Return a deep copy without going through ``copy.deepcopy``.
+
+        ``copy.deepcopy`` replays the pickle protocol for every dataclass
+        instance. On a 10k-table snapshot that measured 1.3-2.7 s per call, and
+        the extraction cache hands out one copy per request, which made it the
+        largest single cost of a query at that size. Rebuilding the tree keeps
+        the same guarantee — the copy shares no mutable state with the cached
+        snapshot — at a fraction of the cost. Immutable fields (``created_at``,
+        the frozen DuckDB source state) are shared on purpose.
+        """
+        return SchemaSnapshot(
+            database_type=self.database_type,
+            database_name=self.database_name,
+            tables={name: table.clone() for name, table in self.tables.items()},
+            created_at=self.created_at,
+            version=self.version,
+            source_schema_version=self.source_schema_version,
+            duckdb_source_state=self.duckdb_source_state,
+        )
 
     @property
     def table_names(self) -> list[str]:
