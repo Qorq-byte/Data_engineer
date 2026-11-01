@@ -1,0 +1,162 @@
+{
+  "stage": 52,
+  "date": "2026-11-01",
+  "branch": "codex/retrieval-and-workers",
+  "baseline_commit": "aed2612",
+  "scope": [
+    "make the keyword schema linker stop rescanning the whole snapshot per candidate",
+    "behaviour-preserving: same rules, same confidence values, same ordering",
+    "no new database support, no real model calls, no concurrency change"
+  ],
+  "profiling": {
+    "method": "cProfile around SchemaLinkingNode.execute on a synthetic SQLite schema, three executes per measurement, 1k and 10k tables with 12 columns each",
+    "before_1k": {
+      "node_execute_ms": 48.8,
+      "function_calls_per_three_executes": 1815583,
+      "top_functions": [
+        {
+          "function": "_all_column_matches",
+          "tottime_s": 0.25,
+          "calls": 114
+        },
+        {
+          "function": "str.lower",
+          "tottime_s": 0.143,
+          "calls": 1716198
+        },
+        {
+          "function": "_all_table_matches",
+          "tottime_s": 0.044,
+          "calls": 114
+        }
+      ]
+    },
+    "before_10k": {
+      "node_execute_ms": 548.9,
+      "function_calls_per_three_executes": 18125257
+    },
+    "after_1k": {
+      "node_execute_ms": 7.7,
+      "function_calls_per_three_executes": 329245
+    },
+    "after_10k": {
+      "node_execute_ms": 124.6,
+      "function_calls_per_three_executes": 3145621,
+      "share_of_remaining_time": {
+        "SchemaNameIndex.__init__": "0.369 s of 0.879 s profiled (about 123 ms per request): building the index is now the cost",
+        "match_columns": "0.106 s cumulative over three executes"
+      }
+    }
+  },
+  "changes": [
+    {
+      "file": "app/knowledge/schema_name_index.py",
+      "what": "one linear pass per request builds name lookups; the four matching rules are answered from dictionaries plus C-level str.find scans",
+      "rules_preserved": [
+        "table: exact 1.0, case-insensitive 0.95, comment containment 0.7, substring either way 0.65",
+        "column: exact 1.0, case-insensitive 0.95, comment containment 0.75, candidate inside name 0.65, name inside candidate 0.6"
+      ],
+      "ordering": "descending confidence, then schema order; because the confidences strictly decrease, keeping the maximum per name reproduces the old first-match elif chain",
+      "edge_cases_found": [
+        "threshold 0.0 returned every table and column with confidence 0.0 in the old scan; the index reproduces that explicitly",
+        "an empty candidate matches everything at 0.65 through Python's '' in s semantics; kept"
+      ]
+    },
+    {
+      "file": "app/nodes/schema_linking.py",
+      "what": "build the index once per execute and pass it to both _match_schema passes, the reverse scan and the multi-table hint; _all_table_matches/_all_column_matches removed"
+    }
+  ],
+  "measurements": {
+    "pipeline_1k": {
+      "instrument": "scripts/scale_load, pipeline scenario, 15 requests, concurrency 1, fresh fixture per run",
+      "before": {
+        "p50_ms": 267,
+        "p95_ms": 464,
+        "attempt_rps": 3.42
+      },
+      "after": {
+        "p50_ms": 126,
+        "p95_ms": 253,
+        "attempt_rps": 6.74
+      }
+    },
+    "pipeline_10k": {
+      "instrument": "scripts/scale_load, pipeline scenario, 6 requests, concurrency 1, per-stage durations captured from the stage events",
+      "before": {
+        "total_p50_ms": 3059,
+        "stages_ms": {
+          "retrieve": 877,
+          "generate": 419,
+          "validate": 449,
+          "execute": 454
+        }
+      },
+      "after": {
+        "total_p50_ms": 2867,
+        "stages_ms": {
+          "retrieve": 569,
+          "generate": 509,
+          "validate": 477,
+          "execute": 525
+        }
+      },
+      "reading": "the retrieve stage drops 877 -> 569 ms (-35%); generate/validate/execute move by +-90 ms between runs with unchanged code, so the 192 ms total delta understates the retrieve win and is inside session noise"
+    },
+    "keyword_retrieve_scenario": {
+      "instrument": "scripts/scale_load, keyword_retrieve scenario, SchemaRetriever.retrieve only",
+      "1k": {
+        "p50_ms": 0.86,
+        "attempt_rps": 723.64
+      },
+      "10k": {
+        "p50_ms": 10.15,
+        "attempt_rps": 29.16
+      },
+      "reading": "the retriever's own keyword path is cheap; the O(tables) cost lived in the Phase-2 fallback scan inside SchemaLinkingNode"
+    },
+    "session_noise_warning": "absolute numbers moved by more than 2x between the stage-51 session and this one on the same machine (an unchanged 10k pipeline measured 1307 ms then and 3059 ms now), so only the paired before/after runs above are used as evidence"
+  },
+  "tests_added": {
+    "tests/test_knowledge/test_schema_name_index.py": 46,
+    "method": "a verbatim copy of the replaced loops is kept in the test module and compared against the index over randomised schemas, candidates, thresholds and queries, including exact ordering",
+    "cases": [
+      "12 seeds x 9 thresholds for table matching",
+      "12 seeds x 9 thresholds for column matching",
+      "8 seeds x 8 queries for the reverse table-name scan",
+      "8 seeds x 8 queries for the direct keyword fallback",
+      "explicit cases: reuse, ordering, comment case folding, parts shorter than three characters, empty candidate, snapshot not mutated"
+    ]
+  },
+  "verification": {
+    "ruff": "ruff check app/ tests/ -> All checks passed",
+    "mypy": "mypy app/ -> no issues in 192 source files",
+    "focused": "pytest tests/test_knowledge/test_schema_name_index.py tests/test_nodes/test_schema_linking_node.py -> 84 passed",
+    "full_suite": {
+      "command": "pytest -m 'not real_database' -q",
+      "result": "2 failed, 4338 passed, 1 skipped, 82 deselected",
+      "known_failures": [
+        "tests/test_evaluation/test_acceptance_v3.py::test_cli_refuses_hardlink_input_alias",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_writers_do_not_mix_records",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_request_audits_keep_their_own_tokens"
+      ],
+      "duration_s": 418.45,
+      "note": "both failures are in the known Windows-only set; the third test from that set (test_concurrent_request_audits_keep_their_own_tokens) passed this run, i.e. it is timing-flaky rather than deterministic"
+    }
+  },
+  "corrections": [
+    "stage-51 recorded 'keyword retrieval is still an O(tables) scan, about 0.9 s at 10k' without a measurement behind it; measured now, the pipeline retrieve stage was 877 ms at 10k and the name-matching scan is about 490 ms of that, while SchemaRetriever.retrieve alone is 10 ms"
+  ],
+  "not_covered": [
+    "the index is rebuilt per request: at 10k that build is 123 ms of the 125 ms node time, so the per-request cost is now linear-but-single-pass rather than solved",
+    "the rest of the 569 ms retrieve stage at 10k is _build_filtered_schema, _filter_schema, foreign-key expansion and result shaping; not touched this round",
+    "synthetic vocabulary only: the fixture reuses the same column names across tables, so unique-name counts are not representative of a real 10k-table warehouse",
+    "SQLite only; PostgreSQL/MySQL linking paths were not measured",
+    "the differential tests prove equality with the previous implementation, not that the previous rules are the right ranking"
+  ],
+  "ci": {
+    "MVP checks": null,
+    "Real database acceptance": null,
+    "conclusion": "pending"
+  }
+}
