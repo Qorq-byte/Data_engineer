@@ -117,8 +117,15 @@
     }
   },
   "ci": {
-    "MVP checks": null,
-    "Real database acceptance": null,
-    "conclusion": "pending"
+    "sha": "f85c444755457e343dc21ed93ce038b19f2dfc7b",
+    "MVP checks": {
+      "run_id": 41306551865,
+      "conclusion": "success"
+    },
+    "Real database acceptance": {
+      "run_id": 41306551861,
+      "conclusion": "success"
+    },
+    "conclusion": "both workflows succeeded on the exact SHA; job logs still require admin rights"
   }
 }
