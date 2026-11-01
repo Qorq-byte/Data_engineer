@@ -1,0 +1,124 @@
+{
+  "stage": 53,
+  "date": "2026-11-01",
+  "branch": "codex/scale-workers",
+  "baseline_commit": "5f102a1",
+  "question": "stage 51 showed throughput does not grow with asyncio concurrency after per-request CPU was cut, and blamed GIL-bound Python work. Does process-level parallelism help, and what breaks if it is used?",
+  "instrument": {
+    "script": "scripts/scale_workers.py",
+    "method": "N independent processes, each with its own database connection and schema cache, sharing only the SQLite file on disk; a multiprocessing barrier starts them together and throughput is total attempts over the shared wall window (earliest start to latest finish), not the sum of per-worker durations",
+    "workload": "the same in-process pipeline as scripts.scale_load (scripted router, no model call, execute against a seeded facts table)",
+    "requests_per_worker": {
+      "1k": 8,
+      "10k": 4
+    }
+  },
+  "results": {
+    "1k_tables": [
+      {
+        "worker_processes": 1,
+        "attempts": 8,
+        "window_seconds": 1.09,
+        "attempt_rps": 7.338,
+        "p50_ms": 110.1,
+        "p95_ms": 220.43
+      },
+      {
+        "worker_processes": 2,
+        "attempts": 16,
+        "window_seconds": 1.123,
+        "attempt_rps": 14.247,
+        "p50_ms": 111.06,
+        "p95_ms": 235.17
+      },
+      {
+        "worker_processes": 4,
+        "attempts": 32,
+        "window_seconds": 1.356,
+        "attempt_rps": 23.598,
+        "p50_ms": 130.61,
+        "p95_ms": 308.38
+      }
+    ],
+    "10k_tables": [
+      {
+        "worker_processes": 1,
+        "attempts": 4,
+        "window_seconds": 4.605,
+        "attempt_rps": 0.869,
+        "p50_ms": 1109.33,
+        "p95_ms": 1283.77
+      },
+      {
+        "worker_processes": 2,
+        "attempts": 8,
+        "window_seconds": 5.04,
+        "attempt_rps": 1.587,
+        "p50_ms": 1221.62,
+        "p95_ms": 1379.5
+      },
+      {
+        "worker_processes": 4,
+        "attempts": 16,
+        "window_seconds": 5.991,
+        "attempt_rps": 2.671,
+        "p50_ms": 1466.57,
+        "p95_ms": 1684.73
+      }
+    ],
+    "reading": "4 processes give 3.2x at 1k tables and 3.1x at 10k tables, while stage 51 measured 1.0x for asyncio concurrency inside one process; per-request latency rises 18-32% as the processes share CPU and disk, which is the expected price and not a regression",
+    "statuses": "every attempt reported ok at both scales, so the numbers are completed pipelines, not early failures"
+  },
+  "defect_found": {
+    "what": "two worker processes starting a workflow in the same microsecond produced the same trace file name, and the second writer failed with PermissionError on Windows",
+    "cause": "app/harness/runner.py built workflow_id as wf_{YYYYMMDD_HHMMSS_%f} with no process or random component, and WorkflowTrace.persist() names the file after the id",
+    "fix": "_new_workflow_id() appends the pid; the id format used by the UI and audit is otherwise unchanged",
+    "evidence": "observed live in the first 1k run of the probe ('Workflow trace persistence failed ... PermissionError'), and reproduced by freezing the clock: same timestamp, different pid, different id"
+  },
+  "tests_added": {
+    "tests/test_harness/test_workflow_id.py": 3,
+    "tests/test_evaluation/test_scale_workers.py": 6,
+    "coverage": [
+      "frozen clock plus two pids -> distinct ids, exact string asserted",
+      "ids differ within one process",
+      "throughput uses the shared window, so a late-starting worker cannot inflate it",
+      "pooled median and p95 over all workers",
+      "worker-count parsing rejects 0, negatives and empty input; the CLI returns 2 and writes nothing",
+      "the CLI refuses to reuse an existing fixture"
+    ]
+  },
+  "blockers_for_real_deployment": [
+    "schema cache is per process: N processes hold N copies (about 470 MB peak RSS each at 10k tables in the stage-51 measurement), so process count multiplies memory, not just CPU",
+    "the retrieval index directory (lancedb + sqlite bm25) was deliberately not built here; concurrent readers and a single writer across processes has not been accepted",
+    "the per-connection lease is an in-process object: N processes means N times the database connections, so the connection budget of the target database has to be recomputed",
+    "the admission gate (max_concurrent_queries) counts in one process, so the effective limit becomes N times the configured value",
+    "recovery and backup assume a single owner of the state directory: refresh_required markers and VACUUM INTO snapshots need a single writer",
+    "trace files are now collision-free by name, but there is no quota or cleanup policy for N processes writing into the same tree",
+    "usage audit appends were tested for concurrent threads, not for concurrent processes"
+  ],
+  "corrections": [
+    "stage 51 concluded that the remaining ceiling is GIL-bound CPU and that only moving work out of the process would help; this stage confirms the direction and quantifies it, but also shows the cost side (memory per process, connection budget, single-writer assumptions) that the earlier note did not name"
+  ],
+  "not_covered": [
+    "no HTTP transport: the workers call run_query in-process, so serialisation, connection acceptance and keep-alive costs are absent",
+    "no real model and no embedding provider; latency is orchestration time only",
+    "SQLite file reads only; PostgreSQL/MySQL behave differently under N connections",
+    "4 processes on a 24-core machine; no measurement above 4, and no test of CPU oversubscription",
+    "the probe does not run a server, so nothing here proves a deployment topology or an SLO"
+  ],
+  "verification": {
+    "ruff": "ruff check app/ tests/ scripts/",
+    "mypy": "mypy app/",
+    "full_suite": {
+      "command": "pytest -m 'not real_database' -q",
+      "result": "2 failed, 4347 passed, 1 skipped, 82 deselected",
+      "duration_s": 211.62,
+      "note": "both failures are the known Windows-only pair (hardlink alias CLI test, concurrent usage-audit writer); unchanged code paths"
+    }
+  },
+  "ci": {
+    "MVP checks": null,
+    "Real database acceptance": null,
+    "conclusion": "pending"
+  }
+}

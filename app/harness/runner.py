@@ -14,6 +14,7 @@ Lifecycle:
 """
 
 import asyncio
+import os
 from datetime import datetime
 from typing import Any
 
@@ -32,6 +33,18 @@ from app.models.workflow import (
 )
 from app.nodes.base import NodeOutput
 from app.nodes.registry import NodeRegistry
+
+
+def _new_workflow_id() -> str:
+    """Build a trace id that is unique across processes, not just across calls.
+
+    The trace file is named after the id, so a microsecond timestamp alone
+    collides when two worker processes start a workflow in the same
+    microsecond: both write the same path and the second one fails with
+    ``PermissionError`` on Windows. The pid disambiguates them.
+    """
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    return f"wf_{stamp}_{os.getpid()}"
 
 
 class WorkflowRunner:
@@ -95,7 +108,7 @@ class WorkflowRunner:
         if reset_constraints:
             self.constraints.reset()
         self.trace = WorkflowTrace(
-            workflow_id=f"wf_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+            workflow_id=_new_workflow_id(),
             plan_id=self.plan.id,
             session_id=session_id,
             started_at=datetime.now(),
