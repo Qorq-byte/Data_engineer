@@ -6,6 +6,7 @@ import os
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -230,6 +231,8 @@ def test_cli_refuses_overwriting_any_frozen_input(source):
 def test_cli_refuses_hardlink_input_alias(tmp_path):
     source = data.DIRECTORY / "sql.json"
     alias = tmp_path / "alias.json"
+    if os.name == "nt" and Path(tmp_path).drive.lower() != source.drive.lower():
+        pytest.skip("Windows cannot hardlink across drives; alias must share the source drive")
     os.link(source, alias)
     assert main(["--output", str(alias)]) == 2
     assert alias.read_bytes() == source.read_bytes()

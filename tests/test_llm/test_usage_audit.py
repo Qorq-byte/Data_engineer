@@ -566,3 +566,22 @@ async def test_snapshot_failure_does_not_replace_success(audit_path, monkeypatch
     assert result["llm_audit"]["status"] == "failed"
     assert "private" not in str(result)
     assert not audit_path.exists()
+
+
+def test_transient_errors_are_classified_for_retry():
+    from app.audit.store import _is_transient
+
+    assert _is_transient(sqlite3.OperationalError("database is locked"))
+    assert _is_transient(sqlite3.OperationalError("attempt to write a readonly database"))
+    assert not _is_transient(sqlite3.OperationalError("no such table: llm_usage_audit"))
+
+
+def test_first_write_survives_a_burst_of_writers(tmp_path):
+    """Every writer must land its record even when they all create the file."""
+    from app.audit.store import UsageAuditStore
+
+    s = UsageAuditStore(str(tmp_path / "burst.db"), 50)
+    records = [sample(f"q_{i:012x}") for i in range(16)]
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        list(pool.map(s.write, records))
+    assert [s.read(r.query_id)["query_id"] for r in records] == [r.query_id for r in records]

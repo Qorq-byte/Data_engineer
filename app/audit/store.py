@@ -9,6 +9,7 @@ import json
 import math
 import re
 import sqlite3
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -217,6 +218,14 @@ def _schema(conn: sqlite3.Connection, *, create: bool) -> None:
         raise ValueError("Unsupported audit table schema")
 
 
+_WRITE_ATTEMPTS = 4
+
+
+def _is_transient(exc: sqlite3.OperationalError) -> bool:
+    message = str(exc).lower()
+    return "locked" in message or "readonly" in message or "read-only" in message
+
+
 class UsageAuditStore:
     def __init__(self, path: str, max_records: int = 1000) -> None:
         if not path.strip() or type(max_records) is not int or not 1 <= max_records <= 10000:
@@ -227,7 +236,22 @@ class UsageAuditStore:
     def write(self, record: UsageAuditRecord) -> None:
         payload = _encode(record)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with contextlib.closing(sqlite3.connect(self.path, timeout=0.2)) as conn, conn:
+        delay = 0.02
+        for attempt in range(_WRITE_ATTEMPTS):
+            try:
+                self._write_once(record, payload)
+                return
+            except sqlite3.OperationalError as exc:
+                # Several writers may race on first use: one creates the file and
+                # the others see a locked or not-yet-writable database. The
+                # statement set below is idempotent, so retrying is safe.
+                if attempt == _WRITE_ATTEMPTS - 1 or not _is_transient(exc):
+                    raise
+                time.sleep(delay)
+                delay *= 2
+
+    def _write_once(self, record: UsageAuditRecord, payload: str) -> None:
+        with contextlib.closing(sqlite3.connect(self.path, timeout=5.0)) as conn, conn:
             conn.execute("BEGIN IMMEDIATE")
             _schema(conn, create=True)
             existing = conn.execute(
