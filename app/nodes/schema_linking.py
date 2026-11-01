@@ -25,6 +25,7 @@ import logging
 from typing import Any
 
 from app.knowledge.schema_graph import expand_foreign_keys as _expand_foreign_keys
+from app.knowledge.schema_name_index import SchemaNameIndex
 from app.models.query import SQR
 from app.models.schema import SchemaSnapshot
 from app.nodes.agentic import AgenticNode
@@ -289,6 +290,9 @@ class SchemaLinkingNode(AgenticNode):
             )
 
         linking_warnings: list[str] = []
+        # One pass over the snapshot, reused by every candidate below; the
+        # previous code rescanned all tables and columns per candidate.
+        name_index = SchemaNameIndex(schema)
 
         # ── Phase 3: RAG-powered 5-step retrieval ──────────────────
         if self._retriever is not None:
@@ -346,14 +350,18 @@ class SchemaLinkingNode(AgenticNode):
 
         # ── Phase 2: keyword matching + FK expansion ───────────────
         candidates = _gather_candidates(sqr)
-        matched_tables, matched_columns = _match_schema(candidates, schema, match_threshold)
+        matched_tables, matched_columns = _match_schema(
+            candidates, schema, match_threshold, index=name_index
+        )
 
         # ── Reverse table-name scan ────────────────────────────────
         # Scan ALL table names against the query text to catch tables
         # that the forward mapping (Chinese→English) missed.  This is
         # critical for tables like "knowledge_base", "notifications",
         # "reports", etc. whose Chinese terms might not be in the map.
-        reverse_matched = _scan_table_names_reverse(input.query_text, schema)
+        reverse_matched = _scan_table_names_reverse(
+            input.query_text, schema, index=name_index
+        )
         if reverse_matched:
             # Add tables found by reverse scan that aren't already matched
             existing = set(matched_tables)
@@ -374,7 +382,9 @@ class SchemaLinkingNode(AgenticNode):
                     candidates.append({"name": t, "kind": "column", "source": "reverse_scan"})
             # Re-run matching with the expanded candidates — keep BOTH
             # tables and columns from the second pass
-            second_tables, matched_columns = _match_schema(candidates, schema, match_threshold)
+            second_tables, matched_columns = _match_schema(
+                candidates, schema, match_threshold, index=name_index
+            )
             existing_tbls_2 = set(matched_tables)
             for t in second_tables:
                 if t not in existing_tbls_2:
@@ -408,7 +418,7 @@ class SchemaLinkingNode(AgenticNode):
         # When a column exists in multiple tables, record every table so
         # the generator can produce one SQL per independent table group.
         multi_table_hint = _build_multi_table_hint(
-            matched_columns, schema, query_text=input.query_text
+            matched_columns, schema, query_text=input.query_text, index=name_index
         )
 
         return NodeOutput(
@@ -518,7 +528,11 @@ for _zh, _en_list in _ZH_TO_EN_MAP.items():
 del _zh, _en_list, _en
 
 
-def _scan_table_names_reverse(query_text: str, schema: SchemaSnapshot) -> list[str]:
+def _scan_table_names_reverse(
+    query_text: str,
+    schema: SchemaSnapshot,
+    index: SchemaNameIndex | None = None,
+) -> list[str]:
     """Scan ALL table names against the query text via reverse lookup.
 
     For each table name in the schema, split it into parts (by underscore)
@@ -534,46 +548,11 @@ def _scan_table_names_reverse(query_text: str, schema: SchemaSnapshot) -> list[s
     if not query_text or schema is None:
         return []
 
-    query_lower = query_text.lower()
-
-    # Also tokenize the query to get individual Chinese terms
-    query_tokens = set(_tokenize_zh(query_text))
-    query_tokens_lower = {t.lower() for t in query_tokens}
-
-    matched: list[str] = []
-
-    for table_name in schema.tables:
-        # Split table name into meaningful parts
-        parts = table_name.replace("-", "_").split("_")
-        for part in parts:
-            part_lower = part.lower().strip()
-            if len(part_lower) < 3:
-                continue
-
-            # 1. Check if this English part has a Chinese reverse mapping
-            zh_terms = _EN_TO_ZH_MAP.get(part_lower, [])
-            for zh in zh_terms:
-                if zh in query_text or zh.lower() in query_tokens_lower:
-                    if table_name not in matched:
-                        matched.append(table_name)
-                    break
-
-            # 2. Also check if the English part directly appears in the query
-            # (e.g., user types "token" in a Chinese query)
-            if (part_lower in query_lower and len(part_lower) >= 4) and (table_name not in matched):
-                matched.append(table_name)
-
-            # 3. Check if any part of the query (English tokens) matches
-            # the table name part
-            for qtok in query_tokens_lower:
-                if len(qtok) >= 4 and (
-                    qtok == part_lower or qtok in part_lower or part_lower in qtok
-                ):
-                    if table_name not in matched:
-                        matched.append(table_name)
-                    break
-
-    return matched
+    if index is None:
+        index = SchemaNameIndex(schema)
+    return index.tables_sharing_parts(
+        query_text, _tokenize_zh(query_text), _EN_TO_ZH_MAP
+    )
 
 
 # ── Schema matching ────────────────────────────────────────────────────
@@ -583,6 +562,7 @@ def _match_schema(
     candidates: list[dict[str, Any]],
     schema: SchemaSnapshot,
     threshold: float,
+    index: SchemaNameIndex | None = None,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     """Match candidates against schema tables and columns.
 
@@ -592,6 +572,9 @@ def _match_schema(
     *all_tables* lists every table that contains it — this enables the
     downstream generator to produce one SQL candidate per table group.
     """
+    if index is None:
+        index = SchemaNameIndex(schema)
+
     matched_tables: dict[str, float] = {}  # name → best confidence
     matched_columns: dict[str, dict[str, Any]] = {}  # key → {name, table, confidence, all_tables}
 
@@ -600,13 +583,13 @@ def _match_schema(
         kind = candidate["kind"]
 
         if kind == "table":
-            table_matches = _all_table_matches(name, schema, threshold)
+            table_matches = index.match_tables(name, threshold)
             for t_name, t_conf in table_matches:
                 if t_name not in matched_tables or t_conf > matched_tables[t_name]:
                     matched_tables[t_name] = t_conf
 
         elif kind == "column":
-            column_matches = _all_column_matches(name, schema, threshold)
+            column_matches = index.match_columns(name, threshold)
             if column_matches:
                 # Best match determines the primary table
                 best_tbl, best_col, best_conf = column_matches[0]
@@ -688,71 +671,11 @@ def _best_column_match(name: str, schema: SchemaSnapshot) -> tuple[str | None, s
     return best_table, best_col, best_conf
 
 
-def _all_table_matches(
-    name: str, schema: SchemaSnapshot, threshold: float
-) -> list[tuple[str, float]]:
-    """Return ALL table matches for *name* above *threshold*, sorted by confidence."""
-    name_lower = name.lower().strip()
-    results: list[tuple[str, float]] = []
-
-    for t_name, t in schema.tables.items():
-        conf = 0.0
-        if t_name == name:
-            conf = 1.0
-        elif t_name.lower() == name_lower:
-            conf = 0.95
-        elif t.comment and name_lower in t.comment.lower():
-            conf = 0.7
-        elif name_lower in t_name.lower() or t_name.lower() in name_lower:
-            conf = 0.65
-
-        if conf >= threshold:
-            results.append((t_name, conf))
-
-    results.sort(key=lambda x: x[1], reverse=True)
-    return results
-
-
-def _all_column_matches(
-    name: str, schema: SchemaSnapshot, threshold: float
-) -> list[tuple[str, str, float]]:
-    """Return ALL column matches for *name* across all tables, sorted by confidence.
-
-    Returns ``[(table_name, column_name, confidence), ...]`` — one entry per
-    table that contains a matching column.  This allows the downstream generator
-    to discover that a term like "name" maps to *users.name*, *employees.name*,
-    and *contacts.name* simultaneously.
-    """
-    name_lower = name.lower().strip()
-    results: list[tuple[str, str, float]] = []
-
-    for t_name, t in schema.tables.items():
-        for col in t.columns:
-            col_lower = col.name.lower()
-            conf = 0.0
-
-            if col.name == name:
-                conf = 1.0
-            elif col_lower == name_lower:
-                conf = 0.95
-            elif col.comment and name_lower in col.comment.lower():
-                conf = 0.75
-            elif name_lower in col_lower:
-                conf = 0.65
-            elif col_lower in name_lower:
-                conf = 0.6
-
-            if conf >= threshold:
-                results.append((t_name, col.name, conf))
-
-    results.sort(key=lambda x: x[2], reverse=True)
-    return results
-
-
 def _build_multi_table_hint(
     matched_columns: list[dict[str, Any]],
     schema: SchemaSnapshot | None = None,
     query_text: str = "",
+    index: SchemaNameIndex | None = None,
 ) -> dict[str, Any]:
     """Build a hint structure that tells the generator about multi-table alternatives.
 
@@ -802,7 +725,7 @@ def _build_multi_table_hint(
 
     # ── Fallback: when no columns matched, try direct keyword scan ──
     if (not all_independent and schema is not None and (len(schema.tables) >= 2)) and (query_text):
-        direct_matches = _direct_keyword_scan(query_text, schema)
+        direct_matches = _direct_keyword_scan(query_text, schema, index=index)
         if direct_matches:
             has_alternatives = True
             for col_name, tables in direct_matches.items():
@@ -826,7 +749,11 @@ def _build_multi_table_hint(
 # ── FK expansion ───────────────────────────────────────────────────────
 
 
-def _direct_keyword_scan(query_text: str, schema: SchemaSnapshot) -> dict[str, list[str]]:
+def _direct_keyword_scan(
+    query_text: str,
+    schema: SchemaSnapshot,
+    index: SchemaNameIndex | None = None,
+) -> dict[str, list[str]]:
     """Scan the NL query text directly against all schema columns.
 
     Uses jieba tokenization + Chinese→English mapping to find matching
@@ -861,45 +788,9 @@ def _direct_keyword_scan(query_text: str, schema: SchemaSnapshot) -> dict[str, l
     # Deduplicate
     expanded = list(dict.fromkeys(expanded))
 
-    # ── Step 1: Check if any table name matches a query token ──
-    # If no table name matches, the query is likely irrelevant to this database
-    table_matched = False
-    for token in expanded:
-        token_lower = token.lower().strip()
-        if len(token_lower) < 2:
-            continue
-        for t_name in schema.tables:
-            t_lower = t_name.lower()
-            if (
-                t_lower == token_lower
-                or (len(token_lower) >= 3 and token_lower in t_lower)
-                or (len(t_lower) >= 3 and t_lower in token_lower)
-            ):
-                table_matched = True
-                break
-        if table_matched:
-            break
-
-    if not table_matched:
-        return {}
-
-    # ── Step 2: Scan all schema columns for matches ──
-    result: dict[str, list[str]] = {}
-    for token in expanded:
-        token_lower = token.lower().strip()
-        if len(token_lower) < 2:
-            continue
-        for t_name, table in schema.tables.items():
-            for col in table.columns:
-                col_lower = col.name.lower()
-                # Exact match or token is substring of column name
-                if col_lower == token_lower or (len(token_lower) >= 3 and token_lower in col_lower):
-                    if col.name not in result:
-                        result[col.name] = []
-                    if t_name not in result[col.name]:
-                        result[col.name].append(t_name)
-
-    return result
+    if index is None:
+        index = SchemaNameIndex(schema)
+    return index.direct_keyword_scan(expanded)
 
 
 # ── Column disambiguation ──────────────────────────────────────────────
