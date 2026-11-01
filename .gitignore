@@ -59,3 +59,14 @@ frontend_dist/
 .npm-cache/
 .pytest-*/
 .baseline-probe.py
+
+# Per-stage project snapshots — full tree copies used to keep stages isolated.
+# They are fully reproducible from git history and must never be committed.
+.stage*/
+.post40-plan/
+
+# Local agent working memory
+.workbuddy/
+
+# Internal release prompt, not part of the published documentation set
+docs/GITHUB_RELEASE_PROMPT.md
