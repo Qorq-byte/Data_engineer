@@ -155,8 +155,17 @@
     "the differential tests prove equality with the previous implementation, not that the previous rules are the right ranking"
   ],
   "ci": {
-    "MVP checks": null,
-    "Real database acceptance": null,
-    "conclusion": "pending"
+    "sha": "05dc384752b8f0381c288f6b2a515196daa7c268",
+    "MVP checks": {
+      "run_id": 41303222414,
+      "conclusion": "success",
+      "steps": "34/34 success"
+    },
+    "Real database acceptance": {
+      "run_id": 41303222440,
+      "conclusion": "success",
+      "steps": "11/11 success"
+    },
+    "conclusion": "both workflows succeeded on the exact SHA; job logs still require admin rights, so no per-test counts are recorded"
   }
 }
