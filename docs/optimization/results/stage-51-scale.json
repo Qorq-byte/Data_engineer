@@ -1,0 +1,142 @@
+{
+  "stage": 51,
+  "date": "2026-11-01",
+  "branch": "codex/schema-concurrency",
+  "baseline_commit": "1b2f797",
+  "scope": [
+    "remove per-request whole-schema work from the query hot path, one measured cause at a time",
+    "no change to concurrency semantics, no new database support, no real model calls"
+  ],
+  "profiling": {
+    "method": "cProfile around a single in-process run_query at 1000 tables (scripted router, mock embedding, SQLite fixture), plus stage durations from the node event callback",
+    "top_costs_before": [
+      {
+        "function": "app/core/prompt_builder.py:521 <genexpr>",
+        "cumtime_s": 3.95,
+        "iterations": 10166383,
+        "note": "per-character Python loop inside estimate_tokens; two str method calls per character"
+      },
+      {
+        "function": "sqlglot identifier rendering inside app/core/schema_validation.py",
+        "identifiers_rendered": 12003,
+        "dialect_inits": 13015,
+        "note": "one rendered identifier per column of every table in the snapshot, for a statement that referenced one table"
+      },
+      {
+        "function": "copy.deepcopy of the cached snapshot",
+        "calls_per_request": 1,
+        "measured_ms_at_10k": [1327, 2112, 2746]
+      }
+    ],
+    "stage_breakdown_1k_before": {
+      "parse_ms": 1,
+      "retrieve_ms": 121,
+      "generate_ms": 49,
+      "validate_ms": 491,
+      "execute_ms": 59
+    }
+  },
+  "changes": [
+    {
+      "file": "app/core/prompt_builder.py",
+      "what": "estimate_tokens counts ASCII and non-ASCII characters with two C-level passes (encode + translate) instead of a per-character loop",
+      "equivalence": "arithmetic unchanged, including Python's treatment of 0x1c-0x1f as ASCII whitespace and non-ASCII whitespace being charged as CJK",
+      "microbenchmark": {
+        "text_chars": 1160000,
+        "reference_impl_ms": 43,
+        "new_impl_ms": 2,
+        "random_strings_compared": 300,
+        "mismatches": 0
+      },
+      "in_process_ab_1k": {
+        "method": "old and new implementation alternated inside one process on one fixture, 15 requests each, 2 rounds",
+        "old_p50_ms": 2183,
+        "new_p50_ms": 1152
+      }
+    },
+    {
+      "file": "app/core/schema_validation.py",
+      "what": "parse the statement first and build the sqlglot MappingSchema only for the tables it names, instead of every table in the snapshot",
+      "pitfalls_found": [
+        "qualify normalises the AST before calling on_qualify, so the source dictionary must be keyed by the same normalisation; otherwise a legal MAIN.USERS statement is rejected as an unrepresented namespace",
+        "case-insensitive dialects (sqlite/duckdb) need a casefold fallback to resolve USERS against a snapshot key spelled Users"
+      ],
+      "unchanged_behaviour": [
+        "unknown table still fails with Table '<x>' not found in schema",
+        "qualified namespace mismatches still fail",
+        "unparsable SQL still returns SCHEMA_ERROR"
+      ],
+      "stage_effect": {
+        "validate_ms_1k": {"before": 491, "after": 89},
+        "validate_ms_10k": {"before": 710, "after": 415}
+      }
+    },
+    {
+      "file": "app/models/schema.py + app/db/schema_extractor.py",
+      "what": "hand-written SchemaSnapshot.clone() replaces copy.deepcopy for the snapshot the extraction cache hands out",
+      "semantics": [
+        "scalars shared, other leaf values still deep-copied so the clone cannot alias mutable state",
+        "created_at and the frozen duckdb_source_state are shared on purpose",
+        "values verified equal to copy.deepcopy via dataclasses.asdict"
+      ],
+      "measured_at_10k": {"deepcopy_ms": 1352, "clone_ms": 377, "speedup": 3.6}
+    }
+  ],
+  "measurements": {
+    "instrument": "scripts/scale_load.py, pipeline scenario, scripted router with fixed SQL, mock embedding provider, single process",
+    "method": "identical command and spec before and after, source switched with git stash on the same machine in one session",
+    "pipeline": {
+      "1k_tables_15_requests": {
+        "before": {"p50_ms": 761, "p95_ms": 893, "attempt_rps": 1.25, "event_loop_lag_p95_ms": 379},
+        "after": {"p50_ms": 122, "p95_ms": 241, "attempt_rps": 6.86, "event_loop_lag_p95_ms": 68}
+      },
+      "10k_tables_6_requests": {
+        "before": {"p50_ms": 8166, "p95_ms": 11061, "attempt_rps": 0.12, "event_loop_lag_p95_ms": 3753},
+        "after": {"p50_ms": 1307, "p95_ms": 1501, "attempt_rps": 0.74, "event_loop_lag_p95_ms": 914}
+      }
+    },
+    "concurrency_10k_after": [
+      {"concurrency": 1, "attempt_rps": 0.31, "p50_ms": 3274},
+      {"concurrency": 2, "attempt_rps": 0.26, "p50_ms": 6647},
+      {"concurrency": 4, "attempt_rps": 0.32, "p50_ms": 12333}
+    ],
+    "conclusion_on_lease": "with per-request CPU cut by ~6x, throughput still does not grow with concurrency and P50 still scales roughly linearly, so the single-connection lease is not the primary throughput ceiling; the remaining work is GIL-bound CPU inside one process"
+  },
+  "tests_added": {
+    "tests/test_core/test_token_estimation.py": 14,
+    "tests/test_db/test_schema_validation_scope.py": 6,
+    "tests/test_models/test_schema_clone.py": 5
+  },
+  "tests_that_fail_on_the_old_code": [
+    "tests/test_db/test_schema_validation_scope.py::test_mapping_is_built_only_for_referenced_tables",
+    "tests/test_db/test_schema_validation_scope.py::test_join_builds_mapping_for_both_sources"
+  ],
+  "verification": {
+    "ruff": "ruff check app/ tests/ -> All checks passed",
+    "mypy": "mypy app/ -> no issues in 191 source files",
+    "full_suite": {
+      "command": "pytest -m 'not real_database' -q",
+      "result": "3 failed, 4291 passed, 1 skipped, 82 deselected",
+      "duration_s": 299.66,
+      "known_failures_reproduce_on_untouched_tree": true,
+      "known_failures": [
+        "tests/test_evaluation/test_acceptance_v3.py::test_cli_refuses_hardlink_input_alias",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_writers_do_not_mix_records",
+        "tests/test_llm/test_usage_audit.py::test_concurrent_request_audits_keep_their_own_tokens"
+      ]
+    }
+  },
+  "not_covered": [
+    "synthetic schema and scripted router only: no real model, no real embedding, no end-to-end semantic or cost numbers",
+    "SQLite only; PostgreSQL/MySQL validation and introspection paths were not re-measured this round",
+    "100k tables untested; 10k remains outside the interactive range even after the improvement",
+    "multi-worker / multi-replica deployment is still undesigned; no concurrency semantics changed",
+    "context compaction still measures the whole snapshot repr against the token budget and therefore always exceeds the threshold at scale; left unchanged and recorded as an open measurement question",
+    "keyword retrieval is still an O(tables) scan (~0.9 s at 10k); no inverted index or precomputed subset"
+  ],
+  "ci": {
+    "MVP checks": null,
+    "Real database acceptance": null,
+    "conclusion": "pending"
+  }
+}
