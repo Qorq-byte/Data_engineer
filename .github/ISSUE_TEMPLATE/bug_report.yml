@@ -1,0 +1,102 @@
+name: Bug report
+description: Something behaves differently from what the documentation says
+labels: ["bug", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: this project documents several limitations on purpose (single-tenant,
+        four of eleven dialects implemented, no accuracy baseline). If the behaviour you saw is
+        one of those, it is expected — see the README roadmap first.
+
+        **Do not paste API keys, database passwords or connection strings.** Redact them.
+
+        For security issues, do not open an issue. See
+        [SECURITY.md](https://github.com/Qorq-byte/Data_engineer/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The observed behaviour, including the exact response body or UI state if you have it.
+      placeholder: |
+        POST /api/v1/query returned 500 with {"code":"INTERNAL_ERROR"} ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+      description: If the documentation led you to expect this, quote the sentence and link the file.
+      placeholder: |
+        README says status is only "completed" or "failed", but I received ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal and deterministic. A redacted curl command or a pytest snippet is ideal.
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Query pipeline (parse / link / generate / validate / execute)
+        - Harness (plans, runner, constraints, permissions)
+        - Database adapter (SQLite, DuckDB, PostgreSQL, MySQL)
+        - RAG / retrieval
+        - LLM routing, completion status, usage
+        - Auth, settings, workspace UI
+        - MCP
+        - Evaluation / scripts
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Output of `git rev-parse --short HEAD`, or the release tag.
+      placeholder: a944ea5
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python version, Node version, database engine and version, LLM provider.
+      placeholder: Windows 11, Python 3.12.13, Node 22, PostgreSQL 16, DeepSeek
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or trace
+      description: Server output around the failure. Remove keys, tokens, hostnames and data.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I removed every credential, connection string and piece of customer data from this report.
+          required: true
+        - label: I checked the README roadmap and this is not a documented limitation.
+          required: true

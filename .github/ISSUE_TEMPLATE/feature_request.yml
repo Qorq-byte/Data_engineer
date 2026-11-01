@@ -1,0 +1,86 @@
+name: Feature request
+description: Propose a capability that does not exist yet
+labels: ["enhancement", "needs triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This project is deliberately narrow: the model never chooses control flow, execution is
+        read-only, and claims require evidence. Proposals that fit those constraints move fast;
+        proposals that relax them need a stronger argument than convenience.
+
+        Before filing, check the README roadmap and `docs/archive/stages/INDEX.md` — the feature may
+        have been attempted and deliberately left out.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you cannot do today, and what you do instead. Describe the situation, not the solution.
+      placeholder: |
+        I have 400 tables and schema linking pulls too many candidates, so ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What the system should do differently. If it touches the query pipeline, say which node.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Query pipeline (new or changed node)
+        - Workflow plan
+        - Database adapter / dialect
+        - RAG / retrieval
+        - LLM routing or model support
+        - Harness (constraints, permissions, sessions)
+        - Web workspace
+        - MCP
+        - Evaluation / tooling
+        - Documentation
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Effect on the harness invariants
+      description: |
+        Does this change allow the model to influence control flow, write to a database, or bypass a
+        permission or constraint? If yes, explain why that is acceptable. If no, say so explicitly.
+      placeholder: |
+        No. Ordering still comes from node_order; the new node is read-only and declares its tool
+        permissions in agent.yml.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do nothing" and any workaround you already use.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How we would know it works
+      description: |
+        A test, a measurement, or an acceptance criterion. "It feels better" is not testable; a
+        number before and after is.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Confirmations
+      options:
+        - label: I read the README roadmap and the stage archive index; this is not already listed.
+          required: true
