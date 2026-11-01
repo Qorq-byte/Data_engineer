@@ -135,8 +135,17 @@
     "keyword retrieval is still an O(tables) scan (~0.9 s at 10k); no inverted index or precomputed subset"
   ],
   "ci": {
-    "MVP checks": null,
-    "Real database acceptance": null,
-    "conclusion": "pending"
+    "sha": "44438f450fd7f5b0f1e7de6083f2aa3674ca0be0",
+    "MVP checks": {
+      "run_id": 41288732932,
+      "conclusion": "success",
+      "steps": "all steps success, including ruff check ., mypy app/, the per-file mypy gates, the frontend contract and build, and pytest -m 'not real_database'"
+    },
+    "Real database acceptance": {
+      "run_id": 41288732940,
+      "conclusion": "success",
+      "steps": "all steps success, including pytest tests/real_db, artifact upload and Stop containers"
+    },
+    "conclusion": "both workflows succeeded on the exact SHA; job logs require repository admin rights, so no per-test counts are recorded here"
   }
 }

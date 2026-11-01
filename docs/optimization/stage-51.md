@@ -146,3 +146,23 @@ python -m scripts.scale_load --output results/s51.json \
 ```
 
 `cProfile` 与阶段耗时的临时脚本没有进仓库（一次性诊断工具），复现靠上面这条命令 + `pytest -m 'not real_database'`。
+
+## 8. 远程验收
+
+按逻辑分块普通提交并推送到 `codex/schema-concurrency`：
+
+| 提交 | 内容 |
+|---|---|
+| `8237797` | token 估算改 C 级扫描 |
+| `182d93c` | 校验只为引用的表建映射 |
+| `ce92033` | 快照手写 `clone()` |
+| `44438f4` | 文档与测量证据 |
+
+精确 SHA `44438f450fd7f5b0f1e7de6083f2aa3674ca0be0` 上两个工作流均 success：
+
+- **MVP checks** `41288732932`：作业 `test` 的全部步骤 success，含 `ruff check .`、`mypy app/`、逐文件 mypy 门禁（其中一步的目标列表包含 `app/core/schema_validation.py`）、前端契约与构建、`pytest -m 'not real_database'`。
+- **Real database acceptance** `41288732940`：`pytest tests/real_db` 成功、junit 产物上传成功、`Stop containers` 成功。
+
+一处证据限制：作业日志接口仍要求仓库 admin 权限，本机取不到逐条通过数，也不下载 junit 产物（需要同一权限），因此这里只登记工作流级与步骤级结论，**不写 PG/MySQL 通过数**。本阶段没有改并发语义、没有新增数据库支持、没有真实模型调用；真实库工作流在这里的作用是证明校验范围改动没有破坏 PG/MySQL 路径的既有断言，不是新的容量证据。
+
+上面第 4 节的所有数字都来自本机合成夹具上的 `scale_load`，是**编排容量**，不是线上 SLO。
