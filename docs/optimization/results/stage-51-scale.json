@@ -25,7 +25,11 @@
       {
         "function": "copy.deepcopy of the cached snapshot",
         "calls_per_request": 1,
-        "measured_ms_at_10k": [1327, 2112, 2746]
+        "measured_ms_at_10k": [
+          1327,
+          2112,
+          2746
+        ]
       }
     ],
     "stage_breakdown_1k_before": {
@@ -67,8 +71,14 @@
         "unparsable SQL still returns SCHEMA_ERROR"
       ],
       "stage_effect": {
-        "validate_ms_1k": {"before": 491, "after": 89},
-        "validate_ms_10k": {"before": 710, "after": 415}
+        "validate_ms_1k": {
+          "before": 491,
+          "after": 89
+        },
+        "validate_ms_10k": {
+          "before": 710,
+          "after": 415
+        }
       }
     },
     {
@@ -79,7 +89,11 @@
         "created_at and the frozen duckdb_source_state are shared on purpose",
         "values verified equal to copy.deepcopy via dataclasses.asdict"
       ],
-      "measured_at_10k": {"deepcopy_ms": 1352, "clone_ms": 377, "speedup": 3.6}
+      "measured_at_10k": {
+        "deepcopy_ms": 1352,
+        "clone_ms": 377,
+        "speedup": 3.6
+      }
     }
   ],
   "measurements": {
@@ -87,18 +101,50 @@
     "method": "identical command and spec before and after, source switched with git stash on the same machine in one session",
     "pipeline": {
       "1k_tables_15_requests": {
-        "before": {"p50_ms": 761, "p95_ms": 893, "attempt_rps": 1.25, "event_loop_lag_p95_ms": 379},
-        "after": {"p50_ms": 122, "p95_ms": 241, "attempt_rps": 6.86, "event_loop_lag_p95_ms": 68}
+        "before": {
+          "p50_ms": 761,
+          "p95_ms": 893,
+          "attempt_rps": 1.25,
+          "event_loop_lag_p95_ms": 379
+        },
+        "after": {
+          "p50_ms": 122,
+          "p95_ms": 241,
+          "attempt_rps": 6.86,
+          "event_loop_lag_p95_ms": 68
+        }
       },
       "10k_tables_6_requests": {
-        "before": {"p50_ms": 8166, "p95_ms": 11061, "attempt_rps": 0.12, "event_loop_lag_p95_ms": 3753},
-        "after": {"p50_ms": 1307, "p95_ms": 1501, "attempt_rps": 0.74, "event_loop_lag_p95_ms": 914}
+        "before": {
+          "p50_ms": 8166,
+          "p95_ms": 11061,
+          "attempt_rps": 0.12,
+          "event_loop_lag_p95_ms": 3753
+        },
+        "after": {
+          "p50_ms": 1307,
+          "p95_ms": 1501,
+          "attempt_rps": 0.74,
+          "event_loop_lag_p95_ms": 914
+        }
       }
     },
     "concurrency_10k_after": [
-      {"concurrency": 1, "attempt_rps": 0.31, "p50_ms": 3274},
-      {"concurrency": 2, "attempt_rps": 0.26, "p50_ms": 6647},
-      {"concurrency": 4, "attempt_rps": 0.32, "p50_ms": 12333}
+      {
+        "concurrency": 1,
+        "attempt_rps": 0.31,
+        "p50_ms": 3274
+      },
+      {
+        "concurrency": 2,
+        "attempt_rps": 0.26,
+        "p50_ms": 6647
+      },
+      {
+        "concurrency": 4,
+        "attempt_rps": 0.32,
+        "p50_ms": 12333
+      }
     ],
     "conclusion_on_lease": "with per-request CPU cut by ~6x, throughput still does not grow with concurrency and P50 still scales roughly linearly, so the single-connection lease is not the primary throughput ceiling; the remaining work is GIL-bound CPU inside one process"
   },
@@ -146,6 +192,12 @@
       "conclusion": "success",
       "steps": "all steps success, including pytest tests/real_db, artifact upload and Stop containers"
     },
-    "conclusion": "both workflows succeeded on the exact SHA; job logs require repository admin rights, so no per-test counts are recorded here"
+    "conclusion": "both workflows succeeded on the exact SHA; job logs require repository admin rights, so no per-test counts are recorded here",
+    "docs_commit": {
+      "sha": "af44c8c615896862ea9584891ab4ad73b51db993",
+      "MVP checks": 41289181433,
+      "Real database acceptance": 41289181439,
+      "conclusion": "documentation-only commit, both workflows succeeded"
+    }
   }
 }
