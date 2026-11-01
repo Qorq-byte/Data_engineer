@@ -16,6 +16,11 @@ from app.models.domain import DomainConfig
 from app.models.query import SQR, IntentType, QueryPair
 from app.models.schema import SchemaSnapshot
 
+# ASCII characters for which ``str.isspace()`` is True: tab, newline, vertical
+# tab, form feed, carriage return, the four 0x1c-0x1f separators, and space.
+# Used by PromptBuilder.estimate_tokens to strip them with one C-level pass.
+_ASCII_WHITESPACE = b"\t\n\v\f\r\x1c\x1d\x1e\x1f "
+
 # ── Prompt Level ────────────────────────────────────────────────────────
 
 
@@ -515,10 +520,21 @@ class PromptBuilder:
         model's tokenizer (e.g., ``tiktoken``).  The 4-char rule is a
         common rule-of-thumb that slightly overestimates for English
         (avoiding budget overruns) and is accurate enough for CJK.
+
+        Implementation note: the character classes are counted with two C-level
+        passes (``encode`` + ``translate``) instead of a Python loop over every
+        character. Prompts carry a whole schema, so a per-character loop cost
+        seconds per query at 1k tables and blocked the event loop; this keeps the
+        exact same arithmetic with a fraction of the CPU.
         """
         if not text:
             return 0
-        en_chars = sum(1 for c in text if c.isascii() and not c.isspace())
+        ascii_text = text.encode("ascii", "ignore")
+        # ASCII characters that Python's str.isspace() accepts: tab, newline,
+        # vertical tab, form feed, carriage return, the four 0x1c-0x1f separators
+        # and the space. Non-ASCII whitespace (e.g. U+3000) is not ASCII, so the
+        # old loop counted it as CJK too — the arithmetic below preserves that.
+        en_chars = len(ascii_text.translate(None, _ASCII_WHITESPACE))
         zh_chars = len(text) - en_chars
         return int(en_chars / 4 + zh_chars / 1.5)
 
