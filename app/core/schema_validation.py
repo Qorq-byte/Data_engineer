@@ -7,23 +7,52 @@ from sqlglot.optimizer.normalize_identifiers import normalize_identifiers
 from sqlglot.optimizer.qualify import qualify
 from sqlglot.schema import MappingSchema
 
-from app.models.schema import SchemaSnapshot
+from app.models.schema import SchemaSnapshot, TableSchema
 
 
 def check_schema_references(
     sql: str, schema: SchemaSnapshot, dialect: str | None
 ) -> tuple[bool, list[str]]:
     # Quoted keys preserve source identifier case; type checks remain a separate stage.
+    try:
+        expression = sqlglot.parse_one(sql, read=dialect)
+    except (SqlglotError, ValueError) as exc:
+        return False, [f"SCHEMA_ERROR: {exc}"]
+
+    # Resolve only the tables this statement names. Building a sqlglot mapping
+    # for the whole snapshot cost ~0.5 s per request against 1k tables (one
+    # rendered identifier per column plus a normalisation pass per table) while
+    # the statement touched a single table. Keys are normalised exactly like the
+    # old full-dictionary ones, because ``qualify`` normalises the AST before
+    # calling back; the case-folded scan keeps SQLite/DuckDB behaviour, where
+    # MAIN.USERS resolves to "Users".
+    sources: dict[str, TableSchema] = {}
+    resolved: list[tuple[str, TableSchema]] = []
+    for reference in dict.fromkeys(t.name for t in expression.find_all(exp.Table) if t.name):
+        key = normalize_identifiers(
+            exp.to_identifier(reference, quoted=True), dialect=dialect
+        ).name
+        table = schema.tables.get(key)
+        schema_name = key
+        if table is None:
+            folded = key.casefold()
+            for candidate, candidate_table in schema.tables.items():
+                if candidate.casefold() == folded:
+                    table, schema_name = candidate_table, candidate
+                    break
+        if table is None:
+            continue
+        sources[key] = table
+        resolved.append((schema_name, table))
+
     mapping = MappingSchema(dialect=dialect)
-    sources = {
-        normalize_identifiers(exp.to_identifier(name, quoted=True), dialect=dialect).name: table
-        for name, table in schema.tables.items()
-    }
-    for name, table in schema.tables.items():
+    for schema_name, table in resolved:
         mapping.add_table(
-            exp.Table(this=exp.to_identifier(name, quoted=True)),
-            {exp.to_identifier(col.name, quoted=True).sql(dialect=dialect): "UNKNOWN"
-             for col in table.columns},
+            exp.Table(this=exp.to_identifier(schema_name, quoted=True)),
+            {
+                exp.to_identifier(col.name, quoted=True).sql(dialect=dialect): "UNKNOWN"
+                for col in table.columns
+            },
         )
 
     def check_source(table: exp.Table) -> None:
@@ -53,7 +82,6 @@ def check_schema_references(
             raise OptimizeError(f"Table '{table.name}' not found in schema")
 
     try:
-        expression = sqlglot.parse_one(sql, read=dialect)
         qualify(
             expression, dialect=dialect, schema=mapping, infer_schema=False,
             on_qualify=check_source,
