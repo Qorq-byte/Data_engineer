@@ -21,6 +21,9 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
   `.github/PULL_REQUEST_TEMPLATE.md`.
 - `README.zh-CN.md`: the Chinese README, reorganized and condensed, with the stage-by-stage progress
   log replaced by a link to the archive index.
+- `README.zh-TW.md`: a Traditional Chinese edition using Taiwan technical vocabulary
+  (資料庫 / 資料表 / 專案 / 預設 / 支援). Same 14-section structure as the other two, and the language
+  switcher is now three-way in every edition.
 - `assets/pipeline.gif` (960 px, seamless loop) and `assets/pipeline.svg` (static fallback).
 - `docs/archive/stages/INDEX.md`: a timeline over the 53 optimisation stages plus the stage-44 live
   acceptance record, with topic, date, conclusion and a link to each report.

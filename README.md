@@ -1,6 +1,6 @@
 # NL2SQL Data Engineering Agent
 
-**English** | [简体中文](README.zh-CN.md)
+**English** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
 An agent harness that turns a natural-language question over a relational database into a
 validated, read-only SQL statement — and tells you honestly when it cannot.

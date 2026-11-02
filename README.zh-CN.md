@@ -1,6 +1,6 @@
 # NL2SQL 数据工程 Agent
 
-[English](README.md) | **简体中文**
+[English](README.md) | **简体中文** | [繁體中文](README.zh-TW.md)
 
 一个把自然语言问题翻译成经过校验的只读 SQL 的 Agent Harness —— 并且在该说不的时候说清楚。
 
