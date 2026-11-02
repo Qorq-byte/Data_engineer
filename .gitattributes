@@ -1,0 +1,24 @@
+# Line endings and binary handling.
+#
+# This project is developed on Windows and tested on Linux: CI runs on ubuntu-latest,
+# so the bytes the runner sees must match the bytes a contributor sees. Storing LF in
+# the index and checking LF out everywhere keeps that true, and stops line endings from
+# showing up as noise in diffs and review.
+* text=auto eol=lf
+
+# Two PowerShell helpers are meant to be run by hand from Windows, where the script
+# host is happier with CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never convert, never attempt a textual diff on these. `*.gif` matters most: the README
+# hero animation is a byte-exact artefact, and a stray newline rewrite would break it.
+*.gif binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
