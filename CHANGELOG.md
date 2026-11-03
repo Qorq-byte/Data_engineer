@@ -24,6 +24,10 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 - `README.zh-TW.md`: a Traditional Chinese edition using Taiwan technical vocabulary
   (資料庫 / 資料表 / 專案 / 預設 / 支援). Same 14-section structure as the other two, and the language
   switcher is now three-way in every edition.
+- `README.ja.md`: a Japanese edition. It states plainly that Japanese is not a first-class input
+  language — the prompt reaches the model untouched, but language detection, limit extraction and
+  ordering extraction only carry Chinese and English patterns, and `language` is `zh` / `en` /
+  `mixed` only. The switcher is now four-way in every edition.
 - `assets/pipeline.gif` (960 px, seamless loop) and `assets/pipeline.svg` (static fallback).
 - `docs/archive/stages/INDEX.md`: a timeline over the 53 optimisation stages plus the stage-44 live
   acceptance record, with topic, date, conclusion and a link to each report.
