@@ -16,9 +16,10 @@ maintained release branches.
 
 Report privately through one of these channels:
 
-- **Preferred:** GitHub private vulnerability reporting — *the Security tab → "Report a
-  vulnerability"*. <!-- TODO: enable this in repository settings and confirm the link resolves -->
-- **Email:** `<security contact — to be filled in before the first external report>`
+- **Email:** `3145971253@qq.com` — this channel is open today and is the one to use.
+- **GitHub private vulnerability reporting** — *the Security tab → "Report a vulnerability"*, once a
+  maintainer has enabled it under Settings → Code security. <!-- Maintainer note: until that toggle is
+  on, the tab shows nothing and email is the only working channel. -->
 
 Include, as far as you can:
 
