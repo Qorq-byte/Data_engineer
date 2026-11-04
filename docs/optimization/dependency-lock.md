@@ -22,7 +22,7 @@ python -m pip install -e '.[dev]' -c constraints.txt
 只锁直接依赖（`pyproject.toml` 里声明的 25 个运行时包 + 7 个 dev 工具），**不锁传递依赖**。理由：
 
 - 传递依赖的解析结果带平台指纹——Windows 会多装 `tzdata`、`pywin32` 之类，硬编码进仓库会让 Linux/CI 装上不该有的包或触发版本冲突。
-- 真正造成漂移的是直接依赖（pydantic、litellm、fastapi 这些），锁住它们就解决了阶段48 记录的问题。
+- 固定直接依赖可阻止阶段48观察到的 pydantic、litellm 等版本漂移；传递依赖仍会变化，不能据此宣称完整环境可重复。
 - 文件小到可以逐行审阅，改哪一行是显式的。
 
 代价要说清楚：传递依赖仍然浮动。同一份 `constraints.txt` 在两个时间点安装，仍可能得到不同的 `pyarrow`/`grpcio`。这不是完整锁定，只是把最大的漂移源钉住。
@@ -40,7 +40,13 @@ python -m pip install -e '.[dev]' -c constraints.txt
 1. 先改 `pyproject.toml` 的下界，再改 `constraints.txt` 的具体版本，两次改动分开提交。
 2. 每次改动都要重跑：全新 venv 安装、`npm run build:frontend`、`pytest -m 'not real_database'`、CI 双工作流。改动了 LLM 或数据库驱动的，还要重跑真实双库验收。
 3. 只有在一套新组合上重新跑过相关验收，才能在文档里写"已在新组合上验证"。阶段44 的 30 题结论**不会**自动迁移到新组合上。
-4. 不把 `constraints.txt` 接进 CI 的 `pip install`：CI 跑 Linux，这份快照来自 Windows，强行套用会把平台差异变成构建失败。CI 仍按 `pyproject.toml` 解析，快照用于部署复现与人工核对。
+4. 阶段55起，两条 Linux CI 均用 `python -m pip install -e '.[dev]' -c constraints.txt` 安装，再运行 `python -m pip check` 与 `python -m scripts.check_dependencies`。约束仅含跨平台直接依赖，平台相关传递包由 pip 解析；任何平台不可安装的组合必须让 CI 失败，不能静默丢弃约束。
+
+## 阶段55：安装后核对
+
+`python -m scripts.check_dependencies` 离线核对声明与快照的覆盖关系、重复/无效约束、声明允许范围和已安装版本。新增直接依赖而遗漏快照、留下已删除依赖或安装版本漂移都会返回非零退出码。仅安装运行时依赖时可传 `--runtime-only`；此模式仍要求快照完整覆盖 runtime/dev，但只核对当前平台生效的运行时包是否已安装。
+
+`pip check` 负责传递依赖兼容性，本脚本负责直接依赖身份。两者都不能证明供应链安全，也不会改变阶段44真实模型评测所绑定的旧环境。Python补丁版本、传递依赖及构建后端仍未完整锁定。
 
 ## 依赖告警口径
 
