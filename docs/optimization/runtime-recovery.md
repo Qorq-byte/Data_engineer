@@ -25,7 +25,7 @@
 1. `initialize_catalogs()`：加载领域与工作流配置。
 2. storage（MySQL store）→ auth（MySQL）→ 各自 10 秒超时，失败只降级不阻塞启动。
 3. RAG：`initialize_rag_engine()` → 打开 LanceDB 与 BM25 → 扫描 `index-pending-*.json` → 把残留标记的库加入 `refresh_required` → 对索引中已存在但当前无连接的库同样标记 → 尝试重建已连接库的 Schema。
-4. LLM：读持久化设置并重建路由；失败则保持 mock/降级状态。
+4. LLM：读持久化设置并重建路由；失败则发布明确的 mock 路由，`components.llm=false`。旧路由或环境配置不能掩盖此次读取失败；后续成功保存或重载设置可恢复动态 readiness。
 5. `app.state.initialized = true`；`readiness` 才开始可能返回 200。
 
 关闭顺序是上一步的逆序：background → subagents → databases → auth → storage → RAG → router。任何一步异常只记录，不阻断其余关闭。
@@ -74,9 +74,15 @@ python -m scripts.state_backup --action prune   --backup-root .state_backups --k
 | `readiness.status = not_ready`，`connected_database_count=0` | 没有注册连接 | 按部署配置重新注册连接；这不是索引问题 |
 | 审计库损坏 | 打开失败 | 保持 `LLM_AUDIT_PATH` 为空以关闭审计，或从备份恢复；查询不因此中断 |
 
-## 七、未覆盖（不得当作已验证）
+## 七、阶段57：LLM设置恢复验收
 
-- **LLM 设置"落盘成功但未发布"的中断场景未验证**：事实来源是外部 MySQL，本地无可用的该服务，本轮不做假设性结论。
+`tests/real_db/test_settings_recovery.py` 使用独立临时 MySQL 数据库覆盖加密保存、关闭重开连接后加载、删除 provider 和实际 SQL 写入拒绝。跨进程探针在真实提交后、发布路由前退出；另一新进程运行实际 lifespan，核对设置、合成密钥恢复和 storage/auth/llm readiness。无效输出上限、providers非字典与不兼容表结构须返回 not_ready，不能沿用探针预置的旧路由。
+
+探针只使用合成凭据，拦截模型调用；RAG在该探针中明确关闭，查询库为本地SQLite。readiness通过只说明当前配置与启动状态符合既有条件，不代表模型网络连通、业务库健康或完整端到端质量。离线回归另覆盖成功PUT/重载后的readiness恢复。
+
+## 八、未覆盖（不得当作已验证）
+
+- MySQL进程或主机崩溃、断电后的存储耐久性不在阶段57进程退出探针范围内。
 - 多 worker 共享索引的失效协议未设计。
 - 备份目录本身的持久化与异地副本不在工具范围内。
 - 索引重建的原子性跨两个后端仍不是事务，只保证"失败可见 + 可回滚尝试"。

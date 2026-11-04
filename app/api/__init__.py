@@ -21,7 +21,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.auth.database import close_auth_pool, init_auth_db
     from app.bootstrap import initialize_catalogs
     from app.db.connections import ConnectionFactory
-    from app.llm.factory import get_default_router, reset_default_router
+    from app.llm.factory import get_default_router, publish_llm_router, reset_default_router
+    from app.llm.router import LiteLLMRouter, RouterConfig
     from app.rag.engine import close_rag_engine, get_rag_engine, initialize_rag_engine
     from app.storage.mysql_store import get_store, init_db
 
@@ -55,7 +56,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         components["llm"] = not get_default_router().mock_mode
     except Exception:
         logger.warning("Persisted LLM settings unavailable", exc_info=True)
-        components["llm"] = not get_default_router().mock_mode
+        # A stale or environment-built router cannot verify the persisted state.
+        # Keep failure visible until a successful settings update or reload.
+        publish_llm_router(LiteLLMRouter(RouterConfig(), mock_mode=True))
+        components["llm"] = False
     app.state.initialized = True
     try:
         yield
