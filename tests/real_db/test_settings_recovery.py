@@ -130,7 +130,10 @@ async def test_committed_write_survives_death_before_publish(settings_store, tmp
     assert KEY not in json.dumps(result)
 
 
-@pytest.mark.parametrize("failure", ["missing_table", "invalid_limit", "invalid_providers"])
+@pytest.mark.parametrize("failure", [
+    "missing_table", "invalid_limit", "invalid_providers",
+    "models_string", "enabled_string", "rpm_string", "base_url_object", "key_number",
+])
 async def test_bad_database_settings_make_new_process_not_ready(settings_store, tmp_path, failure):
     store, config = settings_store
     if failure == "missing_table":
@@ -138,11 +141,22 @@ async def test_bad_database_settings_make_new_process_not_ready(settings_store, 
         # the wrong shape; CREATE TABLE IF NOT EXISTS cannot silently repair it.
         await store._execute("DROP TABLE user_settings")
         await store._execute("CREATE VIEW user_settings AS SELECT 1 AS incompatible")
-    else:
+    elif failure in {"invalid_limit", "invalid_providers"}:
         invalid = candidate()
         invalid["max_tokens" if failure == "invalid_limit" else "providers"] = (
             0 if failure == "invalid_limit" else []
         )
+        await store.save_setting("llm", invalid)
+    else:
+        invalid = candidate()
+        field, value = {
+            "models_string": ("models", "private-malformed-model"),
+            "enabled_string": ("enabled", "false"),
+            "rpm_string": ("rate_limit_rpm", "60"),
+            "base_url_object": ("base_url", {"private-endpoint": "value"}),
+            "key_number": ("api_key_enc", 123),
+        }[failure]
+        invalid["providers"]["fixture"][field] = value
         await store.save_setting("llm", invalid)
     directory = await worker("restore", config, tmp_path / "restart")
     result = json.loads((directory / "restored.json").read_text())
@@ -150,3 +164,5 @@ async def test_bad_database_settings_make_new_process_not_ready(settings_store, 
     assert result["readiness"]["components"]["llm"] is False
     assert result["readiness"]["components"]["auth"] is True
     assert result["key_restored"] is False
+    assert result["model"] != "stage57-model"  # No partial publication of the damaged record.
+    assert "private-" not in json.dumps(result)

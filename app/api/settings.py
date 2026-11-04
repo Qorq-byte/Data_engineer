@@ -17,6 +17,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
+from app.llm.settings_validation import validate_llm_settings
 from app.models.rag_settings import FusionWeights
 
 if TYPE_CHECKING:
@@ -243,18 +244,12 @@ async def _read_llm_configuration() -> tuple[dict[str, Any], MySQLStore | None, 
                 source = "database"
         if raw is None:
             raw = _settings_store.get("llm", _DEFAULT_SETTINGS["llm"])
-        if not isinstance(raw, dict) or not isinstance(raw.get("providers", {}), dict):
-            raise ValueError("Invalid settings record")
+        validate_llm_settings(raw)
         config = copy.deepcopy(_DEFAULT_SETTINGS["llm"])
         config.update(copy.deepcopy(raw))
-        output_limit = config["max_tokens"]
-        if type(output_limit) is not int or not 1 <= output_limit <= 32768:
-            raise ValueError("Invalid stored output token limit")
         if "providers" in raw:
             config["providers"] = {}
             for name, value in raw["providers"].items():
-                if not isinstance(value, dict):
-                    raise ValueError("Invalid provider record")
                 config["providers"][name] = {
                     "enabled": True,
                     "models": [],
@@ -263,6 +258,8 @@ async def _read_llm_configuration() -> tuple[dict[str, Any], MySQLStore | None, 
                     "base_url": None,
                     **copy.deepcopy(value),
                 }
+                if config["providers"][name]["models"] is None:
+                    config["providers"][name]["models"] = []
         return config, store, source
     except Exception:
         raise HTTPException(

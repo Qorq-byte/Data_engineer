@@ -270,6 +270,59 @@ async def test_bad_stored_record_rejected(stored, raw):
     assert caught.value.detail["code"] == "LLM_SETTINGS_READ_FAILED"
 
 
+@pytest.mark.parametrize("field,value", [
+    ("models", "private-malformed-model"),
+    ("enabled", "false"),
+    ("base_url", {"private-endpoint": "value"}),
+    ("rate_limit_rpm", "60"),
+    ("api_key_configured", 1),
+])
+@pytest.mark.parametrize("operation", ["read", "models", "startup", "write", "delete"])
+async def test_nested_record_corruption_never_changes_runtime(stored, field, value, operation):
+    original = factory.get_default_router()
+    memory = copy.deepcopy(api_settings._settings_store)
+    bad = {"providers": {"private-provider": {field: value}}}
+    await stored.save_setting("llm", bad)
+    operations = {
+        "read": api_settings.get_llm_settings,
+        "models": api_settings.get_available_models,
+        "startup": api_settings.reload_llm_router_from_db,
+        "write": lambda: api_settings.update_llm_settings(update(max_tokens=888)),
+        "delete": lambda: api_settings.delete_llm_provider("private-provider"),
+    }
+    with pytest.raises(HTTPException) as caught:
+        await operations[operation]()
+    assert caught.value.status_code == 503
+    assert caught.value.detail["code"] == "LLM_SETTINGS_READ_FAILED"
+    assert "private-" not in str(caught.value.detail)
+    assert api_settings._settings_store == memory
+    assert factory.get_default_router() is original
+    assert await stored.get_setting("llm") == bad
+
+
+async def test_public_read_error_does_not_echo_corrupt_record(stored):
+    await stored.save_setting("llm", {
+        "providers": {"private-provider": {"models": "private-malformed-model"}},
+    })
+    response = authenticated_client(create_app()).get("/api/v1/settings/llm")
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "LLM_SETTINGS_READ_FAILED"
+    assert "private-" not in response.text
+
+
+async def test_legacy_partial_record_keeps_defaults_and_nulls(stored):
+    raw = {"providers": {"fixture": {"models": None, "api_key_enc": None}},
+           "routing_strategy": "legacy-ignored", "temperature": {"legacy": "ignored"}}
+    await stored.save_setting("llm", raw)
+    result = await api_settings.get_llm_settings()
+    assert result["configuration_source"] == "database"
+    assert result["max_tokens"] == api_settings._DEFAULT_SETTINGS["llm"]["max_tokens"]
+    assert result["providers"]["fixture"]["models"] == []
+    assert (await api_settings.get_available_models())["models"] == []
+    await api_settings.reload_llm_router_from_db()
+    assert factory.get_default_router().mock_mode is True
+
+
 @pytest.mark.parametrize("method", ["get", "put", "delete"])
 @pytest.mark.parametrize("user_id,expected", [(None, 401), (999999, 403)])
 async def test_operator_boundary(stored, method, user_id, expected):
