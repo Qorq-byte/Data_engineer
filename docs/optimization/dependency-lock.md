@@ -19,7 +19,7 @@ python -m pip install -e . -c constraints.txt
 python -m pip install -e '.[dev]' -c constraints.txt
 ```
 
-只锁直接依赖（`pyproject.toml` 里声明的 25 个运行时包 + 7 个 dev 工具），**不锁传递依赖**。理由：
+只锁直接依赖（阶段62后为26个运行时声明，含Windows条件依赖，以及7个dev工具），**不锁传递依赖**。理由：
 
 - 传递依赖的解析结果带平台指纹——Windows 会多装 `tzdata`、`pywin32` 之类，硬编码进仓库会让 Linux/CI 装上不该有的包或触发版本冲突。
 - 固定直接依赖可阻止阶段48观察到的 pydantic、litellm 等版本漂移；传递依赖仍会变化，不能据此宣称完整环境可重复。
@@ -56,3 +56,11 @@ python -m pip install -e '.[dev]' -c constraints.txt
 - 前端构建依赖只在构建期执行，不进浏览器包、不被 Python 服务执行；但构建不可信提交仍有构建期拒绝服务风险，继续在隔离且资源受限的可信环境构建。
 
 Python 侧的告警核验结果见[阶段49报告](stage-49.md)，那里记录的是对 `constraints.txt` 组合实测的数字，不引用任何历史结论。
+
+## 阶段62：2026-11-05维护
+
+SQLGlot由30.18.0升级到[30.29.0](https://pypi.org/project/sqlglot/30.29.0/)，适配移除的`infer_schema`参数，保留本项目的来源namespace检查。隔离环境中，旧实现/旧版本与新实现/新版本对30条冻结SQL及边界查询、4种方言共152个判定一致；新增28个明确安全契约。完整Windows离线回归4478通过、1平台跳过，mypy app/零错误（193文件）。这些结果不替代真实模型质量复测。
+
+Windows增加`tzdata`条件依赖，并固定2026.6，解决干净环境缺时区数据的问题；Linux不因此安装该条件包。隔离环境实际按约束安装成功，33项直接依赖核对通过，139个已安装包的依赖兼容检查通过。
+
+本轮pip-audit仍发现13项告警，均属于filelock 3.32.7。通过[PyPI官方元数据](https://pypi.org/pypi/litellm/1.108.0/json)重新核对，LiteLLM 1.108.0依然要求`filelock<4.0,>=3.16.1`，而审计给出的修复版本为4.0.9/4.2.1。因此没有强装不兼容filelock或以无助于修复的SDK升级代替风险处理；该项仍未消除。生产部署继续限制本地锁目录权限，正式发布前重新审计和核对上游约束。

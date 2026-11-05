@@ -82,8 +82,10 @@ def check_schema_references(
             raise OptimizeError(f"Table '{table.name}' not found in schema")
 
     try:
+        # SQLGlot 30.29 no longer accepts infer_schema. Source membership is
+        # still checked by our callback; unknown columns must fail qualification.
         qualify(
-            expression, dialect=dialect, schema=mapping, infer_schema=False,
+            expression, dialect=dialect, schema=mapping,
             on_qualify=check_source,
         )
         # qualify_tables resolves a column's full prefix only if it matches a
