@@ -204,7 +204,7 @@ _ENV_KEYS = {
 
 
 def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
-    """Resolve a provider's API key from settings, falling back to env."""
+    """Use an explicit saved key; consult env only when no ciphertext was saved."""
     from app.security.crypto import decrypt_secret
 
     enc = cfg.get("api_key_enc") or ""
@@ -212,6 +212,7 @@ def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
         key = decrypt_secret(enc)
         if key:
             return key
+        raise ValueError("Persisted LLM credential could not be decrypted")
     # Fallback: env key for built-in providers (agent.yml / .env setup)
     key_env = _ENV_KEYS.get(name, "")
     env_key = os.getenv(key_env, "") if key_env else ""

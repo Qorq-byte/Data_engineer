@@ -133,6 +133,7 @@ async def test_committed_write_survives_death_before_publish(settings_store, tmp
 @pytest.mark.parametrize("failure", [
     "missing_table", "invalid_limit", "invalid_providers",
     "models_string", "enabled_string", "rpm_string", "base_url_object", "key_number",
+    "broken_ciphertext",
 ])
 async def test_bad_database_settings_make_new_process_not_ready(settings_store, tmp_path, failure):
     store, config = settings_store
@@ -155,6 +156,7 @@ async def test_bad_database_settings_make_new_process_not_ready(settings_store, 
             "rpm_string": ("rate_limit_rpm", "60"),
             "base_url_object": ("base_url", {"private-endpoint": "value"}),
             "key_number": ("api_key_enc", 123),
+            "broken_ciphertext": ("api_key_enc", "private-broken-ciphertext"),
         }[failure]
         invalid["providers"]["fixture"][field] = value
         await store.save_setting("llm", invalid)

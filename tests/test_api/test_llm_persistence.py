@@ -323,6 +323,38 @@ async def test_legacy_partial_record_keeps_defaults_and_nulls(stored):
     assert factory.get_default_router().mock_mode is True
 
 
+async def test_broken_ciphertext_can_be_repaired_without_silent_key_fallback(stored):
+    raw = {"providers": {"fixture": {"enabled": True, "models": ["fixture-model"],
+                                    "api_key_enc": "private-broken-ciphertext"}}}
+    await stored.save_setting("llm", raw)
+    original = factory.get_default_router()
+    before = copy.deepcopy(api_settings._settings_store)
+    with pytest.raises(HTTPException) as caught:
+        await api_settings.update_llm_settings(update(max_tokens=888))
+    assert caught.value.detail["code"] == "LLM_SETTINGS_PREPARE_FAILED"
+    assert "private-" not in str(caught.value.detail)
+    assert await stored.get_setting("llm") == raw
+    assert api_settings._settings_store == before
+    assert factory.get_default_router() is original
+    repaired = await api_settings.update_llm_settings(update(
+        providers={"fixture": {"api_key": "synthetic-replacement-key"}},
+    ))
+    assert repaired["persistence"] == "persisted"
+    assert "synthetic-replacement-key" not in str(repaired)
+    assert factory.get_default_router().config.providers["fixture"].api_key == (
+        "synthetic-replacement-key"
+    )
+
+
+async def test_broken_provider_can_be_deleted(stored):
+    await stored.save_setting("llm", {"providers": {
+        "fixture": {"api_key_enc": "private-broken-ciphertext"},
+    }})
+    result = await api_settings.delete_llm_provider("fixture")
+    assert result["persistence"] == "persisted"
+    assert "fixture" not in (await stored.get_setting("llm"))["providers"]
+
+
 @pytest.mark.parametrize("method", ["get", "put", "delete"])
 @pytest.mark.parametrize("user_id,expected", [(None, 401), (999999, 403)])
 async def test_operator_boundary(stored, method, user_id, expected):
