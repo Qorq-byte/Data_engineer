@@ -8,6 +8,7 @@ from app.harness.mysql_coordination import (
     CoordinationUnavailableError,
     MySQLCoordinator,
 )
+from app.harness.mysql_rate_limit import MySQLProviderRateLimit
 from app.storage.shared_sessions import MySQLSessionStore
 from app.workflow.contracts import QueryCapacityError
 
@@ -18,12 +19,14 @@ class SharedQueryRuntime:
             raise ValueError("Shared runtime namespaces must match")
         self.coordinator = coordinator
         self.sessions = sessions
+        self.rate_limit = MySQLProviderRateLimit(sessions.pool, sessions.namespace)
         self.ready = False
 
     async def initialize(self) -> None:
         self.ready = False
         await self.coordinator.initialize()
         await self.sessions.initialize()
+        await self.rate_limit.initialize()
         self.ready = True
 
 

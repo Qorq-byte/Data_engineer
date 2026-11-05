@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest_asyncio.fixture
-async def shared_servers(coordination, tmp_path, monkeypatch):
+async def shared_servers(coordination, tmp_path, monkeypatch, request):
     database, pool, config, children = coordination
     monkeypatch.setattr(settings, "jwt_secret", SECRET)
     store = MySQLStore(pool)
@@ -44,6 +44,7 @@ async def shared_servers(coordination, tmp_path, monkeypatch):
                     "models": ["fixture-model"],
                     "api_key_enc": encrypt_secret("synthetic-provider-key"),
                     "base_url": "https://example.invalid/v1",
+                    "rate_limit_rpm": getattr(request, "param", {}).get("rpm", 60),
                 }
             },
         },
@@ -246,3 +247,25 @@ async def test_shared_session_endpoints_preserve_operator_boundary(shared_server
     assert (await client.get(url, headers={"Authorization": ""})).status_code == 401
     token = create_access_token(99999, "outsider")
     assert (await client.get(url, headers={"Authorization": f"Bearer {token}"})).status_code == 403
+
+
+@pytest.mark.parametrize("shared_servers", [{"rpm": 1}], indirect=True)
+async def test_provider_rate_is_shared_and_rejection_never_calls_model(
+    shared_servers, coordination
+):
+    client, servers = shared_servers
+    first, second = servers[0][0], servers[1][0]
+    response = await client.post(first + "/api/v1/query", json=body("rate-first"))
+    assert response.status_code == 200, response.text
+    rejected = await client.post(second + "/api/v1/query", json=body("rate-second"))
+    assert rejected.status_code == 503, rejected.text
+    assert rejected.json()["detail"]["code"] == "QUERY_CAPACITY"
+    assert not (servers[1][1] / "model-calls.txt").exists()
+    _, pool, _, _ = coordination
+    async with pool.acquire() as connection, connection.cursor() as cursor:
+        await cursor.execute(
+            "UPDATE worker_rate_attempts SET created_at=UTC_TIMESTAMP(6)-INTERVAL 61 SECOND"
+        )
+    response = await client.post(second + "/api/v1/query", json=body("rate-second"))
+    assert response.status_code == 200, response.text
+    assert (servers[1][1] / "model-calls.txt").read_text() == "1"

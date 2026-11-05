@@ -379,9 +379,14 @@ class LiteLLMRouter:
         Yields:
             Text chunks as they arrive from the LLM.
         """
-        stream = checked_events(self.complete_stream_events(
-            messages, model=model, temperature=temperature, **kwargs,
-        ))
+        stream = checked_events(
+            self.complete_stream_events(
+                messages,
+                model=model,
+                temperature=temperature,
+                **kwargs,
+            )
+        )
         try:
             async for event in stream:
                 if event.kind == "delta":
@@ -569,6 +574,15 @@ class LiteLLMRouter:
         return result
 
     async def _wait_rate(self, provider_name: str, rpm: int) -> None:
+        from app.harness.mysql_coordination import CoordinationUnavailableError
+        from app.harness.shared_query_runtime import current_shared_runtime
+
+        shared = current_shared_runtime()
+        if shared is not None:
+            if not shared.ready:
+                raise CoordinationUnavailableError("Shared query runtime is not ready")
+            await shared.rate_limit.reserve(provider_name, rpm)
+            return
         if rpm <= 0:
             return
         window = self._rate_windows[provider_name]
@@ -854,7 +868,8 @@ class LiteLLMRouter:
                 observe_response(
                     chunk,
                     usage_basis="sdk_normalized"
-                    if callable(getattr(chunk, "model_dump", None)) else "response_fields",
+                    if callable(getattr(chunk, "model_dump", None))
+                    else "response_fields",
                 )
                 choices = response_field(chunk, "choices")
                 if not choices:  # usage-only chunks are allowed, including after stop

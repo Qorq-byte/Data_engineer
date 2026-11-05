@@ -22,6 +22,7 @@ import sqlglot
 
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
 from app.harness.events import NodeEventHandler
+from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.models.workflow import (
     Evaluation,
     MetricResult,
@@ -33,6 +34,7 @@ from app.models.workflow import (
 )
 from app.nodes.base import NodeOutput
 from app.nodes.registry import NodeRegistry
+from app.workflow.contracts import QueryCapacityError
 
 
 def _new_workflow_id() -> str:
@@ -208,6 +210,8 @@ class WorkflowRunner:
                             f"status={output.metadata.get('status', 'unknown')}"
                         )
                         trace.error = "; ".join(output.errors) or None
+                    except (QueryCapacityError, CoordinationUnavailableError):
+                        raise
                     except Exception as exc:
                         trace.error = str(exc)
                         evaluation = Evaluation(passed=False, notes=str(exc))
@@ -259,6 +263,13 @@ class WorkflowRunner:
                     continue
                 index += 1
             return await finish("completed")
+        except (QueryCapacityError, CoordinationUnavailableError):
+            if "trace" in locals() and trace not in self.trace.nodes:
+                trace.error = "Query infrastructure unavailable"
+                trace.completed_at = datetime.now()
+                self.trace.nodes.append(trace)
+            await finish("aborted", "Query infrastructure unavailable")
+            raise
         except asyncio.CancelledError:
             if "trace" in locals() and trace not in self.trace.nodes:
                 trace.error = "Request cancelled"
