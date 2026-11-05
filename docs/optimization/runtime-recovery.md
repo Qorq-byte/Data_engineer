@@ -86,6 +86,8 @@ python -m scripts.state_backup --action prune   --backup-root .state_backups --k
 
 ## 八、未覆盖（不得当作已验证）
 
+阶段60将汇总设置GET改为只读组装：在同一worker的LLM/RAG设置锁内读取，批量读取异常或超时返回`SETTINGS_READ_FAILED`，后续分区读取失败也不把部分数据写入内存。成功读取只描述持久化配置与当前运行时，不发布路由或修改内存。该锁不构成跨进程或数据库外部写者的事务快照。
+
 - MySQL进程或主机崩溃、断电后的存储耐久性不在阶段57进程退出探针范围内。
 - 多 worker 共享索引的失效协议未设计。
 - 备份目录本身的持久化与异地副本不在工具范围内。

@@ -168,3 +168,21 @@ async def test_bad_database_settings_make_new_process_not_ready(settings_store, 
     assert result["key_restored"] is False
     assert result["model"] != "stage57-model"  # No partial publication of the damaged record.
     assert "private-" not in json.dumps(result)
+
+
+async def test_aggregate_mysql_read_does_not_publish_partial_settings(settings_store):
+    store, _ = settings_store
+    original = factory.get_default_router()
+    memory = copy.deepcopy(api_settings._settings_store)
+    invalid = candidate()
+    invalid["providers"]["fixture"]["models"] = "private-bad-models"
+    await store.save_setting("llm", invalid)
+    with pytest.raises(HTTPException) as caught:
+        await api_settings.get_all_settings()
+    assert caught.value.status_code == 503
+    assert "private-" not in str(caught.value.detail)
+    assert api_settings._settings_store == memory
+    assert factory.get_default_router() is original
+    await store.save_setting("llm", candidate())
+    assert (await api_settings.get_all_settings())["status"] == "ok"
+    assert api_settings._settings_store == memory

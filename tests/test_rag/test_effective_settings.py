@@ -149,7 +149,7 @@ async def test_real_settings_persist_and_reload_without_reapplying_on_get(active
     assert "top_k" in read["legacy_ignored_fields"]
     engine.close_rag_engine()
     api_settings._settings_store.clear()
-    await api_settings._load_settings_from_db()
+    api_settings._settings_store.update(await api_settings._read_settings_snapshot())
     restarted = await engine.initialize_rag_engine()
     assert restarted.schema_rag.rrf_alpha == 0.9
 
@@ -410,7 +410,7 @@ async def test_aggregate_settings_exposes_actual_rag_runtime(active):
 async def test_default_documents_are_not_aliased_by_edits(active):
     before = copy.deepcopy(api_settings._DEFAULT_SETTINGS)
     api_settings._settings_store.clear()
-    await api_settings._load_settings_from_db()
+    api_settings._settings_store.update(await api_settings._read_settings_snapshot())
     await api_settings.update_rag_settings(api_settings.RagSettingsUpdate(vector_weight=0.2))
     assert before == api_settings._DEFAULT_SETTINGS
 

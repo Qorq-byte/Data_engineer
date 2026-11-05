@@ -67,22 +67,25 @@ def _get_store() -> MySQLStore | None:
         return None
 
 
-async def _load_settings_from_db() -> None:
-    """Load settings from MySQL, falling back to defaults."""
-    global _settings_store
+async def _read_settings_snapshot() -> dict[str, Any]:
+    """Read bulk settings without publishing partial or unvalidated state."""
+    snapshot = copy.deepcopy(_settings_store)
     store = _get_store()
     if store is not None:
         try:
-            db_settings = await store.get_settings()
-            if db_settings:
-                _settings_store = db_settings
-                return
+            db_settings = await asyncio.wait_for(
+                store.get_settings(), timeout=_LLM_SETTINGS_TIMEOUT_SECONDS,
+            )
+            if not isinstance(db_settings, dict):
+                raise ValueError("Invalid settings snapshot")
+            snapshot = copy.deepcopy(db_settings)
         except Exception:
-            pass
-    # Only fill in missing sections from defaults — don't overwrite existing
+            raise HTTPException(status_code=503, detail={
+                "code": "SETTINGS_READ_FAILED", "message": "Configuration storage unavailable.",
+            }) from None
     for key, value in _DEFAULT_SETTINGS.items():
-        if key not in _settings_store:
-            _settings_store[key] = copy.deepcopy(value)
+        snapshot.setdefault(key, copy.deepcopy(value))
+    return snapshot
 
 
 # Copy of default settings for fallback
@@ -220,13 +223,14 @@ async def get_all_settings() -> dict[str, Any]:
     """Get all system settings."""
     from app.db.runtime import gate
 
-    async with gate(("llm-settings",)):
-        await _load_settings_from_db()
-    public = _public_settings(_settings_store)
-    public["llm"] = await get_llm_settings()
-    public["harness"] = await get_harness_settings()
-    public["database"] = await get_database_settings()
-    public["rag"] = await get_rag_settings()
+    async with gate(("llm-settings",)), gate(("rag-settings",)):
+        public = _public_settings(await _read_settings_snapshot())
+        llm, _, llm_source = await _read_llm_configuration()
+        rag, _, rag_source = await _load_rag_configuration()
+        public["llm"] = _llm_public_view(llm, llm_source)
+        public["harness"] = await get_harness_settings()
+        public["database"] = await get_database_settings()
+        public["rag"] = {"status": "ok", **_rag_settings_view(rag, rag_source)}
     return {
         "status": "ok",
         "settings": public,
