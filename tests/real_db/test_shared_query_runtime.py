@@ -1,8 +1,10 @@
 """Two HTTP serving processes share real MySQL sessions and global admission."""
 
 import asyncio
+import hashlib
 import json
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -196,6 +198,46 @@ async def test_global_capacity_rejects_before_second_model_call(shared_servers):
         completed = await pending
     assert completed.status_code == 200, completed.text
     assert (await client.post(second + "/api/v1/query", json=body("second"))).status_code == 200
+
+
+async def test_lost_lease_stops_model_and_records_unknown_usage(shared_servers, coordination):
+    client, servers = shared_servers
+    first, directory, _ = servers[0]
+    second = servers[1][0]
+    (directory / "block-model").touch()
+    pending = asyncio.create_task(client.post(first + "/api/v1/query", json=body("lost")))
+    try:
+        async with asyncio.timeout(10):
+            while not (directory / "model-entered").exists():
+                await asyncio.sleep(0.02)
+        database, pool, _, _ = coordination
+        namespace = hashlib.sha256(database.encode()).hexdigest()[:24]
+        async with pool.acquire() as connection, connection.cursor() as cursor:
+            await cursor.execute("SELECT IS_USED_LOCK(%s)", (f"de:{namespace}:q:0",))
+            identity = (await cursor.fetchone())[0]
+            assert type(identity) is int
+            await cursor.execute(f"KILL CONNECTION {identity}")
+        response = await asyncio.wait_for(pending, 5)
+        assert response.status_code == 503, response.text
+        assert response.json()["detail"]["code"] == "SHARED_STATE_UNAVAILABLE"
+        assert (directory / "model-cleaned-up").exists()
+        session = await client.get(second + "/api/v1/sessions/lost")
+        assert session.json()["session"]["turns"] == []
+        with sqlite3.connect(directory / "usage-audit.sqlite3") as audit:
+            record = json.loads(audit.execute("SELECT payload FROM llm_usage_audit").fetchone()[0])
+        assert record["outcome"] == "cancelled"
+        assert record["llm_calls"] == 1
+        assert record["usage"]["missing_usage_count"] == 1
+        assert record["usage"]["attempts"][0]["status"] == "cancelled"
+        assert record["usage"]["attempts"][0]["completion_tokens"] is None
+        assert (directory / "model-calls.txt").read_text() == "1"
+        response = await client.post(second + "/api/v1/query", json=body("recovered"))
+        assert response.status_code == 200, response.text
+    finally:
+        (directory / "release-model").touch()
+        if not pending.done():
+            pending.cancel()
+        await asyncio.gather(pending, return_exceptions=True)
 
 
 async def test_shared_session_endpoints_preserve_operator_boundary(shared_servers):

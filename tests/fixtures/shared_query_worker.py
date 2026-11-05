@@ -38,9 +38,12 @@ async def run(args):
         Path("model-calls.txt").write_text(str(calls), encoding="utf-8")
         if Path("block-model").exists():
             Path("model-entered").touch()
-            async with asyncio.timeout(20):
-                while not Path("release-model").exists():
-                    await asyncio.sleep(0.02)
+            try:
+                async with asyncio.timeout(20):
+                    while not Path("release-model").exists():
+                        await asyncio.sleep(0.02)
+            finally:
+                Path("model-cleaned-up").touch()
         return {
             "choices": [
                 {
@@ -164,6 +167,7 @@ def main():
         LITELLM_LOCAL_MODEL_COST_MAP="True",
         RAG_EMBEDDING_PROVIDER="mock",
         AGENT_CONFIG_PATH=str(ROOT / "app/config/agent.yml"),
+        LLM_AUDIT_PATH=str(Path.cwd() / "usage-audit.sqlite3"),
     )
     asyncio.run(run(args))
 
