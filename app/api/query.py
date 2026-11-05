@@ -12,26 +12,69 @@ import json
 import logging
 import re as _re_module
 import uuid
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable, Coroutine
 from datetime import datetime
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi import Path as PathParam
 from fastapi.responses import StreamingResponse
+from fastapi.routing import APIRoute
 from pydantic import AliasChoices, BaseModel, Field
 
 from app.db.connections import ConnectionFactory
 from app.db.query_targets import resolve_query_targets
+from app.harness.mysql_coordination import CoordinationUnavailableError
+from app.harness.shared_query_runtime import current_shared_runtime, shared_query_scope
 from app.llm.factory import get_default_router
 from app.models.query import SQLCandidate
 from app.models.schema import SchemaSnapshot
 from app.nodes.base import NodeInput
 from app.nodes.execute_sql import ExecuteSQLNode
-from app.workflow.contracts import QueryEventName, QueryStatus, classify_query_failure
+from app.storage.shared_sessions import (
+    SessionCapacityError,
+    SessionConflictError,
+    SessionStoreUnavailableError,
+)
+from app.workflow.contracts import (
+    QueryCapacityError,
+    QueryEventName,
+    QueryStatus,
+    classify_query_failure,
+)
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+
+
+class QueryRoute(APIRoute):
+    """Shared state failures have the same safe HTTP classification as queries."""
+
+    def get_route_handler(self) -> Callable[[Request], Coroutine[Any, Any, Response]]:
+        original = super().get_route_handler()
+
+        async def handle(request: Request) -> Response:
+            try:
+                return await original(request)
+            except (
+                SessionConflictError,
+                SessionCapacityError,
+                SessionStoreUnavailableError,
+                CoordinationUnavailableError,
+                QueryCapacityError,
+            ) as exc:
+                failure = classify_query_failure(exc)
+                raise HTTPException(
+                    failure.http_status,
+                    detail=failure.payload(),
+                    headers={"Retry-After": str(failure.retry_after_seconds)}
+                    if failure.retry_after_seconds is not None
+                    else None,
+                ) from None
+
+        return handle
+
+
+router = APIRouter(route_class=QueryRoute)
 
 
 # ── Schema resolution helper ────────────────────────────────────────────
@@ -325,7 +368,8 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
             status_code=failure.http_status,
             detail=failure.payload(),
             headers={"Retry-After": str(failure.retry_after_seconds)}
-            if failure.retry_after_seconds is not None else None,
+            if failure.retry_after_seconds is not None
+            else None,
         ) from exc
 
 
@@ -547,14 +591,55 @@ def _get_or_create_session(session_id: str) -> dict[str, Any]:
     return session
 
 
+async def _read_session_snapshot(session_id: str) -> tuple[dict[str, Any] | None, str | None]:
+    runtime = current_shared_runtime()
+    if runtime is None:
+        return _SESSION_STORE.get(session_id), None
+    if not runtime.ready:
+        raise CoordinationUnavailableError("Shared session runtime is not ready")
+    record = await runtime.sessions.get(session_id)
+    return (record.payload, record.revision) if record else (None, None)
+
+
+async def _load_query_session(session_id: str) -> tuple[dict[str, Any], str | None]:
+    runtime = current_shared_runtime()
+    if runtime is None:
+        return _get_or_create_session(session_id), None
+    session, revision = await _read_session_snapshot(session_id)
+    if session is None:
+        now = datetime.now().isoformat()
+        session = {"session_id": session_id, "turns": [], "created_at": now, "updated_at": now}
+        revision = await runtime.sessions.put(session_id, session, None)
+    turns = session.get("turns", [])
+    if not isinstance(turns, list) or any(
+        not isinstance(turn, dict)
+        or not isinstance(turn.get("nl_input"), str)
+        or not isinstance(turn.get("sql"), str)
+        for turn in turns
+    ):
+        raise SessionStoreUnavailableError("Stored session history is invalid")
+    session["turns"] = turns
+    return session, revision
+
+
+async def _commit_query_session(
+    session_id: str, session: dict[str, Any], revision: str | None
+) -> None:
+    runtime = current_shared_runtime()
+    if runtime is not None:
+        if revision is None:
+            raise SessionStoreUnavailableError("Session revision is unconfirmed")
+        await runtime.sessions.put(session_id, session, revision)
+
+
 @router.get("/sessions/{session_id}")
 async def get_session(session_id: str) -> dict[str, Any]:
     """Get conversation session details including all turns.
 
-    Sessions live in this worker's memory only: ``MySQLStore`` has no session
-    tables, so there is no durable session lookup to fall back to.
+    The default is process-local memory. An explicitly installed shared runtime
+    reads MySQL snapshots and never falls back to a stale local session.
     """
-    session = _SESSION_STORE.get(session_id)
+    session, _ = await _read_session_snapshot(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
     return {"status": "ok", "session": session}
@@ -564,10 +649,10 @@ async def get_session(session_id: str) -> dict[str, Any]:
 async def get_session_versions(session_id: str) -> dict[str, Any]:
     """Get version history for a conversation session.
 
-    Returns all SQL versions generated and edited during the session. Version
-    history is process-local for the same reason as :func:`get_session`.
+    Returns all SQL versions generated and edited during the session, using the
+    same authoritative backend as :func:`get_session`.
     """
-    session = _SESSION_STORE.get(session_id)
+    session, _ = await _read_session_snapshot(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
@@ -628,6 +713,11 @@ def _find_version(versions: list[dict[str, Any]], version_number: int) -> dict[s
 
 @router.post("/sessions/{session_id}/versions/{version_number}/rollback")
 async def rollback_to_version(session_id: str, version_number: int) -> dict[str, Any]:
+    async with shared_query_scope(session_id):
+        return await _rollback_to_version(session_id, version_number)
+
+
+async def _rollback_to_version(session_id: str, version_number: int) -> dict[str, Any]:
     """Rollback to a previous SQL version (SPEC §4.7.2).
 
     Creates a new version whose SQL is copied from version *N*. The
@@ -637,7 +727,7 @@ async def rollback_to_version(session_id: str, version_number: int) -> dict[str,
     The new version is marked ``source="rollback"`` with
     ``parent_version=N`` for traceability.
     """
-    session = _SESSION_STORE.get(session_id)
+    session, revision = await _read_session_snapshot(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
@@ -661,6 +751,8 @@ async def rollback_to_version(session_id: str, version_number: int) -> dict[str,
     session["current_version"] = new_number
     session["updated_at"] = datetime.now().isoformat()
 
+    await _commit_query_session(session_id, session, revision)
+
     return {
         "status": "ok",
         "session_id": session_id,
@@ -683,7 +775,7 @@ async def diff_versions(
     """
     import difflib
 
-    session = _SESSION_STORE.get(session_id)
+    session, _ = await _read_session_snapshot(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
@@ -760,6 +852,13 @@ async def diff_versions(
 async def branch_from_version(
     session_id: str, version_number: int, body: dict[str, Any] | None = None
 ) -> dict[str, Any]:
+    async with shared_query_scope(session_id):
+        return await _branch_from_version(session_id, version_number, body)
+
+
+async def _branch_from_version(
+    session_id: str, version_number: int, body: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Create a new branch from version N (SPEC §4.7.2).
 
     Unlike rollback (which copies the SQL verbatim), a branch creates an
@@ -770,7 +869,7 @@ async def branch_from_version(
     The new version is marked ``source="branch"`` with
     ``parent_version=N``.
     """
-    session = _SESSION_STORE.get(session_id)
+    session, revision = await _read_session_snapshot(session_id)
     if session is None:
         raise HTTPException(status_code=404, detail=f"Session '{session_id}' not found")
 
@@ -802,6 +901,8 @@ async def branch_from_version(
     session["versions"] = versions
     session["current_version"] = new_number
     session["updated_at"] = datetime.now().isoformat()
+
+    await _commit_query_session(session_id, session, revision)
 
     return {
         "status": "ok",

@@ -17,6 +17,7 @@ from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
 from app.harness.events import NodeEvent, NodeEventStatus
 from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
+from app.harness.shared_query_runtime import shared_query_scope
 from app.llm.budget import BudgetedRouter, active_budget
 from app.llm.factory import get_default_router
 from app.llm.protocols import CompletionRouter
@@ -125,7 +126,7 @@ async def run_query(
     async with admission:
         if not body.session_id:
             body.session_id = f"s_{uuid.uuid4().hex[:16]}"
-        async with gate(("session", body.session_id)):
+        async with shared_query_scope(body.session_id), gate(("session", body.session_id)):
             audit = QueryAuditState(
                 capture_candidate_digests=settings.llm_audit_candidate_digests,
             )
@@ -135,11 +136,17 @@ async def run_query(
                 )
             result: dict[str, Any] | None = None
             try:
-                result = await _run_query(body, emit, llm_router=llm_router, audit=audit,
-                                          schema_retriever=schema_retriever)
+                result = await _run_query(
+                    body,
+                    emit,
+                    llm_router=llm_router,
+                    audit=audit,
+                    schema_retriever=schema_retriever,
+                )
                 status = result.get("status")
                 audit.outcome = (
-                    status if isinstance(status, str) and status in ("completed", "failed")
+                    status
+                    if isinstance(status, str) and status in ("completed", "failed")
                     else "error"
                 )
             except asyncio.CancelledError:
@@ -147,7 +154,8 @@ async def run_query(
                 raise
             finally:
                 persistence = await finish_audit(
-                    audit, body.session_id,
+                    audit,
+                    body.session_id,
                     result.get("candidates") if result is not None else None,
                 )
             assert result is not None
@@ -167,7 +175,7 @@ async def _run_query(
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
-    from app.api.query import _detect_metadata_query, _get_or_create_session
+    from app.api.query import _commit_query_session, _detect_metadata_query, _load_query_session
     from app.api.workflows import record_trace
     from app.storage.mysql_store import get_store
 
@@ -211,7 +219,7 @@ async def _run_query(
     source_note = (
         "" if schemas else "SQL is based on domain/model knowledge; no connected database result"
     )
-    session = _get_or_create_session(session_id)
+    session, session_revision = await _load_query_session(session_id)
     history = [{"nl_input": t["nl_input"], "sql": t["sql"]} for t in session["turns"][-8:]]
     all_candidates = []
     linked_tables: list[str] = []
@@ -441,6 +449,7 @@ async def _run_query(
     session["turns"].append(turn)
     session["turns"][:] = session["turns"][-max(1, settings.session_max_turns) :]
     session["updated_at"] = turn["timestamp"]
+    await _commit_query_session(session_id, session, session_revision)
     store = get_store()
     if store is not None:
         try:

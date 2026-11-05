@@ -10,7 +10,13 @@ type QueryEventName = Literal[
 ]
 type QueryEventHandler = Callable[[QueryEventName, dict[str, Any]], Awaitable[None]]
 type QueryErrorCode = Literal[
-    "QUERY_TIMEOUT", "QUERY_CAPACITY", "INTERNAL_ERROR", "WORKFLOW_FAILED", "INVALID_REQUEST"
+    "QUERY_TIMEOUT",
+    "QUERY_CAPACITY",
+    "INTERNAL_ERROR",
+    "WORKFLOW_FAILED",
+    "INVALID_REQUEST",
+    "SESSION_CONFLICT",
+    "SHARED_STATE_UNAVAILABLE",
 ]
 
 
@@ -57,6 +63,19 @@ def classify_query_failure(exc: Exception) -> QueryFailure:
     Business failures stay in the ordinary query response; cancellation is a
     BaseException and must propagate rather than pass through this classifier.
     """
+    from app.harness.mysql_coordination import CoordinationUnavailableError
+    from app.storage.shared_sessions import (
+        SessionCapacityError,
+        SessionConflictError,
+        SessionStoreUnavailableError,
+    )
+
+    if isinstance(exc, SessionConflictError):
+        return QueryFailure("SESSION_CONFLICT", "Session changed; read before retrying", 409)
+    if isinstance(exc, CoordinationUnavailableError | SessionStoreUnavailableError):
+        return QueryFailure("SHARED_STATE_UNAVAILABLE", "Shared state unavailable", 503, 1)
+    if isinstance(exc, SessionCapacityError):
+        return QueryFailure("QUERY_CAPACITY", "Shared session capacity reached", 503, 1)
     if isinstance(exc, TimeoutError):
         return QueryFailure("QUERY_TIMEOUT", "Query deadline exceeded", 504)
     if isinstance(exc, QueryCapacityError):
