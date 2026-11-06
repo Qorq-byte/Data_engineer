@@ -9,6 +9,7 @@ import pytest
 
 from app.evaluation.nl2sql_batch import load_suite, prepare
 from app.evaluation.nl2sql_runtime import CallJournal, approved_guard, run_batch
+from app.evaluation.predictions import fingerprint
 from app.llm.router import ProviderConfig
 
 
@@ -89,6 +90,44 @@ async def test_actual_native_harness_audit_and_full_denominators(
         assert "synthetic-private-key" not in value
         assert "private-exception-never-persist" not in value
         assert "private-refusal-never-persist" not in value
+
+
+async def test_capacity_overlaps_physical_calls_without_cross_case_audit(
+    isolated_worker, monkeypatch
+):
+    import litellm
+
+    manifest = prepare("capacity-offline-control", capacity=True)
+    ids = {item["messages_sha256"]: item["id"] for item in manifest["prompt_inventory"]}
+    sql = {case["id"]: case["gold_sql"] for case in load_suite()["sql_cases"]}
+    waves = {}
+    for level in manifest["levels"]:
+        width, cases = level["concurrency"], level["case_ids"]
+        for offset in range(0, len(cases), width):
+            members = cases[offset:offset + width]
+            entered, ready = set(), asyncio.Event()
+            for case in members:
+                waves[case] = (len(members), entered, ready)
+
+    async def transport(**kwargs):
+        case = ids[fingerprint(kwargs["messages"])]
+        count, entered, ready = waves[case]
+        entered.add(case)
+        if len(entered) == count:
+            ready.set()
+        await asyncio.wait_for(ready.wait(), 5)
+        return litellm.ModelResponse(choices=[{
+            "index": 0, "message": {"role": "assistant", "content": sql[case]},
+            "finish_reason": "stop",
+        }], usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15})
+
+    monkeypatch.setattr(litellm, "acompletion", transport)
+    report = await asyncio.wait_for(run_batch(manifest, "synthetic-key", isolated_worker), 30)
+    assert report["physical_calls_reserved"] == report["native_budget_calls"] == 30
+    assert report["unknown_transport_outcomes"] == 0
+    assert report["evaluation"]["robust_match_count"] == 30
+    assert [row["received"] for row in report["capacity_levels"]] == [10, 10, 10]
+    assert all(len(entered) == count for count, entered, _ in waves.values())
 
 
 @pytest.mark.parametrize("defect", ["model", "n", "output", "stream", "overrides", "size"])

@@ -15,6 +15,8 @@ from app.evaluation.predictions import fingerprint
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = "synthetic-nl2sql-v3"
+CAPACITY_PROFILE = "synthetic-nl2sql-capacity-v1"
+CAPACITY_LEVELS = (1, 2, 4)
 MODEL = "deepseek-v4-flash"
 BASE_URL = "https://api.deepseek.com/v1"
 ACCEPTANCE_SHA = "ed4be1acd589350adf428491ae4db542ee686fd3bd212a3f2f3517dca6b45755"
@@ -39,7 +41,7 @@ def source_paths() -> list[Path]:
     return sorted(set(paths))
 
 
-def prepare(run_name: str) -> dict[str, Any]:
+def prepare(run_name: str, *, capacity: bool = False) -> dict[str, Any]:
     if not isinstance(run_name, str) or not re.fullmatch(r"[a-z][a-z0-9-]{0,47}", run_name):
         raise ValueError("Invalid run name")
     suite = load_suite()
@@ -53,7 +55,8 @@ def prepare(run_name: str) -> dict[str, Any]:
         raise ValueError("Invalid frozen prompt inventory")
     cases = [{key: case[key] for key in ("id", "question", "split", "tags")}
              for case in suite["sql_cases"]]
-    return {"profile": PROFILE, "run_name": run_name, "provider": "deepseek", "model": MODEL,
+    manifest: dict[str, Any] = {"profile": PROFILE, "run_name": run_name,
+            "provider": "deepseek", "model": MODEL,
             "base_url": BASE_URL, "api_key_env": "DEEPSEEK_API_KEY", "limits": dict(LIMITS),
             "fallback_chain": [], "cases": cases, "prompt_inventory": prompts,
             "exact_message_utf8_bytes": sum(p["message_bytes"] for p in prompts),
@@ -74,6 +77,14 @@ def prepare(run_name: str) -> dict[str, Any]:
                               "or dollar quota; termination cannot guarantee billing reversal.",
             "scope": "Public synthetic30 cases x3 local scenarios; not business accuracy. "
                      "Alias is not an immutable provider model version; no score-driven tuning."}
+    if capacity:
+        # Allocate similar input sizes across levels without tuning on observed results.
+        by_size = sorted(prompts, key=lambda row: (row["message_bytes"], row["id"]))
+        manifest.update(profile=CAPACITY_PROFILE, levels=[{
+            "concurrency": concurrency,
+            "case_ids": [row["id"] for row in by_size[offset::len(CAPACITY_LEVELS)]],
+        } for offset, concurrency in enumerate(CAPACITY_LEVELS)])
+    return manifest
 
 
 def manifest_digest(value: object) -> str:
@@ -86,7 +97,7 @@ def validate(value: object, confirmation: str) -> dict[str, Any]:
     name = value.get("run_name")
     if not isinstance(name, str):
         raise ValueError("Invalid run name")
-    expected = prepare(name)
+    expected = prepare(name, capacity=value.get("profile") == CAPACITY_PROFILE)
     if manifest_digest(expected) != manifest_digest(value):
         raise ValueError("Manifest, source, inputs or runtime changed")
     return expected

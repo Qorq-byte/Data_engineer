@@ -139,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
     modes.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--run-name", default="stage44-sql-v3")
+    parser.add_argument("--capacity", action="store_true", help="Prepare the capacity profile")
     parser.add_argument("--confirm-manifest-sha256", default="")
     parser.add_argument("--env-file", type=Path)
     parser.add_argument("--owner-token", default="", help=argparse.SUPPRESS)
@@ -152,13 +153,15 @@ def main(argv: list[str] | None = None) -> int:
             from app.evaluation.artifacts import write_atomic
 
             protect_inputs(args.manifest, source_paths())
-            value = prepare(args.run_name)
+            value = prepare(args.run_name, capacity=args.capacity)
             if args.manifest.resolve().is_relative_to(run_directory(args.run_name)):
                 raise ValueError("Manifest must be outside run directory")
             write_atomic(args.manifest, value)
             print(json.dumps({"status": "prepared", "manifest_sha256": manifest_digest(value),
                               "limits": value["limits"]}))
             return 0
+        if args.capacity:
+            raise ValueError("Capacity option is only valid when preparing a manifest")
         value = validate(read_json(args.manifest), args.confirm_manifest_sha256)
         if args.worker:
             if args.env_file:
