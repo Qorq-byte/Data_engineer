@@ -1,7 +1,8 @@
 """Optional shared query dependencies; activation is owned by deployment startup."""
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
 from app.harness.mysql_coordination import (
     CoordinationBusyError,
@@ -21,6 +22,8 @@ class SharedQueryRuntime:
         self.sessions = sessions
         self.rate_limit = MySQLProviderRateLimit(sessions.pool, sessions.namespace)
         self.ready = False
+        self.verify_configuration: Callable[[], Awaitable[None]] | None = None
+        self.model_coordinator: MySQLCoordinator | None = None
 
     async def initialize(self) -> None:
         self.ready = False
@@ -52,6 +55,23 @@ async def shared_query_scope(session_id: str) -> AsyncIterator[None]:
         raise CoordinationUnavailableError("Shared query runtime is not ready")
     try:
         async with runtime.coordinator.query(session_id):
+            if runtime.verify_configuration is not None:
+                await runtime.verify_configuration()
             yield
     except CoordinationBusyError:
         raise QueryCapacityError("Shared query or session capacity reached") from None
+
+
+@asynccontextmanager
+async def shared_model_scope() -> AsyncIterator[None]:
+    runtime = current_shared_runtime()
+    if runtime is None or runtime.model_coordinator is None:
+        yield
+        return
+    if not runtime.ready:
+        raise CoordinationUnavailableError("Shared model runtime is not ready")
+    try:
+        async with runtime.model_coordinator.query(uuid4().hex):
+            yield
+    except CoordinationBusyError:
+        raise QueryCapacityError("Shared model concurrency reached") from None

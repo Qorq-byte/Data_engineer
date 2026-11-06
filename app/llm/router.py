@@ -605,6 +605,53 @@ class LiteLLMRouter:
         stream: bool,
         **kwargs: Any,
     ) -> Any:
+        from app.harness.shared_model_stream import leased_stream
+        from app.harness.shared_query_runtime import current_shared_runtime, shared_model_scope
+
+        runtime = current_shared_runtime()
+        if runtime is None or runtime.model_coordinator is None:
+            return await self._locally_limited_call(
+                provider,
+                model,
+                messages,
+                temperature,
+                n,
+                stream,
+                **kwargs,
+            )
+        if stream:
+            return await leased_stream(
+                lambda: self._locally_limited_call(
+                    provider,
+                    model,
+                    messages,
+                    temperature,
+                    n,
+                    True,
+                    **kwargs,
+                )
+            )
+        async with shared_model_scope():
+            return await self._locally_limited_call(
+                provider,
+                model,
+                messages,
+                temperature,
+                n,
+                False,
+                **kwargs,
+            )
+
+    async def _locally_limited_call(
+        self,
+        provider: ProviderConfig,
+        model: str,
+        messages: list[dict[str, str]],
+        temperature: float,
+        n: int,
+        stream: bool,
+        **kwargs: Any,
+    ) -> Any:
         from app.db.runtime import gate
 
         semaphore = gate("llm-calls", max(1, self.config.max_concurrency))

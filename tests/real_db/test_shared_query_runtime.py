@@ -26,12 +26,18 @@ pytestmark = [
 ROOT = Path(__file__).resolve().parents[2]
 
 
+class ServingProcesses(list):
+    """Fixture list with an explicit fresh-process launcher for restart tests."""
+
+
 @pytest_asyncio.fixture
 async def shared_servers(coordination, tmp_path, monkeypatch, request):
     database, pool, config, children = coordination
     monkeypatch.setattr(settings, "jwt_secret", SECRET)
     store = MySQLStore(pool)
     await store.init_tables()
+    if getattr(request, "param", {}).get("immutable"):
+        await store.seed_defaults()
     await store.save_setting(
         "llm",
         {
@@ -68,35 +74,49 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
         }
     }
     environment.update(PYTHONPATH=str(ROOT), PYTHONUTF8="1")
+    if getattr(request, "param", {}).get("immutable"):
+        from tests.fixtures.immutable_release import build_release
+
+        environment.update(await build_release(config, tmp_path))
+        environment["SHARED_WORKER_NAMESPACE"] = database
+        environment["MAX_CONCURRENT_QUERIES"] = "2"
+        environment["LLM_MAX_CONCURRENCY"] = "1"
     headers = {"Authorization": f"Bearer {create_access_token(1, 'fixture')}"}
-    servers = []
+    servers = ServingProcesses()
+
+    async def launch(name):
+        directory = tmp_path / name
+        directory.mkdir()
+        with (directory / "stderr.txt").open("wb") as stderr:
+            process = await asyncio.create_subprocess_exec(
+                sys.executable,
+                "-m",
+                "tests.fixtures.shared_query_worker",
+                "--port",
+                str(config["port"]),
+                "--database",
+                database,
+                cwd=directory,
+                env=environment,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=stderr,
+            )
+        children.append(process)
+        async with asyncio.timeout(35):
+            while not (directory / "ready.json").exists():
+                if process.returncode is not None:
+                    raise AssertionError((directory / "stderr.txt").read_text())
+                await asyncio.sleep(0.02)
+        port = json.loads((directory / "ready.json").read_text())["port"]
+        result = (f"http://127.0.0.1:{port}", directory, process)
+        servers.append(result)
+        return result
+
+    servers.launch = launch
     async with httpx.AsyncClient(trust_env=False, timeout=30, headers=headers) as client:
         try:
             for name in ("first", "second"):
-                directory = tmp_path / name
-                directory.mkdir()
-                with (directory / "stderr.txt").open("wb") as stderr:
-                    process = await asyncio.create_subprocess_exec(
-                        sys.executable,
-                        "-m",
-                        "tests.fixtures.shared_query_worker",
-                        "--port",
-                        str(config["port"]),
-                        "--database",
-                        database,
-                        cwd=directory,
-                        env=environment,
-                        stdout=asyncio.subprocess.DEVNULL,
-                        stderr=stderr,
-                    )
-                children.append(process)
-                async with asyncio.timeout(35):
-                    while not (directory / "ready.json").exists():
-                        if process.returncode is not None:
-                            raise AssertionError((directory / "stderr.txt").read_text())
-                        await asyncio.sleep(0.02)
-                port = json.loads((directory / "ready.json").read_text())["port"]
-                servers.append((f"http://127.0.0.1:{port}", directory, process))
+                await launch(name)
             yield client, servers
         finally:
             for url, _, process in servers:

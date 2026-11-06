@@ -60,7 +60,9 @@ async def run(args):
     async def unavailable_rag():
         raise RuntimeError("Shared query fixture explicitly uses keyword retrieval")
 
-    engine.initialize_rag_engine = unavailable_rag
+    immutable = bool(os.environ.get("SHARED_WORKER_RELEASE"))
+    if not immutable:
+        engine.initialize_rag_engine = unavailable_rag
     store = await MySQLStore.create()
     await store.init_tables()
     coordination_pool = await aiomysql.create_pool(
@@ -73,23 +75,24 @@ async def run(args):
         minsize=1,
         maxsize=4,
     )
-    runtime = SharedQueryRuntime(
-        MySQLCoordinator(coordination_pool, args.database, 1),
-        MySQLSessionStore(store._pool, args.database, max_entries=20, ttl_seconds=60),
-    )
-    await runtime.initialize()
-    publish_shared_runtime(runtime)
-    await ConnectionFactory.create(
-        DatabaseType.MYSQL,
-        {
-            "host": "127.0.0.1",
-            "port": args.port,
-            "user": "stage40_reader",
-            "password": "stage40-disposable-reader",
-            "database": "de_stage40_fixture",
-        },
-        "fixture",
-    )
+    if not immutable:
+        runtime = SharedQueryRuntime(
+            MySQLCoordinator(coordination_pool, args.database, 1),
+            MySQLSessionStore(store._pool, args.database, max_entries=20, ttl_seconds=60),
+        )
+        await runtime.initialize()
+        publish_shared_runtime(runtime)
+        await ConnectionFactory.create(
+            DatabaseType.MYSQL,
+            {
+                "host": "127.0.0.1",
+                "port": args.port,
+                "user": "stage40_reader",
+                "password": "stage40-disposable-reader",
+                "database": "de_stage40_fixture",
+            },
+            "fixture",
+        )
     app = create_app()
     server = uvicorn.Server(uvicorn.Config(app, log_level="error", lifespan="on"))
 
@@ -167,8 +170,8 @@ def main():
         LITELLM_LOCAL_MODEL_COST_MAP="True",
         RAG_EMBEDDING_PROVIDER="mock",
         AGENT_CONFIG_PATH=str(ROOT / "app/config/agent.yml"),
-        LLM_AUDIT_PATH=str(Path.cwd() / "usage-audit.sqlite3"),
     )
+    os.environ.setdefault("LLM_AUDIT_PATH", str(Path.cwd() / "usage-audit.sqlite3"))
     asyncio.run(run(args))
 
 

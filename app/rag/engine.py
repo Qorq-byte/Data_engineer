@@ -213,8 +213,11 @@ async def _build_rag_engine() -> _RAGEngine:
         dimension=dimension,
         uri=lancedb_uri,
         embedding_id=f"{type(provider).__name__}:{provider.model_name}:document-fulltext-v2",
+        read_only=bool(settings.shared_worker_release),
     )
-    bm25_index = BM25Index(settings.rag_bm25_path or _DEFAULT_BM25_PATH)
+    bm25_index = BM25Index(
+        settings.rag_bm25_path or _DEFAULT_BM25_PATH, read_only=bool(settings.shared_worker_release)
+    )
 
     try:
         # ── RRF fusion with configured weights ─────────────────────────────
@@ -273,6 +276,22 @@ async def _build_rag_engine() -> _RAGEngine:
         # ── Index existing data ────────────────────────────────────────────
         from app.db.connections import ConnectionFactory
 
+        if settings.shared_worker_release:
+            # Immutable serving workers open prebuilt indexes. They must never
+            # rebuild shared files or invoke document embeddings during startup.
+            expected = {info.db_id for info in ConnectionFactory.list_all()}
+            dense_ids = lancedb_store.database_ids(schema_rag.NAMESPACE)
+            sparse_ids = bm25_index.database_ids(schema_rag.NAMESPACE)
+            if (
+                schema_rag.refresh_required_databases
+                or not expected
+                or not expected <= dense_ids
+                or not expected <= sparse_ids
+            ):
+                raise ValueError("Immutable Schema indexes are incomplete")
+            candidate.startup_schema_results = dict.fromkeys(expected, True)
+            return candidate
+
         schema_rag.require_refresh(
             lancedb_store.database_ids(schema_rag.NAMESPACE)
             | bm25_index.database_ids(schema_rag.NAMESPACE)
@@ -302,7 +321,9 @@ async def _index_all_connected_schemas(engine: _RAGEngine) -> dict[str, bool]:
     for info in ConnectionFactory.list_all():
         try:
             result = await refresh_database_schema(
-                info.db_id, engine.schema_rag, document_builder=snapshot_to_schema_docs,
+                info.db_id,
+                engine.schema_rag,
+                document_builder=snapshot_to_schema_docs,
             )
             results[info.db_id] = result.rag_indexed
         except Exception:

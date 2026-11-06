@@ -384,6 +384,11 @@ class ExecuteRequest(BaseModel):
 
 @router.post("/execute")
 async def execute_sql_direct(body: ExecuteRequest) -> dict[str, Any]:
+    async with shared_query_scope(f"direct_{uuid.uuid4().hex}"):
+        return await _execute_sql_direct(body)
+
+
+async def _execute_sql_direct(body: ExecuteRequest) -> dict[str, Any]:
     """Execute a raw SQL statement directly against a connected database.
 
     This is the direct execution endpoint for the WorkbenchPanel.
@@ -597,6 +602,8 @@ async def _read_session_snapshot(session_id: str) -> tuple[dict[str, Any] | None
         return _SESSION_STORE.get(session_id), None
     if not runtime.ready:
         raise CoordinationUnavailableError("Shared session runtime is not ready")
+    if runtime.verify_configuration is not None:
+        await runtime.verify_configuration()
     record = await runtime.sessions.get(session_id)
     return (record.payload, record.revision) if record else (None, None)
 
@@ -627,6 +634,8 @@ async def _commit_query_session(
 ) -> None:
     runtime = current_shared_runtime()
     if runtime is not None:
+        if runtime.verify_configuration is not None:
+            await runtime.verify_configuration()
         if revision is None:
             raise SessionStoreUnavailableError("Session revision is unconfirmed")
         await runtime.sessions.put(session_id, session, revision)

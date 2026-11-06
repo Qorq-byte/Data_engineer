@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+async def _single_lifespan(app: FastAPI) -> AsyncIterator[None]:
     """The sole owner of startup and awaited shutdown in all launch modes."""
     import asyncio
 
@@ -87,6 +87,19 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
                 logger.exception("Storage shutdown failed")
         close_rag_engine()
         reset_default_router()
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    from app.config.settings import settings
+    from app.harness.worker_bootstrap import immutable_worker_lifespan
+
+    if settings.shared_worker_release:
+        async with immutable_worker_lifespan(app, _single_lifespan):
+            yield
+    else:
+        async with _single_lifespan(app):
+            yield
 
 
 def create_app() -> FastAPI:

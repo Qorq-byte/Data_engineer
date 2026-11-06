@@ -40,6 +40,19 @@ async def readiness(request: Request) -> JSONResponse:
     ready = (
         initialized and components.get("auth", False) and components["llm"] and database_count > 0
     )
+    from app.config.settings import settings
+    from app.harness.shared_query_runtime import current_shared_runtime
+
+    if settings.shared_worker_release:
+        shared = current_shared_runtime()
+        shared_ready = shared is not None and shared.ready
+        if shared_ready and shared is not None and shared.verify_configuration is not None:
+            try:
+                await shared.verify_configuration()
+            except Exception:
+                shared_ready = False
+        components["shared_worker"] = shared_ready
+        ready = ready and shared_ready and components.get("storage", False) and components["rag"]
     return JSONResponse(
         status_code=200 if ready else 503,
         content={

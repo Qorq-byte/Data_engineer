@@ -166,12 +166,20 @@ class LanceDBStore:
             ``~/.data_engineer/lancedb``.
     """
 
-    def __init__(self, dimension: int, uri: str | None = None, *, embedding_id: str = ""):
+    def __init__(
+        self,
+        dimension: int,
+        uri: str | None = None,
+        *,
+        embedding_id: str = "",
+        read_only: bool = False,
+    ):
         if not _LANCEDB_AVAILABLE:
             raise ImportError(
                 "LanceDBStore requires the 'lancedb' package. Install it with: pip install lancedb"
             )
         self._embedding_id = embedding_id
+        self._read_only = read_only
         self._dimension = dimension
         self._uri = uri or DEFAULT_LANCEDB_DIR
         self._db: Any = None
@@ -195,7 +203,11 @@ class LanceDBStore:
         """
         if self._db is not None:
             return self._db
-        Path(self._uri).mkdir(parents=True, exist_ok=True)
+        if self._read_only:
+            if not Path(self._uri).is_dir():
+                raise ValueError("Immutable dense directory missing")
+        else:
+            Path(self._uri).mkdir(parents=True, exist_ok=True)
         db = lancedb.connect(self._uri)
         if self._embedding_id:
             manifest = Path(self._uri) / "embedding-version.json"
@@ -210,6 +222,8 @@ class LanceDBStore:
                         "Embedding version mismatch; retain index and rebuild in a new directory"
                     )
             else:
+                if self._read_only:
+                    raise ValueError("Immutable embedding manifest missing")
                 for namespace in ALL_NAMESPACES:
                     try:
                         table = db.open_table(namespace)
@@ -242,6 +256,8 @@ class LanceDBStore:
         Returns:
             Dict mapping namespace name → LanceDB table handle.
         """
+        if overwrite and self._read_only:
+            raise ValueError("Immutable dense store cannot overwrite namespaces")
         db = self._ensure_connected()
 
         schemas = {
@@ -285,6 +301,8 @@ class LanceDBStore:
         try:
             table = db.open_table(namespace)
         except Exception:
+            if self._read_only:
+                raise ValueError("Immutable dense namespace missing") from None
             return db.create_table(namespace, schema=schema, mode="create")
 
         existing_dim = self._table_vector_dim(table)
@@ -336,6 +354,8 @@ class LanceDBStore:
         Returns:
             Number of records inserted.
         """
+        if self._read_only:
+            raise ValueError("Immutable dense store cannot insert")
         if not records:
             return 0
         table = self.ensure_namespace(namespace)
@@ -380,6 +400,8 @@ class LanceDBStore:
             Number of records deleted.
         """
         table = self.ensure_namespace(namespace)
+        if self._read_only:
+            raise ValueError("Immutable dense store cannot delete")
         count_before = int(table.count_rows())
         table.delete(where)
         count_after = int(table.count_rows())
@@ -391,15 +413,22 @@ class LanceDBStore:
         return int(table.count_rows())
 
     def snapshot_database(
-        self, namespace: str, db_id: str, *, new_doc_ids: list[str] | None = None,
+        self,
+        namespace: str,
+        db_id: str,
+        *,
+        new_doc_ids: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         """Read every raw record for a database, refusing cross-database ID collisions."""
         table = self.ensure_namespace(namespace)
         if new_doc_ids:
             ids = ", ".join(literal(doc_id) for doc_id in new_doc_ids)
-            if table.search().where(
-                f"doc_id IN ({ids}) AND (db_id IS NULL OR db_id != {literal(db_id)})"
-            ).limit(1).to_list():
+            if (
+                table.search()
+                .where(f"doc_id IN ({ids}) AND (db_id IS NULL OR db_id != {literal(db_id)})")
+                .limit(1)
+                .to_list()
+            ):
                 raise ValueError("Schema document ID belongs to another database")
         records: list[dict[str, Any]] = (
             table.search().where(f"db_id = {literal(db_id)}").limit(None).to_list()
@@ -417,9 +446,14 @@ class LanceDBStore:
         return ids
 
     def restore_database(
-        self, namespace: str, db_id: str, records: list[dict[str, Any]],
+        self,
+        namespace: str,
+        db_id: str,
+        records: list[dict[str, Any]],
     ) -> None:
         """Compensate a database replacement, preserving original vectors and timestamps."""
+        if self._read_only:
+            raise ValueError("Immutable dense store cannot restore")
         if any(record.get("db_id") != db_id for record in records):
             raise ValueError("Recovery records must belong to the specified database")
         table = self.ensure_namespace(namespace)
@@ -429,6 +463,8 @@ class LanceDBStore:
 
     def drop_namespace(self, namespace: str) -> None:
         """Drop a namespace table entirely."""
+        if self._read_only:
+            raise ValueError("Immutable dense store cannot drop namespaces")
         if namespace not in ALL_NAMESPACES:
             raise ValueError(f"Unknown namespace '{namespace}'.")
         db = self._ensure_connected()
