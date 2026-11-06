@@ -135,7 +135,7 @@ PRESET_DIALECTS: dict[str, DialectConfig] = {
     ),
     "starrocks": DialectConfig(
         dialect="starrocks",
-        driver="mysql-connector",
+        driver="aiomysql",
         type_mapping={
             "int": "INT",
             "bigint": "BIGINT",

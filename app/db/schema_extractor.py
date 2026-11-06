@@ -2,7 +2,7 @@
 
 Extracts TableSchema and SchemaSnapshot from live databases.
 Implemented: PostgreSQL (public), SQLite (main), DuckDB (current catalog/main),
-MySQL, ClickHouse (selected database) and Trino (selected catalog and schema).
+MySQL, ClickHouse, StarRocks (selected database) and Trino (selected catalog and schema).
 Other database types raise NotImplementedError.
 """
 
@@ -111,6 +111,12 @@ class SchemaExtractor:
 
                 if not isinstance(connection, TrinoConnection):
                     raise ValueError("Invalid Trino connection")
+                snapshot = await connection.extract_schema()
+            case DatabaseType.STARROCKS:
+                from app.db.starrocks_source import StarRocksConnection
+
+                if not isinstance(connection, StarRocksConnection):
+                    raise ValueError("Invalid StarRocks connection")
                 snapshot = await connection.extract_schema()
             case _:
                 raise NotImplementedError(

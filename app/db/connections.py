@@ -1,6 +1,6 @@
 """Multi-database connection factory.
 
-Registers 11 database types and connects SQLite, DuckDB, PostgreSQL, MySQL, ClickHouse and Trino.
+Connects SQLite, DuckDB, PostgreSQL, MySQL, ClickHouse, Trino and StarRocks.
 """
 
 import asyncio
@@ -123,9 +123,12 @@ class ConnectionFactory:
                 from app.db.trino_source import TrinoConnection
 
                 return await TrinoConnection.connect(config)
+            case DatabaseType.STARROCKS:
+                from app.db.starrocks_source import StarRocksConnection
+
+                return await StarRocksConnection.connect(config)
             case (
                 DatabaseType.SNOWFLAKE
-                | DatabaseType.STARROCKS
                 | DatabaseType.BIGQUERY
                 | DatabaseType.REDSHIFT
                 | DatabaseType.DATABRICKS
@@ -239,6 +242,7 @@ class ConnectionFactory:
             DatabaseType.MYSQL: ("aiomysql", "pool_acquired_connection"),
             DatabaseType.CLICKHOUSE: ("httpx", "async_single_connection"),
             DatabaseType.TRINO: ("httpx", "async_single_connection"),
+            DatabaseType.STARROCKS: ("aiomysql", "pool_acquired_connection"),
         }
         counts = dict.fromkeys(DatabaseType, 0)
         for db_id in list(cls._connections):

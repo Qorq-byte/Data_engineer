@@ -28,6 +28,7 @@ from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
 from app.db.mysql_query import bounded_mysql_query
 from app.db.sqlite_source import SchemaSourceChangedError, read_scope
+from app.db.starrocks_source import StarRocksConnection
 from app.db.trino_source import TrinoConnection
 from app.models.query import PlanAnalysis
 from app.models.schema import DuckDBSourceState, SchemaSnapshot
@@ -132,6 +133,8 @@ class ExecuteSQLNode(AgenticNode):
             dialect = "clickhouse"
         elif isinstance(conn, TrinoConnection):
             dialect = "trino"
+        elif isinstance(conn, StarRocksConnection):
+            dialect = "starrocks"
         if self._is_write_statement(sql, dialect):
             return NodeOutput(
                 result=None,
@@ -176,7 +179,7 @@ class ExecuteSQLNode(AgenticNode):
         try:
             async_driver = (
                 self._is_asyncpg_connection(conn) or self._is_aiomysql_connection(conn)
-                or isinstance(conn, ClickHouseConnection | TrinoConnection)
+                or isinstance(conn, ClickHouseConnection | TrinoConnection | StarRocksConnection)
             )
             deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
 
@@ -264,7 +267,7 @@ class ExecuteSQLNode(AgenticNode):
         *, explain: bool = False,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
-        if isinstance(conn, ClickHouseConnection | TrinoConnection):
+        if isinstance(conn, ClickHouseConnection | TrinoConnection | StarRocksConnection):
             if explain:
                 raise ValueError("EXPLAIN is not supported by this connector")
             return await conn.query(sql, max_rows, timeout)

@@ -8,6 +8,7 @@ from abc import ABCMeta
 from asyncio import AbstractEventLoop, Future
 from collections.abc import Awaitable, Mapping, Sequence
 from contextlib import AbstractAsyncContextManager
+from ssl import SSLContext
 from typing import Any, Generic, TypedDict, TypeVar, Unpack, overload
 
 _RowT = TypeVar("_RowT", default=tuple[Any, ...])
@@ -26,6 +27,9 @@ class _ConnectionOptions(TypedDict, total=False):
     charset: str
     autocommit: bool
     connect_timeout: float | None
+    ssl: SSLContext | None
+
+class Error(Exception): ...
 
 class Cursor(Generic[_RowT]):
     rowcount: int
@@ -43,6 +47,8 @@ class Cursor(Generic[_RowT]):
 class DictCursor(Cursor[dict[str, Any]]):
     def fetchall(self) -> Awaitable[list[dict[str, Any]]]: ...
 
+class SSCursor(Cursor[tuple[Any, ...]]): ...
+
 class Connection:
     @property
     def closed(self) -> bool: ...
@@ -57,6 +63,7 @@ class Connection:
     async def commit(self) -> None: ...
     async def rollback(self) -> None: ...
     async def ping(self, reconnect: bool = True) -> None: ...
+    def thread_id(self) -> int: ...
 
 class Pool:
     @property
