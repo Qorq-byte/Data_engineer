@@ -15,6 +15,9 @@ from app.evaluation.predictions import fingerprint
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILE = "local-embeddinggemma-acceptance-v1"
+CAPACITY_PROFILE = "local-embeddinggemma-capacity-v1"
+CAPACITY_LEVELS = (1, 2, 4)
+CAPACITY_TEXT_COUNT = 8
 ACCEPTANCE_SHA = "ed4be1acd589350adf428491ae4db542ee686fd3bd212a3f2f3517dca6b45755"
 BASE_URL = "http://127.0.0.1:11434"
 MODEL = "embeddinggemma:latest"
@@ -22,6 +25,7 @@ DIMENSION = 768
 _SOURCE_NAMES = (
     "app/evaluation/embedding_batch.py", "app/evaluation/embedding_runtime.py",
     "app/evaluation/embedding_rankings.py", "app/evaluation/embedding_probe.py",
+    "app/evaluation/scale_probe.py",
     "scripts/run_embedding_acceptance.py",
     "tests/fixtures/embedding_acceptance/schema_prompt.yml",
     "app/knowledge/retrieval/embedding.py", "app/knowledge/retrieval/schema_rag.py",
@@ -82,7 +86,7 @@ def _model(value: object) -> dict[str, Any]:
     return model
 
 
-def prepare(run_name: str, model: object) -> dict[str, Any]:
+def prepare(run_name: str, model: object, *, capacity: bool = False) -> dict[str, Any]:
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,47}", run_name):
         raise ValueError("Invalid embedding run name")
     model = _model(model)
@@ -92,7 +96,7 @@ def prepare(run_name: str, model: object) -> dict[str, Any]:
     total = sum(row["utf8_bytes"] for row in inventory)
     if total != 3803 or max(row["utf8_bytes"] for row in inventory) != 165:
         raise ValueError("Frozen embedding input size changed")
-    return {
+    manifest: dict[str, Any] = {
         "profile": PROFILE, "run_name": run_name, "model": model, "base_url": BASE_URL,
         "acceptance_manifest_sha256": ACCEPTANCE_SHA, "inputs": inventory,
         "runtime": {"python": platform.python_version(), **{name: version(name) for name in
@@ -119,6 +123,25 @@ def prepare(run_name: str, model: object) -> dict[str, Any]:
                           "Existing Ollama CPU/GPU/RSS not hard-limited; startup not reset.",
         "actual_cost_usd": None,
     }
+    if capacity:
+        queries = [row for row in inventory if row["id"].startswith("query/")][:CAPACITY_TEXT_COUNT]
+        scheduled = queries * len(CAPACITY_LEVELS)
+        manifest.update(profile=CAPACITY_PROFILE, inputs=queries, retrieval=None,
+                        levels=[{"concurrency": level, "requests": len(queries)}
+                                for level in CAPACITY_LEVELS])
+        manifest["limits"].update(
+            embedding_posts=len(scheduled), http_requests=len(scheduled) + 2,
+            concurrency=max(CAPACITY_LEVELS),
+            input_utf8_bytes=sum(row["utf8_bytes"] for row in scheduled),
+            max_text_bytes=max(row["utf8_bytes"] for row in queries),
+            float32_vector_payload_bytes=len(scheduled) * DIMENSION * 4,
+        )
+        manifest["requests"][1:-1] = [
+            {"kind": "embedding", "method": "POST", "path": "/api/embeddings",
+             "input_id": row["id"], "concurrency": level}
+            for level in CAPACITY_LEVELS for row in queries
+        ]
+    return manifest
 
 
 def manifest_digest(value: object) -> str:
@@ -131,7 +154,7 @@ def validate(value: object, confirmation: str) -> dict[str, Any]:
     name = value.get("run_name")
     if not isinstance(name, str):
         raise ValueError("Invalid embedding run name")
-    expected = prepare(name, value.get("model"))
+    expected = prepare(name, value.get("model"), capacity=value.get("profile") == CAPACITY_PROFILE)
     if manifest_digest(expected) != manifest_digest(value):
         raise ValueError("Embedding manifest, source or frozen inputs changed")
     return expected
