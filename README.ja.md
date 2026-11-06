@@ -66,7 +66,8 @@
 | `request_query` 以外の 6 つのテンプレートプラン | **一部実装** —— 読み込まれ一覧にも出るが、API から実行できるのは `request_query` だけ | `app/api/workflows.py:39` |
 | マルチエージェント編成 / サブエージェント | **一部実装** —— 起動時に登録されるが、リクエスト経路が通るのはワークフローランナー | `main.py:105` |
 | フィードバック駆動のルール学習 | **一部実装** —— 収集・レビュー・統計はあるが、生成への自動反映は未接続 | `app/learning/` |
-| 宣言された 11 方言のうち 7 方言 | **宣言のみ** —— [対応データベース](#対応データベース)を参照 | `app/db/connections.py:15` |
+| 7 種類の読み取り専用データベースコネクター | 実装・検証済み。[対応データベース](#対応データベース)を参照 | `app/db/connections.py` |
+| 固定構成の MySQL 共有ワーカー | 単一ホストで明示的に有効化 | [デプロイと復旧](docs/optimization/immutable-workers.md) |
 | マルチテナント分離 | **未実装** —— 単一の管理者グループが 1 つのデータセットを共有する | `app/auth/access.py` |
 | 実データでの精度 / 再現率ベースライン | **未確立** | [ロードマップ](#ロードマップ)を参照 |
 
@@ -336,18 +337,27 @@ curl -X POST http://localhost:8001/api/v1/query \
 ワークスペースのサイドバーには 9 つのパネルがある。クエリパネルはノードごとの進捗を流し、
 SQL、検証レポート、結果テーブルを横に並べて表示する。
 
+ブラウザー検証ではログイン、ローカル Ollama による SQL 生成、MySQL の読み取り専用クエリ、
+狭い画面での履歴を確認した。埋め込みの警告とテストモデルのバッジは個別に表示する。
+
 ## 対応データベース
 
-`DatabaseType` には 11 の方言名が宣言されているが、接続実装が動くのは 4 つだけ。残り 7 つは列挙型の
-名前でしかなく、接続しようとすると `501` を投げる。
+7 種類のコネクターが読み取り専用クエリに対応する。検証範囲は次の表を参照。
 
 | 方言 | ドライバ | ステータス |
 |---|---|---|
 | SQLite | `sqlite3` | **実装済み** —— authorizer、progress deadline、スキーマバージョン追跡 |
 | DuckDB | `duckdb` | **実装済み** —— 外部アクセスを無効化、interrupt によるキャンセル |
-| PostgreSQL | `asyncpg` / `psycopg2` | **実装済み** —— CI で PostgreSQL 16 に対して検証済み |
-| MySQL | `aiomysql` / `pymysql` | **実装済み** —— サーバー側の行数上限、CI で MySQL 8.4 に対して検証済み |
-| Snowflake、StarRocks、BigQuery、Redshift、ClickHouse、Databricks、Trino | — | **宣言のみ** —— 接続経路もスキーマ抽出もない |
+| PostgreSQL | `asyncpg` | **実装済み** —— CI で PostgreSQL 16 に対して検証済み |
+| MySQL | `aiomysql` | **実装済み** —— サーバー側の行数上限、CI で MySQL 8.4 に対して検証済み |
+| ClickHouse | `httpx` | [独立インスタンスで検証済み](docs/optimization/clickhouse-acceptance.md)。単一データベース |
+| Trino | `httpx` | [独立インスタンスで検証済み](docs/optimization/trino-acceptance.md)。単一のカタログとスキーマ |
+| StarRocks | `aiomysql` | [独立インスタンスで検証済み](docs/optimization/starrocks-acceptance.md)。内部カタログの単一データベース |
+| Snowflake、BigQuery、Redshift、Databricks | — | 方言定義のみ |
+
+クエリ対象のデータベースでは読み取り専用アカウントを使用する。固定構成のマルチワーカー検証は、
+単一ホスト、共有 MySQL 制御プレーン、MySQL クエリ対象で実施した。
+構成上の制約は[デプロイと復旧](docs/optimization/immutable-workers.md)を参照。
 
 ## 対応 LLM
 
@@ -364,23 +374,27 @@ API から設定したキーは即座に有効になり、再起動をまたい�
 ## テストと品質ゲート
 
 ```bash
-pytest -m "not real_database"     # CI スイート：155 モジュール、763 テスト
+pytest -m "not real_database"     # 通常の CI スイート
 pytest tests/test_nodes/          # 単一ディレクトリ
 ruff check .                      # 行長 100、ターゲット py312
-mypy app/                         # リポジトリ全体の診断。既知の技術的負債は残る
+mypy app/                         # アプリケーションの厳格な型チェック
 npm run check:frontend            # ページ契約 + リフレッシュ/メンテナンス処理
 npm run check:frontend:build      # 再現可能なビルド。失敗時は旧成果物を残す
 ```
 
-`checks.yml` は順に実行する：インストール → `npm ci` → フロントエンドの 2 検査 → `ruff check .` →
-**20 個の独立した `mypy` ゲート**（strict なコア集合、評価モジュール、監査ストア、ストリーミング、
-使用量）→ `pytest -m 'not real_database'`。
+`checks.yml` は依存関係のスナップショット、フロントエンドの契約と再現可能なビルド、lint、
+型チェック、通常の pytest スイートを検証する。
 
-`real-databases.yml` は PostgreSQL 16 と MySQL 8.4 のサービスコンテナを起動し、モックモデルで
-`pytest tests/real_db` を走らせる。JUnit レポートが欠けていればジョブは失敗する。
+`real-databases.yml` はモックモデルを使い、PostgreSQL 16 と 2 つの MySQL 8.4 インスタンスを検証する。
+ClickHouse、Trino、StarRocks の独立実データベーステストは個別に有効化できる。
 
 テストはモックではなく、実際の SQLite、DuckDB、LanceDB、FTS5 を使う。共有フィクスチャが
 `tests/fixtures/test_schema.sql` から EC サイトのスキーマ（`users`、`products`、`orders`）を組み立てる。
+
+[リリース判定](docs/optimization/stage-68-release-gates.md)にはブラウザー、実データベース、
+コードバージョン間のロールバックの検証結果をまとめている。
+[Ollama プローブ](docs/optimization/ollama-capacity-probe.md)は呼び出し上限付きの埋め込み測定を記録する。
+DeepSeek プローブは個別に承認された実行バッチに対応する。
 
 ## ロードマップ
 
@@ -395,8 +409,8 @@ npm run check:frontend:build      # 再現可能なビルド。失敗時は旧�
   本番のサイジングは未検証。
 - **プラン選択は配線されていない。** リクエスト経路は常に `request_query` を使う。残り 6 つのプランは
   テンプレートであって、振る舞いではない。
-- **7 つの方言は名前だけ**であり、**テナント分離もない**。単一の管理者グループが 1 つのデータセットを
-  共有する。
+- **クラウドデータベースの検証は今後の対象。** Snowflake、BigQuery、Redshift、Databricks が該当する。
+- **ワークスペースのデータセットは共有される。** 1 つの管理者グループが 1 つのデータセットを利用する。
 - **学習はループを閉じていない。** フィードバックは集められ、レビューもされるが、それを生成へ自動で
   戻すものは何もない。
 
