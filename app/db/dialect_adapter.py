@@ -245,7 +245,7 @@ PRESET_DIALECTS: dict[str, DialectConfig] = {
     ),
     "trino": DialectConfig(
         dialect="trino",
-        driver="trino-python-client",
+        driver="httpx",
         type_mapping={
             "int": "INTEGER",
             "bigint": "BIGINT",

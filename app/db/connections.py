@@ -1,6 +1,6 @@
 """Multi-database connection factory.
 
-Registers 11 database types and connects SQLite, DuckDB, PostgreSQL, MySQL and ClickHouse.
+Registers 11 database types and connects SQLite, DuckDB, PostgreSQL, MySQL, ClickHouse and Trino.
 """
 
 import asyncio
@@ -119,13 +119,16 @@ class ConnectionFactory:
                 from app.db.clickhouse_source import ClickHouseConnection
 
                 return await ClickHouseConnection.connect(config)
+            case DatabaseType.TRINO:
+                from app.db.trino_source import TrinoConnection
+
+                return await TrinoConnection.connect(config)
             case (
                 DatabaseType.SNOWFLAKE
                 | DatabaseType.STARROCKS
                 | DatabaseType.BIGQUERY
                 | DatabaseType.REDSHIFT
                 | DatabaseType.DATABRICKS
-                | DatabaseType.TRINO
             ):
                 raise NotImplementedError(
                     f"Database type '{db_type}' is not yet implemented (Phase 2+)"
@@ -235,6 +238,7 @@ class ConnectionFactory:
             DatabaseType.POSTGRESQL: ("asyncpg", "async_single_connection"),
             DatabaseType.MYSQL: ("aiomysql", "pool_acquired_connection"),
             DatabaseType.CLICKHOUSE: ("httpx", "async_single_connection"),
+            DatabaseType.TRINO: ("httpx", "async_single_connection"),
         }
         counts = dict.fromkeys(DatabaseType, 0)
         for db_id in list(cls._connections):

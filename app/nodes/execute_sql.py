@@ -28,6 +28,7 @@ from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
 from app.db.mysql_query import bounded_mysql_query
 from app.db.sqlite_source import SchemaSourceChangedError, read_scope
+from app.db.trino_source import TrinoConnection
 from app.models.query import PlanAnalysis
 from app.models.schema import DuckDBSourceState, SchemaSnapshot
 from app.nodes.agentic import AgenticNode
@@ -126,7 +127,11 @@ class ExecuteSQLNode(AgenticNode):
             )
 
         # ── Invariant: read_only check ────────────────────────
-        dialect = "clickhouse" if isinstance(conn, ClickHouseConnection) else ""
+        dialect = ""
+        if isinstance(conn, ClickHouseConnection):
+            dialect = "clickhouse"
+        elif isinstance(conn, TrinoConnection):
+            dialect = "trino"
         if self._is_write_statement(sql, dialect):
             return NodeOutput(
                 result=None,
@@ -171,7 +176,7 @@ class ExecuteSQLNode(AgenticNode):
         try:
             async_driver = (
                 self._is_asyncpg_connection(conn) or self._is_aiomysql_connection(conn)
-                or isinstance(conn, ClickHouseConnection)
+                or isinstance(conn, ClickHouseConnection | TrinoConnection)
             )
             deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
 
@@ -259,9 +264,9 @@ class ExecuteSQLNode(AgenticNode):
         *, explain: bool = False,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
-        if isinstance(conn, ClickHouseConnection):
+        if isinstance(conn, ClickHouseConnection | TrinoConnection):
             if explain:
-                raise ValueError("ClickHouse EXPLAIN is not supported by this connector")
+                raise ValueError("EXPLAIN is not supported by this connector")
             return await conn.query(sql, max_rows, timeout)
         if self._is_aiomysql_connection(conn):
             try:
