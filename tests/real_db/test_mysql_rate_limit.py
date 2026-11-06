@@ -60,6 +60,16 @@ async def test_cancelled_waiter_does_not_charge_or_leave_transaction(coordinatio
     await limiter.reserve("other-provider", 1)
 
 
+async def test_concurrent_candidates_reserve_existing_provider_row(coordination):
+    limiter = await limiter_for(coordination)
+    await limiter.reserve("fixture", 20)
+    await asyncio.gather(*(limiter.reserve("fixture", 20) for _ in range(12)))
+    _, pool, _, _ = coordination
+    async with pool.acquire() as connection, connection.cursor() as cursor:
+        await cursor.execute("SELECT COUNT(*) FROM worker_rate_attempts")
+        assert (await cursor.fetchone())[0] == 13
+
+
 async def test_unlimited_still_detects_worker_configuration_mismatch(coordination):
     limiter = await limiter_for(coordination)
     await limiter.reserve("fixture", 0)

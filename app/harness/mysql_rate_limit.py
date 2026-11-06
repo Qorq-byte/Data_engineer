@@ -57,8 +57,11 @@ class MySQLProviderRateLimit:
                 try:
                     async with conn.cursor() as cur:
                         await cur.execute("START TRANSACTION")
+                        # Lock an existing row exclusively at once. INSERT IGNORE
+                        # takes a shared duplicate-key lock that can deadlock on upgrade.
                         await cur.execute(
-                            "INSERT IGNORE INTO worker_rate_config VALUES (%s,%s,%s)",
+                            "INSERT INTO worker_rate_config VALUES (%s,%s,%s) "
+                            "ON DUPLICATE KEY UPDATE rpm=worker_rate_config.rpm",
                             (self.namespace, key, rpm),
                         )
                         await cur.execute(
