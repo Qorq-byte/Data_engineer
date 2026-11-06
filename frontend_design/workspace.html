@@ -1110,7 +1110,6 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
             language: collected.language || 'zh',
             intent: collected.intent || 'SELECT',
             confidence: collected.confidence ?? 0,
-            isMock: collected.warnings.some(w => /mock/i.test(w)),
             summary: `${collected.execution ? "查询执行完成 · " + collected.execution.row_count + " 行" : "SQL 已生成，未执行"} — 领域: ${domain}${collected.workflowId ? ` | 工作流: ${collected.workflowId}` : ''}`,
             candidates: collected.candidates.length > 0 ? collected.candidates : [{ id: 'c1', sql_text: collected.sql, confidence: collected.confidence ?? 0, generation_mode: 'primary' }],
             primarySql: collected.sql,
@@ -1415,7 +1414,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                           <p className="text-sm text-neutral-700 dark:text-neutral-300 m-0 flex items-center gap-2">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" /> {msg.summary}
                           </p>
-                          {msg.isMock && <span className="text-[10px] bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full">测试模型（MOCK）</span>}
+                          {msg.warnings?.some(w => w.startsWith('MOCK LLM:')) && <span className="text-[10px] bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400 px-1.5 py-0.5 rounded-full">测试模型（MOCK）</span>}
                           {msg.language && <span className="text-[10px] text-neutral-400 bg-gray-100 dark:bg-neutral-800 px-1.5 rounded-full">{msg.language}</span>}
                           {msg.intent && <span className="text-[10px] text-neutral-400 bg-gray-100 dark:bg-neutral-800 px-1.5 rounded-full">{msg.intent}</span>}
                         </div>
