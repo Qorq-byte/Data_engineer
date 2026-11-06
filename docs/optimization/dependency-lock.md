@@ -19,10 +19,10 @@ python -m pip install -e . -c constraints.txt
 python -m pip install -e '.[dev]' -c constraints.txt
 ```
 
-只锁直接依赖（`pyproject.toml` 里声明的 25 个运行时包 + 7 个 dev 工具），**不锁传递依赖**。理由：
+只锁直接依赖（阶段62后为26个运行时声明，含Windows条件依赖，以及7个dev工具），**不锁传递依赖**。理由：
 
 - 传递依赖的解析结果带平台指纹——Windows 会多装 `tzdata`、`pywin32` 之类，硬编码进仓库会让 Linux/CI 装上不该有的包或触发版本冲突。
-- 真正造成漂移的是直接依赖（pydantic、litellm、fastapi 这些），锁住它们就解决了阶段48 记录的问题。
+- 固定直接依赖可阻止阶段48观察到的 pydantic、litellm 等版本漂移；传递依赖仍会变化，不能据此宣称完整环境可重复。
 - 文件小到可以逐行审阅，改哪一行是显式的。
 
 代价要说清楚：传递依赖仍然浮动。同一份 `constraints.txt` 在两个时间点安装，仍可能得到不同的 `pyarrow`/`grpcio`。这不是完整锁定，只是把最大的漂移源钉住。
@@ -40,7 +40,13 @@ python -m pip install -e '.[dev]' -c constraints.txt
 1. 先改 `pyproject.toml` 的下界，再改 `constraints.txt` 的具体版本，两次改动分开提交。
 2. 每次改动都要重跑：全新 venv 安装、`npm run build:frontend`、`pytest -m 'not real_database'`、CI 双工作流。改动了 LLM 或数据库驱动的，还要重跑真实双库验收。
 3. 只有在一套新组合上重新跑过相关验收，才能在文档里写"已在新组合上验证"。阶段44 的 30 题结论**不会**自动迁移到新组合上。
-4. 不把 `constraints.txt` 接进 CI 的 `pip install`：CI 跑 Linux，这份快照来自 Windows，强行套用会把平台差异变成构建失败。CI 仍按 `pyproject.toml` 解析，快照用于部署复现与人工核对。
+4. 阶段55起，两条 Linux CI 均用 `python -m pip install -e '.[dev]' -c constraints.txt` 安装，再运行 `python -m pip check` 与 `python -m scripts.check_dependencies`。约束仅含跨平台直接依赖，平台相关传递包由 pip 解析；任何平台不可安装的组合必须让 CI 失败，不能静默丢弃约束。
+
+## 阶段55：安装后核对
+
+`python -m scripts.check_dependencies` 离线核对声明与快照的覆盖关系、重复/无效约束、声明允许范围和已安装版本。新增直接依赖而遗漏快照、留下已删除依赖或安装版本漂移都会返回非零退出码。仅安装运行时依赖时可传 `--runtime-only`；此模式仍要求快照完整覆盖 runtime/dev，但只核对当前平台生效的运行时包是否已安装。
+
+`pip check` 负责传递依赖兼容性，本脚本负责直接依赖身份。两者都不能证明供应链安全，也不会改变阶段44真实模型评测所绑定的旧环境。Python补丁版本、传递依赖及构建后端仍未完整锁定。
 
 ## 依赖告警口径
 
@@ -50,3 +56,11 @@ python -m pip install -e '.[dev]' -c constraints.txt
 - 前端构建依赖只在构建期执行，不进浏览器包、不被 Python 服务执行；但构建不可信提交仍有构建期拒绝服务风险，继续在隔离且资源受限的可信环境构建。
 
 Python 侧的告警核验结果见[阶段49报告](stage-49.md)，那里记录的是对 `constraints.txt` 组合实测的数字，不引用任何历史结论。
+
+## 阶段62：2026-11-05维护
+
+SQLGlot由30.18.0升级到[30.29.0](https://pypi.org/project/sqlglot/30.29.0/)，适配移除的`infer_schema`参数，保留本项目的来源namespace检查。隔离环境中，旧实现/旧版本与新实现/新版本对30条冻结SQL及边界查询、4种方言共152个判定一致；新增28个明确安全契约。完整Windows离线回归4478通过、1平台跳过，mypy app/零错误（193文件）。这些结果不替代真实模型质量复测。
+
+Windows增加`tzdata`条件依赖，并固定2026.6，解决干净环境缺时区数据的问题；Linux不因此安装该条件包。隔离环境实际按约束安装成功，33项直接依赖核对通过，139个已安装包的依赖兼容检查通过。
+
+本轮pip-audit仍发现13项告警，均属于filelock 3.32.7。通过[PyPI官方元数据](https://pypi.org/pypi/litellm/1.108.0/json)重新核对，LiteLLM 1.108.0依然要求`filelock<4.0,>=3.16.1`，而审计给出的修复版本为4.0.9/4.2.1。因此没有强装不兼容filelock或以无助于修复的SDK升级代替风险处理；该项仍未消除。生产部署继续限制本地锁目录权限，正式发布前重新审计和核对上游约束。

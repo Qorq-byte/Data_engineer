@@ -9,6 +9,7 @@ import time
 import uuid
 from collections import Counter
 from collections.abc import Callable
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +17,7 @@ from app.evaluation.artifacts import read_json
 from app.evaluation.embedding_runtime import write_atomic
 from app.evaluation.nl2sql_batch import (
     BASE_URL,
+    CAPACITY_PROFILE,
     LIMITS,
     MODEL,
     PROMPTS,
@@ -29,7 +31,7 @@ from app.llm.router import LiteLLMRouter, ProviderConfig, RouterConfig
 
 
 def error_code(exc: BaseException) -> str:
-    if isinstance(exc, (TimeoutError, asyncio.CancelledError)):
+    if isinstance(exc, TimeoutError | asyncio.CancelledError):
         return "CANCELLED" if isinstance(exc, asyncio.CancelledError) else "TIMEOUT"
     name = type(exc).__name__
     return {"IncompleteCompletionError": "INCOMPLETE_COMPLETION",
@@ -46,7 +48,7 @@ class CallJournal:
         self.prompts = directory / "prompts.json"
         self.records: list[dict[str, Any]] = []
         self.messages: list[dict[str, Any]] = []
-        self.case_id: str | None = None
+        self._case_id: ContextVar[str | None] = ContextVar("nl2sql_case_id", default=None)
         self.allowed = {c["id"] for c in load_suite()["sql_cases"]}
         self.io_failed = False
         self.policy_failure: str | None = None
@@ -56,8 +58,16 @@ class CallJournal:
         self.inventory = {r["id"]: r for r in inventory}
         write_atomic(self.path, self.records)
 
+    @property
+    def case_id(self) -> str | None:
+        return self._case_id.get()
+
+    @case_id.setter
+    def case_id(self, value: str | None) -> None:
+        self._case_id.set(value)
+
     def reserve(self, messages: list[dict[str, str]]) -> None:
-        if (self.io_failed or self.case_id not in self.allowed
+        if (self.io_failed or self.policy_failure or self.case_id not in self.allowed
                 or len(self.records) >= LIMITS["max_calls"]
                 or any(row["id"] == self.case_id for row in self.records)):
             raise RuntimeError("CALL_BUDGET_OR_DUPLICATE_REJECTED")
@@ -71,7 +81,8 @@ class CallJournal:
         self.publish(self.path, self.records)  # Must succeed before native SDK transport.
 
     def update(self, **values: Any) -> None:
-        self.records[-1].update(values)
+        row = next(row for row in self.records if row["id"] == self.case_id)
+        row.update(values)
         self.publish(self.path, self.records)
 
     def publish(self, path: Path, value: object) -> None:
@@ -103,10 +114,11 @@ def approved_guard(provider: ProviderConfig, journal: CallJournal) -> Callable[.
 
 
 class ControlledRouter(LiteLLMRouter):
-    def __init__(self, provider: ProviderConfig, journal: CallJournal):
+    def __init__(self, provider: ProviderConfig, journal: CallJournal, concurrency: int = 1):
         super().__init__(RouterConfig(providers={"deepseek": provider}, default_model=MODEL,
             fallback_chain=[], max_retries=0, timeout_seconds=LIMITS["request_seconds"],
-            max_concurrency=1, max_output_tokens=LIMITS["max_output_tokens"]), mock_mode=False)
+            max_concurrency=concurrency, max_output_tokens=LIMITS["max_output_tokens"]),
+            mock_mode=False)
         self.journal = journal
 
     async def _call_provider(self, *args: Any, **kwargs: Any) -> Any:
@@ -126,11 +138,14 @@ class ControlledRouter(LiteLLMRouter):
         return value
 
 
-def latency(samples: list[float]) -> dict[str, Any]:
+def latency(
+    samples: list[float],
+    policy: str = "Nearest-rank over attempted cases including failed/cancelled cases",
+) -> dict[str, Any]:
     values = sorted(samples)
     return {"sample_count": len(values), **{f"p{p}_ms": values[math.ceil(p / 100 * len(values))-1]
             if values else None for p in (50, 95, 99)},
-            "policy": "Nearest-rank over attempted cases including failed/cancelled cases"}
+            "policy": policy}
 
 
 def grouped_scores(suite: dict[str, Any], evaluation: dict[str, Any]) -> dict[str, Any]:
@@ -167,7 +182,9 @@ async def run_batch(manifest: dict[str, Any], api_key: str, directory: Path) -> 
     suite = load_suite()
     journal = CallJournal(directory)
     provider = ProviderConfig("deepseek", "DEEPSEEK_API_KEY", [MODEL], BASE_URL, api_key=api_key)
-    router = ControlledRouter(provider, journal)
+    levels = manifest["levels"] if manifest["profile"] == CAPACITY_PROFILE else []
+    concurrency = max((level["concurrency"] for level in levels), default=1)
+    router = ControlledRouter(provider, journal, concurrency)
     batch = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=30))
     guard = active_call_guard.set(approved_guard(provider, journal))
     states = [{"id": c["id"], "status": "unattempted", "elapsed_ms": None,
@@ -196,81 +213,108 @@ async def run_batch(manifest: dict[str, Any], api_key: str, directory: Path) -> 
                 "max_artifact_bytes"]:
             raise RuntimeError("ARTIFACT_BUDGET_EXCEEDED")
 
-    async def observe_event(event: str, payload: dict[str, Any]) -> None:
-        # Save protocol/Harness evidence privately; no global registry/RAG mutation.
-        events.append({"event": event, "data": payload})
-
-    events: list[dict[str, Any]] = []
     db_id = "nl2sql-v3-fixture"
+
+    async def run_case(case: dict[str, Any], state: dict[str, Any]) -> None:
+        async def observe_event(event: str, payload: dict[str, Any]) -> None:
+            # Save protocol/Harness evidence privately; no global registry/RAG mutation.
+            events.append({"event": event, "data": payload})
+
+        own = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
+        token = active_call_limits.set((batch, own))
+        journal.case_id = case["id"]
+        events: list[dict[str, Any]] = []
+        started = time.perf_counter()
+        try:
+            state["status"] = "running"
+            checkpoint()
+            async with asyncio.timeout(LIMITS["case_seconds"]):
+                response = await run_query(QueryRequest(nl_text=case["question"],
+                    session_id=f"eval-{uuid.uuid4().hex}", domain="", database=db_id,
+                    dialect="sqlite", num_candidates=1, execute=False, run_validation=True,
+                    model=MODEL), observe_event, llm_router=router,
+                    schema_retriever=SchemaRetriever())
+            state["status"] = response["status"]
+            state["usage"] = response["llm_usage"]
+            state["generated"] = any(c.get("generation_source") == "model_response"
+                and c.get("finish_reason") == "stop" for c in response["candidates"])
+            validation = response.get("validation") or {}
+            state["validation_passed"] = validation.get("passed") is True
+            state["workflow_ids"] = response["workflow_ids"]
+            state["node_order"] = [e["data"]["stage"] for e in events
+                if e["event"] == "stage" and e["data"].get("status") == "started"]
+            state["retrieval_method"] = "keyword-only retriever or node fallback"
+            state["schema_warning_codes"] = [w.split(":", 1)[0] for w in
+                response.get("warnings", []) if w.startswith("SCHEMA_")]
+            if response["llm_audit"]["status"] != "persisted":
+                state.update(status="audit_failed", error_code="AUDIT_FAILED")
+                return
+            source = {key: response[key] for key in ("query_id", "status", "nl_text",
+                      "candidates", "llm_calls", "llm_usage")}
+            responses.append(source)
+            candidate = source["candidates"][0]["id"] if source["candidates"] else None
+            bindings.append({"id": case["id"], "query_id": source["query_id"],
+                             "candidate_id": candidate, "db_id": db_id})
+            inferred = None
+            finishes = {a.get("finish_status") for a in
+                        response["llm_usage"].get("attempts", [])}
+            if "length" in finishes:
+                inferred = "TRUNCATED_COMPLETION"
+            elif "other" in finishes:
+                inferred = "REFUSAL_OR_TOOL_COMPLETION"
+            elif not state["generated"]:
+                inferred = "NO_SQL_CANDIDATE"
+            elif not state["validation_passed"]:
+                inferred = ("VALIDATION_SYNTAX_FAILED" if validation.get("syntax_errors")
+                            else "VALIDATION_FAILED")
+            state["error_code"] = next((row["error_code"] for row in journal.records
+                if row["id"] == case["id"] and row["error_code"]), inferred)
+        except asyncio.CancelledError:
+            state.update(status="cancelled", error_code="CANCELLED")
+            report["status"] = "cancelled"
+            raise
+        except TimeoutError:
+            state.update(status="timeout", error_code="TIMEOUT")
+        except Exception:
+            state.update(status="error", error_code="CASE_FAILED")
+        finally:
+            state["elapsed_ms"] = (time.perf_counter() - started) * 1000
+            active_call_limits.reset(token)
+            write_atomic(directory / f"events-{case['id']}.json", events)
+            checkpoint()
+
     try:
         conn = await ConnectionFactory.create(DatabaseType.SQLITE,
             {"path": "fixture.sqlite3"}, db_id)
         for name in ("schema.sql", "base.sql"):
             conn.executescript((DIRECTORY / name).read_text(encoding="utf-8"))
         conn.execute("PRAGMA query_only=ON")
-        for case, state in zip(manifest["cases"], states, strict=True):
-            own = ConstraintEnforcer(ConstraintLimits(max_llm_calls_per_query=1))
-            token = active_call_limits.set((batch, own))
-            journal.case_id = case["id"]
-            events = []
-            started = time.perf_counter()
-            try:
-                state["status"] = "running"
-                checkpoint()
-                async with asyncio.timeout(LIMITS["case_seconds"]):
-                    response = await run_query(QueryRequest(nl_text=case["question"],
-                        session_id=f"eval-{uuid.uuid4().hex}", domain="", database=db_id,
-                        dialect="sqlite", num_candidates=1, execute=False, run_validation=True,
-                        model=MODEL), observe_event, llm_router=router,
-                        schema_retriever=SchemaRetriever())
-                state["status"] = response["status"]
-                state["usage"] = response["llm_usage"]
-                state["generated"] = any(c.get("generation_source") == "model_response"
-                    and c.get("finish_reason") == "stop" for c in response["candidates"])
-                validation = response.get("validation") or {}
-                state["validation_passed"] = validation.get("passed") is True
-                state["workflow_ids"] = response["workflow_ids"]
-                state["node_order"] = [e["data"]["stage"] for e in events
-                    if e["event"] == "stage" and e["data"].get("status") == "started"]
-                state["retrieval_method"] = "keyword-only retriever or node fallback"
-                state["schema_warning_codes"] = [w.split(":", 1)[0] for w in
-                    response.get("warnings", []) if w.startswith("SCHEMA_")]
-                if response["llm_audit"]["status"] != "persisted":
-                    state.update(status="audit_failed", error_code="AUDIT_FAILED")
-                    continue
-                source = {key: response[key] for key in ("query_id", "status", "nl_text",
-                          "candidates", "llm_calls", "llm_usage")}
-                responses.append(source)
-                candidate = source["candidates"][0]["id"] if source["candidates"] else None
-                bindings.append({"id": case["id"], "query_id": source["query_id"],
-                                 "candidate_id": candidate, "db_id": db_id})
-                inferred = None
-                finishes = {a.get("finish_status") for a in
-                            response["llm_usage"].get("attempts", [])}
-                if "length" in finishes:
-                    inferred = "TRUNCATED_COMPLETION"
-                elif "other" in finishes:
-                    inferred = "REFUSAL_OR_TOOL_COMPLETION"
-                elif not state["generated"]:
-                    inferred = "NO_SQL_CANDIDATE"
-                elif not state["validation_passed"]:
-                    inferred = ("VALIDATION_SYNTAX_FAILED" if validation.get("syntax_errors")
-                                else "VALIDATION_FAILED")
-                state["error_code"] = next((row["error_code"] for row in journal.records
-                    if row["id"] == case["id"] and row["error_code"]), inferred)
-            except asyncio.CancelledError:
-                state.update(status="cancelled", error_code="CANCELLED")
-                report["status"] = "cancelled"
-                raise
-            except TimeoutError:
-                state.update(status="timeout", error_code="TIMEOUT")
-            except Exception:
-                state.update(status="error", error_code="CASE_FAILED")
-            finally:
-                state["elapsed_ms"] = (time.perf_counter() - started) * 1000
-                active_call_limits.reset(token)
-                write_atomic(directory / f"events-{case['id']}.json", events)
-                checkpoint()
+        if levels:
+            by_id = {case["id"]: (case, state)
+                     for case, state in zip(manifest["cases"], states, strict=True)}
+            measured: list[dict[str, Any]] = []
+            for level in levels:
+                ids = level["case_ids"]
+                width = level["concurrency"]
+                began = time.perf_counter()
+                for offset in range(0, len(ids), width):
+                    async with asyncio.TaskGroup() as wave:
+                        for case_id in ids[offset:offset + width]:
+                            wave.create_task(run_case(*by_id[case_id]))
+                wall = time.perf_counter() - began
+                transport = [row for row in journal.records if row["id"] in ids]
+                received = [row["elapsed_ms"] for row in transport
+                            if row["state"] in ("response_received", "response_rejected")]
+                measured.append({"concurrency": width, "cases": len(ids), "wall_seconds": wall,
+                                 "reserved": len(transport), "received": len(received),
+                                 "received_per_second": len(received) / wall,
+                                 "response_latency": latency(
+                                     received, "Nearest-rank over received provider responses"
+                                 )})
+            report["capacity_levels"] = measured
+        else:
+            for case, state in zip(manifest["cases"], states, strict=True):
+                await run_case(case, state)
         report["status"] = "finished"
     finally:
         active_call_guard.reset(guard)

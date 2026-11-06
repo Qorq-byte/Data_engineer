@@ -15,11 +15,13 @@ from dataclasses import replace
 
 from app.core.prompt_builder import PromptBuilder
 from app.core.sql_generator import SQLGenerator, _split_alternatives
+from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.llm.protocols import CompletionRouter
 from app.llm.router import LiteLLMRouter, RouterConfig
 from app.llm.streaming import StreamEvent, events_for
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
+from app.workflow.contracts import QueryCapacityError
 
 
 class GenerateSQLNode(AgenticNode):
@@ -145,7 +147,10 @@ class GenerateSQLNode(AgenticNode):
                 # Streaming mode — accumulate tokens
                 collected: list[str] = []
                 stream = events_for(
-                    self.generator, "generate_stream", "generate_stream_events", sqr,
+                    self.generator,
+                    "generate_stream",
+                    "generate_stream_events",
+                    sqr,
                     schema=schema,
                     domain=domain,
                     history=history,
@@ -223,6 +228,8 @@ class GenerateSQLNode(AgenticNode):
                     database_name=database_name,
                     warnings=generation_warnings,
                 )
+        except (QueryCapacityError, CoordinationUnavailableError):
+            raise
         except Exception as exc:
             return NodeOutput(
                 result={"candidates": [], "primary_sql": None},

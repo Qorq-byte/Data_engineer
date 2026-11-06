@@ -23,10 +23,13 @@ if TYPE_CHECKING:
     import asyncpg
 
 from app.config.settings import settings
+from app.db.clickhouse_source import ClickHouseConnection
 from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
 from app.db.mysql_query import bounded_mysql_query
 from app.db.sqlite_source import SchemaSourceChangedError, read_scope
+from app.db.starrocks_source import StarRocksConnection
+from app.db.trino_source import TrinoConnection
 from app.models.query import PlanAnalysis
 from app.models.schema import DuckDBSourceState, SchemaSnapshot
 from app.nodes.agentic import AgenticNode
@@ -125,7 +128,14 @@ class ExecuteSQLNode(AgenticNode):
             )
 
         # ── Invariant: read_only check ────────────────────────
-        if self._is_write_statement(sql):
+        dialect = ""
+        if isinstance(conn, ClickHouseConnection):
+            dialect = "clickhouse"
+        elif isinstance(conn, TrinoConnection):
+            dialect = "trino"
+        elif isinstance(conn, StarRocksConnection):
+            dialect = "starrocks"
+        if self._is_write_statement(sql, dialect):
             return NodeOutput(
                 result=None,
                 errors=[
@@ -167,7 +177,10 @@ class ExecuteSQLNode(AgenticNode):
         )
 
         try:
-            async_driver = self._is_asyncpg_connection(conn) or self._is_aiomysql_connection(conn)
+            async_driver = (
+                self._is_asyncpg_connection(conn) or self._is_aiomysql_connection(conn)
+                or isinstance(conn, ClickHouseConnection | TrinoConnection | StarRocksConnection)
+            )
             deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
 
             def remaining_timeout() -> int:
@@ -233,7 +246,7 @@ class ExecuteSQLNode(AgenticNode):
     # ── Write detection ────────────────────────────────────────────
 
     @staticmethod
-    def _is_write_statement(sql: str) -> bool:
+    def _is_write_statement(sql: str, dialect: str = "") -> bool:
         """Check if a SQL statement is a write operation.
 
         Uses the shared AST read-query guard; unparseable SQL and multiple
@@ -242,7 +255,7 @@ class ExecuteSQLNode(AgenticNode):
         if not sql.strip():
             return False
         try:
-            require_read_query(sql)
+            require_read_query(sql, dialect)
             return False
         except ValueError:
             return True
@@ -254,6 +267,10 @@ class ExecuteSQLNode(AgenticNode):
         *, explain: bool = False,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
+        if isinstance(conn, ClickHouseConnection | TrinoConnection | StarRocksConnection):
+            if explain:
+                raise ValueError("EXPLAIN is not supported by this connector")
+            return await conn.query(sql, max_rows, timeout)
         if self._is_aiomysql_connection(conn):
             try:
                 query = f"EXPLAIN {sql}" if explain else sql

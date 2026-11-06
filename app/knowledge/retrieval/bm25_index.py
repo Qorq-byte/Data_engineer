@@ -397,8 +397,9 @@ class BM25Index:
     BM25 parameters:  k1 = 1.5,  b = 0.75  (per implementation-plan §4.8.3).
     """
 
-    def __init__(self, db_path: str = ":memory:"):
+    def __init__(self, db_path: str = ":memory:", *, read_only: bool = False):
         self._db_path = db_path
+        self._read_only = read_only
         self._conn: sqlite3.Connection | None = None
 
     # ── Properties ─────────────────────────────────────────────────────
@@ -412,6 +413,13 @@ class BM25Index:
     def connect(self) -> sqlite3.Connection:
         """Open (or create) the SQLite database.  Idempotent."""
         if self._conn is not None:
+            return self._conn
+        if self._read_only:
+            self._conn = sqlite3.connect(
+                Path(self._db_path).resolve().as_uri() + "?mode=ro", uri=True
+            )
+            self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA query_only=ON")
             return self._conn
         if self._db_path != ":memory:":
             Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -456,6 +464,13 @@ class BM25Index:
         """
         conn = self._ensure_connected()
         table = self._table_name(namespace)
+        if self._read_only:
+            if (
+                conn.execute("SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone()
+                is None
+            ):
+                raise ValueError("Immutable sparse namespace missing")
+            return
         conn.execute(
             f"CREATE VIRTUAL TABLE IF NOT EXISTS {table} USING fts5("
             "doc_id, text, metadata_json, tokenize='unicode61')"
@@ -634,30 +649,44 @@ class BM25Index:
         self.ensure_namespace(namespace)
 
     def snapshot_database(
-        self, namespace: str, db_id: str, *, new_doc_ids: list[str] | None = None,
+        self,
+        namespace: str,
+        db_id: str,
+        *,
+        new_doc_ids: list[str] | None = None,
     ) -> list[tuple[str, str, str]]:
         """Capture raw FTS text/metadata without tokenizing again; errors propagate."""
         conn = self._ensure_connected()
         table = self._table_name(namespace)
-        if new_doc_ids and conn.execute(
-            f"SELECT 1 FROM {table} WHERE doc_id IN (SELECT value FROM json_each(?)) "
-            "AND (json_extract(metadata_json, '$.db_id') IS NULL "
-            "OR json_extract(metadata_json, '$.db_id') != ?) LIMIT 1",
-            (json.dumps(new_doc_ids), db_id),
-        ).fetchone():
+        if (
+            new_doc_ids
+            and conn.execute(
+                f"SELECT 1 FROM {table} WHERE doc_id IN (SELECT value FROM json_each(?)) "
+                "AND (json_extract(metadata_json, '$.db_id') IS NULL "
+                "OR json_extract(metadata_json, '$.db_id') != ?) LIMIT 1",
+                (json.dumps(new_doc_ids), db_id),
+            ).fetchone()
+        ):
             raise ValueError("Schema document ID belongs to another database")
-        return [tuple(row) for row in conn.execute(
-            f"SELECT doc_id, text, metadata_json FROM {table} "
-            "WHERE json_extract(metadata_json, '$.db_id') = ?", (db_id,),
-        ).fetchall()]
+        return [
+            tuple(row)
+            for row in conn.execute(
+                f"SELECT doc_id, text, metadata_json FROM {table} "
+                "WHERE json_extract(metadata_json, '$.db_id') = ?",
+                (db_id,),
+            ).fetchall()
+        ]
 
     def database_ids(self, namespace: str) -> set[str]:
         """Enumerate raw metadata owners; malformed or absent ownership is an error."""
         conn = self._ensure_connected()
         table = self._table_name(namespace)
-        ids = {row[0] for row in conn.execute(
-            f"SELECT DISTINCT json_extract(metadata_json, '$.db_id') FROM {table}"
-        ).fetchall()}
+        ids = {
+            row[0]
+            for row in conn.execute(
+                f"SELECT DISTINCT json_extract(metadata_json, '$.db_id') FROM {table}"
+            ).fetchall()
+        }
         if any(not isinstance(db_id, str) or not db_id.strip() for db_id in ids):
             raise ValueError(
                 "Schema index has invalid database ownership; explicit rebuild required"
@@ -665,7 +694,10 @@ class BM25Index:
         return ids
 
     def restore_database(
-        self, namespace: str, db_id: str, rows: list[tuple[str, str, str]],
+        self,
+        namespace: str,
+        db_id: str,
+        rows: list[tuple[str, str, str]],
     ) -> None:
         """Restore exact FTS records in one local transaction, without swallowing errors."""
         if any(json.loads(row[2]).get("db_id") != db_id for row in rows):
@@ -680,7 +712,8 @@ class BM25Index:
                 (db_id,),
             )
             conn.executemany(
-                f"INSERT INTO {table}(doc_id, text, metadata_json) VALUES (?, ?, ?)", rows,
+                f"INSERT INTO {table}(doc_id, text, metadata_json) VALUES (?, ?, ?)",
+                rows,
             )
 
     def delete_database(self, namespace: str, db_id: str) -> None:
@@ -689,7 +722,8 @@ class BM25Index:
         table = self._table_name(namespace)
         with conn:
             conn.execute(
-                f"DELETE FROM {table} WHERE json_extract(metadata_json, '$.db_id') = ?", (db_id,),
+                f"DELETE FROM {table} WHERE json_extract(metadata_json, '$.db_id') = ?",
+                (db_id,),
             )
 
     # ── Introspection ──────────────────────────────────────────────────

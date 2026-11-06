@@ -1,7 +1,6 @@
 """Multi-database connection factory.
 
-Supports 11 database types via a unified factory interface.
-Phase 1 implements: SQLite, DuckDB, PostgreSQL, MySQL.
+Connects SQLite, DuckDB, PostgreSQL, MySQL, ClickHouse, Trino and StarRocks.
 """
 
 import asyncio
@@ -116,14 +115,23 @@ class ConnectionFactory:
                 return await cls._connect_postgresql(config)
             case DatabaseType.MYSQL:
                 return await cls._connect_mysql(config)
+            case DatabaseType.CLICKHOUSE:
+                from app.db.clickhouse_source import ClickHouseConnection
+
+                return await ClickHouseConnection.connect(config)
+            case DatabaseType.TRINO:
+                from app.db.trino_source import TrinoConnection
+
+                return await TrinoConnection.connect(config)
+            case DatabaseType.STARROCKS:
+                from app.db.starrocks_source import StarRocksConnection
+
+                return await StarRocksConnection.connect(config)
             case (
                 DatabaseType.SNOWFLAKE
-                | DatabaseType.STARROCKS
                 | DatabaseType.BIGQUERY
                 | DatabaseType.REDSHIFT
-                | DatabaseType.CLICKHOUSE
                 | DatabaseType.DATABRICKS
-                | DatabaseType.TRINO
             ):
                 raise NotImplementedError(
                     f"Database type '{db_type}' is not yet implemented (Phase 2+)"
@@ -232,6 +240,9 @@ class ConnectionFactory:
             DatabaseType.DUCKDB: ("duckdb", "native_single_connection"),
             DatabaseType.POSTGRESQL: ("asyncpg", "async_single_connection"),
             DatabaseType.MYSQL: ("aiomysql", "pool_acquired_connection"),
+            DatabaseType.CLICKHOUSE: ("httpx", "async_single_connection"),
+            DatabaseType.TRINO: ("httpx", "async_single_connection"),
+            DatabaseType.STARROCKS: ("aiomysql", "pool_acquired_connection"),
         }
         counts = dict.fromkeys(DatabaseType, 0)
         for db_id in list(cls._connections):

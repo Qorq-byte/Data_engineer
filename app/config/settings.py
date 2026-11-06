@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     app_debug: bool = True
     app_host: str = "0.0.0.0"
     app_port: int = 8001
+    shared_worker_release: str = ""  # Explicit immutable release bundle; empty = single worker.
+    shared_worker_namespace: str = ""  # New deployment generation after offline maintenance.
 
     # --- Database ---
     database_url: str = "sqlite:///./data/app.db"

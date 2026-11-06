@@ -11,7 +11,9 @@
 #
 # The versions below were resolved on CPython 3.12.13 / Windows 11 on
 # 2026-10-31 and are the exact combination used for the stage 48 clean-room
-# deployment and the stage 49 verification run. See
+# deployment and the stage 49 verification run. Stage 62 updates SQLGlot to
+# 30.29.0 and adds Windows-only runtime tzdata (the constraint itself does not
+# cause installation on other platforms). See
 # docs/optimization/dependency-lock.md before changing any line.
 
 # ── web framework ────────────────────────────────────────────────────
@@ -37,7 +39,7 @@ aiomysql==0.3.2
 pymysql==1.2.3
 
 # ── SQL parsing ──────────────────────────────────────────────────────
-sqlglot==30.18.0
+sqlglot==30.29.0
 sqlparse==0.6.0
 
 # ── data & validation ────────────────────────────────────────────────
@@ -53,6 +55,7 @@ pyjwt==2.15.1
 cryptography==50.0.2
 httpx==0.28.1
 python-dateutil==2.9.0.post0
+tzdata==2026.6
 structlog==26.1.0
 
 # ── dev tooling (matches pyproject [dev] pins) ───────────────────────

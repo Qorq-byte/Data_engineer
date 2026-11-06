@@ -1,6 +1,6 @@
 # 受限试用发布检查单与支持范围冻结
 
-2026-10-31。适用于阶段41–47证据汇总后的**私有单实例试用**。本文冻结"能承诺什么、不能承诺什么"，以及部署、升级、回退、备份的可执行步骤。证据与实测数字见[阶段48报告](stage-48.md)，原始记录见[stage-48-clean-room.json](results/stage-48-clean-room.json)。
+2026-11-05更新：纳入阶段55–60证据，适用于**私有单实例试用**。本文冻结"能承诺什么、不能承诺什么"，以及部署、升级、回退、备份的可执行步骤。证据与实测数字见[阶段48报告](stage-48.md)，原始记录见[stage-48-clean-room.json](results/stage-48-clean-room.json)。
 
 **准备发布不等于已经发布。** 扩大访问面、接入真实业务库、对外宣称准确率或SLO，都需要届时明确的指令和本文列出的缺失证据。
 
@@ -26,7 +26,7 @@
 | 档位 | 类型 | 已实测内容 |
 |---|---|---|
 | 逐轮真实执行验收 | SQLite、DuckDB | 常驻测试；只读执行、超时、取消、authorizer |
-| CI真实双库验收 | PostgreSQL 16、MySQL 8.4 | `tests/real_db` 82 项，每次推送跑 |
+| CI真实双库验收 | PostgreSQL 16、MySQL 8.4 | `tests/real_db`，每次推送执行；用例数随阶段增长，不沿用阶段40的历史数量 |
 | 仅方言适配与注册 | Snowflake、StarRocks、BigQuery、Redshift、ClickHouse、Databricks、Trino | `PRESET_DIALECTS` 与连接注册；**无真实连接、无端到端SQL验收** |
 
 试用期只能把前两档当作"已验证"。第三档需要连接真实实例单独验收后才能开放，且必须以数据库原生只读账户运行——应用层只读校验不是权限边界。
@@ -96,7 +96,7 @@
 
 1. 停服，或准备独立版本目录（禁止在线原地改写正在服务的目录）。
 2. 在停服窗口执行 `--action backup --backup-dir <新目录>`。
-3. 切源码到新提交，重装依赖（`pip install -e .`），按需重建 `frontend_dist/`。
+3. 切源码到新提交，重装依赖（`pip install -e . -c constraints.txt`，随后`pip check`及`python -m scripts.check_dependencies --runtime-only`），按需重建 `frontend_dist/`。
 4. 启动，重复"启动后"检查单。
 5. 确认新代码能 `verify` 并通过旧版本产生的备份（实测 51 文件全部一致）。
 
@@ -128,16 +128,28 @@
 
 | 缺口 | 影响 | 补齐方式 |
 |---|---|---|
-| Python 依赖已有 `constraints.txt` 快照，但未在新组合上重跑真实评测 | 阶段44 的 26/30 仍只对应 pydantic 2.14.1 / litellm 1.106.4；快照解决"装到什么版本"，不解决"这个组合是否被评测覆盖" | 在新快照上重跑 30 题批次 |
-| `filelock` 3.32.7 有 13 项 CVE（修复在 4.0.9+），但装不上 | 最新 litellm 1.106.6 硬性要求 `filelock<4.0`，filelock 也没有 3.x 回移修复；项目不直接 import filelock | 等上游放开约束；多用户主机上不要把锁目录暴露给不可信本地用户 |
-| `sqlglot` 不能跟随新版本 | 30.27.0 移除了 `qualify(infer_schema=)`，实测 350 项测试失败，已回退并保持 30.18.0 | 要升级必须先改 `app/core/schema_validation.py` 并验证列限定行为等价 |
+| 当前运行时的业务质量证据 | 阶段63A已在SQLGlot30.29.0/Pydantic2.14.2/LiteLLM1.106.6上完成真实合成基线27/30；业务标注仍缺失 | 接收业务标注后单独验收，后续运行时变化需复测 |
+| 阶段49历史依赖告警（不是当前审计结论） | 阶段49当时的 litellm 1.106.6 要求 `filelock<4.0`，filelock 也没有 3.x 回移修复；项目不直接 import filelock | 等上游放开约束；多用户主机上不要把锁目录暴露给不可信本地用户 |
+| SQLGlot升级后的真实模型质量 | 阶段62已适配30.29.0并通过新旧152项判定对比及完整离线回归；阶段44真实模型分数仍绑定旧环境 | 阶段63A已按新清单复测，见current-runtime-baselines.md；不迁移旧分数 |
 | 无业务标注 | 无法给出任何业务准确率 | 需要真实业务问题与人工标注 |
 | 无真实模型/真实 embedding 的容量数据 | 阶段45 是 mock 编排容量 | 需要真实提供商配额与影子流量 |
-| MySQL 侧 readiness 未在干净环境验证 | 只看到降级态 | 在有 MySQL 的环境重复检查单 |
+| 完整部署的MySQL readiness | 阶段57已在新进程、独立MySQL的真实storage/auth下验证成功与失败状态，RAG在探针中关闭，查询库为SQLite | 仍需目标部署环境完整检查，不能把探针当作真实模型连通性 |
 | 浏览器主路径只在合成夹具上验证 | 临时 JWT、内存 SQLite、脚本化模型，没接真实库与真实模型 | 在有真实库/模型的环境重跑同一批脚本 |
 | 7 种方言无真实连接验收 | 只能按"未验证"对待 | 逐个连接真实实例跑 `tests/real_db` 等价用例 |
 | 前端构建依赖审计口径不稳 | 同一 lockfile 在 10-23 报 7 项、10-31 报 0 项，差异来自注册表侧数据 | 只能按"构建工具链风险未消除"表述，不能宣称已清理 |
 
 阶段47 曾把 `agents/schema_retriever.py` 的术语/规则匹配死路径留作"待修"，该项已在阶段49修复（同步调用 + 失败写入 metadata，5 项回归测试，见[阶段49](stage-49.md)）。
 
-阶段50 把三处"看起来成功"改成显式失败或显式降级：`tool_executor` 在没有 MCP 客户端时返回 `ERROR`，不再用 `{"stub": True}` 加 `status=ok` 冒充执行完成；PostgreSQL 索引列改由 `pg_index` + `pg_get_indexdef` 取真实列名与顺序，不再是 `columns=[]`；`FeedbackAgent` 与 `POST /api/v1/feedback` 共用同一个 MySQL 写入并回报 `storage` / `persisted`，不再一边不问就答"已记录"。仍未覆盖的两点照旧记在这里：反馈写入没有对真实 MySQL 做验收（用例用的是 fake store），agent 也不触发学习管线（明确返回 `learning_pipeline=False`）。详见[阶段50](stage-50.md)。
+阶段50 把三处"看起来成功"改成显式失败或显式降级：`tool_executor` 在没有 MCP 客户端时返回 `ERROR`，不再用 `{"stub": True}` 加 `status=ok` 冒充执行完成；PostgreSQL 索引列改由 `pg_index` + `pg_get_indexdef` 取真实列名与顺序，不再是 `columns=[]`；`FeedbackAgent` 与 `POST /api/v1/feedback` 共用同一个 MySQL 写入并回报 `storage` / `persisted`，不再一边不问就答"已记录"。阶段56已补齐REST与Agent反馈的真实MySQL写入、关闭重开读取与SQL失败回退；Agent仍不触发学习管线（明确返回`learning_pipeline=False`）。详见[阶段50](stage-50.md)。
+
+
+## 7. 阶段55–60证据收口
+
+- 55（`4ebe7aa`）：直接依赖快照接入两条Linux CI，干净安装、pip check与版本核对通过；传递依赖仍浮动。
+- 56（`066ab36`）：反馈真实MySQL成功与回退验收，修复反馈ID及提示语。
+- 57（`a1da738`）：提交后发布前退出、新进程读取恢复，真实storage/auth readiness验收。
+- 58（`d424dbc`）：共享设置结构校验，损坏记录不得部分发布。
+- 59（`55a373b`）：非空密文解密失败不得静默采用环境密钥。
+- 60（`0fb0bca`）：汇总设置只读组装，失败不污染内存，成功GET不发布运行时。
+
+最终阶段60的[常规CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/41961890262)和[真实双库CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/41961890297)均通过，包含上述累计变更。阶段55–60尚未合并main；阶段44的真实模型分数没有在新运行时重跑。后续依赖与验收条件见[剩余执行计划](remaining-execution-plan.md)。

@@ -166,3 +166,46 @@ class TestApplySettings:
         _settings_store["llm"] = _llm_settings(default_model="deepseek-v4-pro")
         router = apply_llm_settings()
         assert router.config.default_model == "deepseek-v4-pro"
+
+
+@pytest.mark.parametrize("failure", ["malformed", "tampered", "wrong_signing_key"])
+@pytest.mark.parametrize("source", ["none", "environment", "settings"])
+def test_explicit_broken_ciphertext_never_falls_back(real_mode, failure, source):
+    import base64
+
+    from app.llm import factory
+
+    config = _llm_settings()
+    if failure == "malformed":
+        config["providers"]["deepseek"]["api_key_enc"] = "private-malformed-ciphertext"
+    elif failure == "tampered":
+        raw = bytearray(base64.b64decode(config["providers"]["deepseek"]["api_key_enc"]))
+        raw[-1] ^= 1
+        config["providers"]["deepseek"]["api_key_enc"] = base64.b64encode(raw).decode()
+    else:
+        real_mode.setattr(settings, "jwt_secret", "different-synthetic-signing-key-0123456789")
+    if source == "environment":
+        real_mode.setenv("DEEPSEEK_API_KEY", "private-environment-key")
+    elif source == "settings":
+        real_mode.setattr(settings, "deepseek_api_key", "private-settings-key")
+    original = factory.build_router(force_mock=True)
+    factory.publish_llm_router(original)
+    with pytest.raises(ValueError) as caught:
+        factory.apply_llm_settings(config)
+    assert str(caught.value) == "Persisted LLM credential could not be decrypted"
+    assert factory.current_llm_router() is original
+
+
+def test_valid_saved_key_takes_priority_over_environment(real_mode):
+    real_mode.setenv("DEEPSEEK_API_KEY", "synthetic-environment-key")
+    router = build_router_from_settings(_llm_settings())
+    assert router.config.providers["deepseek"].api_key == "sk-ds-test"
+
+
+@pytest.mark.parametrize("empty", [None, ""])
+def test_absent_ciphertext_keeps_environment_fallback(real_mode, empty):
+    real_mode.setenv("DEEPSEEK_API_KEY", "synthetic-environment-key")
+    config = _llm_settings()
+    config["providers"]["deepseek"]["api_key_enc"] = empty
+    router = build_router_from_settings(config)
+    assert router.config.providers["deepseek"].api_key == "synthetic-environment-key"

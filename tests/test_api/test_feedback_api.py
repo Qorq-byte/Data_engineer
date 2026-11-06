@@ -112,3 +112,34 @@ async def test_collector_failure_is_reported(monkeypatch: pytest.MonkeyPatch) ->
     assert data["learning"] is False
     assert data["storage"] == "process_memory"
     assert "学习队列" in data["message"]
+
+
+async def test_mysql_success_survives_collector_failure(monkeypatch):
+    store = _FakeStore()
+    monkeypatch.setattr(feedback_api, "get_store", lambda: store)
+
+    def unavailable(**kwargs):
+        raise RuntimeError("collector is down")
+
+    monkeypatch.setattr(_COLLECTOR_MODULE.feedback_collector, "collect", unavailable)
+    result = await feedback_api.submit_feedback(_body())
+    assert result["persisted"] is True
+    assert result["learning"] is False
+    assert "已写入 MySQL" in result["message"]
+    assert "学习队列当前不可用" in result["message"]
+
+
+async def test_feedback_ids_survive_memory_reset_and_frozen_clock(monkeypatch):
+    from datetime import datetime
+
+    class FrozenDatetime:
+        @staticmethod
+        def now():
+            return datetime(2026, 11, 4)
+
+    monkeypatch.setattr(feedback_api, "datetime", FrozenDatetime)
+    monkeypatch.setattr(feedback_api, "get_store", lambda: None)
+    first = await feedback_api.submit_feedback(_body())
+    feedback_api._feedback_store.clear()
+    second = await feedback_api.submit_feedback(_body())
+    assert first["feedback_id"] != second["feedback_id"]

@@ -40,6 +40,49 @@ def test_manifest_requires_exact_confirmation_and_source_identity(manifest):
         validate(manifest, manifest_digest(manifest))
 
 
+@pytest.mark.parametrize("fail", [False, True])
+async def test_capacity_waves_validate_reservations_and_abort(manifest, tmp_path, fail):
+    profile = prepare("capacity-control", manifest["model"], capacity=True)
+    assert validate(profile, manifest_digest(profile)) == profile
+    active = peak = posts = 0
+
+    async def respond(request):
+        nonlocal active, peak, posts
+        if request.method == "GET":
+            return httpx.Response(200, json={"models": [{
+                "name": runtime.MODEL, "digest": manifest["model"]["digest"],
+            }]})
+        posts += 1
+        number = posts
+        active += 1
+        peak = max(peak, active)
+        try:
+            await asyncio.sleep(0.01)
+            if fail and number == 9:
+                return httpx.Response(500)
+            return httpx.Response(200, json={"embedding": [1.0] + [0.0] * (DIMENSION - 1)})
+        finally:
+            active -= 1
+
+    ledger = runtime.RequestLedger(tmp_path, profile)
+    _, inputs = runtime.load_inputs()
+    async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as raw:
+        bounded = runtime.BoundedOllamaClient(raw, ledger)
+        await bounded.verify_model("model_before")
+        if fail:
+            with pytest.raises(ExceptionGroup) as caught:
+                await runtime.measure_capacity(bounded, inputs, profile)
+            assert runtime.failure_code(caught.value) == "HTTP_STATUS_FAILED"
+            assert posts == 10 and peak == 2 and active == 0
+            assert len(ledger.records) == 11
+            return
+        levels = await runtime.measure_capacity(bounded, inputs, profile)
+        await bounded.verify_model("model_after")
+    assert [level["validated_requests"] for level in levels] == [8, 8, 8]
+    assert posts == 24 and peak == 4 and active == 0
+    assert ledger.summary()["requests_validated"] == 26
+
+
 @pytest.mark.parametrize("name", ["../escape", "UPPER", "a/b", "", "x" * 49])
 def test_run_name_cannot_escape_root(manifest, name):
     with pytest.raises(ValueError):

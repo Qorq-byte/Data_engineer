@@ -27,6 +27,7 @@ import yaml
 
 from app.config.settings import settings
 from app.llm.router import LiteLLMRouter, ProviderConfig, RouterConfig
+from app.llm.settings_validation import validate_llm_settings
 
 # ── Model-prefix → provider inference rules ────────────────────────
 # (prefixes, provider_name, api_key_env, base_url_env)
@@ -203,7 +204,7 @@ _ENV_KEYS = {
 
 
 def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
-    """Resolve a provider's API key from settings, falling back to env."""
+    """Use an explicit saved key; consult env only when no ciphertext was saved."""
     from app.security.crypto import decrypt_secret
 
     enc = cfg.get("api_key_enc") or ""
@@ -211,6 +212,7 @@ def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
         key = decrypt_secret(enc)
         if key:
             return key
+        raise ValueError("Persisted LLM credential could not be decrypted")
     # Fallback: env key for built-in providers (agent.yml / .env setup)
     key_env = _ENV_KEYS.get(name, "")
     env_key = os.getenv(key_env, "") if key_env else ""
@@ -239,9 +241,8 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
         A router in real mode when at least one provider is usable,
         otherwise a mock-mode router.
     """
+    validate_llm_settings(llm_settings)
     output_limit = llm_settings.get("max_tokens", 4096)
-    if type(output_limit) is not int or not 1 <= output_limit <= 32768:
-        raise ValueError("Invalid configured output token limit")
     providers: dict[str, ProviderConfig] = {}
     provider_cfg: dict[str, Any] = llm_settings.get("providers") or {}
 
@@ -258,7 +259,7 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
             api_key=api_key,
             base_url=cfg.get("base_url") or None,
             models=models,
-            rate_limit_rpm=int(cfg.get("rate_limit_rpm", settings.llm_rate_limit_rpm)),
+            rate_limit_rpm=cfg.get("rate_limit_rpm", settings.llm_rate_limit_rpm),
         )
 
     available_models = [m for pc in providers.values() for m in pc.models]

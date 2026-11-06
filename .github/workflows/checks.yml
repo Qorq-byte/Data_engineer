@@ -17,11 +17,14 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - run: python -m pip install -e '.[dev]'
+      - run: python -m pip install -e '.[dev]' -c constraints.txt
+      - run: python -m pip check
+      - run: python -m scripts.check_dependencies
       - run: npm ci --ignore-scripts
       - run: npm run check:frontend
       - run: npm run check:frontend:build
       - run: ruff check .
+      - run: mypy scripts/check_dependencies.py
       - run: mypy app/
       - run: mypy scripts/evaluate_quality.py
       - run: mypy app/evaluation/acceptance_data.py app/evaluation/acceptance_sql.py app/evaluation/acceptance_retrieval.py app/evaluation/acceptance_suite.py app/evaluation/ranking.py scripts/evaluate_acceptance.py

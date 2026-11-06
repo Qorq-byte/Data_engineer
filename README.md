@@ -63,7 +63,8 @@ work or is not reachable from the request path.
 | Six template plans besides `request_query` | **Partial** — loaded and listed, but only `request_query` is executable through the API | `app/api/workflows.py:39` |
 | Multi-agent orchestrator / sub-agents | **Partial** — registered at boot; the request path uses the workflow runner | `main.py:105` |
 | Feedback-driven rule learning | **Partial** — collection, review and stats exist; no automatic repair is wired in | `app/learning/` |
-| Seven of eleven declared database dialects | **Declared only** — see [Supported Databases](#supported-databases) | `app/db/connections.py:15` |
+| Seven read-only database connectors | Implemented and tested — see [Supported Databases](#supported-databases) | `app/db/connections.py` |
+| Fixed-configuration MySQL shared workers | Opt-in, single host | [Deployment and recovery](docs/optimization/immutable-workers.md) |
 | Multi-tenant isolation | **Not implemented** — one shared administrator workbench | `app/auth/access.py` |
 | Answer-accuracy / recall baseline on real data | **Not established** | see [Roadmap](#roadmap) |
 
@@ -329,18 +330,27 @@ Three pages, all served from `frontend_dist/`:
 The workspace sidebar holds nine panels; the query panel streams node-by-node progress and shows
 the SQL, the validation report and the result table side by side.
 
+Browser acceptance exercised login, local Ollama generation, a read-only MySQL query, and
+history on a narrow viewport. Embedding warnings are shown separately from the mock-model badge.
+
 ## Supported Databases
 
-Eleven dialect names are declared in `DatabaseType`; four have a working connection
-implementation. The other seven are names in an enum — connecting to them raises `501`.
+Seven connectors support read-only queries. The acceptance scope for each connector is listed below.
 
 | Dialect | Driver | Status |
 |---|---|---|
 | SQLite | `sqlite3` | **Implemented** — authorizer, progress deadline, schema-version tracking |
 | DuckDB | `duckdb` | **Implemented** — external access disabled, interrupt-based cancel |
-| PostgreSQL | `asyncpg` / `psycopg2` | **Implemented** — verified against PostgreSQL 16 in CI |
-| MySQL | `aiomysql` / `pymysql` | **Implemented** — server-side row cap, verified against MySQL 8.4 in CI |
-| Snowflake, StarRocks, BigQuery, Redshift, ClickHouse, Databricks, Trino | — | **Declared only** — no connection path, no schema extraction |
+| PostgreSQL | `asyncpg` | **Implemented** — verified against PostgreSQL 16 in CI |
+| MySQL | `aiomysql` | **Implemented** — server-side row cap, verified against MySQL 8.4 in CI |
+| ClickHouse | `httpx` | [Standalone acceptance](docs/optimization/clickhouse-acceptance.md) — one database |
+| Trino | `httpx` | [Standalone acceptance](docs/optimization/trino-acceptance.md) — one catalog and schema |
+| StarRocks | `aiomysql` | [Standalone acceptance](docs/optimization/starrocks-acceptance.md) — one database in the internal catalog |
+| Snowflake, BigQuery, Redshift, Databricks | — | Dialect definitions only |
+
+Use a native read-only account on the target database. The fixed-configuration multi-worker
+deployment was rehearsed on a single host with a shared MySQL control plane and a MySQL query
+target. See [deployment and recovery](docs/optimization/immutable-workers.md) for its constraints.
 
 ## Supported LLMs
 
@@ -357,23 +367,26 @@ read at startup and never written back.
 ## Testing & Quality Gates
 
 ```bash
-pytest -m "not real_database"     # the CI suite: 763 tests across 155 modules
+pytest -m "not real_database"     # the regular CI suite
 pytest tests/test_nodes/          # one directory
 ruff check .                      # line length 100, target py312
-mypy app/                         # full-repo diagnosis; known debt remains
+mypy app/                         # strict application type checks
 npm run check:frontend            # page contracts + refresh/maintenance handlers
 npm run check:frontend:build      # reproducible build, keeps the old artefact on failure
 ```
 
-`checks.yml` runs: install → `npm ci` → both frontend checks → `ruff check .` → **20 separate
-`mypy` gates** (strict core set, evaluation modules, audit store, streaming, usage) →
-`pytest -m 'not real_database'`.
+`checks.yml` verifies the dependency snapshot, frontend contracts and reproducible build, lint,
+type checks, and the regular pytest suite.
 
-`real-databases.yml` spins up PostgreSQL 16 and MySQL 8.4 service containers and runs
-`pytest tests/real_db` against them with a mock model; the job fails if the JUnit report is missing.
+`real-databases.yml` runs against PostgreSQL 16 and two MySQL 8.4 instances with a mock model.
+ClickHouse, Trino, and StarRocks have separate opt-in tests against disposable instances.
 
 Tests use real SQLite, DuckDB, LanceDB and FTS5 rather than mocks; the shared fixture builds an
 e-commerce schema (`users`, `products`, `orders`) from `tests/fixtures/test_schema.sql`.
+
+The [release gates](docs/optimization/stage-68-release-gates.md) collect the browser, database
+and cross-version rollback evidence. The [Ollama probe](docs/optimization/ollama-capacity-probe.md)
+records a bounded embedding run. The DeepSeek probe supports a separately authorized live batch.
 
 ## Roadmap
 
@@ -388,8 +401,8 @@ Open work, stated as gaps rather than features:
   bottleneck is Python CPU. Production sizing is unproven.
 - **Plan selection is not wired.** The request path always uses `request_query`; the other six
   plans are templates, not behaviours.
-- **Seven dialects are names only**, and there is **no tenant isolation** — one administrator
-  group shares one data set.
+- **Cloud database acceptance is pending** for Snowflake, BigQuery, Redshift, and Databricks.
+- **Tenancy is shared.** One administrator group shares one data set.
 - **Learning does not close the loop.** Feedback is collected and reviewed; nothing feeds it back
   into generation automatically.
 

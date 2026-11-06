@@ -1,0 +1,25 @@
+<clickhouse>
+    <profiles>
+        <default><max_threads>2</max_threads></default>
+        <acceptance_reader>
+            <readonly>1</readonly>
+            <max_execution_time>10</max_execution_time>
+            <cancel_http_readonly_queries_on_client_close>1</cancel_http_readonly_queries_on_client_close>
+            <max_threads>2</max_threads>
+        </acceptance_reader>
+    </profiles>
+    <users>
+        <default>
+            <password>stage67-disposable-admin</password>
+            <networks><ip>127.0.0.1</ip></networks>
+            <profile>default</profile>
+            <access_management>1</access_management>
+        </default>
+        <stage67_reader>
+            <password>stage67-disposable-reader</password>
+            <networks><ip>127.0.0.1</ip></networks>
+            <profile>acceptance_reader</profile>
+            <grants><query>GRANT SELECT ON de_stage67_fixture.*</query></grants>
+        </stage67_reader>
+    </users>
+</clickhouse>

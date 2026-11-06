@@ -16,6 +16,7 @@ from app.evaluation.artifacts import read_json
 from app.evaluation.artifacts import write_atomic as _atomic_write
 from app.evaluation.embedding_batch import (
     BASE_URL,
+    CAPACITY_PROFILE,
     DIMENSION,
     MODEL,
     ROOT,
@@ -25,6 +26,7 @@ from app.evaluation.embedding_batch import (
     validate,
 )
 from app.evaluation.predictions import fingerprint
+from app.evaluation.scale_probe import latency_summary
 
 if TYPE_CHECKING:
     import httpx
@@ -144,7 +146,7 @@ class BoundedOllamaClient:
 
     async def _request(
         self, kind: str, input_id: str | None = None, payload: dict[str, str] | None = None,
-    ) -> httpx.Response:
+    ) -> tuple[int, httpx.Response]:
         import httpx
 
         index = self.ledger.reserve(kind, input_id)
@@ -164,16 +166,17 @@ class BoundedOllamaClient:
                     response_bytes=len(body), elapsed_ms=(time.perf_counter() - started) * 1000)
                 result = httpx.Response(status, content=bytes(body), request=response.request)
                 result.raise_for_status()
-                return result
+                return index, result
 
     async def post(self, url: str, *, json: dict[str, str]) -> httpx.Response:
         if (url != BASE_URL + "/api/embeddings" or set(json) != {"model", "prompt"}
                 or json["model"] != MODEL or json["prompt"] not in self.inventory):
             raise MeasurementError("UNAPPROVED_EMBEDDING_REQUEST")
-        return await self._request("embedding", self.inventory[json["prompt"]], json)
+        _, response = await self._request("embedding", self.inventory[json["prompt"]], json)
+        return response
 
     async def verify_model(self, kind: str) -> dict[str, str]:
-        response = await self._request(kind)
+        index, response = await self._request(kind)
         value = response.json()
         rows = value.get("models") if isinstance(value, dict) else None
         if not isinstance(rows, list):
@@ -186,8 +189,40 @@ class BoundedOllamaClient:
         if digest != self.ledger.manifest["model"]["digest"]:
             raise MeasurementError("MODEL_IDENTITY_MISMATCH")
         result = {"model": MODEL, "digest": digest}
-        self.ledger.update(len(self.ledger.records) - 1, state="validated", model=result)
+        self.ledger.update(index, state="validated", model=result)
         return result
+
+    async def capacity_sample(self, text: str) -> float:
+        started = time.perf_counter()
+        index, response = await self._request("embedding", self.inventory[text],
+                                              {"model": MODEL, "prompt": text})
+        value = response.json()
+        vector = validate_vector(value.get("embedding") if isinstance(value, dict) else None)
+        elapsed = (time.perf_counter() - started) * 1000
+        self.ledger.update(index, state="validated", vector_sha256=fingerprint(vector),
+                           embedding_elapsed_ms=elapsed)
+        return elapsed
+
+
+async def measure_capacity(client: BoundedOllamaClient, inputs: list[dict[str, str]],
+                           manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    texts = {row["id"]: row["text"] for row in inputs}
+    selected = [texts[row["id"]] for row in manifest["inputs"]]
+    results = []
+    for level in manifest["levels"]:
+        concurrency = level["concurrency"]
+        samples: list[float] = []
+        started = time.perf_counter()
+        for offset in range(0, len(selected), concurrency):
+            async with asyncio.TaskGroup() as batch:
+                tasks = [batch.create_task(client.capacity_sample(text))
+                         for text in selected[offset:offset + concurrency]]
+            samples.extend(task.result() for task in tasks)
+        wall = time.perf_counter() - started
+        results.append({**level, "validated_requests": len(samples), "wall_seconds": wall,
+                        "requests_per_second": len(samples) / wall,
+                        "latency": latency_summary(samples, samples)})
+    return results
 
 
 def artifact_bytes(directory: Path) -> int:
@@ -201,6 +236,9 @@ def check_artifact_budget(directory: Path, manifest: dict[str, Any]) -> None:
 
 
 def failure_code(exc: BaseException) -> str:
+    if isinstance(exc, BaseExceptionGroup):
+        codes = {failure_code(child) for child in exc.exceptions}
+        return next(iter(codes)) if len(codes) == 1 else "MULTIPLE_MEASUREMENT_FAILURES"
     if isinstance(exc, MeasurementError):
         return exc.code
     if isinstance(exc, TimeoutError):
@@ -308,7 +346,14 @@ def supervise(value: object, confirmation: str) -> dict[str, Any]:
     except Exception:
         return _write_failure(directory, manifest, "INVALID_WORKER_REPORT")
     if (not isinstance(report, dict) or report.get("manifest_sha256") != confirmation
-            or report.get("status") != "completed" or not report.get("index_ready")):
+            or report.get("status") != "completed"):
+        return _write_failure(directory, manifest, "INVALID_WORKER_REPORT")
+    if manifest["profile"] == CAPACITY_PROFILE:
+        requests = report.get("requests")
+        if (not isinstance(requests, dict)
+                or requests.get("requests_validated") != len(manifest["requests"])):
+            return _write_failure(directory, manifest, "INVALID_WORKER_REPORT")
+    elif not report.get("index_ready"):
         return _write_failure(directory, manifest, "INVALID_WORKER_REPORT")
     return report
 
@@ -331,12 +376,24 @@ async def worker(value: object, confirmation: str, owner: str) -> dict[str, Any]
 
         suite, inputs = load_inputs()
         async with httpx.AsyncClient(trust_env=False, follow_redirects=False,
-                timeout=httpx.Timeout(30), limits=httpx.Limits(max_connections=1),
+                timeout=httpx.Timeout(30), limits=httpx.Limits(
+                    max_connections=manifest["limits"]["concurrency"]),
                 transport=httpx.AsyncHTTPTransport(retries=0)) as raw:
             bounded = BoundedOllamaClient(raw, ledger)
             provider = OllamaEmbeddingProvider(model=MODEL, base_url=BASE_URL,
                                                dimension=DIMENSION, client=bounded)
             before = await bounded.verify_model("model_before")
+            if manifest["profile"] == CAPACITY_PROFILE:
+                levels = await measure_capacity(bounded, inputs, manifest)
+                after = await bounded.verify_model("model_after")
+                report = {"profile": CAPACITY_PROFILE, "manifest_sha256": confirmation,
+                          "status": "completed", "model_before": before, "model_after": after,
+                          "levels": levels, "requests": ledger.summary(), "actual_cost_usd": None,
+                          "resource_scope": manifest["resource_scope"]}
+                write_atomic(directory / "report.json", report)
+                check_artifact_budget(directory, manifest)
+                write_atomic(directory / "run-state.json", {**state, "state": "completed"})
+                return report
             records = []
             timings = []
             for row in inputs:

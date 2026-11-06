@@ -59,7 +59,8 @@
 | `request_query` 之外的 6 個計畫 | **部分實作** —— 會載入、會列出，但只有 `request_query` 能透過 API 執行 | `app/api/workflows.py:39` |
 | 多 Agent 編排 / 子 Agent | **部分實作** —— 啟動時註冊，請求鏈路走的是工作流程執行器 | `main.py:105` |
 | 回饋驅動的規則學習 | **部分實作** —— 收集、審核、統計都有，但沒有自動回灌到產生 | `app/learning/` |
-| 11 種宣告方言中的 7 種 | **僅有宣告** —— 見[支援的資料庫](#支援的資料庫) | `app/db/connections.py:15` |
+| 7 種唯讀資料庫連接器 | 已實作並驗收，見[支援的資料庫](#支援的資料庫) | `app/db/connections.py` |
+| 固定設定的 MySQL 多 worker | 單機按需啟用 | [部署與復原](docs/optimization/immutable-workers.md) |
 | 多租戶隔離 | **未實作** —— 單一管理員群組共用一份資料 | `app/auth/access.py` |
 | 真實資料上的準確率 / 召回基準 | **尚未建立** | 見[路線圖](#路線圖) |
 
@@ -319,18 +320,25 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 工作台側邊欄有九個面板；查詢面板逐節點推送進度，並把 SQL、驗證報告和結果表並排顯示。
 
+瀏覽器驗收涵蓋登入、本機 Ollama 產生 SQL、MySQL 唯讀查詢及窄螢幕歷史紀錄。嵌入警告與測試模型標籤分別顯示。
+
 ## 支援的資料庫
 
-`DatabaseType` 裡宣告了 11 種方言，其中 4 種有可用的連線實作。其餘 7 種只是列舉裡的名字，
-連線時拋 `501`。
+以下 7 種連接器支援唯讀查詢，各項的驗收範圍見表中說明。
 
 | 方言 | 驅動程式 | 狀態 |
 |---|---|---|
 | SQLite | `sqlite3` | **已實作** —— authorizer、progress deadline、schema 版本感知 |
 | DuckDB | `duckdb` | **已實作** —— 關閉外部存取，用 interrupt 取消 |
-| PostgreSQL | `asyncpg` / `psycopg2` | **已實作** —— CI 對 PostgreSQL 16 實測 |
-| MySQL | `aiomysql` / `pymysql` | **已實作** —— 伺服器端列數上限，CI 對 MySQL 8.4 實測 |
-| Snowflake、StarRocks、BigQuery、Redshift、ClickHouse、Databricks、Trino | — | **僅有宣告** —— 無連線路徑，無 Schema 擷取 |
+| PostgreSQL | `asyncpg` | **已實作** —— CI 對 PostgreSQL 16 實測 |
+| MySQL | `aiomysql` | **已實作** —— 伺服器端列數上限，CI 對 MySQL 8.4 實測 |
+| ClickHouse | `httpx` | [獨立實庫驗收](docs/optimization/clickhouse-acceptance.md)，限一個資料庫 |
+| Trino | `httpx` | [獨立實庫驗收](docs/optimization/trino-acceptance.md)，限一個 catalog 與 schema |
+| StarRocks | `aiomysql` | [獨立實庫驗收](docs/optimization/starrocks-acceptance.md)，限內部 catalog 的一個資料庫 |
+| Snowflake、BigQuery、Redshift、Databricks | — | 僅有方言定義 |
+
+請在目標資料庫上使用原生唯讀帳號。固定設定的多 worker 演練涵蓋單機部署、共用 MySQL 控制平面與 MySQL 查詢目標。
+部署約束見[部署與復原](docs/optimization/immutable-workers.md)。
 
 ## 支援的 LLM
 
@@ -346,22 +354,25 @@ curl -X POST http://localhost:8001/api/v1/query \
 ## 測試與品質關卡
 
 ```bash
-pytest -m "not real_database"     # CI 套件：155 個模組、763 個測試
+pytest -m "not real_database"     # 一般 CI 套件
 pytest tests/test_nodes/          # 單一目錄
 ruff check .                      # 行寬 100，target py312
-mypy app/                         # 全儲存庫診斷，仍有已知技術債
+mypy app/                         # 應用程式嚴格型別檢查
 npm run check:frontend            # 頁面契約 + 重新整理/維護處理函式
 npm run check:frontend:build      # 可重複建置，失敗時保留舊產物
 ```
 
-`checks.yml` 依序執行：安裝 → `npm ci` → 兩項前端檢查 → `ruff check .` → **20 條獨立的
-`mypy` 關卡**（strict 核心集、評測模組、稽核儲存、串流、用量）→ `pytest -m 'not real_database'`。
+`checks.yml` 驗證相依性快照、前端契約與可重複建置、lint、型別檢查和一般 pytest 套件。
 
-`real-databases.yml` 起 PostgreSQL 16 與 MySQL 8.4 服務容器，用 mock 模型跑
-`pytest tests/real_db`；JUnit 報告缺失即判失敗。
+`real-databases.yml` 使用模擬模型，涵蓋 PostgreSQL 16 與兩個 MySQL 8.4 執行個體。
+ClickHouse、Trino、StarRocks 的獨立實庫測試按需啟用。
 
 測試用真實 SQLite、DuckDB、LanceDB 與 FTS5，不做 mock；共用 fixture 由
 `tests/fixtures/test_schema.sql` 建構電商 Schema（`users`、`products`、`orders`）。
+
+[發布關卡](docs/optimization/stage-68-release-gates.md)彙整瀏覽器、實庫及跨程式碼版本回復證據。
+[Ollama 探針](docs/optimization/ollama-capacity-probe.md)記錄一次有呼叫上限的嵌入實測。
+DeepSeek 探針支援個別授權的真實批次。
 
 ## 路線圖
 
@@ -373,7 +384,8 @@ npm run check:frontend:build      # 可重複建置，失敗時保留舊產物
 - **沒有容量 SLO。** 4 個獨立行程在 1k / 10k 資料表 Schema 上約為單一行程的 3.1–3.2 倍；
   行程內 asyncio 並行無效，瓶頸是 Python CPU。生產容量仍屬未驗證。
 - **計畫選擇沒有接線。** 請求鏈路固定用 `request_query`，另外 6 個計畫是樣板，不是行為。
-- **7 種方言只有名字**，且**沒有租戶隔離**，單一管理員群組共用一份資料。
+- **雲端資料庫驗收待補齊**，涉及 Snowflake、BigQuery、Redshift 與 Databricks。
+- **工作台採用共用資料集。** 一個管理員群組共用一份資料。
 - **學習迴圈沒閉上。** 回饋會收集、會審核，但沒有任何東西自動回灌到產生。
 
 ## 參與貢獻

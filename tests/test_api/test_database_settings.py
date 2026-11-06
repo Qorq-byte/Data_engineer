@@ -34,7 +34,9 @@ def test_real_connectors_not_legacy_dialect_switches(client):
     data = response.json()
     assert data["mode"] == "read_only"
     implemented = {row["type"] for row in data["connectors"] if row["implemented"]}
-    assert implemented == {"sqlite", "duckdb", "postgresql", "mysql"}
+    assert implemented == {
+        "sqlite", "duckdb", "postgresql", "mysql", "clickhouse", "trino", "starrocks",
+    }
 
 
 @pytest.mark.parametrize(
@@ -59,6 +61,9 @@ def test_all_legacy_writes_rejected_without_side_effects(client, payload):
             DatabaseType.DUCKDB,
             DatabaseType.MYSQL,
             DatabaseType.POSTGRESQL,
+            DatabaseType.CLICKHOUSE,
+            DatabaseType.TRINO,
+            DatabaseType.STARROCKS,
         }
     ],
 )

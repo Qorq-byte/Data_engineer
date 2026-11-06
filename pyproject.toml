@@ -36,7 +36,7 @@ dependencies = [
     "pymysql>=1.1.0",
 
     # SQL parsing & transformation
-    "sqlglot==30.18.0",
+    "sqlglot==30.29.0",
     "sqlparse>=0.5.0",
 
     # Data & validation
@@ -59,6 +59,7 @@ dependencies = [
     # Utils
     "httpx>=0.28.0",
     "python-dateutil>=2.9.0",
+    "tzdata>=2024.1; sys_platform == 'win32'",
     "structlog>=24.0.0",
 ]
 

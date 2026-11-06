@@ -135,7 +135,7 @@ PRESET_DIALECTS: dict[str, DialectConfig] = {
     ),
     "starrocks": DialectConfig(
         dialect="starrocks",
-        driver="mysql-connector",
+        driver="aiomysql",
         type_mapping={
             "int": "INT",
             "bigint": "BIGINT",
@@ -201,7 +201,7 @@ PRESET_DIALECTS: dict[str, DialectConfig] = {
     ),
     "clickhouse": DialectConfig(
         dialect="clickhouse",
-        driver="clickhouse-connect",
+        driver="httpx",
         type_mapping={
             "int": "Int32",
             "bigint": "Int64",
@@ -245,7 +245,7 @@ PRESET_DIALECTS: dict[str, DialectConfig] = {
     ),
     "trino": DialectConfig(
         dialect="trino",
-        driver="trino-python-client",
+        driver="httpx",
         type_mapping={
             "int": "INTEGER",
             "bigint": "BIGINT",

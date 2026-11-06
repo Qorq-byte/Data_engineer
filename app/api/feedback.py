@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Any
 
@@ -32,7 +33,7 @@ _feedback_store: list[dict[str, Any]] = []
 @router.post("/feedback")
 async def submit_feedback(body: FeedbackRequest) -> dict[str, Any]:
     record = {
-        "id": f"fb_{len(_feedback_store) + 1}_{datetime.now().strftime('%Y%m%d%H%M%S')}",
+        "id": f"fb_{uuid.uuid4().hex}",
         "query_id": body.query_id,
         "session_id": body.session_id,
         "nl_input": body.nl_input,
@@ -96,6 +97,8 @@ async def submit_feedback(body: FeedbackRequest) -> dict[str, Any]:
         logger.warning("Feedback collector unavailable: %s", e)
     if storage == "mysql" and learning:
         message = "感谢您的反馈！反馈已写入 MySQL 并进入学习队列。"
+    elif storage == "mysql":
+        message = "感谢您的反馈！反馈已写入 MySQL，但学习队列当前不可用。"
     elif learning:
         message = "感谢您的反馈！反馈已进入学习队列，但未写入 MySQL（仅进程内保留）。"
     else:

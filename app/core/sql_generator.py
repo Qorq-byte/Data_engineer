@@ -18,12 +18,14 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from typing import Any, Literal
 
 from app.core.prompt_builder import PromptBuilder
+from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.llm.completion import IncompleteCompletionError, check_completion, response_field
 from app.llm.protocols import CompletionRouter
 from app.llm.streaming import StreamEvent, events_for
 from app.models.domain import DomainConfig
 from app.models.query import SQR, QueryPair, SQLCandidate
 from app.models.schema import SchemaSnapshot
+from app.workflow.contracts import QueryCapacityError
 
 # ── Perspective prompts for multi-perspective strategy ──────────────────
 
@@ -100,14 +102,34 @@ class SQLGenerator:
         """
         if strategy == "multi_perspective" and num_candidates > 1:
             return await self._multi_perspective(
-                sqr, schema, domain, history, similar_pairs,
-                num_candidates, model, dialect, rag_context,
-                error_context, multi_table_hint, database_name, warnings,
+                sqr,
+                schema,
+                domain,
+                history,
+                similar_pairs,
+                num_candidates,
+                model,
+                dialect,
+                rag_context,
+                error_context,
+                multi_table_hint,
+                database_name,
+                warnings,
             )
         return await self._temperature_sampling(
-            sqr, schema, domain, history, similar_pairs,
-            num_candidates, model, dialect, rag_context,
-            error_context, multi_table_hint, database_name, warnings,
+            sqr,
+            schema,
+            domain,
+            history,
+            similar_pairs,
+            num_candidates,
+            model,
+            dialect,
+            rag_context,
+            error_context,
+            multi_table_hint,
+            database_name,
+            warnings,
         )
 
     async def generate_stream(
@@ -126,9 +148,17 @@ class SQLGenerator:
     ) -> AsyncIterator[str]:
         """Stream provisional text while retaining existing caller compatibility."""
         stream = self.generate_stream_events(
-            sqr, schema=schema, domain=domain, history=history, similar_pairs=similar_pairs,
-            model=model, dialect=dialect, rag_context=rag_context, error_context=error_context,
-            multi_table_hint=multi_table_hint, database_name=database_name,
+            sqr,
+            schema=schema,
+            domain=domain,
+            history=history,
+            similar_pairs=similar_pairs,
+            model=model,
+            dialect=dialect,
+            rag_context=rag_context,
+            error_context=error_context,
+            multi_table_hint=multi_table_hint,
+            database_name=database_name,
         )
         try:
             async for event in stream:
@@ -153,15 +183,21 @@ class SQLGenerator:
     ) -> AsyncGenerator[StreamEvent, None]:
         """Yield deltas and terminal evidence after complete consumption."""
         prompt = self.prompt_builder.build(
-            sqr, schema=schema, domain=domain,
-            history=history, similar_pairs=similar_pairs,
-            dialect=dialect, rag_context=rag_context,
+            sqr,
+            schema=schema,
+            domain=domain,
+            history=history,
+            similar_pairs=similar_pairs,
+            dialect=dialect,
+            rag_context=rag_context,
             error_context=error_context,
             multi_table_hint=multi_table_hint,
             database_name=database_name,
         )
         stream = events_for(
-            self.router, "complete_stream", "complete_stream_events",
+            self.router,
+            "complete_stream",
+            "complete_stream_events",
             messages=[{"role": "user", "content": prompt}],
             model=model,
             temperature=0.3,
@@ -201,9 +237,13 @@ class SQLGenerator:
         alternative becomes a separate candidate.
         """
         prompt = self.prompt_builder.build(
-            sqr, schema=schema, domain=domain,
-            history=history, similar_pairs=similar_pairs,
-            dialect=dialect, rag_context=rag_context,
+            sqr,
+            schema=schema,
+            domain=domain,
+            history=history,
+            similar_pairs=similar_pairs,
+            dialect=dialect,
+            rag_context=rag_context,
             error_context=error_context,
             multi_table_hint=multi_table_hint,
             database_name=database_name,
@@ -232,6 +272,8 @@ class SQLGenerator:
         idx = 0
         rejected: list[IncompleteCompletionError] = []
         for resp in responses_raw:
+            if isinstance(resp, QueryCapacityError | CoordinationUnavailableError):
+                raise resp
             if isinstance(resp, Exception):
                 if isinstance(resp, IncompleteCompletionError):
                     rejected.append(resp)
@@ -247,7 +289,8 @@ class SQLGenerator:
             if content is None:
                 continue
             finish_reason, actual_model = _response_metadata(
-                resp, model or self.router.config.default_model,
+                resp,
+                model or self.router.config.default_model,
             )
 
             # ── Parse multi-SQL response ──────────────────────────
@@ -318,9 +361,13 @@ class SQLGenerator:
     ) -> list[SQLCandidate]:
         """Strategy B: N independent calls with distinct perspectives."""
         base_prompt = self.prompt_builder.build(
-            sqr, schema=schema, domain=domain,
-            history=history, similar_pairs=similar_pairs,
-            dialect=dialect, rag_context=rag_context,
+            sqr,
+            schema=schema,
+            domain=domain,
+            history=history,
+            similar_pairs=similar_pairs,
+            dialect=dialect,
+            rag_context=rag_context,
             error_context=error_context,
             multi_table_hint=multi_table_hint,
             database_name=database_name,
@@ -345,6 +392,8 @@ class SQLGenerator:
         candidates: list[SQLCandidate] = []
         rejected: list[IncompleteCompletionError] = []
         for i, resp in enumerate(responses):
+            if isinstance(resp, QueryCapacityError | CoordinationUnavailableError):
+                raise resp
             if isinstance(resp, Exception):
                 if isinstance(resp, IncompleteCompletionError):
                     rejected.append(resp)
@@ -361,7 +410,8 @@ class SQLGenerator:
                 continue
 
             finish_reason, actual_model = _response_metadata(
-                resp, model or self.router.config.default_model,
+                resp,
+                model or self.router.config.default_model,
             )
 
             # ── Parse multi-SQL response ──────────────────────────
@@ -415,7 +465,8 @@ class SQLGenerator:
 
 
 def _response_metadata(
-    response: object, requested_model: str,
+    response: object,
+    requested_model: str,
 ) -> tuple[Literal["stop"] | None, str]:
     """Read only this validated response; a missing marker remains unknown."""
     choices = response_field(response, "choices")
@@ -431,7 +482,8 @@ def _completion_text(response: object) -> str | None:
     """Reject malformed/non-text choices independently, preserving valid siblings."""
     choices = (
         response.get("choices")
-        if isinstance(response, dict) else getattr(response, "choices", None)
+        if isinstance(response, dict)
+        else getattr(response, "choices", None)
     )
     if not isinstance(choices, list) or not choices:
         return None
@@ -492,7 +544,7 @@ def _extract_sql(text: str) -> str:
         "Generated SQL:",
     ]:
         if cleaned.lower().startswith(prefix.lower()):
-            cleaned = cleaned[len(prefix):].strip()
+            cleaned = cleaned[len(prefix) :].strip()
 
     return cleaned
 

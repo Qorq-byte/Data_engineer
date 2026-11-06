@@ -1,6 +1,16 @@
 // Execute actual page functions; never call external model services.
 const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
 const html = fs.readFileSync('frontend_design/workspace.html', 'utf8');
+const mockBadge = html.match(/\{([^{}\n]+) && <span[^>]*>测试模型（MOCK）<\/span>\}/);
+assert(mockBadge, 'Find the model badge condition in the workbench');
+const showMockBadge = msg => Boolean(vm.runInNewContext(mockBadge[1], { msg }));
+const mockEmbeddingWarning = 'MOCK embeddings: retrieval is not a semantic quality guarantee';
+const mockModelWarning = 'MOCK LLM: output is a test placeholder, not a verified database answer';
+assert.equal(showMockBadge({ warnings: [mockEmbeddingWarning], isMock: true }), false);
+assert.equal(showMockBadge({ warnings: [mockEmbeddingWarning] }), false);
+assert.equal(showMockBadge({ warnings: [mockEmbeddingWarning, mockModelWarning] }), true);
+assert.equal(showMockBadge({ warnings: [] }), false);
+assert.equal(showMockBadge({}), false);
 function extract(name, next) { const a = html.indexOf(`const ${name} =`), b = html.indexOf(`const ${next} =`, a + 1); assert(a >= 0 && b > a); return html.slice(a, b); }
 const snapshot = vm.runInNewContext(`${extract('llmConfigurationSnapshot', 'databaseCapabilitiesSnapshot')}; llmConfigurationSnapshot;`);
 function data(options = {}) { return { status: 'ok', configuration_source: 'memory', default_model: 'test-model', fallback_model: '', routing_policy: 'primary_then_fallback', temperature_policy: 'caller_supplied', unsupported_fields: ['routing_strategy', 'temperature'], max_tokens: 4096,

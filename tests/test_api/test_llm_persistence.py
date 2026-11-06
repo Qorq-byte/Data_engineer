@@ -270,6 +270,147 @@ async def test_bad_stored_record_rejected(stored, raw):
     assert caught.value.detail["code"] == "LLM_SETTINGS_READ_FAILED"
 
 
+@pytest.mark.parametrize("field,value", [
+    ("models", "private-malformed-model"),
+    ("enabled", "false"),
+    ("base_url", {"private-endpoint": "value"}),
+    ("rate_limit_rpm", "60"),
+    ("api_key_configured", 1),
+])
+@pytest.mark.parametrize("operation", ["read", "models", "startup", "write", "delete"])
+async def test_nested_record_corruption_never_changes_runtime(stored, field, value, operation):
+    original = factory.get_default_router()
+    memory = copy.deepcopy(api_settings._settings_store)
+    bad = {"providers": {"private-provider": {field: value}}}
+    await stored.save_setting("llm", bad)
+    operations = {
+        "read": api_settings.get_llm_settings,
+        "models": api_settings.get_available_models,
+        "startup": api_settings.reload_llm_router_from_db,
+        "write": lambda: api_settings.update_llm_settings(update(max_tokens=888)),
+        "delete": lambda: api_settings.delete_llm_provider("private-provider"),
+    }
+    with pytest.raises(HTTPException) as caught:
+        await operations[operation]()
+    assert caught.value.status_code == 503
+    assert caught.value.detail["code"] == "LLM_SETTINGS_READ_FAILED"
+    assert "private-" not in str(caught.value.detail)
+    assert api_settings._settings_store == memory
+    assert factory.get_default_router() is original
+    assert await stored.get_setting("llm") == bad
+
+
+async def test_public_read_error_does_not_echo_corrupt_record(stored):
+    await stored.save_setting("llm", {
+        "providers": {"private-provider": {"models": "private-malformed-model"}},
+    })
+    response = authenticated_client(create_app()).get("/api/v1/settings/llm")
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] == "LLM_SETTINGS_READ_FAILED"
+    assert "private-" not in response.text
+
+
+async def test_legacy_partial_record_keeps_defaults_and_nulls(stored):
+    raw = {"providers": {"fixture": {"models": None, "api_key_enc": None}},
+           "routing_strategy": "legacy-ignored", "temperature": {"legacy": "ignored"}}
+    await stored.save_setting("llm", raw)
+    result = await api_settings.get_llm_settings()
+    assert result["configuration_source"] == "database"
+    assert result["max_tokens"] == api_settings._DEFAULT_SETTINGS["llm"]["max_tokens"]
+    assert result["providers"]["fixture"]["models"] == []
+    assert (await api_settings.get_available_models())["models"] == []
+    await api_settings.reload_llm_router_from_db()
+    assert factory.get_default_router().mock_mode is True
+
+
+async def test_broken_ciphertext_can_be_repaired_without_silent_key_fallback(stored):
+    raw = {"providers": {"fixture": {"enabled": True, "models": ["fixture-model"],
+                                    "api_key_enc": "private-broken-ciphertext"}}}
+    await stored.save_setting("llm", raw)
+    original = factory.get_default_router()
+    before = copy.deepcopy(api_settings._settings_store)
+    with pytest.raises(HTTPException) as caught:
+        await api_settings.update_llm_settings(update(max_tokens=888))
+    assert caught.value.detail["code"] == "LLM_SETTINGS_PREPARE_FAILED"
+    assert "private-" not in str(caught.value.detail)
+    assert await stored.get_setting("llm") == raw
+    assert api_settings._settings_store == before
+    assert factory.get_default_router() is original
+    repaired = await api_settings.update_llm_settings(update(
+        providers={"fixture": {"api_key": "synthetic-replacement-key"}},
+    ))
+    assert repaired["persistence"] == "persisted"
+    assert "synthetic-replacement-key" not in str(repaired)
+    assert factory.get_default_router().config.providers["fixture"].api_key == (
+        "synthetic-replacement-key"
+    )
+
+
+async def test_broken_provider_can_be_deleted(stored):
+    await stored.save_setting("llm", {"providers": {
+        "fixture": {"api_key_enc": "private-broken-ciphertext"},
+    }})
+    result = await api_settings.delete_llm_provider("fixture")
+    assert result["persistence"] == "persisted"
+    assert "fixture" not in (await stored.get_setting("llm"))["providers"]
+
+
+@pytest.mark.parametrize("failure", ["llm", "rag", "bulk"])
+async def test_aggregate_read_failure_keeps_memory_and_router(stored, monkeypatch, failure):
+    original = factory.get_default_router()
+    memory = copy.deepcopy(api_settings._settings_store)
+    if failure == "llm":
+        await stored.save_setting("llm", {"providers": {"private": {"models": "private-value"}}})
+    elif failure == "rag":
+        await stored.save_setting("llm", {"default_model": "new-persisted-model"})
+        await stored.save_setting("rag", ["private-value"])
+    else:
+        async def denied():
+            raise RuntimeError("private-error")
+        monkeypatch.setattr(stored, "get_settings", denied)
+    with pytest.raises(HTTPException) as caught:
+        await api_settings.get_all_settings()
+    assert caught.value.status_code == 503
+    assert "private" not in str(caught.value.detail)
+    assert api_settings._settings_store == memory
+    assert factory.get_default_router() is original
+
+
+async def test_aggregate_success_is_observation_only(stored):
+    original = factory.get_default_router()
+    memory = copy.deepcopy(api_settings._settings_store)
+    await stored.save_setting("llm", {"default_model": "new-persisted-model"})
+    result = await api_settings.get_all_settings()
+    assert result["settings"]["llm"]["default_model"] == "new-persisted-model"
+    assert result["settings"]["llm"]["runtime"]["active_model"] != "new-persisted-model"
+    assert api_settings._settings_store == memory
+    assert factory.get_default_router() is original
+
+
+async def test_aggregate_holds_the_existing_rag_gate(stored):
+    from app.db.runtime import gate
+
+    async with gate(("rag-settings",)):
+        task = asyncio.create_task(api_settings.get_all_settings())
+        await asyncio.sleep(0)
+        assert not task.done()
+    assert (await asyncio.wait_for(task, 2))["status"] == "ok"
+
+
+async def test_aggregate_bulk_timeout_keeps_memory(stored, monkeypatch):
+    memory = copy.deepcopy(api_settings._settings_store)
+
+    async def slow():
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(stored, "get_settings", slow)
+    monkeypatch.setattr(api_settings, "_LLM_SETTINGS_TIMEOUT_SECONDS", 0.02)
+    with pytest.raises(HTTPException) as caught:
+        await api_settings.get_all_settings()
+    assert caught.value.detail["code"] == "SETTINGS_READ_FAILED"
+    assert api_settings._settings_store == memory
+
+
 @pytest.mark.parametrize("method", ["get", "put", "delete"])
 @pytest.mark.parametrize("user_id,expected", [(None, 401), (999999, 403)])
 async def test_operator_boundary(stored, method, user_id, expected):

@@ -27,6 +27,7 @@ def main(argv: list[str] | None = None) -> int:
     mode.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--model-manifest", type=Path)
+    parser.add_argument("--capacity", action="store_true", help="Prepare local capacity profile")
     parser.add_argument("--run-name", default="stage43-embeddinggemma-v3")
     parser.add_argument("--confirm-manifest-sha256")
     parser.add_argument("--owner-token", help=argparse.SUPPRESS)
@@ -39,13 +40,14 @@ def main(argv: list[str] | None = None) -> int:
                     or args.owner_token is not None):
                 raise ValueError("Invalid preparation arguments")
             protect_inputs(args.manifest, source_paths() + [args.model_manifest])
-            result = prepare(args.run_name, read_model_identity(args.model_manifest))
+            result = prepare(args.run_name, read_model_identity(args.model_manifest),
+                             capacity=args.capacity)
             write_atomic(args.manifest, result)
             print(json.dumps({"status": "prepared", "manifest_sha256": manifest_digest(result),
                               "model": result["model"], "limits": result["limits"],
                               "resource_scope": result["resource_scope"]}))
             return 0
-        if args.model_manifest is not None or not args.confirm_manifest_sha256:
+        if args.model_manifest is not None or args.capacity or not args.confirm_manifest_sha256:
             raise ValueError("Explicit manifest confirmation required")
         result = validate(read_json(args.manifest), args.confirm_manifest_sha256)
         # Import runtime/providers only after complete manifest/source validation.

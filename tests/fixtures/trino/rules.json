@@ -1,0 +1,13 @@
+{
+  "catalogs": [
+    {"user": "stage67_admin", "allow": "all"},
+    {"user": "stage67_reader", "catalog": "fixture", "allow": "read-only"}
+  ],
+  "schemas": [
+    {"user": "stage67_admin", "owner": true}
+  ],
+  "tables": [
+    {"user": "stage67_admin", "privileges": ["SELECT", "INSERT", "DELETE", "UPDATE", "OWNERSHIP", "GRANT_SELECT"]},
+    {"user": "stage67_reader", "catalog": "fixture", "schema": "acceptance", "privileges": ["SELECT"]}
+  ]
+}
