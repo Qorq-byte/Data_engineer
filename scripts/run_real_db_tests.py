@@ -51,6 +51,8 @@ def test_environment(ports: dict[str, str]) -> dict[str, str]:
         "PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "HOME", "USERPROFILE",
         "USERNAME", "USER", "LOGNAME", "LNAME", "SSL_CERT_FILE", "SSL_CERT_DIR",
     }}
+    if "mysql-recovery" in ports:
+        keep["DE_REAL_MYSQL_RECOVERY_PORT"] = ports["mysql-recovery"]
     return dict(keep, DE_REAL_DB_TESTS="1", DE_REAL_PG_PORT=ports["postgresql"],
                 DE_REAL_MYSQL_PORT=ports["mysql"], LLM_MOCK_MODE="1", PYTHONUTF8="1",
                 PYTHONPATH=str(ROOT), LITELLM_LOCAL_MODEL_COST_MAP="True",
@@ -61,6 +63,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "data/real-db-acceptance/report.json")
     parser.add_argument("--filter", default="")
+    parser.add_argument("--mysql-recovery", action="store_true", help="Start a second MySQL")
     args = parser.parse_args(argv)
     output = args.output.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -73,7 +76,8 @@ def main(argv: list[str] | None = None) -> int:
         if docker("info", "--format", "{{.OSType}}").stdout.strip() != "linux":
             raise RuntimeError("Linux test containers are required")
         ports = {}
-        for kind, image in IMAGES.items():
+        images = {**IMAGES, **({"mysql-recovery": IMAGES["mysql"]} if args.mysql_recovery else {})}
+        for kind, image in images.items():
             image_id = docker("image", "inspect", image, "--format", "{{.Id}}").stdout.strip()
             if not image_id.startswith("sha256:"):
                 raise RuntimeError("Invalid test image identity")
@@ -91,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             for item in env:
                 command.extend(["--env", item])
             command.append(image_id)
-            if kind == "mysql":
+            if kind != "postgresql":
                 command.extend(["--performance-schema=OFF", "--innodb-buffer-pool-size=64M"])
             identity = docker(*command).stdout.strip()
             # Store the full immutable ID immediately; never delete by name or pattern.

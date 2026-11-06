@@ -84,7 +84,7 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
     headers = {"Authorization": f"Bearer {create_access_token(1, 'fixture')}"}
     servers = ServingProcesses()
 
-    async def launch(name, *, overrides=None):
+    async def launch(name, *, overrides=None, mysql_port=None):
         directory = tmp_path / name
         directory.mkdir()
         with (directory / "stderr.txt").open("wb") as stderr:
@@ -93,7 +93,7 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
                 "-m",
                 "tests.fixtures.shared_query_worker",
                 "--port",
-                str(config["port"]),
+                str(config["port"] if mysql_port is None else mysql_port),
                 "--database",
                 database,
                 cwd=directory,
