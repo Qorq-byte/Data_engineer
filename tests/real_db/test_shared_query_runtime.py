@@ -84,7 +84,7 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
     headers = {"Authorization": f"Bearer {create_access_token(1, 'fixture')}"}
     servers = ServingProcesses()
 
-    async def launch(name):
+    async def launch(name, *, overrides=None):
         directory = tmp_path / name
         directory.mkdir()
         with (directory / "stderr.txt").open("wb") as stderr:
@@ -97,7 +97,7 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
                 "--database",
                 database,
                 cwd=directory,
-                env=environment,
+                env={**environment, **(overrides or {})},
                 stdout=asyncio.subprocess.DEVNULL,
                 stderr=stderr,
             )
