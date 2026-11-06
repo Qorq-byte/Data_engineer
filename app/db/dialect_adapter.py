@@ -201,7 +201,7 @@ PRESET_DIALECTS: dict[str, DialectConfig] = {
     ),
     "clickhouse": DialectConfig(
         dialect="clickhouse",
-        driver="clickhouse-connect",
+        driver="httpx",
         type_mapping={
             "int": "Int32",
             "bigint": "Int64",

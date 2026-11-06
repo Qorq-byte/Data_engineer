@@ -1,7 +1,8 @@
 """Multi-dialect schema extractor.
 
 Extracts TableSchema and SchemaSnapshot from live databases.
-Implemented: PostgreSQL (public), SQLite (main), DuckDB (current catalog/main), MySQL.
+Implemented: PostgreSQL (public), SQLite (main), DuckDB (current catalog/main),
+MySQL and ClickHouse (selected database).
 Other database types raise NotImplementedError.
 """
 
@@ -99,6 +100,12 @@ class SchemaExtractor:
                 )
             case DatabaseType.MYSQL:
                 snapshot = await SchemaExtractor._extract_mysql(connection, db_name)
+            case DatabaseType.CLICKHOUSE:
+                from app.db.clickhouse_source import ClickHouseConnection
+
+                if not isinstance(connection, ClickHouseConnection):
+                    raise ValueError("Invalid ClickHouse connection")
+                snapshot = await connection.extract_schema()
             case _:
                 raise NotImplementedError(
                     f"Schema extraction for '{db_type}' is not yet implemented (Phase 2+)"

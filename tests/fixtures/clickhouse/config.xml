@@ -1,0 +1,13 @@
+<clickhouse>
+    <logger><level>warning</level><console>1</console></logger>
+    <listen_host>127.0.0.1</listen_host>
+    <http_port from_env="DE_REAL_CLICKHOUSE_PORT"/>
+    <path from_env="DE_CLICKHOUSE_DATA"/>
+    <users_config from_env="DE_CLICKHOUSE_USERS"/>
+    <background_schedule_pool_size>16</background_schedule_pool_size>
+    <background_buffer_flush_schedule_pool_size>4</background_buffer_flush_schedule_pool_size>
+    <background_message_broker_schedule_pool_size>4</background_message_broker_schedule_pool_size>
+    <background_distributed_schedule_pool_size>4</background_distributed_schedule_pool_size>
+    <max_thread_pool_size>128</max_thread_pool_size>
+    <max_server_memory_usage>805306368</max_server_memory_usage>
+</clickhouse>
