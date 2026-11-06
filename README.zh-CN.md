@@ -59,7 +59,8 @@
 | `request_query` 之外的 6 个计划 | **部分实现** —— 会加载、会列出，但只有 `request_query` 能通过 API 执行 | `app/api/workflows.py:39` |
 | 多 Agent 编排 / 子 Agent | **部分实现** —— 启动时注册，请求链路走的是工作流执行器 | `main.py:105` |
 | 反馈驱动的规则学习 | **部分实现** —— 收集、审核、统计都有，但没有自动回灌到生成 | `app/learning/` |
-| 11 种声明方言中的 7 种 | **仅有声明** —— 见[支持的数据库](#支持的数据库) | `app/db/connections.py:15` |
+| 7 种只读数据库连接器 | 已实现并验收，见[支持的数据库](#支持的数据库) | `app/db/connections.py` |
+| 固定配置的 MySQL 多 worker | 单机按需启用 | [部署与恢复](docs/optimization/immutable-workers.md) |
 | 多租户隔离 | **未实现** —— 单管理员组共享一份数据 | `app/auth/access.py` |
 | 真实数据上的准确率 / 召回基线 | **尚未建立** | 见[路线图](#路线图) |
 
@@ -319,18 +320,25 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 工作台侧边栏有九个面板；查询面板逐节点推送进度，并把 SQL、校验报告和结果表并排展示。
 
+浏览器验收覆盖登录、本地 Ollama 生成、MySQL 只读查询和窄屏历史。嵌入告警与测试模型标签分别显示。
+
 ## 支持的数据库
 
-`DatabaseType` 里声明了 11 种方言，其中 4 种有可用的连接实现。其余 7 种只是枚举里的名字，
-连接时抛 `501`。
+以下 7 种连接器支持只读查询，各项的验收范围见表中说明。
 
 | 方言 | 驱动 | 状态 |
 |---|---|---|
 | SQLite | `sqlite3` | **已实现** —— authorizer、progress deadline、schema 版本感知 |
 | DuckDB | `duckdb` | **已实现** —— 关闭外部访问，用 interrupt 取消 |
-| PostgreSQL | `asyncpg` / `psycopg2` | **已实现** —— CI 对 PostgreSQL 16 实测 |
-| MySQL | `aiomysql` / `pymysql` | **已实现** —— 服务端行数上限，CI 对 MySQL 8.4 实测 |
-| Snowflake、StarRocks、BigQuery、Redshift、ClickHouse、Databricks、Trino | — | **仅有声明** —— 无连接路径，无 Schema 提取 |
+| PostgreSQL | `asyncpg` | **已实现** —— CI 对 PostgreSQL 16 实测 |
+| MySQL | `aiomysql` | **已实现** —— 服务端行数上限，CI 对 MySQL 8.4 实测 |
+| ClickHouse | `httpx` | [独立实库验收](docs/optimization/clickhouse-acceptance.md)，限一个数据库 |
+| Trino | `httpx` | [独立实库验收](docs/optimization/trino-acceptance.md)，限一个 catalog 和 schema |
+| StarRocks | `aiomysql` | [独立实库验收](docs/optimization/starrocks-acceptance.md)，限内部 catalog 的一个数据库 |
+| Snowflake、BigQuery、Redshift、Databricks | — | 仅有方言定义 |
+
+请在目标数据库上使用原生只读账号。固定配置的多 worker 演练覆盖单机部署、共享 MySQL 控制面与 MySQL 查询目标。
+部署约束见[部署与恢复](docs/optimization/immutable-workers.md)。
 
 ## 支持的 LLM
 
@@ -346,22 +354,25 @@ curl -X POST http://localhost:8001/api/v1/query \
 ## 测试与质量门禁
 
 ```bash
-pytest -m "not real_database"     # CI 套件：155 个模块、763 个测试
+pytest -m "not real_database"     # 常规 CI 套件
 pytest tests/test_nodes/          # 单个目录
 ruff check .                      # 行宽 100，target py312
-mypy app/                         # 全仓诊断，仍有已知债务
+mypy app/                         # 应用严格类型检查
 npm run check:frontend            # 页面契约 + 刷新/维护处理函数
 npm run check:frontend:build      # 可重复构建，失败时保留旧产物
 ```
 
-`checks.yml` 依次执行：安装 → `npm ci` → 两项前端检查 → `ruff check .` → **20 条独立的
-`mypy` 门禁**（strict 核心集、评测模块、审计存储、流式、用量）→ `pytest -m 'not real_database'`。
+`checks.yml` 验证依赖快照、前端契约与可重复构建、lint、类型检查和常规 pytest 套件。
 
-`real-databases.yml` 起 PostgreSQL 16 与 MySQL 8.4 服务容器，用 mock 模型跑
-`pytest tests/real_db`；JUnit 报告缺失即判失败。
+`real-databases.yml` 使用模拟模型，覆盖 PostgreSQL 16 和两个 MySQL 8.4 实例。
+ClickHouse、Trino、StarRocks 的独立实库测试按需启用。
 
 测试用真实 SQLite、DuckDB、LanceDB 与 FTS5，不做 mock；共享 fixture 由
 `tests/fixtures/test_schema.sql` 构建电商 Schema（`users`、`products`、`orders`）。
+
+[发布门禁](docs/optimization/stage-68-release-gates.md)汇总浏览器、实库和跨代码版本回退证据。
+[Ollama 探针](docs/optimization/ollama-capacity-probe.md)记录一次有调用上限的嵌入实测。
+DeepSeek 探针支持单独授权的真实批次。
 
 ## 路线图
 
@@ -373,7 +384,8 @@ npm run check:frontend:build      # 可重复构建，失败时保留旧产物
 - **没有容量 SLO。** 4 个独立进程在 1k / 10k 表 Schema 上约为单进程的 3.1–3.2 倍；
   进程内 asyncio 并发无效，瓶颈是 Python CPU。生产容量仍属未验证。
 - **计划选择没有接线。** 请求链路固定用 `request_query`，另外 6 个计划是模板，不是行为。
-- **7 种方言只有名字**，且**没有租户隔离**，单管理员组共享一份数据。
+- **云数据库验收待补齐**，涉及 Snowflake、BigQuery、Redshift 和 Databricks。
+- **工作台采用共享数据集。** 一个管理员组共享一份数据。
 - **学习闭环没闭上。** 反馈会收集、会审核，但没有任何东西自动回灌到生成。
 
 ## 参与贡献
