@@ -8,7 +8,7 @@ from app.api import create_app
 from app.api.frontend import register_frontend
 
 
-@pytest.mark.parametrize("route", ["/", "/login", "/workspace"])
+@pytest.mark.parametrize("route", ["/", "/login", "/register", "/workspace"])
 def test_missing_frontend_is_explicit_and_does_not_require_cdn(tmp_path, route):
     app = FastAPI()
     register_frontend(app, tmp_path / "missing")
@@ -30,16 +30,17 @@ def test_compiled_pages_assets_and_source_boundaries(tmp_path):
     (tmp_path / "manifest.json").write_text("{}", encoding="utf-8")
     for filename in ("landing_page.html", "form.html", "workspace.html"):
         (tmp_path / filename).write_text(
-            "<!doctype html><title>local build</title>", encoding="utf-8"
+            f"<!doctype html><title>{filename}</title>", encoding="utf-8"
         )
     app = FastAPI()
     register_frontend(app, tmp_path)
     client = TestClient(app)
-    for route in ("/", "/login", "/workspace"):
+    for route in ("/", "/login", "/register", "/workspace"):
         response = client.get(route)
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/html")
         assert response.headers["cache-control"] == "no-cache"
+    assert "<title>form.html</title>" in client.get("/register").text
     javascript = client.get("/assets/app-123.js")
     assert javascript.status_code == 200
     assert "javascript" in javascript.headers["content-type"]
