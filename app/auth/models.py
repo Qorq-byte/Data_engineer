@@ -14,7 +14,10 @@ class RegisterRequest(BaseModel):
     """Request body for POST /api/v1/auth/register."""
 
     username: str = Field(..., min_length=2, max_length=50, description="用户名")
-    email: str = Field(..., min_length=5, max_length=120, description="邮箱地址")
+    email: str = Field(
+        ..., min_length=5, max_length=120, pattern=r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+        description="邮箱地址",
+    )
     password: str = Field(..., min_length=6, max_length=128, description="密码")
 
 

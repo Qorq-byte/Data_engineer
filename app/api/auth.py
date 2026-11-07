@@ -17,6 +17,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Annotated, Any
 
+from aiomysql import IntegrityError
 from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
@@ -131,10 +132,14 @@ async def register(
     """Register a new user account. Returns a JWT token on success."""
     from app.config.settings import settings
 
-    if not settings.registration_token or not secrets.compare_digest(
-        registration_token or "", settings.registration_token
+    if not settings.registration_token:
+        raise HTTPException(status_code=403, detail="注册暂未开放，请联系管理员")
+    if not secrets.compare_digest(
+        (registration_token or "").encode("utf-8"), settings.registration_token.encode("utf-8")
     ):
-        raise HTTPException(status_code=403, detail="A registration invitation is required")
+        raise HTTPException(status_code=403, detail="邀请码无效，请检查后重试")
+    if len(body.password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=422, detail="密码不能超过 72 个 UTF-8 字节")
 
     try:
         async with get_connection() as conn, conn.cursor() as cur:
@@ -168,6 +173,10 @@ async def register(
 
     except HTTPException:
         raise
+    except IntegrityError as e:
+        if e.args and e.args[0] == 1062:
+            raise HTTPException(status_code=409, detail="该邮箱或用户名已被注册") from None
+        raise HTTPException(status_code=500, detail="注册失败，请稍后重试") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail="数据库连接失败，请稍后重试") from e
 

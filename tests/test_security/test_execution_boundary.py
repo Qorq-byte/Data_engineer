@@ -81,16 +81,29 @@ def test_business_access_requires_operator():
     assert client.get("/api/v1/databases").status_code == 200
 
 
-def test_registration_requires_configured_invitation():
+@pytest.mark.parametrize(
+    ("configured", "invitation", "password", "status", "detail"),
+    [
+        (None, None, "Strong12345!", 403, "注册暂未开放"),
+        ("fixture-invite", "wrong-invite", "Strong12345!", 403, "邀请码无效"),
+        ("fixture-invite", "fixture-invite", "密" * 25, 422, "72 个 UTF-8 字节"),
+    ],
+)
+def test_registration_rejection(monkeypatch, configured, invitation, password, status, detail):
+    from app.config.settings import settings
+
+    monkeypatch.setattr(settings, "registration_token", configured)
     response = TestClient(create_app()).post(
         "/api/v1/auth/register",
+        headers={"X-Registration-Token": invitation} if invitation else {},
         json={
             "username": "uninvited",
             "email": "uninvited@example.com",
-            "password": "Strong12345!",
+            "password": password,
         },
     )
-    assert response.status_code == 403
+    assert response.status_code == status
+    assert detail in response.json()["detail"]
 
 
 def test_default_signing_secret_fails_closed(monkeypatch):
