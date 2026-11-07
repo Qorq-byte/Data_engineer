@@ -63,6 +63,8 @@ Cached structure is identified separately from fresh introspection. Syntax,
 schema references, type heuristics, declared foreign-key relationships, configured
 static business rules and actual execution have separate scopes. Undeclared or
 complex joins remain unverified. Model-requested clarifications block execution.
+Partial composite-key joins and type comparisons with diagnostic warnings remain
+unverified, even when other static checks pass.
 The legacy `confidence` field is zero, indicating no calibrated probability.
 The UI displays evidence instead of confidence percentages or a composite score.
 Static checks and successful execution do not establish business-answer accuracy.

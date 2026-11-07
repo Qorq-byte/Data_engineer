@@ -58,6 +58,8 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
   diagnostic formula and explicitly disclose incomplete verification and business semantics.
 - Preserve the single-statement read-only policy for SQL containing trailing assumption comments,
   normalize supported driver dialect aliases, and block clarification drafts from execution.
+- Keep partial composite-key relationships and type warnings explicitly unverified, and refresh
+  frozen synthetic prompt fingerprints after the prompt changes.
 - README claimed an `app/web/` Streamlit fallback UI. That directory does not exist.
 - README listed 12 API modules; there are 13 routers across 16 files.
 - README advertised 6 preset workflows with 4/3/5/5/3/4 nodes. There are 7 plan files with
