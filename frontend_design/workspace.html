@@ -768,6 +768,21 @@ const SUGGESTIONS = [
   "哪些 SKU 的库存低于安全水位？",
 ];
 
+const QueryEvidence = ({ evidence }) => {
+  if (!evidence?.checks) return <p className="text-xs text-amber-700">历史结果缺少检查依据，请重新生成验证。</p>;
+  const labels = { passed: "已通过", failed: "未通过", unverified: "未验证" };
+  return <div className="text-xs border rounded p-3 space-y-2" aria-label="SQL 检查依据">
+    <p>结构来源 {({live_schema: "实时数据库结构", cached_schema: "缓存结构", user_schema: "用户提供的结构或说明", inferred: "需求推断"})[evidence.source] || evidence.source} · 方言 {evidence.dialect}{evidence.schema_time && " · 结构采集 " + evidence.schema_time}</p>
+    {evidence.checks.map(check => <div key={check.name}>
+      <strong className={check.status === "passed" ? "text-emerald-700" : "text-amber-700"}>{check.name} · {labels[check.status] || "未验证"}</strong>
+      <p className="whitespace-pre-wrap break-words">{check.detail}</p>
+    </div>)}
+    {evidence.assumptions?.length > 0 && <div><strong>生成假设，需用户确认</strong>{evidence.assumptions.map((item, i) => <p key={i}>{item}</p>)}</div>}
+    {evidence.clarifications?.length > 0 && <div role="alert"><strong>请补充关键信息</strong>{evidence.clarifications.map((item, i) => <p key={i}>{item}</p>)}</div>}
+    <p>{evidence.score_policy}</p>
+  </div>;
+};
+
 const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -778,7 +793,9 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
   const [online, setOnline] = useState(null); // null=checking, true, false
   const [detectedDomain, setDetectedDomain] = useState(null); // auto-detected domain
   const [database, setDatabase] = useState(""); // active database for queries (empty = all databases)
-  const [dbDialect, setDbDialect] = useState("ansi"); // active DB dialect
+  const [dbDialect, setDbDialect] = useState("ansi");
+  const [schemaDdl, setSchemaDdl] = useState("");
+  const [schemaNotes, setSchemaNotes] = useState(""); // active DB dialect
   const [dbList, setDbList] = useState([]); // available databases for selector
   const [streamingText, setStreamingText] = useState(""); // SSE streaming text
   const [selectedModel, setSelectedModel] = useState(""); // "" = 跟随系统默认
@@ -937,7 +954,9 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
         session_id: run.sessionId || undefined,
         domain: domain,
         database: database,
-        dialect: database ? dbDialect : dbList[0]?.db_type || "ansi",
+        dialect: dbDialect,
+        schema_ddl: schemaDdl,
+        schema_notes: schemaNotes,
         num_candidates: 3,
         execute: !forceResult,
         validate: true,
@@ -1082,7 +1101,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                   case 'done':
                   case 'complete':
                     receivedDone = true;
-                    if (data.status === 'failed') throw new Error((data.errors || []).join('; ') || '查询失败');
+                    if (data.status === 'failed' && !data.primary_sql) throw new Error((data.errors || []).join('; ') || '查询失败');
                     if (data.validation) collected.validation = data.validation;
                     if (data.execution) collected.execution = data.execution;
                     if (data.warnings) collected.warnings = data.warnings;
@@ -1468,7 +1487,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                             "flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg",
                             msg.source === 'domain' && "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
                             msg.source === 'rag' && "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400",
-                            msg.source === 'llm_auto' && "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
+                            ["llm_auto", "inferred", "user_schema"].includes(msg.source) && "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
                           )}>
                             <IconAlert className="h-3.5 w-3.5 flex-shrink-0" />
                             <span>{msg.sourceNote}</span>
@@ -1490,23 +1509,9 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                               {c.generation_mode && c.generation_mode.startsWith('alt_') && (
                                 <span className="text-[10px] bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 px-1.5 py-0.5 rounded-full">备选 {c.generation_mode.replace('alt_', '')}</span>
                               )}
-                              {c.confidence > 0 && (
-                                <span className="text-[10px] text-neutral-400">置信度: {(c.confidence * 100).toFixed(0)}%</span>
-                              )}
                             </div>
                             <SqlCard sql={c.sql_text} dialect={c.dialect || 'ansi'} onSendToWorkbench={onSendToWorkbench} />
-                            {/* Per-candidate validation */}
-                            {c.validation && (
-                              <div className="ml-4 flex items-center gap-2 text-[11px]">
-                                <span className={cn("w-1.5 h-1.5 rounded-full", c.validation.passed ? "bg-emerald-500" : "bg-red-400")} />
-                                <span className="text-neutral-500">验证{c.validation.passed ? '通过' : '未通过'} · 评分 {c.validation.score?.toFixed(2)}</span>
-                                {[['syntax_ok', '语法'], ['schema_valid', 'Schema'], ['type_valid', '类型']].map(([k, l]) => (
-                                  <span key={k} className={cn("px-1.5 py-0.5 rounded text-[10px]", c.validation[k] ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" : "bg-red-50 dark:bg-red-500/10 text-red-500")}>
-                                    {c.validation[k] ? '✓' : '✗'} {l}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
+                            <QueryEvidence evidence={c.evidence} />
                             {/* Per-candidate execution */}
                             {c.execution && c.execution.rows && c.execution.rows.length > 0 && (
                               <div className="ml-4">
@@ -1577,25 +1582,6 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                         {/* Primary SQL (fallback if no candidates) */}
                         {(!msg.candidates || msg.candidates.length === 0) && msg.primarySql && (
                           <SqlCard sql={msg.primarySql} dialect="ansi" onSendToWorkbench={onSendToWorkbench} />
-                        )}
-
-                        {/* Validation */}
-                        {msg.validation && (
-                          <Card className="p-3.5">
-                            <div className="flex items-center gap-2 mb-2">
-                              <span className={cn("w-1.5 h-1.5 rounded-full", msg.validation.passed ? "bg-emerald-500" : "bg-red-400")} />
-                              <span className="text-xs font-medium text-neutral-500 uppercase tracking-wider">
-                                验证 {msg.validation.passed ? '通过' : '未通过'} · 评分 {msg.validation.score?.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 text-[11px]">
-                              {[['syntax_ok', '语法'], ['schema_valid', 'Schema'], ['type_valid', '类型']].map(([k, l]) => (
-                                <div key={k} className={cn("flex items-center gap-1 px-2 py-1 rounded", msg.validation[k] ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600" : "bg-red-50 dark:bg-red-500/10 text-red-500")}>
-                                  {msg.validation[k] ? <IconCheck className="h-3 w-3" /> : <IconAlert className="h-3 w-3" />} {l}
-                                </div>
-                              ))}
-                            </div>
-                          </Card>
                         )}
 
                         {/* Execution result */}
@@ -1738,6 +1724,21 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
               </select>
             </div>
           )}
+          <details className="mb-2 text-xs">
+            <summary className="cursor-pointer">SQL 生成选项 · 方言 {dbList.length ? "跟随数据库" : dbDialect}</summary>
+            <label className="block my-2">未连接数据库时采用的方言
+              <select aria-label="SQL 方言" value={dbDialect} onChange={e => setDbDialect(e.target.value)} className="ml-2">
+                {["ansi", "mysql", "postgres", "sqlite", "duckdb", "bigquery", "snowflake", "redshift", "clickhouse", "databricks", "trino"].map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </label>
+            <label className="block my-2">建表语句（仅解析结构）
+              <textarea aria-label="用户 Schema DDL" value={schemaDdl} onChange={e => setSchemaDdl(e.target.value)} className="block w-full border rounded p-2 bg-transparent" placeholder="CREATE TABLE orders (...);" />
+            </label>
+            <label className="block my-2">表字段说明与业务口径
+              <textarea aria-label="表字段说明" value={schemaNotes} onChange={e => setSchemaNotes(e.target.value)} className="block w-full border rounded p-2 bg-transparent" placeholder="说明字段含义、关联条件、时区和统计口径" />
+            </label>
+            <p>连接数据库时以实际数据库结构和方言为准。未连接时可直接生成 SQL。</p>
+          </details>
           {/* Model selector */}
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[11px] text-neutral-400">模型:</span>
@@ -3469,7 +3470,7 @@ const LearningPanel = () => {
                     <p className="text-neutral-900 dark:text-neutral-100 text-sm font-medium m-0 mb-1">{c.description}</p>
                     <div className="flex items-center gap-2 text-xs text-neutral-400 mb-2">
                       <span className="font-mono bg-gray-50 dark:bg-neutral-800 px-1.5 py-0.5 rounded">模式: {c.pattern}</span>
-                      <span>置信度: {(c.confidence * 100).toFixed(0)}%</span>
+                      <span>历史候选 · 无经校准的正确概率</span>
                       <span>来源数: {c.source_count}</span>
                     </div>
                     <div className="bg-gray-50 dark:bg-neutral-800 rounded p-2 text-xs font-mono text-neutral-600 dark:text-neutral-400 mb-3">
