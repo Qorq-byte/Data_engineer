@@ -768,7 +768,7 @@ const SUGGESTIONS = [
   "哪些 SKU 的库存低于安全水位？",
 ];
 
-const ChatPanel = ({ userName, onSendToWorkbench }) => {
+const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [cmds, setCmds] = useState([]);
@@ -792,63 +792,70 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   const [candFeedback, setCandFeedback] = useState({});
   const [showHistory, setShowHistory] = useState(false); // history sidebar toggle
   const [history, setHistory] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nl2sql_query_history') || '[]'); } catch(e) { return []; }
+    try {
+      const entries = JSON.parse(localStorage.getItem('nl2sql_query_history') || '[]');
+      return Array.isArray(entries) ? entries : [];
+    } catch(e) { return []; }
   });
   const scrollRef = useRef(null);
-  const streamRef = useRef(null); // AbortController for SSE
+  const streamRef = useRef(null); // The query attached to the visible conversation
+  const inFlight = useRef(new Set());
   const sessionRef = useRef("");
-  const generationRef = useRef(0);
-  const cancelQuery = () => {
-    generationRef.current += 1;
-    streamRef.current?.abort();
+  const detachQuery = () => {
+    if (streamRef.current) streamRef.current.messages = messages;
     streamRef.current = null;
     setPending(null);
     setStreamingText("");
   };
+  const cancelQuery = () => {
+    streamRef.current?.controller.abort();
+    detachQuery();
+  };
   useEffect(() => () => {
-    generationRef.current += 1;
-    streamRef.current?.abort();
+    inFlight.current.forEach(controller => controller.abort());
   }, []);
   const composingRef = useRef(false); // IME composition state
   const notify = useNotify();
 
   // ── History helpers ──
-  const saveToHistory = (msgs, queryText, domain) => {
-    if (msgs.length === 0) return;
+  useEffect(() => {
+    try {
+      if (history.length) localStorage.setItem('nl2sql_query_history', JSON.stringify(history));
+      else localStorage.removeItem('nl2sql_query_history');
+    } catch(e) {}
+  }, [history]);
+
+  const saveToHistory = (run, msg, queryText, domain) => {
+    const msgs = [...run.messages, msg];
     const entry = {
-      id: Date.now().toString(36),
+      id: run.historyId,
       time: new Date().toLocaleString('zh-CN'),
-      queryText: queryText || msgs.find(m => m.role === 'user')?.text || '',
-      domain: domain || detectedDomain || '',
-      sessionId: sessionRef.current,
+      queryText,
+      domain,
+      sessionId: run.sessionId,
       messageCount: msgs.length,
       messages: msgs,
     };
-    const updated = [entry, ...history].slice(0, 50); // keep last 50
-    setHistory(updated);
-    try { localStorage.setItem('nl2sql_query_history', JSON.stringify(updated)); } catch(e) {}
+    setHistory(entries => [entry, ...entries].slice(0, 50));
   };
 
   const loadHistory = (entry) => {
-    cancelQuery();
+    detachQuery();
     sessionRef.current = entry.sessionId || "";
     setMessages(entry.messages || []);
-    if (entry.domain) setDetectedDomain(entry.domain);
+    setDetectedDomain(entry.domain || null);
     setShowHistory(false);
     notify("已加载历史对话", 'ok', 2000);
   };
 
   const deleteHistory = (id) => {
-    const updated = history.filter(h => h.id !== id);
-    setHistory(updated);
-    try { localStorage.setItem('nl2sql_query_history', JSON.stringify(updated)); } catch(e) {}
+    setHistory(entries => entries.filter(h => h.id !== id));
     notify("已删除历史记录", 'ok', 2000);
   };
 
   const clearHistory = () => {
     if (!confirm('确定要清空所有历史查询吗？')) return;
     setHistory([]);
-    try { localStorage.removeItem('nl2sql_query_history'); } catch(e) {}
     notify("已清空所有历史", 'ok', 2000);
   };
 
@@ -859,25 +866,28 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
   ];
 
   useEffect(() => {
-    api.isOnline().then(setOnline);
-    api._fetch('/health/ready').then(setReadiness).catch(e => setReadiness(e.body || { status: 'unavailable' }));
+    if (!active) return;
+    let current = true;
+    api.isOnline().then(value => { if (current) setOnline(value); });
+    api._fetch('/health/ready').then(value => {
+      if (current) setReadiness(value);
+    }).catch(e => { if (current) setReadiness(e.body || { status: 'unavailable' }); });
     // Fetch available databases for query execution
     api.databases().then(data => {
-      const dbs = data.databases || [];
-      setDbList(dbs);
-      if (dbs.length > 0) { setDbDialect(dbs[0].db_type || "ansi"); }
+      if (current) setDbList(data.databases || []);
       // Don't auto-select a specific database — default to all databases
     }).catch(() => {});
     // Fetch user-configured LLM models for the model selector
     api._fetch('/api/v1/settings/available-models').then(r => {
-      if (r && r.models) setChatModels(r.models.filter(m => m.available));
+      if (current && r && r.models) setChatModels(r.models.filter(m => m.available));
     }).catch(() => {});
-  }, []);
+    return () => { current = false; };
+  }, [active]);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, pending, streamingText]);
+    if (active && el) el.scrollTop = el.scrollHeight;
+  }, [active, messages, pending, streamingText]);
 
   // ── Auto-detect domain from NL text ──
   const detectDomain = async (text, isCurrent, signal) => {
@@ -892,25 +902,42 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
   // ── Run the real pipeline via API (with SSE streaming) ──
   const WORKFLOW_STAGES = ["parse", "retrieve", "generate", "validate", "execute"];
-  const runPipeline = async (text, forceResult) => {
-    cancelQuery();
-    const generation = generationRef.current;
+  const runPipeline = async (text, forceResult, conversation) => {
     const controller = new AbortController();
-    streamRef.current = controller;
-    const isCurrent = () => generationRef.current === generation && !controller.signal.aborted;
+    const run = {
+      controller,
+      messages: conversation,
+      sessionId: sessionRef.current,
+      historyId: Array.from(crypto.getRandomValues(new Uint32Array(4))).join('-'),
+    };
+    streamRef.current = run;
+    inFlight.current.add(controller);
+    const isForeground = () => streamRef.current === run;
+    const updateProgress = value => { if (isForeground()) setPending(value); };
+    const updatePreview = value => { if (isForeground()) setStreamingText(value); };
+    const updateSession = value => {
+      if (!value) return;
+      run.sessionId = value;
+      if (isForeground()) sessionRef.current = value;
+    };
+    let domain = "";
+    const finish = msg => {
+      saveToHistory(run, msg, text, domain);
+      if (isForeground()) setMessages(m => [...m, msg]);
+    };
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 130000);
     setPending({ step: -1, statuses: {} });
     setStreamingText("");
     try {
-      const domain = await detectDomain(text, isCurrent, controller.signal);
-      if (!isCurrent()) return;
+      domain = await detectDomain(text, isForeground, controller.signal);
+      controller.signal.throwIfAborted();
       const body = {
         nl_text: text,
-        session_id: sessionRef.current || undefined,
+        session_id: run.sessionId || undefined,
         domain: domain,
         database: database,
-        dialect: dbDialect || "ansi",
+        dialect: database ? dbDialect : dbList[0]?.db_type || "ansi",
         num_candidates: 3,
         execute: !forceResult,
         validate: true,
@@ -949,7 +976,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
         while (true) {
           const { done, value } = await reader.read();
-          if (!isCurrent()) return;
+          controller.signal.throwIfAborted();
           if (done) break;
           buf += decoder.decode(value, { stream: true });
           const lines = buf.split('\n');
@@ -964,7 +991,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
               if (!dataStr) continue;
               try {
                 const data = JSON.parse(dataStr);
-                if (data.session_id) sessionRef.current = data.session_id;
+                updateSession(data.session_id);
 
                 switch (currentEvent) {
                   case 'workflow_start':
@@ -975,7 +1002,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                   case 'stage':
                     const stageIdx = WORKFLOW_STAGES.indexOf(data.stage);
                     if (stageIdx >= 0) {
-                      setPending(p => ({ step: stageIdx, statuses: { ...p?.statuses, [data.stage]: data.skipped ? 'skipped' : data.status } }));
+                      updateProgress(p => ({ step: stageIdx, statuses: { ...p?.statuses, [data.stage]: data.skipped ? 'skipped' : data.status } }));
                     }
                     collected.stageHistory.push({ type: 'stage', ...data });
                     break;
@@ -999,7 +1026,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                   case 'token':
                     if (data.text) {
                       collected.sql += data.text;
-                      setStreamingText(collected.sql);
+                      updatePreview(collected.sql);
                     }
                     break;
                   case 'candidate':
@@ -1017,7 +1044,7 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                     collected.candidates.push(candData);
                     if (candData.sql_text) {
                       collected.sql = candData.sql_text;
-                      setStreamingText(candData.sql_text);
+                      updatePreview(candData.sql_text);
                     }
                     break;
                   case 'validation':
@@ -1055,7 +1082,6 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                   case 'done':
                   case 'complete':
                     receivedDone = true;
-                    if (data.session_id) sessionRef.current = data.session_id;
                     if (data.status === 'failed') throw new Error((data.errors || []).join('; ') || '查询失败');
                     if (data.validation) collected.validation = data.validation;
                     if (data.execution) collected.execution = data.execution;
@@ -1078,10 +1104,10 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
                     if (data.tables) collected.tables = data.tables;
                     if (data.primary_sql) {
                       collected.sql = data.primary_sql;
-                      setStreamingText(data.primary_sql);
+                      updatePreview(data.primary_sql);
                     } else if (data.text) {
                       collected.sql += data.text;
-                      setStreamingText(collected.sql);
+                      updatePreview(collected.sql);
                     }
                 }
               } catch(e) {
@@ -1094,8 +1120,6 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
         }
 
         if (!receivedDone) throw new Error('查询连接中断，未收到完成状态，请确认后重试');
-        setPending(null);
-        setStreamingText("");
 
         if (collected.sql) {
           const msg = {
@@ -1123,17 +1147,17 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
             source: collected.source,
             sourceNote: collected.sourceNote,
           };
-          setMessages(m => { const updated = [...m, msg]; saveToHistory(updated, text, domain); return updated; });
+          finish(msg);
           return;
         }
 
         // Handle "no relevant data" response from backend
         if (collected.message) {
-          setMessages(m => [...m, {
+          finish({
             role: "assistant",
             kind: "error",
             text: collected.message,
-          }]);
+          });
           return;
         }
       } catch(streamErr) {
@@ -1142,29 +1166,27 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
       throw new Error('服务未返回查询结果');
     } catch (e) {
-      if (generationRef.current !== generation) return;
-      setPending(null);
-      setStreamingText("");
-      if (e.name === 'AbortError' && !timedOut) return;
+      if (controller.signal.aborted && !timedOut) return;
       if (timedOut) e = new Error('请求超过 130 秒，已停止等待；请检查后端状态后重试');
       if (e.message === 'API_OFFLINE' || e.code === 'API_OFFLINE') {
-        setMessages(m => [...m, { role: "assistant", kind: "error", text: "API 离线，请恢复连接后重试" }]);
+        finish({ role: "assistant", kind: "error", text: "API 离线，请恢复连接后重试" });
       } else if (e.message === 'API_TIMEOUT' || e.code === 'API_TIMEOUT') {
-        notify("请求超时，请检查网络连接", 'error', 4000);
-        setMessages(m => [...m, {
+        if (isForeground()) notify("请求超时，请检查网络连接", 'error', 4000);
+        finish({
           role: "assistant", kind: "error",
           text: `请求超时 — 请检查网络连接后重试`,
-        }]);
+        });
       } else {
-        notify(`查询失败: ${e.message}`, 'error', 5000);
-        setMessages(m => [...m, {
+        if (isForeground()) notify(`查询失败: ${e.message}`, 'error', 5000);
+        finish({
           role: "assistant", kind: "error",
           text: `查询失败: ${e.message}`,
-        }]);
+        });
       }
     } finally {
       clearTimeout(timer);
-      if (generationRef.current === generation) {
+      inFlight.current.delete(controller);
+      if (isForeground()) {
         streamRef.current = null;
         setPending(null);
         setStreamingText("");
@@ -1174,8 +1196,10 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
 
 
   const ask = (text, forceResult) => {
-    setMessages(m => [...m, { role: "user", text }]);
-    runPipeline(text, forceResult);
+    if (streamRef.current) return;
+    const conversation = [...messages, { role: "user", text }];
+    setMessages(conversation);
+    runPipeline(text, forceResult, conversation);
   };
 
   const handleSend = () => {
@@ -1312,7 +1336,18 @@ const ChatPanel = ({ userName, onSendToWorkbench }) => {
         <button className={cn("btn-outline flex items-center gap-1", showHistory && "active")} onClick={() => setShowHistory(!showHistory)} title="历史查询">
           <IconClock className="h-3.5 w-3.5" /> 历史{history.length > 0 && ` (${history.length})`}
         </button>
-        <button className="btn-outline" onClick={() => { cancelQuery(); sessionRef.current = ""; setMessages([]); notify("已清空对话", 'ok', 2000); }} title="新建对话">
+        <button className="btn-outline" onClick={() => {
+          detachQuery();
+          sessionRef.current = "";
+          setMessages([]);
+          setDetectedDomain(null);
+          setInput("");
+          setCmds([]);
+          setCmdOpen(false);
+          setEditingSqlIdx(-1);
+          setEditingCandKey(null);
+          setCandFeedback({});
+        }} title="新建对话">
           + 新对话
         </button>
       </PanelHeader>
@@ -5273,7 +5308,6 @@ const App = () => {
 
   const renderPanel = () => {
     switch (activePanel) {
-      case "query":     return <ChatPanel key={panelRefreshKey} userName={userName} onSendToWorkbench={handleSendToWorkbench} />;
       case "schema":    return <SchemaPanel key={dbVersion} />;
       case "connect":   return <ConnectPanel onDbChange={bumpDb} />;
       case "domain":    return <DomainPanel />;
@@ -5333,11 +5367,15 @@ const App = () => {
       <div className="flex flex-1 min-w-0 min-h-0">
         <div
           className="p-2 md:p-8 md:rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col flex-1 w-full min-w-0 min-h-0 overflow-hidden"
-          key={activePanel}
         >
-          <div className="panel-enter flex flex-col flex-1 min-h-0 overflow-auto">
-            {renderPanel()}
+          <div className={activePanel === "query" ? "flex flex-col flex-1 min-h-0 overflow-auto" : "hidden"}>
+            <ChatPanel active={activePanel === "query"} userName={userName} onSendToWorkbench={handleSendToWorkbench} />
           </div>
+          {activePanel !== "query" && (
+            <div key={activePanel} className="panel-enter flex flex-col flex-1 min-h-0 overflow-auto">
+              {renderPanel()}
+            </div>
+          )}
         </div>
       </div>
     </div>
