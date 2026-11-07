@@ -110,6 +110,13 @@ class ValidateSQLNode(AgenticNode):
             )
 
         perf_warnings = report.plan_analysis.warnings if report.plan_analysis else []
+        clarification = any(
+            line.strip().startswith("-- CLARIFICATION:") for line in sql.splitlines()
+        )
+        if clarification:
+            report.passed = False
+            report.score = 0.0
+            report.warnings.append("需求或结构信息不足，请补充 CLARIFICATION 指定的信息")
 
         return NodeOutput(
             result={
