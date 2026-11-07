@@ -20,7 +20,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi import Path as PathParam
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
-from pydantic import AliasChoices, BaseModel, Field
+from pydantic import AliasChoices, BaseModel, Field, ValidationInfo, field_validator
 
 from app.db.connections import ConnectionFactory
 from app.db.query_targets import resolve_query_targets
@@ -263,7 +263,7 @@ def _detect_metadata_query(
             SQLCandidate(
                 id=f"cand_{uuid.uuid4().hex[:8]}",
                 sql_text=sql,
-                confidence=0.95,
+                confidence=0.0,
                 generation_mode="metadata_query",
                 generation_source="prepared",
                 dialect=db_type,
@@ -287,6 +287,35 @@ class QueryRequest(BaseModel):
     domain: str = Field(default="default", description="Domain name (e.g., ecommerce)")
     database: str = Field(default="", description="Database identifier")
     dialect: str = Field(default="ansi", description="SQL dialect")
+    schema_ddl: str = Field(default="", max_length=50000, description="User supplied CREATE TABLE")
+    schema_notes: str = Field(default="", max_length=10000, description="Table/field descriptions")
+
+    @field_validator("dialect")
+    @classmethod
+    def supported_dialect(cls, value: str) -> str:
+        import sqlglot
+
+        from app.db.dialect_adapter import PRESET_DIALECTS
+
+        dialect = value.strip().lower()
+        if dialect in {"", "ansi", "standard", "sql", "generic"}:
+            return "ansi"
+        preset = PRESET_DIALECTS.get(dialect)
+        dialect = preset.dialect if preset else dialect
+        sqlglot.Dialect.get_or_raise(dialect)
+        return dialect
+
+    @field_validator("schema_ddl")
+    @classmethod
+    def valid_declarations(cls, value: str, info: ValidationInfo) -> str:
+        from app.core.query_evidence import supplied_schema
+
+        if value.strip():
+            try:
+                supplied_schema(value, info.data.get("dialect", "ansi"))
+            except Exception as exc:
+                raise ValueError("请提供可解析的 CREATE TABLE 声明") from exc
+        return value
     num_candidates: int = Field(default=3, ge=1, le=5, description="Number of SQL candidates")
     execute: bool = Field(default=False, description="Execute the generated SQL")
     run_validation: bool = Field(
@@ -307,6 +336,7 @@ class CandidateResult(BaseModel):
     id: str
     sql_text: str
     confidence: float
+    evidence: dict[str, Any] = Field(default_factory=dict)
     generation_mode: str
     dialect: str | None = None
     database_name: str = ""

@@ -107,6 +107,11 @@ class GenerateSQLNode(AgenticNode):
             sqr = SQR(raw_text=input.query_text)
 
         schema = input.context.get("linked_schema") or input.context.get("schema")
+        notes = input.config.get("schema_notes", "")
+        if notes:
+            sqr = replace(
+                sqr, raw_text=sqr.raw_text + "\n用户提供的表字段说明（优先依据）\n" + notes,
+            )
         domain = input.context.get("domain")
         history = input.context.get("history")
         similar_pairs = input.context.get("similar_pairs")
@@ -189,7 +194,7 @@ class GenerateSQLNode(AgenticNode):
                             SQLCandidate(
                                 id=f"cand_{_uuid.uuid4().hex[:8]}",
                                 sql_text=alt_sql,
-                                confidence=max(0.85 - j * 0.12, 0.3),
+                                confidence=0.0,
                                 generation_mode=mode,
                                 dialect=dialect or "ansi",
                                 model=model or self.router.config.default_model,
@@ -202,7 +207,7 @@ class GenerateSQLNode(AgenticNode):
                     candidate = SQLCandidate(
                         id=f"cand_{_uuid.uuid4().hex[:8]}",
                         sql_text=sql_text,
-                        confidence=0.85,
+                        confidence=0.0,
                         generation_mode="stream",
                         dialect=dialect or "ansi",
                         model=model or self.router.config.default_model,

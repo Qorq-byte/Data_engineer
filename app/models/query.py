@@ -111,6 +111,7 @@ class SQLCandidate:
         "model_response", "model_stream", "prepared", "stream_text", "unknown"
     ] = "unknown"
     finish_reason: Literal["stop"] | None = None
+    evidence: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

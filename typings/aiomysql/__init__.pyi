@@ -30,6 +30,7 @@ class _ConnectionOptions(TypedDict, total=False):
     ssl: SSLContext | None
 
 class Error(Exception): ...
+class IntegrityError(Error): ...
 
 class Cursor(Generic[_RowT]):
     rowcount: int

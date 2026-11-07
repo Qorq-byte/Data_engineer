@@ -211,11 +211,18 @@ function Toast({ message, onClose }) {
 /* ================================================================================================
    LoginForm — Email / Password / Let's go!
    ================================================================================================ */
-function LoginForm({ onSuccess }) {
+function LoginForm({ onSuccess, registeredEmail }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  useEffect(() => {
+    if (registeredEmail) {
+      setEmail(registeredEmail);
+      setPassword('');
+      setError('');
+    }
+  }, [registeredEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -296,30 +303,36 @@ function RegisterForm({ onSuccess }) {
     e.preventDefault();
     setError('');
 
+    const invite = invitation.trim();
+    if (!/^[!-~]+$/.test(invite)) { setError('请输入有效的邀请码'); return; }
     if (!username.trim()) { setError('请输入用户名'); return; }
     if (username.trim().length < 2) { setError('用户名至少需要 2 个字符'); return; }
     if (!email.trim()) { setError('请输入邮箱地址'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError('请输入有效的邮箱地址'); return; }
     if (!password) { setError('请输入密码'); return; }
     if (password.length < 6) { setError('密码至少需要 6 个字符'); return; }
+    if (new TextEncoder().encode(password).length > 72) { setError('密码不能超过 72 个 UTF-8 字节'); return; }
     if (password !== confirm) { setError('两次输入的密码不一致'); return; }
 
     setLoading(true);
     try {
       const res = await fetch(`${API}/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Registration-Token': invitation },
+        headers: { 'Content-Type': 'application/json', 'X-Registration-Token': invite },
         body: JSON.stringify({ username: username.trim(), email: email.trim(), password }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.detail?.message || (typeof data.detail === 'string' ? data.detail : '') || '注册失败');
+        setError(typeof data.detail === 'string' ? data.detail :
+          res.status === 422 ? '注册信息不符合要求，请检查用户名、邮箱和密码' : '注册失败，请稍后重试');
         setLoading(false);
         return;
       }
-      localStorage.setItem('nl2sql_token', data.access_token);
-      localStorage.setItem('nl2sql_user', JSON.stringify(data.user));
-      onSuccess('注册成功！正在跳转…');
+      setLoading(false);
+      setInvitation('');
+      setPassword('');
+      setConfirm('');
+      onSuccess(email.trim());
     } catch {
       setError('无法连接到服务器，请检查后端是否启动');
       setLoading(false);
@@ -341,6 +354,7 @@ function RegisterForm({ onSuccess }) {
           aria-label="Username" placeholder="Username"
           value={username}
           onChange={e => setUsername(e.target.value)}
+          maxLength={50}
           autoComplete="username"
         />
         <input
@@ -349,6 +363,7 @@ function RegisterForm({ onSuccess }) {
           aria-label="Email" placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
+          maxLength={120}
           autoComplete="email"
         />
         <input
@@ -381,18 +396,18 @@ function RegisterForm({ onSuccess }) {
 /* ================================================================================================
    FlipCard — 3D flip container driven by the mode toggle
    ================================================================================================ */
-function FlipCard({ mode, onSuccess }) {
+function FlipCard({ mode, onLogin, onRegister, registeredEmail }) {
   const flipped = mode === 'signup';
   return (
     <div className="flip-container">
       <div className={`flip-inner${flipped ? ' flipped' : ''}`}>
         {/* Front — Log in */}
         <div className="flip-face brutal-card px-8 py-10 sm:px-10" inert={flipped ? "" : undefined} aria-hidden={flipped}>
-          <LoginForm onSuccess={onSuccess} />
+          <LoginForm onSuccess={onLogin} registeredEmail={registeredEmail} />
         </div>
         {/* Back — Sign up */}
         <div className="flip-face flip-back brutal-card px-8 py-10 sm:px-10" inert={!flipped ? "" : undefined} aria-hidden={!flipped}>
-          <RegisterForm onSuccess={onSuccess} />
+          <RegisterForm onSuccess={onRegister} />
         </div>
       </div>
     </div>
@@ -403,8 +418,20 @@ function FlipCard({ mode, onSuccess }) {
    APP
    ================================================================================================ */
 function App() {
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(() => window.location.pathname === '/register' ? 'signup' : 'login');
   const [toast, setToast] = useState(null);
+  const [registeredEmail, setRegisteredEmail] = useState('');
+
+  const changeMode = nextMode => {
+    setMode(nextMode);
+    window.history.replaceState(null, '', nextMode === 'signup' ? '/register' : '/login');
+  };
+
+  const handleRegistration = email => {
+    setRegisteredEmail(email);
+    setToast({ message: '注册成功，请使用新账号登录。业务访问由管理员授权。' });
+    changeMode('login');
+  };
 
   const handleSuccess = useCallback((msg) => {
     setToast({ message: msg });
@@ -448,7 +475,7 @@ function App() {
         <button
           type="button"
           className={`mode-label${mode === 'login' ? ' active' : ''}`}
-          onClick={() => setMode('login')}
+          onClick={() => changeMode('login')}
         >
           Log in
         </button>
@@ -456,21 +483,21 @@ function App() {
           type="button"
           aria-label="切换登入/注册"
           className={`switch-track${mode === 'signup' ? ' on' : ''}`}
-          onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
+          onClick={() => changeMode(mode === 'login' ? 'signup' : 'login')}
         >
           <span className="switch-knob"></span>
         </button>
         <button
           type="button"
           className={`mode-label${mode === 'signup' ? ' active' : ''}`}
-          onClick={() => setMode('signup')}
+          onClick={() => changeMode('signup')}
         >
           Sign up
         </button>
       </div>
 
       {/* Flip card */}
-      <FlipCard mode={mode} onSuccess={handleSuccess} />
+      <FlipCard mode={mode} onLogin={handleSuccess} onRegister={handleRegistration} registeredEmail={registeredEmail} />
 
       {/* Toast */}
       {toast && <Toast message={toast.message} onClose={() => setToast(null)} />}

@@ -41,6 +41,7 @@ def register_frontend(app: FastAPI, directory: Path | None = None) -> None:
         return page("landing_page.html")
 
     @app.get("/login", include_in_schema=False, response_model=None)
+    @app.get("/register", include_in_schema=False, response_model=None)
     async def login_page() -> FileResponse | JSONResponse:
         return page("form.html")
 
