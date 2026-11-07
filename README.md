@@ -40,6 +40,38 @@ this repository treats "the LLM thought it was a good idea" as a control-flow pr
 
 ## Core Features
 
+The workbench retains the current conversation, rendered messages and running SSE
+request when switching modules. “+ 新对话” opens a blank conversation. A detached
+request finishes into its original history entry, including failures, without
+resubmitting or placing a late response into the new conversation.
+
+The login page links to `/register`. Registration requires the administrator's
+`REGISTRATION_TOKEN` invitation and returns to login with the new email filled in.
+Invalid invitations, duplicate accounts and invalid input show explicit errors.
+New accounts can log in, with business access governed by the existing operator allow-list.
+
+SQL generation works with or without a query database. In the workbench, expand
+“SQL 生成选项” to choose an offline dialect and provide CREATE TABLE declarations
+or field descriptions. The JSON and SSE query endpoints accept the same
+`schema_ddl` and `schema_notes` fields. Connected targets use their own dialect and
+introspected structure. Without a target, execution is skipped and the result is
+marked as user-supplied structure or inferred, with an explicit unverified warning.
+
+Each candidate exposes `evidence` with its structure source, capture time, dialect,
+assumptions, clarification requests and individual passed/failed/unverified checks.
+Cached structure is identified separately from fresh introspection. Syntax,
+schema references, type heuristics, declared foreign-key relationships, configured
+static business rules and actual execution have separate scopes. Undeclared or
+complex joins remain unverified. Model-requested clarifications block execution.
+The legacy `confidence` field is zero, indicating no calibrated probability.
+The UI displays evidence instead of confidence percentages or a composite score.
+Static checks and successful execution do not establish business-answer accuracy.
+For compatibility, `validation.score` remains a diagnostic for performed static
+checks. It is zero on a blocking failure, otherwise
+`max(0.5, 1 - 0.05 * H - 0.02 * S)`, where H counts syntax/schema/type diagnostics
+and S counts performance/business-rule diagnostics. Skipped checks contribute
+no diagnostics. This metric does not measure coverage or SQL correctness.
+
 Status reflects running code, not design documents. `Implemented` means the path is wired and
 covered by tests; `Partial` means the code exists but a documented part of the surface does not
 work or is not reachable from the request path.
