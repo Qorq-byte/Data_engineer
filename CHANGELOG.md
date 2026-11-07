@@ -10,6 +10,13 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Added
 
+- SQL generation accepts user-provided CREATE TABLE declarations, field descriptions and an
+  offline dialect, while connected targets retain their introspected structure and dialect.
+- Per-candidate SQL evidence identifies live, cached, user-supplied and inferred structure,
+  assumptions, clarification requests, static checks and actual execution outcomes.
+- JSON/SSE regression cases cover offline generation, provided structure, complex queries,
+  missing columns, metadata failures, execution errors and dialect aliases.
+
 - `LICENSE` (MIT, 2026 Majiaqi). The README already claimed MIT; GitHub could not detect it without
   the file.
 - `CONTRIBUTING.md`: environment setup, branch model, Conventional Commits, pull-request checklist,
@@ -43,6 +50,14 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Fixed
 
+- Keep smart-query conversations and in-flight requests across module navigation. New
+  conversations isolate late responses and preserve the original conversation's history.
+- Restore the registration route and login-page entry, return successful signups to login,
+  and report invalid invitations, duplicate accounts and UTF-8 password length errors.
+- Replace SQL confidence percentages with performed-check evidence. Document the legacy static
+  diagnostic formula and explicitly disclose incomplete verification and business semantics.
+- Preserve the single-statement read-only policy for SQL containing trailing assumption comments,
+  normalize supported driver dialect aliases, and block clarification drafts from execution.
 - README claimed an `app/web/` Streamlit fallback UI. That directory does not exist.
 - README listed 12 API modules; there are 13 routers across 16 files.
 - README advertised 6 preset workflows with 4/3/5/5/3/4 nodes. There are 7 plan files with
