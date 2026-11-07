@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from app.audit.store import UsageAuditStore
+from app.core.query_evidence import candidate_evidence, supplied_schema
+from app.core.sql_validator import SQLValidator
 from app.db.query_targets import resolve_query_targets
 from app.harness.config_loader import ConfigLoader
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
@@ -213,11 +215,22 @@ async def _run_query(
         db_id: (target.schema, target.database_name, target.dialect)
         for db_id, target in resolved_targets.items()
     }
+    user_schema = None
+    ddl = getattr(body, "schema_ddl", "").strip()
+    notes = getattr(body, "schema_notes", "").strip()
+    if ddl and not schemas:
+        try:
+            user_schema = supplied_schema(ddl, body.dialect)
+        except Exception as exc:
+            # Reject malformed declarations instead of silently inventing a replacement.
+            raise ValueError("用户提供的表结构无法解析，请检查 CREATE TABLE 声明") from exc
     if not schemas:
         warnings.append("No connected schema; generated SQL is not an executed database answer")
-    source = "database" if schemas else ("domain" if domain else "llm_auto")
+    source = "database" if schemas else ("user_schema" if ddl or notes else "inferred")
     source_note = (
-        "" if schemas else "SQL is based on domain/model knowledge; no connected database result"
+        "依据所选数据库结构；缓存命中与验证范围见候选检查依据" if schemas else
+        "依据用户提供的结构或说明生成，未经真实数据库验证" if ddl or notes else
+        "基于需求推断生成，未经真实数据库验证"
     )
     session, session_revision = await _load_query_session(session_id)
     history = [{"nl_input": t["nl_input"], "sql": t["sql"]} for t in session["turns"][-8:]]
@@ -250,11 +263,12 @@ async def _run_query(
         targets: list[tuple[str, tuple[SchemaSnapshot | None, str, str]]] = [
             (db_id, (schema, db_name, dialect))
             for db_id, (schema, db_name, dialect) in schemas.items()
-        ] or [("", (None, "", body.dialect))]
+        ] or [("", (user_schema, "", body.dialect))]
         for db_id, (schema, db_name, dialect) in targets:
+            execution_error = ""
             metadata = (
                 _detect_metadata_query(body.nl_text, {db_id: (schema, db_name, dialect)})
-                if schema
+                if schema and db_id
                 else None
             )
             registry = NodeRegistry()
@@ -286,6 +300,7 @@ async def _run_query(
                     "dialect": dialect,
                     "database_name": db_name,
                     "prepared_candidates": metadata,
+                    "schema_notes": notes,
                 }
             )
             node_configs["validate"].update(
@@ -306,6 +321,7 @@ async def _run_query(
             async def on_node_event(
                 status: NodeEventStatus, data: NodeEvent, target_db_id: str = db_id
             ) -> None:
+                nonlocal execution_error
                 node_id = data["node_id"]
                 stage = {
                     "parse": "parse",
@@ -315,6 +331,11 @@ async def _run_query(
                     "exec": "execute",
                 }[node_id]
                 output = data.get("output")
+                if (
+                    node_id == "exec" and output and output.errors
+                    and output.metadata.get("status") == "execution_error"
+                ):
+                    execution_error = "; ".join(output.errors)
                 await publish(
                     "stage",
                     {
@@ -400,13 +421,29 @@ async def _run_query(
                 candidates[0].execution = context["last_execution"]
                 if execution is None:
                     execution = context["last_execution"]
+            basis = (
+                "cached_schema" if schema and schema.from_cache else "live_schema"
+            ) if db_id else source
+            for index, candidate in enumerate(candidates):
+                candidate.confidence = 0.0  # Legacy field, no calibrated probability exists.
+                candidate.dialect = dialect
+                if index > 0 and (body.run_validation or body.execute):
+                    candidate.validation = asdict(await SQLValidator(dialect).validate(
+                        candidate.sql_text, schema=schema, rules=domain.rules if domain else [],
+                    ))
+                candidate.evidence = candidate_evidence(
+                    candidate, None if metadata else schema, basis,
+                    domain.rules if domain else [], notes=notes,
+                    ambiguities=[a.description for a in sqr.ambiguities] if sqr else [],
+                    execution_error=execution_error if index == 0 else "",
+                )
             all_candidates.extend(candidates)
     finally:
         audit.llm_calls = limits.llm_calls_used
         active_budget.reset(budget_token)
         active_usage.reset(usage_token)
     if body.execute and not schemas:
-        errors.append("No connected database is available for execution")
+        warnings.append("无可用数据库，仅生成 SQL；未执行，未经真实数据库验证")
     status = (
         "completed"
         if statuses and all(s == "completed" for s in statuses) and not errors
@@ -424,7 +461,7 @@ async def _run_query(
         "nl_text": body.nl_text,
         "language": sqr.language if sqr else "",
         "intent": sqr.intent.value if sqr else "UNKNOWN",
-        "confidence": sqr.confidence if sqr else 0,
+        "confidence": 0.0,
         "candidates": [asdict(c) for c in all_candidates],
         "primary_sql": primary_sql,
         "validation": primary_validation,
