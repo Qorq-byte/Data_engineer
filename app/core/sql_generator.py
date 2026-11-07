@@ -305,7 +305,7 @@ class SQLGenerator:
                         SQLCandidate(
                             id=f"cand_{uuid.uuid4().hex[:8]}",
                             sql_text=alt_sql,
-                            confidence=max(0.85 - j * 0.12, 0.3),
+                            confidence=0.0,
                             generation_mode=mode,
                             dialect=dialect or "ansi",
                             model=str(actual_model),
@@ -323,7 +323,7 @@ class SQLGenerator:
                     SQLCandidate(
                         id=f"cand_{uuid.uuid4().hex[:8]}",
                         sql_text=sql_text,
-                        confidence=max(0.85 - idx * 0.1, 0.3),
+                        confidence=0.0,
                         generation_mode=mode,
                         dialect=dialect or "ansi",
                         model=str(actual_model),
@@ -423,7 +423,7 @@ class SQLGenerator:
                         SQLCandidate(
                             id=f"cand_{uuid.uuid4().hex[:8]}",
                             sql_text=alt_sql,
-                            confidence=max(0.85 - j * 0.12, 0.3),
+                            confidence=0.0,
                             generation_mode=mode,
                             reasoning=perspectives[i] if i < len(perspectives) else "",
                             dialect=dialect or "ansi",
@@ -440,7 +440,7 @@ class SQLGenerator:
                     SQLCandidate(
                         id=f"cand_{uuid.uuid4().hex[:8]}",
                         sql_text=_extract_sql(content),
-                        confidence=max(0.85 - i * 0.1, 0.3),
+                        confidence=0.0,
                         generation_mode=mode,
                         reasoning=perspectives[i] if i < len(perspectives) else "",
                         dialect=dialect or "ansi",
