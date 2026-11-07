@@ -23,6 +23,7 @@ from sqlglot import exp
 from sqlglot.errors import ErrorLevel, ParseError
 
 from app.core.schema_validation import check_schema_references
+from app.db.dialect_adapter import PRESET_DIALECTS
 from app.knowledge.rule_engine import _match_pattern
 from app.models.query import PlanAnalysis, ValidationReport
 from app.models.schema import ColumnSchema, SchemaSnapshot
@@ -35,6 +36,9 @@ _SQLGLOT_DIALECTS: set[str] = {d.name.lower() for d in sqlglot.Dialects if d.nam
 def _read_dialect(dialect: str) -> str | None:
     """Return a sqlglot-compatible dialect string, or ``None`` for default."""
     d = dialect.lower()
+    preset = PRESET_DIALECTS.get(d)
+    if preset is not None:
+        d = preset.dialect
     if d in ("ansi", "standard", "sql", "generic", ""):
         return None
     if d in _SQLGLOT_DIALECTS:
@@ -64,7 +68,7 @@ class SQLValidator:
     """
 
     def __init__(self, dialect: str = "") -> None:
-        self.dialect = dialect if dialect not in ("ansi",) else ""
+        self.dialect = _read_dialect(dialect) or ""
 
     # ------------------------------------------------------------------
     # Public API
@@ -190,6 +194,9 @@ class SQLValidator:
         try:
             # Try parsing — sqlglot is lenient by default; raise on errors
             parsed = sqlglot.parse(sql, error_level=ErrorLevel.RAISE, **_read_kwargs(self.dialect))
+            # Match the shared read-only policy: a trailing comment may be a
+            # standalone Semicolon AST node, which is not an executable statement.
+            parsed = [statement for statement in parsed if not isinstance(statement, exp.Semicolon)]
             if not parsed or not parsed[0]:
                 return False, ["SYNTAX_ERROR: Unable to parse SQL — empty result"]
         except ParseError as e:
