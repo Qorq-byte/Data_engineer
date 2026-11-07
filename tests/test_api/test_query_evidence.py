@@ -5,10 +5,12 @@ import json
 import pytest
 
 from app.api import create_app, query
+from app.core.query_evidence import candidate_evidence, supplied_schema
 from app.core.sql_validator import SQLValidator
 from app.db.connections import ConnectionFactory, DatabaseType
 from app.db.schema_extractor import SchemaExtractor
 from app.llm.router import LiteLLMRouter, RouterConfig
+from app.models.query import SQLCandidate
 from tests.api_client import authenticated_client
 
 COMPLEX = """
@@ -165,3 +167,24 @@ def test_driver_dialect_alias_is_normalized_for_schema_and_validation():
     )
     assert body.dialect == "postgres"
     assert SQLValidator("postgresql").dialect == "postgres"
+
+
+@pytest.mark.parametrize("condition", [
+    "o.parent_id = p.id",
+    "o.parent_id = p.id AND o.tenant_id = p.tenant_id",
+])
+def test_composite_foreign_key_requires_complete_relation_verification(condition):
+    schema = supplied_schema(
+        "CREATE TABLE parents (id INT, tenant_id INT); "
+        "CREATE TABLE orders (parent_id INT, tenant_id INT, "
+        "FOREIGN KEY (parent_id, tenant_id) REFERENCES parents (id, tenant_id));",
+        "sqlite",
+    )
+    candidate = SQLCandidate(
+        id="composite", sql_text=f"SELECT o.parent_id FROM orders o JOIN parents p ON {condition}",
+        dialect="sqlite",
+    )
+    evidence = candidate_evidence(candidate, schema, "user_schema", [])
+    relation = next(check for check in evidence["checks"] if check["name"] == "关联关系")
+    assert relation["status"] == "unverified"
+    assert any("待确认" in assumption for assumption in evidence["assumptions"])

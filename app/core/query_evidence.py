@@ -1,5 +1,6 @@
 """Reproducible SQL checks and source disclosures, without probability scores."""
 
+from collections import Counter
 from typing import Any
 
 import sqlglot
@@ -30,13 +31,13 @@ def supplied_schema(ddl: str, dialect: str) -> SchemaSnapshot:
                 name=column.name,
                 type=column.args["kind"].sql(dialect=_read_dialect(dialect)),
             ))
-        for fk in declaration.find_all(exp.ForeignKey):
+        for index, fk in enumerate(declaration.find_all(exp.ForeignKey)):
             reference = fk.find(exp.Reference)
             if reference is not None and isinstance(reference.this, exp.Schema):
                 target = reference.this
                 for local, remote in zip(fk.expressions, target.expressions, strict=True):
                     table.foreign_keys.append(ForeignKey(
-                        name="", column=local.name, ref_table=target.this.name,
+                        name=f"declared_fk_{index}", column=local.name, ref_table=target.this.name,
                         ref_column=remote.name,
                     ))
         for column in declaration.find_all(exp.ColumnDef):
@@ -44,7 +45,8 @@ def supplied_schema(ddl: str, dialect: str) -> SchemaSnapshot:
                 target = reference.this
                 if isinstance(target, exp.Schema) and len(target.expressions) == 1:
                     table.foreign_keys.append(ForeignKey(
-                        name="", column=column.name, ref_table=target.this.name,
+                        name=f"inline_fk_{column.name}", column=column.name,
+                        ref_table=target.this.name,
                         ref_column=target.expressions[0].name,
                     ))
         if not table.columns or table.name in snapshot.tables:
@@ -141,9 +143,14 @@ def candidate_evidence(
                         right_table = physical.get(right.table)
                         table = schema.tables.get(left_table.name) if left_table else None
                         if table and right_table:
+                            key_sizes = Counter(
+                                (key.name, key.ref_table) for key in table.foreign_keys
+                            )
                             supported = any(
                                 fk.column == left.name and fk.ref_table == right_table.name
-                                and fk.ref_column == right.name for fk in table.foreign_keys
+                                and fk.ref_column == right.name
+                                and key_sizes[(fk.name, fk.ref_table)] == 1
+                                for fk in table.foreign_keys
                             )
                         if supported:
                             break
