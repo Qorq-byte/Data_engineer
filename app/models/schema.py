@@ -165,6 +165,7 @@ class SchemaSnapshot:
     # SQLite main.schema_version at introspection; unknown for legacy/other sources.
     source_schema_version: int | None = None
     duckdb_source_state: DuckDBSourceState | None = None
+    from_cache: bool = False
 
     def get_table(self, name: str) -> TableSchema | None:
         return self.tables.get(name)
@@ -188,6 +189,7 @@ class SchemaSnapshot:
             version=self.version,
             source_schema_version=self.source_schema_version,
             duckdb_source_state=self.duckdb_source_state,
+            from_cache=self.from_cache,
         )
 
     @property

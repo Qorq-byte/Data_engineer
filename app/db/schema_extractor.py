@@ -57,7 +57,9 @@ class SchemaExtractor:
                 and cached[2].duckdb_source_state == duckdb_state
                 and time.monotonic() - cached[1] < settings.schema_cache_seconds
             ):
-                return cached[2].clone()
+                snapshot = cached[2].clone()
+                snapshot.from_cache = True
+                return snapshot
             snapshot = await cls._extract_unlocked(connection, db_type, db_name)
             cls._cache[id(connection)] = (connection, time.monotonic(), snapshot)
             return snapshot.clone()
