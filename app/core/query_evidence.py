@@ -83,7 +83,10 @@ def candidate_evidence(
           candidate.dialect + " · " + "; ".join(report.get("syntax_errors", [])))
     check("表与字段", result("schema_valid", schema is not None and bool(report)),
           source + " · " + "; ".join(report.get("schema_errors", [])))
-    check("字段类型启发式检查", result("type_valid", schema is not None and bool(report)),
+    type_status = result("type_valid", schema is not None and bool(report))
+    if report.get("type_errors"):
+        type_status = "unverified"
+    check("字段类型启发式检查", type_status,
           "静态兼容性检查，未覆盖全部表达式类型 · " + "; ".join(report.get("type_errors", [])))
     supported_directives = {
         "require", "forbid", "require_where", "require_limit", "require_time_range", "precision",

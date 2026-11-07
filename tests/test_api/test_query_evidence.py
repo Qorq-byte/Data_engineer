@@ -1,6 +1,7 @@
 """Exercise both transports, source provenance and actual SQLite results."""
 
 import json
+from dataclasses import asdict
 
 import pytest
 
@@ -188,3 +189,18 @@ def test_composite_foreign_key_requires_complete_relation_verification(condition
     relation = next(check for check in evidence["checks"] if check["name"] == "关联关系")
     assert relation["status"] == "unverified"
     assert any("待确认" in assumption for assumption in evidence["assumptions"])
+
+
+async def test_type_warnings_do_not_appear_as_passed_checks():
+    schema = supplied_schema("CREATE TABLE t (id INT)", "sqlite")
+    sql = "SELECT id FROM t WHERE id = 'abc'"
+    report = await SQLValidator("sqlite").validate(sql, schema=schema)
+    assert report.passed
+    assert report.type_errors
+    candidate = SQLCandidate(
+        id="type-warning", sql_text=sql, dialect="sqlite", validation=asdict(report),
+    )
+    evidence = candidate_evidence(candidate, schema, "user_schema", [])
+    check = next(item for item in evidence["checks"] if item["name"] == "字段类型启发式检查")
+    assert check["status"] == "unverified"
+    assert "TYPE_WARNING" in check["detail"]
