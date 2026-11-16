@@ -570,8 +570,9 @@ def build(animated: bool) -> str:
 
 def main() -> None:
     ASSETS.mkdir(parents=True, exist_ok=True)
-    (ASSETS / "runtime-flow.svg").write_text(build(True), encoding="utf-8")
-    (ASSETS / "runtime-flow-static.svg").write_text(build(False), encoding="utf-8")
+    for name, animated in (("runtime-flow.svg", True), ("runtime-flow-static.svg", False)):
+        # newline="\n" keeps the committed bytes identical on Windows and Linux.
+        (ASSETS / name).write_text(build(animated), encoding="utf-8", newline="\n")
     for name in ("runtime-flow.svg", "runtime-flow-static.svg"):
         size = (ASSETS / name).stat().st_size
         print(f"wrote assets/{name} ({size / 1024:.1f} KiB)")
