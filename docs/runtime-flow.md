@@ -1,8 +1,8 @@
 # Runtime flow / 运行流程
 
-The README diagram is a labelled illustration of the shipped boot and request path. It is not a live
-trace, not telemetry and not a performance measurement.
-README 中的流程图是对实际启动与请求链路的示意标注，不是实时运行记录、监控数据或性能数据。
+The README diagram is a labelled one-page illustration of the shipped boot and request path. It is
+not a live trace, not telemetry and not a performance measurement.
+README 中的流程图是一页式示意标注，描述实际启动与请求链路，不是实时记录、监控数据或性能数据。
 
 ![Animated runtime diagram / 动态流程图](../assets/runtime-flow.svg)
 
@@ -11,28 +11,24 @@ Static, motion-free version for print and diff review: [`assets/runtime-flow-sta
 
 ## What the diagram claims / 图里画的到底是什么
 
-| Band | Meaning / 含义 |
+| Part | Meaning / 含义 |
 |---|---|
-| `00` Boot | `main.py` starts uvicorn with the `create_app` factory; `create_app()` fails closed on a weak JWT secret; the lifespan registers catalogs, probes storage/auth/RAG/LLM with 10-second bounds, and serves only after `app.state.initialized`. A failed probe degrades a named component instead of aborting. Shutdown is awaited in a fixed order. 启动先过 JWT 守卫；lifespan 在 10 秒边界内探测各组件，失败则降级，关闭按固定顺序释放。 |
-| `01` Entry and admission | Web, JSON, SSE and MCP enter the same service. Every `/api/v1` route except auth and health passes the operator gate; request validation rejects bad dialects or disabled models; `submit_query` applies the 120-second deadline; `run_query` takes an admission slot and serialises the session. 四种入口共用一条服务链路，认证、校验、截止时间、准入与会话绑定依次生效。 |
-| `02` Control plane | `PlanLoader` reads `request_query.yml` (mtime reload); the request builds its own five-node registry; `WorkflowRunner` rejects an empty plan, an unknown metric, a missing/duplicate node or an unsatisfied dependency before node one. 顺序来自计划文件，模型不能插入、跳过或重试节点。 |
-| `03` Five nodes | `parse_nl → schema_linking → generate_sql → validate_sql → execute_sql`. Each runs `setup_input → execute → update_context → evaluate` and writes only into `WorkflowContext`; the diagram names the context key each node owns. Permission, constraint, SQL-policy and budget guard rails apply per step. 五个节点只通过上下文通信；每一步都受权限、约束、SQL 策略与预算约束。 |
-| `04` Branches and failures | 401/403, 422, 503, 409 and 504 terminate before or around the workflow; `execute=false` or a missing target produces a skipped execution and `execution: null`; a failed validation blocks execution; a node exception becomes a failed evaluation with zero retries; RAG or mock providers degrade with a warning. 执行是分支，跳过与阻断都要明说。 |
-| `05` End state | Per-target statuses aggregate to `completed` or `failed`; business failures still return HTTP 200. The session turn, MySQL query history, JSONL trace and optional usage audit are written before the reply. 状态聚合、统一契约、持久化，然后才是响应。 |
+| Boot line | `main.py` → `create_app()` → lifespan catalogs and 10-second probes → `:8001 ready`. A failed probe marks a component unavailable instead of aborting; shutdown closes background work, sub-agents, database leases, the auth pool, storage, RAG and the router in order. 启动只做一次，失败降级；关闭按固定顺序等待释放。 |
+| Entry row | Web, JSON, SSE and MCP enter the same service; the operator gate returns 401/403, request validation 422, admission 503, session conflict 409 and the 120-second deadline 504. 四种入口共用一条服务链路，错误类别在入口处就分开。 |
+| Plan bar | `request_query.yml` fixes `node_order`; `WorkflowRunner` walks it with `max_retries 0` and aborts on failure. 顺序来自计划文件，模型不能插入、跳过或重试节点。 |
+| Node row | `parse_nl → schema_linking → generate_sql → validate_sql → execute_sql`. Each card names the value it writes into `WorkflowContext`; the SQL policy and the write check gate execution. 五个节点只通过上下文通信。 |
+| Response card | JSON and SSE return `QueryResponse`; MCP projects the same status, identifiers, SQL and errors into a tool result. The trace is persisted before the reply. 一份结果契约，三种出口。 |
+| Footnotes | Guards: `PermissionManager`, `ConstraintEnforcer`, SQL policy, LLM budget. Branches: skipped execution, blocked validation, node abort, explicit degradation and HTTP error classes. 护栏与分支各压成一行。 |
 
-The diagram labels the JSON/SSE `QueryResponse` fields (MCP projects them into a tool result) but
-deliberately omits SSE heartbeat framing, per-driver connection leases and per-node latency figures.
-Those live in [`query-contract.md`](optimization/query-contract.md) and
-[`runtime-and-load.md`](optimization/runtime-and-load.md), because drawing them would make the
-picture unreadable.
+The diagram deliberately omits SSE heartbeat framing, per-driver connection leases and per-node
+latency figures. Those live in [`query-contract.md`](optimization/query-contract.md) and
+[`runtime-and-load.md`](optimization/runtime-and-load.md), because drawing them would break the
+one-page layout.
 
-图标注的是 JSON/SSE 的 `QueryResponse` 字段（MCP 会投影成工具结果），但有意省略 SSE 心跳帧、
-逐驱动连接租约与逐节点耗时。这些写在[查询契约](optimization/query-contract.md) 与
-[运行与负载](optimization/runtime-and-load.md) 里，画上去会让图失去可读性。
+图有意省略 SSE 心跳帧、逐驱动连接租约与逐节点耗时。这些写在[查询契约](optimization/query-contract.md)
+与[运行与负载](optimization/runtime-and-load.md) 里，画上去会破坏一页式布局。
 
 ## Text form / 文本形态
-
-The README carries the picture; this is the same path as five lines you can grep and diff.
 
 ```text
 in    web workspace · JSON · SSE · MCP  →  auth · validate · bind session and target
@@ -52,26 +48,23 @@ gate  PermissionManager · ConstraintEnforcer · SQL policy · LLM budget (every
 
 ## Regenerate / 重新生成
 
-The diagram is generated, not hand-drawn. Only the standard library is required:
-
 ```bash
 python scripts/render_runtime_flow.py
 ```
 
 The script writes both SVGs into `assets/` and touches nothing else: no network, no model, no
-database, no environment secrets. Motion is declarative SMIL, so the file stays small and degrades to
-a still image wherever animation is unavailable. The script fails if a label exceeds its card width.
+database, no environment secrets. The canvas is 1000 × 398 so the README stays compact; motion is
+declarative SMIL and degrades to a still image. The script fails if a label exceeds its card width.
 
-脚本只用标准库，输出两个 SVG 到 `assets/`，不联网、不读写凭据。动画是声明式 SMIL，文件不大，
-在不支持动画的环境里退化为静态图。文案超出卡片宽度时脚本会报错退出。
+脚本只用标准库，输出两个 SVG 到 `assets/`，画布 1000 × 398，保持 README 紧凑；动画是声明式 SMIL，
+不支持动画时退化为静态图。文案超出卡片宽度时脚本会报错退出。
 
 When you change a node name, a guard, an endpoint or the execution semantics, update in the same
 commit:
 
-1. `scripts/render_runtime_flow.py` — the labels and the timeline live in the data tables at the top of
-   `build()`.
-2. The text form in this file and, if a band is renamed, the caption in all README versions.
+1. `scripts/render_runtime_flow.py` — the labels live in the small tables inside `build()`.
+2. The text form in this file and the caption in both READMEs.
 3. This file, if the claim table above changed.
 
-修改节点名、护栏、接口或执行语义时，请在同一次提交里同步：脚本里的文案表、本文件的五行文本形态，
-以及上表的说明。
+修改节点名、护栏、接口或执行语义时，请在同一次提交里同步：脚本里的文案、本文件的五行文本形态，
+以及两份 README 的图注。

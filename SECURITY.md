@@ -1,6 +1,6 @@
 # Security Policy
 
-[Project overview](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md) · [Contributing](CONTRIBUTING.md)
+[Project overview](README.md) · [简体中文](README.zh-CN.md) · [Contributing](CONTRIBUTING.md)
 
 - [Deployment checklist](#deployment-checklist)
 - [Supported versions](#supported-versions)
