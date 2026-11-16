@@ -1,5 +1,29 @@
 # Security Policy
 
+[Project overview](README.md) · [简体中文入口](README.zh-CN.md) · [Contributing](CONTRIBUTING.md)
+
+- [Deployment checklist](#deployment-checklist)
+- [Supported versions](#supported-versions)
+- [Reporting a vulnerability](#reporting-a-vulnerability)
+- [What to expect](#what-to-expect)
+- [Disclosure process](#disclosure-process)
+- [Scope](#scope)
+- [Security-relevant design notes](#security-relevant-design-notes)
+
+## Deployment checklist
+
+- Keep authentication-store credentials separate from read-only query-target credentials.
+- Set a unique random JWT secret and a private registration invitation; configure administrator
+  IDs explicitly, and remove invitations when registration is not needed.
+- Keep `.env`, model keys, audit files, traces and database snapshots out of Git and public reports.
+- Expose the workbench only to the intended administrator group. Follow the documented worker
+  and recovery contract before changing deployment topology.
+- Read-only SQL and client cancellation are defense layers, not a guarantee of bounded server
+  work, immediate remote termination or business-answer correctness.
+
+安全问题请通过下方私密渠道报告；不要公开凭据、业务数据或可直接利用的复现。
+账号存储与查询目标应使用不同凭据，查询目标使用原生只读账号。
+
 ## Supported versions
 
 This project is a pre-1.0 MVP. Security fixes are applied to the `main` branch only; there are no

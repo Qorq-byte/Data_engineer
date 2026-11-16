@@ -1,13 +1,44 @@
 # Contributing
 
+[Project overview](README.md) · [简体中文入口](README.zh-CN.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
+
 Thanks for taking the time to look at this project. It is an MVP with an unusually strict harness,
 and most of the rules below exist to keep that harness honest rather than to make review easier.
+
+- [Before you start](#before-you-start)
+- [Environment](#environment)
+- [Branch model](#branch-model)
+- [Commit messages](#commit-messages)
+- [Pull request checklist](#pull-request-checklist)
+- [Adding a node](#adding-a-node)
+- [Adding a workflow plan](#adding-a-workflow-plan)
+- [Documentation and translations](#documentation-and-translations)
+- [Reporting a security issue](#reporting-a-security-issue)
+
+## Documentation and translations
+
+English (`README.md`) is the primary project introduction; `README.zh-CN.md` provides the
+corresponding Simplified Chinese guide. Update both when setup, support scope or query behaviour
+changes. Traditional Chinese and Japanese guides remain available through the language links.
+Keep statements tied to current code or linked acceptance reports, and distinguish synthetic
+measurements from production guarantees.
+
+For workflow illustrations, edit the data tables in `scripts/render_runtime_flow.py` and run
+`python scripts/render_runtime_flow.py`. It rewrites `assets/runtime-flow.svg` (animated) and
+`assets/runtime-flow-static.svg` from the standard library alone — no Pillow, no network. Then update
+`docs/runtime-flow.md` and the Mermaid source in both READMEs. Check labels, arrows, the `<desc>`
+accessibility text and both language links before submitting.
+
+Documentation PRs should include a short description, checked relative links and a rendered preview
+where useful. Run code gates when changing executable tooling; never upload `.env`, private SQL,
+traces, provider responses or credentials as examples.
+
 
 ## Before you start
 
 - Read [`docs/optimization/query-contract.md`](docs/optimization/query-contract.md) if you are
   touching the query path. It defines the failure semantics you must preserve.
-- Read [`README.md`](README.md) § Architecture. The invariant there is not a suggestion.
+- Read [`docs/runtime-flow.md`](docs/runtime-flow.md). The Harness invariant is mandatory.
 - Look at `docs/archive/stages/INDEX.md` before proposing a large change; there is a reasonable
   chance it was attempted and rejected, or attempted and left incomplete on purpose.
 

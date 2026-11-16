@@ -1,5 +1,12 @@
 # Contributor Covenant Code of Conduct
 
+This policy covers this repository's issues, pull requests, reviews and other project spaces.
+For contribution steps see [CONTRIBUTING.md](CONTRIBUTING.md); report software vulnerabilities
+through [SECURITY.md](SECURITY.md), separately from conduct incidents.
+
+本准则适用于本仓库的 Issue、Pull Request、代码评审及其他项目交流空间。
+行为投诉请使用下文的私密联系方式；软件漏洞请按照安全政策报告。
+
 ## Our Pledge
 
 We as members, contributors, and leaders pledge to make participation in our
