@@ -1,8 +1,8 @@
 # Runtime flow / 运行流程
 
-The README diagram is a labelled illustration of the fixed request path; it is not a live trace,
-not telemetry and not a performance measurement.
-README 中的流程图是对固定请求链路的示意标注，不是实时运行记录、监控数据或性能数据。
+The README diagram is a labelled illustration of the shipped boot and request path. It is not a live
+trace, not telemetry and not a performance measurement.
+README 中的流程图是对实际启动与请求链路的示意标注，不是实时运行记录、监控数据或性能数据。
 
 ![Animated runtime diagram / 动态流程图](../assets/runtime-flow.svg)
 
@@ -13,22 +13,22 @@ Static, motion-free version for print and diff review: [`assets/runtime-flow-sta
 
 | Band | Meaning / 含义 |
 |---|---|
-| 01 Entry surfaces | Web workspace, JSON API, SSE stream and MCP each enter the same request path. 四个入口走同一条请求路径。 |
-| 02 Bind | Authentication against the auth store, request validation, then session and target binding happen before any node runs. 认证、校验、绑定目标先于节点执行。 |
-| 03 Control plane | `PlanLoader` reads `request_query.yml`; `WorkflowRunner` walks `node_order` and owns every transition. 顺序来自计划文件，模型不能插入、跳过或重试节点。 |
-| 04 Five nodes | `parse_nl` → `schema_linking` → `generate_sql` → `validate_sql` → `execute_sql`, each emitting only into `WorkflowContext`. 五个节点只通过上下文通信。 |
-| 05 Guard rails | `PermissionManager`, `ConstraintEnforcer`, the single-statement read-only policy and the LLM budget are consulted per step; unlisted tools are denied. 四道护栏逐步生效，未列出的工具默认拒绝。 |
-| 06 Conditional execution | Execution is a branch, not a guarantee: no target, `execute=false`, a blocking check or a row cap all produce an explicit non-success outcome. 执行是分支，跳过与阻断都要明说。 |
-| 07 One contract | JSON, SSE and MCP share `QueryResponse`; the trace is persisted and the optional audit never stores SQL. 三种出口共用一份契约。 |
+| `00` Boot | `main.py` starts uvicorn with the `create_app` factory; `create_app()` fails closed on a weak JWT secret; the lifespan registers catalogs, probes storage/auth/RAG/LLM with 10-second bounds, and serves only after `app.state.initialized`. A failed probe degrades a named component instead of aborting. Shutdown is awaited in a fixed order. 启动先过 JWT 守卫；lifespan 在 10 秒边界内探测各组件，失败则降级，关闭按固定顺序释放。 |
+| `01` Entry and admission | Web, JSON, SSE and MCP enter the same service. Every `/api/v1` route except auth and health passes the operator gate; request validation rejects bad dialects or disabled models; `submit_query` applies the 120-second deadline; `run_query` takes an admission slot and serialises the session. 四种入口共用一条服务链路，认证、校验、截止时间、准入与会话绑定依次生效。 |
+| `02` Control plane | `PlanLoader` reads `request_query.yml` (mtime reload); the request builds its own five-node registry; `WorkflowRunner` rejects an empty plan, an unknown metric, a missing/duplicate node or an unsatisfied dependency before node one. 顺序来自计划文件，模型不能插入、跳过或重试节点。 |
+| `03` Five nodes | `parse_nl → schema_linking → generate_sql → validate_sql → execute_sql`. Each runs `setup_input → execute → update_context → evaluate` and writes only into `WorkflowContext`; the diagram names the context key each node owns. Permission, constraint, SQL-policy and budget guard rails apply per step. 五个节点只通过上下文通信；每一步都受权限、约束、SQL 策略与预算约束。 |
+| `04` Branches and failures | 401/403, 422, 503, 409 and 504 terminate before or around the workflow; `execute=false` or a missing target produces a skipped execution and `execution: null`; a failed validation blocks execution; a node exception becomes a failed evaluation with zero retries; RAG or mock providers degrade with a warning. 执行是分支，跳过与阻断都要明说。 |
+| `05` End state | Per-target statuses aggregate to `completed` or `failed`; business failures still return HTTP 200. The session turn, MySQL query history, JSONL trace and optional usage audit are written before the reply. 状态聚合、统一契约、持久化，然后才是响应。 |
 
-Optional detail that the drawing deliberately omits: the SSE event stream emits one event per node,
-cancellation closes streams and releases connection leases, and per-request usage records keep
-observed values separate from missing telemetry. Those are described in
-[`query-contract.md`](optimization/query-contract.md), not drawn, because a diagram that tries to show
-them becomes unreadable.
+The diagram labels the JSON/SSE `QueryResponse` fields (MCP projects them into a tool result) but
+deliberately omits SSE heartbeat framing, per-driver connection leases and per-node latency figures.
+Those live in [`query-contract.md`](optimization/query-contract.md) and
+[`runtime-and-load.md`](optimization/runtime-and-load.md), because drawing them would make the
+picture unreadable.
 
-图有意省略的细节：SSE 每个节点一个事件、取消时关闭流并释放连接租约、逐次用量与缺测分开记录。
-这些写在 [query-contract.md](optimization/query-contract.md) 里，画上去会让图失去可读性。
+图标注的是 JSON/SSE 的 `QueryResponse` 字段（MCP 会投影成工具结果），但有意省略 SSE 心跳帧、
+逐驱动连接租约与逐节点耗时。这些写在[查询契约](optimization/query-contract.md) 与
+[运行与负载](optimization/runtime-and-load.md) 里，画上去会让图失去可读性。
 
 ## Text form / 文本形态
 
@@ -60,17 +60,18 @@ python scripts/render_runtime_flow.py
 
 The script writes both SVGs into `assets/` and touches nothing else: no network, no model, no
 database, no environment secrets. Motion is declarative SMIL, so the file stays small and degrades to
-a still image wherever animation is unavailable.
+a still image wherever animation is unavailable. The script fails if a label exceeds its card width.
 
-脚本只用标准库，输出两个 SVG 到 `assets/`，不联网、不读写凭据。动画是声明式 SMIL，文件很小，
-在不支持动画的环境里退化为静态图。
+脚本只用标准库，输出两个 SVG 到 `assets/`，不联网、不读写凭据。动画是声明式 SMIL，文件不大，
+在不支持动画的环境里退化为静态图。文案超出卡片宽度时脚本会报错退出。
 
-When you change a node name, a guard or the execution semantics, update in the same commit:
+When you change a node name, a guard, an endpoint or the execution semantics, update in the same
+commit:
 
 1. `scripts/render_runtime_flow.py` — the labels and the timeline live in the data tables at the top of
    `build()`.
-2. The text form in this file and, if a band is renamed, the caption in both READMEs.
+2. The text form in this file and, if a band is renamed, the caption in all README versions.
 3. This file, if the claim table above changed.
 
-修改节点名、护栏或执行语义时，请在同一次提交里同步：脚本里的文案表、本文件的五行文本形态，
+修改节点名、护栏、接口或执行语义时，请在同一次提交里同步：脚本里的文案表、本文件的五行文本形态，
 以及上表的说明。

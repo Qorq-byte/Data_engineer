@@ -1,7 +1,7 @@
 # Usage
 
-Everything the README does not carry: authentication, connecting a target, the request contract, the
-other endpoints and what the response fields mean.
+The operational detail behind the README: authentication, connecting a target, the request contract,
+the other endpoints and what the response fields mean.
 
 ## 1. Create an account
 
@@ -64,7 +64,7 @@ curl -X POST http://localhost:8001/api/v1/query \
 ```jsonc
 // Abridged: nested payloads are trimmed to the fields that carry decisions.
 {
-  "query_id": "q_20261101T143012Z_4f1c",
+  "query_id": "q_4f1c2a9b7e01",
   "status": "completed",
   "plan_id": "request_query",
   "llm_calls": 2,
@@ -91,9 +91,11 @@ curl -X POST http://localhost:8001/api/v1/query \
 }
 ```
 
-`status` is `completed` or `failed`. HTTP errors carry a machine-readable `code` (`INVALID_SQL`,
-`TIMEOUT`, `PAYLOAD_TOO_LARGE`, `INTERNAL_ERROR`, …) plus a `Retry-After` header when waiting could
-help. The full contract is in [optimization/query-contract.md](optimization/query-contract.md).
+`status` is `completed` or `failed`. Business failures return HTTP 200 with `status=failed` and the
+reason in `errors[]`. Infrastructure failures use 4xx/5xx with a machine-readable `detail.code`
+(`QUERY_TIMEOUT`, `QUERY_CAPACITY`, `SESSION_CONFLICT`, `SHARED_STATE_UNAVAILABLE`,
+`INTERNAL_ERROR`) plus a `Retry-After` header when waiting could help; request validation keeps
+FastAPI's 422 format. The full contract is in [optimization/query-contract.md](optimization/query-contract.md).
 
 ## What the response fields mean
 

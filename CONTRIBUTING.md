@@ -1,6 +1,6 @@
 # Contributing
 
-[Project overview](README.md) · [简体中文入口](README.zh-CN.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
+[Project overview](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md) · [Code of Conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
 
 Thanks for taking the time to look at this project. It is an MVP with an unusually strict harness,
 and most of the rules below exist to keep that harness honest rather than to make review easier.
@@ -17,23 +17,30 @@ and most of the rules below exist to keep that harness honest rather than to mak
 
 ## Documentation and translations
 
-English (`README.md`) is the primary project introduction; `README.zh-CN.md` provides the
-corresponding Simplified Chinese guide. Both stay short and link out to `docs/usage.md`,
-`docs/architecture.md` and `docs/support-matrix.md` — put new detail in those pages rather than
-growing the READMEs again. Update the English and Chinese pair together when setup, support scope or
-query behaviour changes. Traditional Chinese and Japanese guides remain available through the
-language links. Keep statements tied to current code or linked acceptance reports, and distinguish
-synthetic measurements from production guarantees.
+The README exists in three synchronized forms: `README.md` is the bilingual landing page, with
+English first and a `# 简体中文` section behind the language switch; `README.en.md` and
+`README.zh-CN.md` are the single-language views. The three files must be edited together — a change to
+setup, support scope, request semantics or limits belongs in the same commit in all of them. Section
+order, links and terminology are mirrored one-to-one; `README.md` repeats the two language bodies in
+order, so a missing section in one language is a review blocker.
 
-For workflow illustrations, edit the data tables in `scripts/render_runtime_flow.py` and run
+Keep the READMEs navigable and push detail into `docs/usage.md`, `docs/architecture.md` and
+`docs/support-matrix.md` rather than growing all three pages. Traditional Chinese and Japanese guides
+remain available through the language links. Keep statements tied to current code or linked acceptance
+reports, and distinguish synthetic measurements from production guarantees.
+
+For the runtime illustration, edit the data tables in `scripts/render_runtime_flow.py` and run
 `python scripts/render_runtime_flow.py`. It rewrites `assets/runtime-flow.svg` (animated) and
-`assets/runtime-flow-static.svg` from the standard library alone — no Pillow, no network. Then update
-`docs/runtime-flow.md` and the caption in both READMEs. Check labels, arrows, the `<desc>`
-accessibility text and both language links before submitting.
+`assets/runtime-flow-static.svg` from the standard library alone — no Pillow, no network — and exits
+non-zero if a label overflows its card. Then update `docs/runtime-flow.md` and the caption in all
+README versions. Check labels, arrows, the `<desc>` accessibility text, the six band numbers and every
+language link before submitting.
 
 Documentation PRs should include a short description, checked relative links and a rendered preview
-where useful. Run code gates when changing executable tooling; never upload `.env`, private SQL,
-traces, provider responses or credentials as examples.
+where useful. Run `python scripts/check_readmes.py` before submitting: it compares section lists
+across the three README views, resolves local links and anchors, and verifies that the static diagram
+contains no animation. Run code gates when changing executable tooling; never upload `.env`, private
+SQL, traces, provider responses or credentials as examples.
 
 
 ## Before you start

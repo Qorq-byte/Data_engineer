@@ -5,8 +5,8 @@ The README states the invariant in one line; this page explains how the code kee
 ## Request lifecycle
 
 `POST /api/v1/query` → Pydantic validation (a `model` override must match an enabled provider) →
-`PlanLoader` returns `request_query.yml` → `WorkflowRunner` walks `node_order` → one `QueryResponse`
-contract is shared by JSON, SSE and MCP → the trace is persisted.
+`PlanLoader` returns `request_query.yml` → `WorkflowRunner` walks `node_order` → JSON and SSE return a
+`QueryResponse`, while MCP projects the same result into a tool dictionary → the trace is persisted.
 
 Each node runs `setup_input()` → `execute()` → `update_context()` → evaluation. Nodes never call one
 another; they communicate only through `WorkflowContext`. A skipped or blocked execution is still an
@@ -56,7 +56,7 @@ assets/           runtime-flow diagrams (animated and static)
 docs/             usage, architecture, support matrix, per-stage engineering record
 frontend_design/  source pages, compiled into frontend_dist/ by npm
 scripts/          build, evaluation, load and acceptance entry points
-tests/            177 test modules, 855 test functions
+tests/            177 test modules, 856 test functions
 ```
 
 ## Design decisions

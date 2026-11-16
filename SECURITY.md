@@ -1,6 +1,6 @@
 # Security Policy
 
-[Project overview](README.md) · [简体中文入口](README.zh-CN.md) · [Contributing](CONTRIBUTING.md)
+[Project overview](README.md) · [English](README.en.md) · [简体中文](README.zh-CN.md) · [Contributing](CONTRIBUTING.md)
 
 - [Deployment checklist](#deployment-checklist)
 - [Supported versions](#supported-versions)
@@ -107,8 +107,9 @@ Out of scope, or already documented as a known limitation:
 
 ## Security-relevant design notes
 
-- Read-only is enforced three times: a single-statement AST policy, read-only driver sessions, and
-  an `execute_sql` node with no write path.
+- Read-only is enforced in layers: a single-statement AST policy, a separate write check inside
+  `execute_sql`, driver-side guards where the driver exposes them (SQLite authorizer, ClickHouse
+  read-only profile), and a native read-only account on the target database.
 - `JWT_SECRET` shorter than 32 characters, or left at its default, makes the application refuse to
   start.
 - LLM API keys configured through the workspace are AES-GCM encrypted before being written to MySQL
