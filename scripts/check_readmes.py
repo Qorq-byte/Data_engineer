@@ -1,12 +1,13 @@
-"""Check that the three README views agree and every local link resolves.
+"""Check the English and Simplified Chinese READMEs stay in step.
 
 Run from the repository root::
 
     python scripts/check_readmes.py
 
-The bilingual ``README.md`` is composed from the English and Simplified Chinese bodies. This checker
-compares the section lists, resolves relative links and same-file anchors, and verifies that the
-static diagram really is motion-free. Standard library only.
+``README.md`` is the English entry and ``README.zh-CN.md`` the Chinese mirror. This checker compares
+their section lists and relative link targets, resolves every local link and anchor, rejects a
+duplicated English page or a concatenated bilingual page, and verifies that the static diagram is
+motion-free and stays one page tall. Standard library only.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ["README.md", "README.en.md", "README.zh-CN.md"]
+FILES = ["README.md", "README.zh-CN.md"]
 
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
@@ -66,6 +67,17 @@ def h2(text: str) -> list[str]:
     return [title for level, title in headings(text) if level == 2]
 
 
+def body_targets(text: str, start: str) -> list[str]:
+    """Relative link targets inside one language body, ignoring navigation and anchors."""
+    body = text[text.index(start) :]
+    targets: list[str] = []
+    for raw in LINK.findall(strip_code(body)):
+        if raw.startswith(("http://", "https://", "mailto:", "#")):
+            continue
+        targets.append(urlparse(unquote(raw)).path)
+    return sorted(targets)
+
+
 def check_links(path: Path, problems: list[str]) -> None:
     text = strip_code(path.read_text(encoding="utf-8"))
     local_anchors = anchors(text)
@@ -90,44 +102,36 @@ def check_links(path: Path, problems: list[str]) -> None:
                 problems.append(f"{path.name}: missing anchor {target} in {parsed.path}")
 
 
-def body_targets(text: str, start: str) -> list[str]:
-    """Relative link targets inside one language body, ignoring navigation and anchors."""
-    body = text[text.index(start) :]
-    targets: list[str] = []
-    for raw in LINK.findall(strip_code(body)):
-        if raw.startswith(("http://", "https://", "mailto:", "#")):
-            continue
-        targets.append(urlparse(unquote(raw)).path)
-    return sorted(targets)
-
-
 def main() -> None:
     problems: list[str] = []
+    if (ROOT / "README.en.md").exists():
+        problems.append("README.en.md is a duplicate of the English README; remove it")
     texts = {name: (ROOT / name).read_text(encoding="utf-8") for name in FILES}
 
-    en_sections = h2(texts["README.en.md"])
+    for name, text in texts.items():
+        levels = [level for level, _ in headings(text)]
+        if levels.count(1) != 1:
+            problems.append(f"{name}: expected exactly one level-1 title, found {levels.count(1)}")
+    if re.search(r"^# 简体中文\s*$", texts["README.md"], re.MULTILINE):
+        problems.append(
+            "README.md: Chinese section found; keep the two languages in separate pages"
+        )
+
+    en_sections = h2(texts["README.md"])
     zh_sections = h2(texts["README.zh-CN.md"])
     if len(en_sections) != len(zh_sections):
         problems.append(
             f"section count differs: English {len(en_sections)} vs Chinese {len(zh_sections)}"
         )
 
-    en_targets = body_targets(texts["README.en.md"], "## Overview")
+    en_targets = body_targets(texts["README.md"], "## Overview")
     zh_targets = body_targets(texts["README.zh-CN.md"], "## 项目简介")
     if en_targets != zh_targets:
         only_en = [item for item in en_targets if item not in zh_targets]
         only_zh = [item for item in zh_targets if item not in en_targets]
         problems.append(f"body links differ: only English {only_en}; only Chinese {only_zh}")
 
-    combined = h2(texts["README.md"])
-    if combined[: len(en_sections)] != en_sections:
-        problems.append("README.md: English half does not match README.en.md section order")
-    if combined[len(en_sections) :] != zh_sections:
-        problems.append("README.md: Chinese half does not match README.zh-CN.md section order")
-
     for name in FILES:
-        if not texts[name].lstrip().startswith("# "):
-            problems.append(f"{name}: must start with a level-1 title")
         check_links(ROOT / name, problems)
 
     animated = (ROOT / "assets/runtime-flow.svg").read_text(encoding="utf-8")
@@ -136,6 +140,11 @@ def main() -> None:
         problems.append("assets/runtime-flow.svg: no animation found")
     if "<animate" in static:
         problems.append("assets/runtime-flow-static.svg: still contains animation")
+    box = re.search(r'viewBox="0 0 (\d+) (\d+)"', static)
+    if not box or int(box.group(2)) > 500:
+        problems.append(
+            "assets/runtime-flow-static.svg: taller than 500 px; keep the one-page layout"
+        )
 
     if problems:
         print("README checks failed:")
@@ -144,7 +153,7 @@ def main() -> None:
         raise SystemExit(1)
     print(
         f"README checks passed: {len(en_sections)} sections per language, "
-        f"{len(combined)} sections in the bilingual view, all local links resolve."
+        "all local links resolve, diagram is one page and motion-free when static."
     )
 
 

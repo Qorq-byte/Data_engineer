@@ -2,7 +2,7 @@
 
 **用自然语言向关系型数据库提问，拿到可审查、可校验、可解释的 SQL —— 或者一句明确的「做不到」。**
 
-[English](README.en.md) · **简体中文** · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md) · [双语版](README.md)
+[English](README.md) · **简体中文** · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
 [![MVP checks](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml)
 [![Real database acceptance](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml)
@@ -16,9 +16,9 @@
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-4C9A5A.svg)](CONTRIBUTING.md)
 [![Security policy](https://img.shields.io/badge/security-policy-4B5563.svg)](SECURITY.md)
 
-<a href="assets/runtime-flow-static.svg"><img src="assets/runtime-flow.svg" width="1200" alt="运行流程图：启动流程、操作员准入、固定 request_query 计划、五个节点及其上下文键、护栏、分支与失败结果，以及最终响应与持久化状态"></a>
+<a href="assets/runtime-flow-static.svg"><img src="assets/runtime-flow.svg" width="1000" alt="紧凑运行流程图：启动行、入口与准入行、固定 request_query 计划、五个节点、响应卡，以及护栏与分支脚注"></a>
 
-*生成式示意图，不是运行记录。[静态版](assets/runtime-flow-static.svg) · [每一段在说什么](docs/runtime-flow.md)。*
+*生成式示意图，不是运行记录。[静态版](assets/runtime-flow-static.svg) · [图里画了什么](docs/runtime-flow.md)。*
 
 ## 项目简介
 
@@ -262,18 +262,16 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 ## 运行流程
 
 顶部示意图由 `scripts/render_runtime_flow.py` 生成，描述的是实际发布的链路，不是录制的运行轨迹。
-图分六段：
+图分四步：
 
-| 段 | 内容 |
-|---|---|
-| `00` 启动 | `main.py` → uvicorn factory → `create_app()` → lifespan 探测 → 就绪，另含降级与关闭路径 |
-| `01` 入口与准入 | 四种入口、操作员校验、请求校验、截止时间、准入槽位与会话绑定 |
-| `02` 控制面 | 固定计划、请求级限制，以及执行器的四项快速失败检查 |
-| `03` 五个节点 | `parse_nl → schema_linking → generate_sql → validate_sql → execute_sql`，含上下文键、生命周期与护栏 |
-| `04` 分支与失败 | 401/403/422/503/409/504、跳过执行、校验阻断、节点异常与显式降级 |
-| `05` 结束状态 | 状态聚合、`QueryResponse` 契约、持久化与最终出口 |
+- **启动** —— `main.py` → `create_app()` → lifespan 探测 → `:8001`。探测失败只降级命名组件；
+  关闭按固定顺序等待释放。
+- **进入与准入** —— 四种入口、操作员校验、请求校验、准入槽位、会话绑定与 120 秒截止时间。
+- **计划与执行** —— `request_query.yml` 固定 `node_order`，`WorkflowRunner` 依次走五个节点。
+  节点只写入 `WorkflowContext`。
+- **响应** —— JSON 与 SSE 返回 `QueryResponse`，MCP 做投影；轨迹在回复前落盘。
 
-压缩成五行可 grep 的文本：
+护栏与失败分支收敛成图底两行脚注，不再单独占一段：
 
 ```text
 入   Web 工作台 · JSON · SSE · MCP  →  认证 · 校验 · 绑定会话与目标库
@@ -283,7 +281,7 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 闸门 PermissionManager · ConstraintEnforcer · SQL 策略 · LLM 预算（每步生效）
 ```
 
-绘图说明、逐段声明与重新生成命令见 [docs/runtime-flow.md](docs/runtime-flow.md)。
+绘图说明、图中声明与重新生成命令见 [docs/runtime-flow.md](docs/runtime-flow.md)。
 
 ## 文档
 
@@ -411,7 +409,7 @@ Git Bash 里跑。Windows 会自动安装 `tzdata`。
 欢迎贡献，尤其是能钉住失败语义的测试。先读 [CONTRIBUTING.md](CONTRIBUTING.md)：环境、分支模型、
 提交约定，以及新增节点 / 计划的骨架代码。参与即表示同意[行为准则](CODE_OF_CONDUCT.md)。
 
-改查询链路时，请在同一次提交里跑完上面的门禁，并同步计划、流程图数据表和三份 README。
+改查询链路时，请在同一次提交里跑完上面的门禁，并同步计划、流程图文案和中英文两份 README。
 
 ## 安全
 

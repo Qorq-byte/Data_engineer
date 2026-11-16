@@ -1,6 +1,6 @@
 # NL2SQL データエンジニアリングエージェント
 
-[English](README.en.md) | [简体中文](README.zh-CN.md) | [バイリンガル版](README.md) | [繁體中文](README.zh-TW.md) | **日本語**
+[English](README.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | **日本語**
 
 リレーショナルデータベースに対する自然言語の質問を、検証済みの読み取り専用 SQL 文に変換する
 エージェントハーネス。変換できないときは、ごまかさずにそう言う。
