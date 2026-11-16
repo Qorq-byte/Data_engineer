@@ -1,13 +1,15 @@
-"""Check the English and Simplified Chinese READMEs stay in step.
+"""Check the four README language views stay in step.
 
 Run from the repository root::
 
     python scripts/check_readmes.py
 
-``README.md`` is the English entry and ``README.zh-CN.md`` the Chinese mirror. This checker compares
-their section lists and relative link targets, resolves every local link and anchor, rejects a
-duplicated English page or a concatenated bilingual page, and verifies that the static diagram is
-motion-free and stays one page tall. Standard library only.
+``README.md`` is the English entry; ``README.zh-CN.md``, ``README.zh-TW.md`` and
+``README.ja.md`` are the Simplified Chinese, Traditional Chinese and Japanese mirrors.
+The checker compares their section counts and relative link targets, resolves local
+links and anchors, rejects a duplicated English page or a concatenated bilingual
+page, and verifies that the static diagram is motion-free and stays one page tall.
+Standard library only.
 """
 
 from __future__ import annotations
@@ -17,7 +19,13 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).resolve().parents[1]
-FILES = ["README.md", "README.zh-CN.md"]
+BODIES = {
+    "README.md": "## Overview",
+    "README.zh-CN.md": "## 项目简介",
+    "README.zh-TW.md": "## 專案簡介",
+    "README.ja.md": "## 概要",
+}
+FILES = list(BODIES)
 
 LINK = re.compile(r"(?<!!)\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 HEADING = re.compile(r"^(#{1,6})\s+(.*)$")
@@ -48,7 +56,7 @@ def headings(text: str) -> list[tuple[int, str]]:
 def slug(value: str) -> str:
     value = value.strip().lower()
     value = re.sub(r"`", "", value)
-    value = re.sub(r"[^\w\s\u4e00-\u9fff-]", "", value, flags=re.UNICODE)
+    value = re.sub(r"[^\w\s\u4e00-\u9fff\u3040-\u30ff-]", "", value, flags=re.UNICODE)
     return re.sub(r"\s+", "-", value)
 
 
@@ -114,22 +122,23 @@ def main() -> None:
             problems.append(f"{name}: expected exactly one level-1 title, found {levels.count(1)}")
     if re.search(r"^# 简体中文\s*$", texts["README.md"], re.MULTILINE):
         problems.append(
-            "README.md: Chinese section found; keep the two languages in separate pages"
+            "README.md: Chinese section found; keep the languages in separate pages"
         )
 
-    en_sections = h2(texts["README.md"])
-    zh_sections = h2(texts["README.zh-CN.md"])
-    if len(en_sections) != len(zh_sections):
-        problems.append(
-            f"section count differs: English {len(en_sections)} vs Chinese {len(zh_sections)}"
-        )
+    counts = {name: len(h2(text)) for name, text in texts.items()}
+    if len(set(counts.values())) != 1:
+        detail = ", ".join(f"{name}={count}" for name, count in counts.items())
+        problems.append(f"section counts differ: {detail}")
 
-    en_targets = body_targets(texts["README.md"], "## Overview")
-    zh_targets = body_targets(texts["README.zh-CN.md"], "## 项目简介")
-    if en_targets != zh_targets:
-        only_en = [item for item in en_targets if item not in zh_targets]
-        only_zh = [item for item in zh_targets if item not in en_targets]
-        problems.append(f"body links differ: only English {only_en}; only Chinese {only_zh}")
+    en_targets = body_targets(texts["README.md"], BODIES["README.md"])
+    for name in FILES[1:]:
+        targets = body_targets(texts[name], BODIES[name])
+        if targets != en_targets:
+            only_en = [item for item in en_targets if item not in targets]
+            only_other = [item for item in targets if item not in en_targets]
+            problems.append(
+                f"body links differ for {name}: only English {only_en}; only this view {only_other}"
+            )
 
     for name in FILES:
         check_links(ROOT / name, problems)
@@ -151,8 +160,9 @@ def main() -> None:
         for item in problems:
             print("  -", item)
         raise SystemExit(1)
+    sections = next(iter(counts.values()))
     print(
-        f"README checks passed: {len(en_sections)} sections per language, "
+        f"README checks passed: {len(FILES)} language views, {sections} sections each, "
         "all local links resolve, diagram is one page and motion-free when static."
     )
 

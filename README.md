@@ -435,8 +435,8 @@ Contributions are welcome, especially tests that pin down failure semantics. Sta
 [CONTRIBUTING.md](CONTRIBUTING.md): environment, branch model, commit conventions and skeletons for a
 new node or plan. Participation is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-For changes to the query path, run the gates above and update the plan, the diagram labels and both
-README languages in the same commit.
+For changes to the query path, run the gates above and update the plan, the diagram labels and all
+four README languages in the same commit.
 
 ## Security
 

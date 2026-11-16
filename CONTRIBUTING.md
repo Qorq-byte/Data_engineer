@@ -17,13 +17,13 @@ and most of the rules below exist to keep that harness honest rather than to mak
 
 ## Documentation and translations
 
-`README.md` is the English entry; `README.zh-CN.md` is the Simplified Chinese mirror. Keep section
-order, links and terminology one-to-one, and edit both in the same commit when setup, support scope,
-request semantics or limits change. Do not concatenate the two languages into one page — the language
-links are the switch. Traditional Chinese and Japanese guides remain available through the same links.
+`README.md` is the English entry; `README.zh-CN.md`, `README.zh-TW.md` and `README.ja.md` are the
+Simplified Chinese, Traditional Chinese and Japanese mirrors. Keep section order, links and terminology
+one-to-one, and edit all four in the same commit when setup, support scope, request semantics or limits
+change. Do not concatenate languages into one page — the language links are the switch.
 
 Keep the READMEs navigable and push detail into `docs/usage.md`, `docs/architecture.md` and
-`docs/support-matrix.md` rather than growing both pages. Keep statements tied to current code or
+`docs/support-matrix.md` rather than growing all four pages. Keep statements tied to current code or
 linked acceptance reports, and distinguish synthetic measurements from production guarantees.
 
 For the runtime illustration, edit the labels in `scripts/render_runtime_flow.py` and run
@@ -31,11 +31,11 @@ For the runtime illustration, edit the labels in `scripts/render_runtime_flow.py
 `assets/runtime-flow-static.svg` from the standard library alone — no Pillow, no network — and exits
 non-zero if a label overflows its card. Keep the one-page layout: a boot line, the entry/admission
 row, the plan bar, the five nodes and the response card. Then update `docs/runtime-flow.md` and the
-caption in both READMEs. Check labels, arrows, the `<desc>` accessibility text and every language link
-before submitting.
+caption in all four READMEs. Check labels, arrows, the `<desc>` accessibility text and every language
+link before submitting.
 
 Documentation PRs should include a short description, checked relative links and a rendered preview
-where useful. Run `python scripts/check_readmes.py` before submitting: it compares the two README
+where useful. Run `python scripts/check_readmes.py` before submitting: it compares the four README
 section lists, resolves local links and anchors, rejects a duplicated English page, and verifies that
 the static diagram contains no animation. Run code gates when changing executable tooling; never
 upload `.env`, private SQL, traces, provider responses or credentials as examples.

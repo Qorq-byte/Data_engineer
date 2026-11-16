@@ -63,8 +63,8 @@ When you change a node name, a guard, an endpoint or the execution semantics, up
 commit:
 
 1. `scripts/render_runtime_flow.py` — the labels live in the small tables inside `build()`.
-2. The text form in this file and the caption in both READMEs.
+2. The text form in this file and the caption in all four READMEs.
 3. This file, if the claim table above changed.
 
 修改节点名、护栏、接口或执行语义时，请在同一次提交里同步：脚本里的文案、本文件的五行文本形态，
-以及两份 README 的图注。
+以及四份 README 的图注。
