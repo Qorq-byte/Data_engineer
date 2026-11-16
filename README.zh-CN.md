@@ -65,7 +65,7 @@ flowchart TD
     N3 --> N4["04 validate_sql"]
     N4 --> E{"05 execute_sql —— 是否可执行？"}
     E -->|是| X["只读连接 · 行数上限 · 超时 · 连接租约"]
-    E -->|"无目标 / execute=false / 校验阻断"| K["跳过或阻断 —— 明确状态"]
+    E -->|"不可执行"| K["跳过或阻断 —— 无目标、execute=false 或校验阻断"]
     X --> O["QueryResponse —— 候选、证据、行、用量"]
     K --> O
     O --> T["持久化 trace · 可选的不存 SQL 审计"]

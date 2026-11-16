@@ -70,7 +70,7 @@ flowchart TD
     N3 --> N4["04 validate_sql"]
     N4 --> E{"05 execute_sql — eligible?"}
     E -->|yes| X["read-only target · row cap · deadline · lease"]
-    E -->|"no target / execute=false / blocking check"| K["skipped or blocked — explicit status"]
+    E -->|"not eligible"| K["skipped or blocked — no target, execute=false, blocking check"]
     X --> O["QueryResponse — candidates, evidence, rows, usage"]
     K --> O
     O --> T["trace persisted · optional SQL-free audit"]
