@@ -2,6 +2,14 @@
 
 [Project overview](README.md) · [简体中文入口](README.zh-CN.md) · [Contributing](CONTRIBUTING.md)
 
+- [Deployment checklist](#deployment-checklist)
+- [Supported versions](#supported-versions)
+- [Reporting a vulnerability](#reporting-a-vulnerability)
+- [What to expect](#what-to-expect)
+- [Disclosure process](#disclosure-process)
+- [Scope](#scope)
+- [Security-relevant design notes](#security-relevant-design-notes)
+
 ## Deployment checklist
 
 - Keep authentication-store credentials separate from read-only query-target credentials.

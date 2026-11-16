@@ -36,6 +36,9 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
   ordering extraction only carry Chinese and English patterns, and `language` is `zh` / `en` /
   `mixed` only. The switcher is now four-way in every edition.
 - `assets/pipeline.gif` (960 px, seamless loop) and `assets/pipeline.svg` (static fallback).
+- `assets/runtime-flow.svg` and `assets/runtime-flow-static.svg`, plus
+  `scripts/render_runtime_flow.py` (standard library only) to regenerate them.
+- `docs/runtime-flow.md` now states what the diagram claims, band by band, in both languages.
 - `docs/archive/stages/INDEX.md`: a timeline over the 53 optimisation stages plus the stage-44 live
   acceptance record, with topic, date, conclusion and a link to each report.
 - `.gitignore` now excludes `.stage*/`, `.post40-plan/`, `.workbuddy/` and
@@ -45,6 +48,14 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 - `README.md` is now the English primary document. It was previously a 664-line Chinese page whose
   final 56 lines were a chronological dump of stages 1–40.
+- Both primary READMEs were restructured into the sections a reader expects — badges, runtime flow,
+  features, architecture, quick start, usage, databases, testing, roadmap, contributing, security,
+  licence — with a table of contents and a language switcher. The prose is shorter; every claim still
+  links to the file or acceptance report that supports it.
+- The hero illustration is now `assets/runtime-flow.svg`, a generated animated diagram of the request
+  lifecycle, with `assets/runtime-flow-static.svg` as the motion-free fallback. It replaces the
+  960 px `assets/pipeline.gif` in the English and Simplified Chinese READMEs; the older file remains
+  for the Traditional Chinese and Japanese editions.
 - Every capability statement in both READMEs is now traceable to a file, and unproven work is
   labelled as unproven instead of described as a feature.
 

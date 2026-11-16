@@ -1,0 +1,211 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1056" viewBox="0 0 1280 1056" role="img" aria-labelledby="title desc">
+<title id="title">Request lifecycle of the NL2SQL data engineering agent</title>
+<desc id="desc">Four entry surfaces converge on one authenticated request. A fixed YAML plan drives WorkflowRunner through parse_nl, schema_linking, generate_sql, validate_sql and execute_sql. Permission, constraint, SQL-policy and LLM-budget guard rails apply per step. Execution is conditional; a skipped or blocked run still produces an explicit status. Every surface shares one QueryResponse contract and a persisted trace.</desc>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0.35" y2="1"><stop offset="0" stop-color="#0A1020"/><stop offset="0.55" stop-color="#0B1222"/><stop offset="1" stop-color="#0E1728"/></linearGradient><radialGradient id="halo" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#2DD4BF" stop-opacity="0.55"/><stop offset="1" stop-color="#2DD4BF" stop-opacity="0"/></radialGradient></defs>
+<rect width="1280" height="1056" fill="url(#bg)"/>
+<text x="36.0" y="30.0" font-size="9.5" fill="#61728C" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="2.4">NL2SQL DATA ENGINEERING AGENT</text>
+<text x="36.0" y="58.0" font-size="19" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">Request lifecycle: one fixed path, five nodes, four guard rails</text>
+<text x="1244.0" y="30.0" font-size="9" fill="#61728C" font-weight="400" text-anchor="end" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">architecture illustration · not telemetry</text>
+<path d="M 36.0 74 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="36.0" y="100.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">01</text><text x="70.0" y="100.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">ENTRY SURFACES</text><path d="M 163 97 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="36.0" y="110.0" width="291.5" height="50.0" rx="9" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="36.0" y="110.0" width="3.0" height="50.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="52.0" y="131.0" font-size="11" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">Web workspace</text>
+<text x="52.0" y="148.0" font-size="8.8" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">chat · schema · SQL workbench</text>
+<rect x="341.5" y="110.0" width="291.5" height="50.0" rx="9" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="341.5" y="110.0" width="3.0" height="50.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="357.5" y="131.0" font-size="11" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">JSON API</text>
+<text x="357.5" y="148.0" font-size="8.8" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">POST /api/v1/query</text>
+<rect x="647.0" y="110.0" width="291.5" height="50.0" rx="9" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="647.0" y="110.0" width="3.0" height="50.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="663.0" y="131.0" font-size="11" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">SSE stream</text>
+<text x="663.0" y="148.0" font-size="8.8" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">POST /api/v1/query/stream</text>
+<rect x="952.5" y="110.0" width="291.5" height="50.0" rx="9" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="952.5" y="110.0" width="3.0" height="50.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="968.5" y="131.0" font-size="11" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">MCP server</text>
+<text x="968.5" y="148.0" font-size="8.8" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">4 FastMCP servers · tool calls</text>
+<path d="M 182 160.0 V 172.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 487 160.0 V 172.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 793 160.0 V 172.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1098 160.0 V 172.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 182 172.0 H 1098" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 640 172.0 V 218" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="635,213.0 645,213.0 640,220" fill="#95A6BE"/>
+<text x="36.0" y="212.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">02</text><text x="70.0" y="212.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">AUTHENTICATE · VALIDATE · BIND</text><path d="M 257 209 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="36.0" y="222.0" width="1208.0" height="60.0" rx="9" fill="#0E1626" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="54.0" y="232.0" width="370.7" height="40.0" rx="7" fill="#16233A" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="66.0" y="252.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">1  JWT + allow-list</text>
+<text x="66.0" y="268.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">unlisted operator → 401</text>
+<text x="412.7" y="252.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">auth</text>
+<path d="M 422.6666666666667 252.0 H 432.6666666666667" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="427.6666666666667,247.0 427.6666666666667,257.0 434.6666666666667,252.0" fill="#95A6BE"/>
+<rect x="448.7" y="232.0" width="370.7" height="40.0" rx="7" fill="#16233A" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="460.7" y="252.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">2  Request validation</text>
+<text x="460.7" y="268.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">Pydantic · dialect enum · enabled model</text>
+<text x="807.3" y="252.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">validate</text>
+<path d="M 817.3333333333334 252.0 H 827.3333333333334" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="822.3333333333334,247.0 822.3333333333334,257.0 829.3333333333334,252.0" fill="#95A6BE"/>
+<rect x="843.3" y="232.0" width="370.7" height="40.0" rx="7" fill="#16233A" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="855.3" y="252.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">3  Session + target</text>
+<text x="855.3" y="268.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">session_id · domain · db_id snapshot</text>
+<text x="1202.0" y="252.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">bind</text>
+<text x="36.0" y="308.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">03</text><text x="70.0" y="308.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">CONTROL PLANE — THE MODEL NEVER PICKS THE NEXT STEP</text><path d="M 381 305 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="110.0" y="318.0" width="1134.0" height="92.0" rx="10" fill="#0D1524" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="124.0" y="336.0" font-size="8" fill="#61728C" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.6">CONTROL</text>
+<rect x="124.0" y="344.0" width="214.0" height="54.0" rx="7" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="136.0" y="362.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">PlanLoader</text>
+<text x="136.0" y="376.0" font-size="8.4" fill="#95A6BE" font-weight="400" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace"><tspan x="136.0" dy="0">request_query.yml</tspan><tspan x="136.0" dy="10.5">validated before use</tspan></text>
+<rect x="352.0" y="344.0" width="414.0" height="54.0" rx="7" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="364.0" y="362.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">request_query.yml</text>
+<text x="364.0" y="376.0" font-size="8.4" fill="#95A6BE" font-weight="400" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace"><tspan x="364.0" dy="0">node_order:</tspan><tspan x="364.0" dy="10.5">parse_nl → schema_linking →</tspan><tspan x="364.0" dy="10.5">generate_sql → validate_sql → execute_sql</tspan></text>
+<rect x="780.0" y="344.0" width="214.0" height="54.0" rx="7" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="792.0" y="362.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">WorkflowRunner</text>
+<text x="792.0" y="376.0" font-size="8.4" fill="#95A6BE" font-weight="400" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace"><tspan x="792.0" dy="0">setup · execute · update</tspan><tspan x="792.0" dy="10.5">owns every transition</tspan></text>
+<rect x="1008.0" y="344.0" width="222.0" height="54.0" rx="7" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="1020.0" y="362.0" font-size="10.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">node lifecycle</text>
+<text x="1020.0" y="376.0" font-size="8.4" fill="#95A6BE" font-weight="400" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace"><tspan x="1020.0" dy="0">setup_input()</tspan><tspan x="1020.0" dy="10.5">execute()</tspan><tspan x="1020.0" dy="10.5">update_context()</tspan><tspan x="1020.0" dy="10.5">evaluate()</tspan></text>
+<path d="M 342.0 371.0 H 358.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="353.0,366.0 353.0,376.0 360.0,371.0" fill="#95A6BE"/>
+<path d="M 770.0 371.0 H 786.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="781.0,366.0 781.0,376.0 788.0,371.0" fill="#95A6BE"/>
+<path d="M 998.0 371.0 H 1014.0" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1009.0,366.0 1009.0,376.0 1016.0,371.0" fill="#95A6BE"/>
+<text x="36.0" y="438.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">04</text><text x="70.0" y="438.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">FIVE NODES, FIXED ORDER — A FAILED NODE ABORTS, IT DOES NOT REROUTE</text><path d="M 475 435 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 410.0 V 456.0" fill="none" stroke="#2B3A52" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 150 456.0 H 1129.2" fill="none" stroke="#2B3A52" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1244.0" y="448.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">dispatched by the runner in node_order</text>
+<rect x="36.0" y="472.0" width="229.6" height="190.0" rx="10" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="36.0" y="472.0" width="229.6" height="3.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="50.0" y="502.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">01</text>
+<text x="76.0" y="502.0" font-size="12.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">parse_nl</text>
+<text x="50.0" y="520.0" font-size="8.8" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">question → structured query</text>
+<path d="M 50.0 530.0 H 251.60000000000002" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="50.0" y="550.0" font-size="9.2" fill="#95A6BE" font-weight="400" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"><tspan x="50.0" dy="0">language · intent · entities</tspan><tspan x="50.0" dy="16">time range · target tables</tspan><tspan x="50.0" dy="16">ambiguous asks flagged</tspan><tspan x="50.0" dy="16">clarification blocks execution</tspan></text>
+<path d="M 50.0 618.0 H 251.60000000000002" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="50.0" y="632.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">emits</text>
+<text x="88.0" y="632.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">→ SQR</text>
+<path d="M 150.8 456.0 V 470.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="145.8,464.0 155.8,464.0 150.8,471.0" fill="#2B3A52"/>
+<path d="M 267.6 567.0 H 276.6" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="271.6,562.0 271.6,572.0 278.6,567.0" fill="#95A6BE"/>
+<rect x="280.6" y="472.0" width="229.6" height="190.0" rx="10" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="280.6" y="472.0" width="229.6" height="3.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="294.6" y="502.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">02</text>
+<text x="320.6" y="502.0" font-size="12.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">schema_linking</text>
+<text x="294.6" y="520.0" font-size="8.8" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">entities → schema objects</text>
+<path d="M 294.6 530.0 H 496.20000000000005" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="294.6" y="550.0" font-size="9.2" fill="#95A6BE" font-weight="400" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"><tspan x="294.6" dy="0">tables · columns · keys · comments</tspan><tspan x="294.6" dy="16">glossary · FK expansion</tspan><tspan x="294.6" dy="16">BM25 ⊕ vectors → RRF</tspan><tspan x="294.6" dy="16">cached vs fresh snapshot labelled</tspan></text>
+<path d="M 294.6 618.0 H 496.20000000000005" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="294.6" y="632.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">emits</text>
+<text x="332.6" y="632.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">→ linked schema</text>
+<path d="M 395.4 456.0 V 470.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="390.40000000000003,464.0 400.40000000000003,464.0 395.40000000000003,471.0" fill="#2B3A52"/>
+<path d="M 512.2 567.0 H 521.2" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="516.2,562.0 516.2,572.0 523.2,567.0" fill="#95A6BE"/>
+<rect x="525.2" y="472.0" width="229.6" height="190.0" rx="10" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="525.2" y="472.0" width="229.6" height="3.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="539.2" y="502.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">03</text>
+<text x="565.2" y="502.0" font-size="12.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">generate_sql</text>
+<text x="539.2" y="520.0" font-size="8.8" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">prompt → SQL candidates</text>
+<path d="M 539.2 530.0 H 740.8000000000001" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="539.2" y="550.0" font-size="9.2" fill="#95A6BE" font-weight="400" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"><tspan x="539.2" dy="0">1–5 candidates, temperature spread</tspan><tspan x="539.2" dy="16">completion evidence + usage</tspan><tspan x="539.2" dy="16">writes are never requested</tspan><tspan x="539.2" dy="16">mock mode yields placeholders</tspan></text>
+<path d="M 539.2 618.0 H 740.8000000000001" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="539.2" y="632.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">emits</text>
+<text x="577.2" y="632.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">→ candidates</text>
+<path d="M 640.0 456.0 V 470.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="635.0,464.0 645.0,464.0 640.0,471.0" fill="#2B3A52"/>
+<path d="M 756.8000000000001 567.0 H 765.8000000000001" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="760.8000000000001,562.0 760.8000000000001,572.0 767.8000000000001,567.0" fill="#95A6BE"/>
+<rect x="769.8" y="472.0" width="229.6" height="190.0" rx="10" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="769.8" y="472.0" width="229.6" height="3.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="783.8" y="502.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">04</text>
+<text x="809.8" y="502.0" font-size="12.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">validate_sql</text>
+<text x="783.8" y="520.0" font-size="8.8" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">five static stages</text>
+<path d="M 783.8 530.0 H 985.4" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="783.8" y="550.0" font-size="9.2" fill="#95A6BE" font-weight="400" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"><tspan x="783.8" dy="0">syntax · schema refs — blocking</tspan><tspan x="783.8" dy="16">types · plan · rules — warning</tspan><tspan x="783.8" dy="16">each check pass / fail / ?</tspan><tspan x="783.8" dy="16">skipped is never reported as passed</tspan></text>
+<path d="M 783.8 618.0 H 985.4" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="783.8" y="632.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">emits</text>
+<text x="821.8" y="632.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">→ evidence</text>
+<path d="M 884.6 456.0 V 470.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="879.5999999999999,464.0 889.5999999999999,464.0 884.5999999999999,471.0" fill="#2B3A52"/>
+<path d="M 1001.4 567.0 H 1010.4" fill="none" stroke="#2B3A52" stroke-width="1.0" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1005.4,562.0 1005.4,572.0 1012.4,567.0" fill="#95A6BE"/>
+<rect x="1014.4" y="472.0" width="229.6" height="190.0" rx="10" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<rect x="1014.4" y="472.0" width="229.6" height="3.0" rx="1.5" fill="#2DD4BF" stroke="#2DD4BF" stroke-width="0"/>
+<text x="1028.4" y="502.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">05</text>
+<text x="1054.4" y="502.0" font-size="12.5" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">execute_sql</text>
+<text x="1028.4" y="520.0" font-size="8.8" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">read-only run, if eligible</text>
+<path d="M 1028.4 530.0 H 1230.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1028.4" y="550.0" font-size="9.2" fill="#95A6BE" font-weight="400" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif"><tspan x="1028.4" dy="0">read-only session · row cap</tspan><tspan x="1028.4" dy="16">deadline · connection lease</tspan><tspan x="1028.4" dy="16">no write path exists</tspan><tspan x="1028.4" dy="16">skip is not success</tspan></text>
+<path d="M 1028.4 618.0 H 1230.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1028.4" y="632.0" font-size="8" fill="#61728C" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">emits</text>
+<text x="1066.4" y="632.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">→ rows | skipped</text>
+<path d="M 1129.2 456.0 V 470.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<polygon points="1124.2,464.0 1134.2,464.0 1129.2,471.0" fill="#2B3A52"/>
+<path d="M 36.0 678 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 5"/>
+<path d="M 150.8 664.0 V 678" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 4"/>
+<path d="M 395.4 664.0 V 678" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 4"/>
+<path d="M 640.0 664.0 V 678" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 4"/>
+<path d="M 884.6 664.0 V 678" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 4"/>
+<path d="M 1129.2 664.0 V 678" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 4"/>
+<text x="36.0" y="702.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">05</text><text x="70.0" y="702.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">GUARD RAILS — CHECKED PER STEP, UNLISTED MEANS DENIED</text><path d="M 393 699 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="36.0" y="712.0" width="293.0" height="54.0" rx="8" fill="#111925" stroke="#3A4A63" stroke-width="1.0"/>
+<text x="48.0" y="734.0" font-size="9.8" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">PermissionManager</text>
+<text x="48.0" y="750.0" font-size="8.4" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">allow · deny · ask · default deny</text>
+<rect x="341.0" y="712.0" width="293.0" height="54.0" rx="8" fill="#111925" stroke="#3A4A63" stroke-width="1.0"/>
+<text x="353.0" y="734.0" font-size="9.8" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">ConstraintEnforcer</text>
+<text x="353.0" y="750.0" font-size="8.4" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">read_only · max_rows · max_llm_calls</text>
+<rect x="646.0" y="712.0" width="293.0" height="54.0" rx="8" fill="#111925" stroke="#3A4A63" stroke-width="1.0"/>
+<text x="658.0" y="734.0" font-size="9.8" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">SQL policy</text>
+<text x="658.0" y="750.0" font-size="8.4" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">single statement · AST · no DML</text>
+<rect x="951.0" y="712.0" width="293.0" height="54.0" rx="8" fill="#111925" stroke="#3A4A63" stroke-width="1.0"/>
+<text x="963.0" y="734.0" font-size="9.8" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">LLM boundary</text>
+<text x="963.0" y="750.0" font-size="8.4" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">budget · finish_reason · usage</text>
+<text x="36.0" y="792.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">06</text><text x="70.0" y="792.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">EXECUTION IS CONDITIONAL — THE OUTCOME IS ALWAYS EXPLICIT</text><path d="M 416 789 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="36.0" y="802.0" width="584.0" height="62.0" rx="9" fill="#101A28" stroke="#3A4A63" stroke-width="1.0"/>
+<rect x="36.0" y="802.0" width="3.0" height="62.0" rx="1.5" fill="#4ADE80" stroke="#4ADE80" stroke-width="0"/>
+<text x="52.0" y="826.0" font-size="10.8" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">execution runs</text>
+<text x="52.0" y="844.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">read-only session · row cap · deadline · lease</text>
+<text x="606.0" y="826.0" font-size="8.6" fill="#4ADE80" font-weight="500" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">rows + truncated flag</text>
+<rect x="636.0" y="802.0" width="608.0" height="62.0" rx="9" fill="#101A28" stroke="#3A4A63" stroke-width="1.0"/>
+<rect x="636.0" y="802.0" width="3.0" height="62.0" rx="1.5" fill="#F5C451" stroke="#F5C451" stroke-width="0"/>
+<text x="652.0" y="826.0" font-size="10.8" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">skipped / blocked</text>
+<text x="652.0" y="844.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">no target · execute=false · blocking check · cap hit</text>
+<text x="1230.0" y="826.0" font-size="8.6" fill="#F5C451" font-weight="500" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">explicit status, no fake success</text>
+<text x="36.0" y="890.0" font-size="9.5" fill="#2DD4BF" font-weight="700" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" letter-spacing="1.2">07</text><text x="70.0" y="890.0" font-size="9.5" fill="#95A6BE" font-weight="600" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif" letter-spacing="1.6">ONE CONTRACT, THREE SURFACES</text><path d="M 245 887 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="36.0" y="900.0" width="1208.0" height="62.0" rx="9" fill="#111A2B" stroke="#2B3A52" stroke-width="1.0"/>
+<text x="52.0" y="924.0" font-size="11" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">QueryResponse</text>
+<text x="1228.0" y="925.0" font-size="8.4" fill="#61728C" font-weight="400" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">trace → MySQL · optional SQL-free audit</text>
+<path d="M 52.0 940.0 H 1228.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="1228.0" y="954.0" font-size="8.4" fill="#61728C" font-weight="400" text-anchor="end" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">one status per request · errors carry a code</text>
+<rect x="186.0" y="911.0" width="49.2" height="20.0" rx="5" fill="#16233A" stroke="#31425C" stroke-width="1.0"/>
+<text x="210.6" y="925.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">status</text>
+<rect x="243.2" y="911.0" width="111.2" height="20.0" rx="5" fill="#16233A" stroke="#31425C" stroke-width="1.0"/>
+<text x="298.8" y="925.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">candidates[].sql</text>
+<rect x="362.4" y="911.0" width="61.6" height="20.0" rx="5" fill="#16233A" stroke="#31425C" stroke-width="1.0"/>
+<text x="393.2" y="925.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">evidence</text>
+<rect x="432.0" y="911.0" width="74.0" height="20.0" rx="5" fill="#16233A" stroke="#31425C" stroke-width="1.0"/>
+<text x="469.0" y="925.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">validation</text>
+<rect x="514.0" y="911.0" width="67.8" height="20.0" rx="5" fill="#16233A" stroke="#31425C" stroke-width="1.0"/>
+<text x="547.9" y="925.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">execution</text>
+<rect x="589.8" y="911.0" width="43.0" height="20.0" rx="5" fill="#16233A" stroke="#31425C" stroke-width="1.0"/>
+<text x="611.3" y="925.0" font-size="8.6" fill="#7FF3E4" font-weight="400" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">usage</text>
+<text x="56.0" y="954.0" font-size="8" fill="#2DD4BF" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">▸</text>
+<text x="66.0" y="954.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">JSON</text>
+<text x="115.6" y="954.0" font-size="8" fill="#2DD4BF" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">▸</text>
+<text x="125.6" y="954.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">SSE event per node</text>
+<text x="264.8" y="954.0" font-size="8" fill="#2DD4BF" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">▸</text>
+<text x="274.8" y="954.0" font-size="8.6" fill="#95A6BE" font-weight="400" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">MCP tool result</text>
+<circle cx="40.0" cy="978.5" r="3.4" fill="#4ADE80" opacity="0.9"/>
+<text x="50.0" y="982.0" font-size="9.4" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">completed</text>
+<text x="114.0" y="982.0" font-size="8.6" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">SQL and evidence returned</text>
+<circle cx="460.0" cy="978.5" r="3.4" fill="#F87171" opacity="0.9"/>
+<text x="470.0" y="982.0" font-size="9.4" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">failed</text>
+<text x="516.0" y="982.0" font-size="8.6" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">a node aborted · errors[] carries a code</text>
+<circle cx="900.0" cy="978.5" r="3.4" fill="#F5C451" opacity="0.9"/>
+<text x="910.0" y="982.0" font-size="9.4" fill="#E9F0FA" font-weight="600" text-anchor="start" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">skipped / blocked</text>
+<text x="1022.0" y="982.0" font-size="8.6" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">execution not attempted · said so</text>
+<path d="M 36.0 1030 H 1244.0" fill="none" stroke="#2B3A52" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="36.0" y="1046.0" font-size="8.6" fill="#61728C" font-weight="400" text-anchor="start" font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">Rendered from scripts/render_runtime_flow.py · the plan YAML decides order; the model only writes SQL</text>
+<text x="1244.0" y="1046.0" font-size="8.6" fill="#61728C" font-weight="400" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace">read-only · request-scoped · fail explicit</text>
+</svg>
