@@ -38,7 +38,10 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 - `assets/pipeline.gif` (960 px, seamless loop) and `assets/pipeline.svg` (static fallback).
 - `assets/runtime-flow.svg` and `assets/runtime-flow-static.svg`, plus
   `scripts/render_runtime_flow.py` (standard library only) to regenerate them.
-- `docs/runtime-flow.md` now states what the diagram claims, band by band, in both languages.
+- `docs/runtime-flow.md` now states what the diagram claims, band by band, in both languages, and
+  carries the five-line text form of the same path.
+- `docs/usage.md`, `docs/architecture.md` and `docs/support-matrix.md`: the reference material moved
+  out of the READMEs.
 - `docs/archive/stages/INDEX.md`: a timeline over the 53 optimisation stages plus the stage-44 live
   acceptance record, with topic, date, conclusion and a link to each report.
 - `.gitignore` now excludes `.stage*/`, `.post40-plan/`, `.workbuddy/` and
@@ -48,9 +51,11 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 - `README.md` is now the English primary document. It was previously a 664-line Chinese page whose
   final 56 lines were a chronological dump of stages 1–40.
-- Both primary READMEs were restructured into the sections a reader expects — badges, runtime flow,
-  features, architecture, quick start, usage, databases, testing, roadmap, contributing, security,
-  licence — with a table of contents and a language switcher. The prose is shorter; every claim still
+- Both primary READMEs were cut to roughly 110 lines: positioning, badges, the runtime diagram,
+  features, a copy-paste quick start, one request example, a documentation index, and the known
+  limits. The detail that used to live there — API fields, endpoints, response evidence, layer
+  tables, repository layout, design notes, database and model support, the per-feature status table
+  — moved to `docs/usage.md`, `docs/architecture.md` and `docs/support-matrix.md`. Every claim still
   links to the file or acceptance report that supports it.
 - The hero illustration is now `assets/runtime-flow.svg`, a generated animated diagram of the request
   lifecycle, with `assets/runtime-flow-static.svg` as the motion-free fallback. It replaces the

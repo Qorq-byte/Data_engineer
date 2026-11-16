@@ -30,6 +30,26 @@ them becomes unreadable.
 图有意省略的细节：SSE 每个节点一个事件、取消时关闭流并释放连接租约、逐次用量与缺测分开记录。
 这些写在 [query-contract.md](optimization/query-contract.md) 里，画上去会让图失去可读性。
 
+## Text form / 文本形态
+
+The README carries the picture; this is the same path as five lines you can grep and diff.
+
+```text
+in    web workspace · JSON · SSE · MCP  →  auth · validate · bind session and target
+plan  PlanLoader reads request_query.yml  →  WorkflowRunner owns node_order
+run   parse_nl → schema_linking → generate_sql → validate_sql → execute_sql
+out   executed: read-only rows  ·  skipped/blocked: explicit status  →  QueryResponse
+gate  PermissionManager · ConstraintEnforcer · SQL policy · LLM budget (every step)
+```
+
+```text
+入   Web 工作台 · JSON · SSE · MCP  →  认证 · 校验 · 绑定会话与目标库
+计划 PlanLoader 读取 request_query.yml  →  WorkflowRunner 按 node_order 推进
+执行 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql
+出   执行：只读结果  ·  跳过/阻断：明确状态  →  QueryResponse
+闸门 PermissionManager · ConstraintEnforcer · SQL 策略 · LLM 预算（每步生效）
+```
+
 ## Regenerate / 重新生成
 
 The diagram is generated, not hand-drawn. Only the standard library is required:
@@ -49,8 +69,8 @@ When you change a node name, a guard or the execution semantics, update in the s
 
 1. `scripts/render_runtime_flow.py` — the labels and the timeline live in the data tables at the top of
    `build()`.
-2. The five-line text digest under “Runtime flow” in `README.md` and `README.zh-CN.md`.
+2. The text form in this file and, if a band is renamed, the caption in both READMEs.
 3. This file, if the claim table above changed.
 
-修改节点名、护栏或执行语义时，请在同一次提交里同步：脚本里的文案表、两份 README 里的五行文本摘要，
+修改节点名、护栏或执行语义时，请在同一次提交里同步：脚本里的文案表、本文件的五行文本形态，
 以及上表的说明。

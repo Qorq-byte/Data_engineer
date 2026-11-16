@@ -18,16 +18,18 @@ and most of the rules below exist to keep that harness honest rather than to mak
 ## Documentation and translations
 
 English (`README.md`) is the primary project introduction; `README.zh-CN.md` provides the
-corresponding Simplified Chinese guide. Update both when setup, support scope or query behaviour
-changes. Traditional Chinese and Japanese guides remain available through the language links.
-Keep statements tied to current code or linked acceptance reports, and distinguish synthetic
-measurements from production guarantees.
+corresponding Simplified Chinese guide. Both stay short and link out to `docs/usage.md`,
+`docs/architecture.md` and `docs/support-matrix.md` — put new detail in those pages rather than
+growing the READMEs again. Update the English and Chinese pair together when setup, support scope or
+query behaviour changes. Traditional Chinese and Japanese guides remain available through the
+language links. Keep statements tied to current code or linked acceptance reports, and distinguish
+synthetic measurements from production guarantees.
 
 For workflow illustrations, edit the data tables in `scripts/render_runtime_flow.py` and run
 `python scripts/render_runtime_flow.py`. It rewrites `assets/runtime-flow.svg` (animated) and
 `assets/runtime-flow-static.svg` from the standard library alone — no Pillow, no network. Then update
-`docs/runtime-flow.md` and the five-line text digest in both READMEs. Check labels, arrows, the
-`<desc>` accessibility text and both language links before submitting.
+`docs/runtime-flow.md` and the caption in both READMEs. Check labels, arrows, the `<desc>`
+accessibility text and both language links before submitting.
 
 Documentation PRs should include a short description, checked relative links and a rendered preview
 where useful. Run code gates when changing executable tooling; never upload `.env`, private SQL,
