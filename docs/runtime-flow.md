@@ -49,8 +49,8 @@ When you change a node name, a guard or the execution semantics, update in the s
 
 1. `scripts/render_runtime_flow.py` — the labels and the timeline live in the data tables at the top of
    `build()`.
-2. The Mermaid source in `README.md` and `README.zh-CN.md`.
+2. The five-line text digest under “Runtime flow” in `README.md` and `README.zh-CN.md`.
 3. This file, if the claim table above changed.
 
-修改节点名、护栏或执行语义时，请在同一次提交里同步：脚本里的文案表、两份 README 的 Mermaid
-源码，以及上表的说明。
+修改节点名、护栏或执行语义时，请在同一次提交里同步：脚本里的文案表、两份 README 里的五行文本摘要，
+以及上表的说明。

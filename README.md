@@ -57,26 +57,14 @@ must match an enabled provider. `PlanLoader` returns `request_query.yml`, the ru
 `node_order`, constraints and permissions are consulted per step, and one `QueryResponse` contract is
 shared by the JSON, SSE and MCP surfaces before the trace is persisted.
 
-The same path, as text you can diff:
+The same path in five lines, for diff review:
 
-```mermaid
-flowchart TD
-    S["Web workspace · JSON · SSE · MCP"] --> A["Authenticate · validate · bind session and target"]
-    A --> P["PlanLoader → request_query.yml"]
-    P --> R["WorkflowRunner — fixed node_order"]
-    R --> N1["01 parse_nl"]
-    N1 --> N2["02 schema_linking"]
-    N2 --> N3["03 generate_sql"]
-    N3 --> N4["04 validate_sql"]
-    N4 --> E{"05 execute_sql — eligible?"}
-    E -->|yes| X["read-only target · row cap · deadline · lease"]
-    E -->|"not eligible"| K["skipped or blocked — no target, execute=false, blocking check"]
-    X --> O["QueryResponse — candidates, evidence, rows, usage"]
-    K --> O
-    O --> T["trace persisted · optional SQL-free audit"]
-    G["PermissionManager · ConstraintEnforcer · SQL policy · LLM budget"] -.-> R
-    G -.-> N3
-    G -.-> X
+```text
+in    web workspace · JSON · SSE · MCP  →  auth · validate · bind session and target
+plan  PlanLoader reads request_query.yml  →  WorkflowRunner owns node_order
+run   parse_nl → schema_linking → generate_sql → validate_sql → execute_sql
+out   executed: read-only rows  ·  skipped/blocked: explicit status  →  QueryResponse
+gate  PermissionManager · ConstraintEnforcer · SQL policy · LLM budget (every step)
 ```
 
 Each node runs `setup_input()` → `execute()` → `update_context()` → evaluation. Nodes never call one

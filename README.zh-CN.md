@@ -52,26 +52,14 @@
 `PlanLoader` 返回 `request_query.yml`；执行器按 `node_order` 逐节点推进，约束与权限逐步生效；
 JSON、SSE、MCP 共用同一份 `QueryResponse` 契约，最后持久化 trace。
 
-同一路径的文本版本，便于 diff：
+同一路径的五行摘要，便于 diff：
 
-```mermaid
-flowchart TD
-    S["Web 工作台 · JSON · SSE · MCP"] --> A["认证 · 校验 · 绑定会话与目标库"]
-    A --> P["PlanLoader → request_query.yml"]
-    P --> R["WorkflowRunner —— 固定 node_order"]
-    R --> N1["01 parse_nl"]
-    N1 --> N2["02 schema_linking"]
-    N2 --> N3["03 generate_sql"]
-    N3 --> N4["04 validate_sql"]
-    N4 --> E{"05 execute_sql —— 是否可执行？"}
-    E -->|是| X["只读连接 · 行数上限 · 超时 · 连接租约"]
-    E -->|"不可执行"| K["跳过或阻断 —— 无目标、execute=false 或校验阻断"]
-    X --> O["QueryResponse —— 候选、证据、行、用量"]
-    K --> O
-    O --> T["持久化 trace · 可选的不存 SQL 审计"]
-    G["PermissionManager · ConstraintEnforcer · SQL 策略 · LLM 预算"] -.-> R
-    G -.-> N3
-    G -.-> X
+```text
+入   Web 工作台 · JSON · SSE · MCP  →  认证 · 校验 · 绑定会话与目标库
+计划 PlanLoader 读取 request_query.yml  →  WorkflowRunner 按 node_order 推进
+执行 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql
+出   执行：只读结果  ·  跳过/阻断：明确状态  →  QueryResponse
+闸门 PermissionManager · ConstraintEnforcer · SQL 策略 · LLM 预算（每步生效）
 ```
 
 每个节点只跑 `setup_input()` → `execute()` → `update_context()` → 评估。节点之间互不调用，

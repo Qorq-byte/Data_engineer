@@ -26,8 +26,8 @@ measurements from production guarantees.
 For workflow illustrations, edit the data tables in `scripts/render_runtime_flow.py` and run
 `python scripts/render_runtime_flow.py`. It rewrites `assets/runtime-flow.svg` (animated) and
 `assets/runtime-flow-static.svg` from the standard library alone — no Pillow, no network. Then update
-`docs/runtime-flow.md` and the Mermaid source in both READMEs. Check labels, arrows, the `<desc>`
-accessibility text and both language links before submitting.
+`docs/runtime-flow.md` and the five-line text digest in both READMEs. Check labels, arrows, the
+`<desc>` accessibility text and both language links before submitting.
 
 Documentation PRs should include a short description, checked relative links and a rendered preview
 where useful. Run code gates when changing executable tooling; never upload `.env`, private SQL,
