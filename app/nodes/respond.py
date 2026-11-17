@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.llm.router import LiteLLMRouter
+from app.llm.protocols import CompletionRouter
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
 
@@ -50,7 +50,7 @@ class RespondNode(AgenticNode):
     name = "respond"
     description = "Assemble SQL, execution results, and validation into a user-facing reply"
 
-    def __init__(self, router: LiteLLMRouter | None = None) -> None:
+    def __init__(self, router: CompletionRouter | None = None) -> None:
         super().__init__()
         self._router = router
 
@@ -134,6 +134,9 @@ class RespondNode(AgenticNode):
         model: str | None,
     ) -> str | None:
         """Generate the reply via LLM. Returns ``None`` on any failure."""
+        router = self._router
+        if router is None:
+            return None
         prompt = self._build_prompt(
             question=question,
             sql=sql,
@@ -149,7 +152,7 @@ class RespondNode(AgenticNode):
             "based on the provided query context."
         )
         try:
-            result = await self._router.complete(  # type: ignore[union-attr]
+            result = await router.complete(
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": prompt},

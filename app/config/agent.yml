@@ -55,6 +55,9 @@ agent:
       tools: [analyze_error, compare_results]
       permissions:
         analyze_error: allow
+        # Declared as an available tool; denying it made the reflection node
+        # impossible to run once its plan became executable.
+        compare_results: allow
 
     hybrid_search:
       model: none

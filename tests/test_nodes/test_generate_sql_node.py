@@ -260,3 +260,64 @@ class TestWorkflowChain:
         assert shared["primary_sql"] is not None
         assert "sqr" in shared
         assert "candidates" in shared
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Reflection revise (self_heal mode)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestSelfHealContext:
+    async def test_revise_prompt_carries_previous_sql_and_error(self, sample_sqr):
+        from app.llm.router import LiteLLMRouter, RouterConfig
+
+        captured: dict[str, str] = {}
+
+        class ScriptedRouter(LiteLLMRouter):
+            async def complete(self, messages, **kwargs):
+                captured["prompt"] = "\n".join(item.get("content", "") for item in messages)
+                return {"choices": [{"message": {"content": "SELECT id FROM orders"}}]}
+
+        node = GenerateSQLNode(router=ScriptedRouter(RouterConfig(), mock_mode=True))
+        output = await node.execute(
+            NodeInput(
+                query_text="查询所有订单",
+                context={
+                    "sqr": sample_sqr,
+                    "sql": "SELECT missing FROM orders",
+                    "error_analysis": "no such column: missing",
+                    "fix_hints": ["改用 id 列"],
+                },
+                config={"mode": "self_heal", "num_candidates": 1},
+            )
+        )
+
+        assert output.errors == []
+        assert "SELECT missing FROM orders" in captured["prompt"]
+        assert "no such column: missing" in captured["prompt"]
+        assert "改用 id 列" in captured["prompt"]
+
+    async def test_default_mode_does_not_inject_error_context(self, sample_sqr):
+        from app.llm.router import LiteLLMRouter, RouterConfig
+
+        captured: dict[str, str] = {}
+
+        class ScriptedRouter(LiteLLMRouter):
+            async def complete(self, messages, **kwargs):
+                captured["prompt"] = "\n".join(item.get("content", "") for item in messages)
+                return {"choices": [{"message": {"content": "SELECT id FROM orders"}}]}
+
+        node = GenerateSQLNode(router=ScriptedRouter(RouterConfig(), mock_mode=True))
+        await node.execute(
+            NodeInput(
+                query_text="查询所有订单",
+                context={
+                    "sqr": sample_sqr,
+                    "sql": "SELECT missing FROM orders",
+                    "error_analysis": "no such column: missing",
+                },
+                config={"num_candidates": 1},
+            )
+        )
+
+        assert "no such column: missing" not in captured["prompt"]

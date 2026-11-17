@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -20,19 +20,30 @@ from app.harness.events import NodeEvent, NodeEventStatus
 from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
 from app.harness.shared_query_runtime import shared_query_scope
-from app.llm.budget import BudgetedRouter, active_budget
+from app.llm.budget import active_budget
 from app.llm.factory import get_default_router
 from app.llm.protocols import CompletionRouter
 from app.llm.usage import active_usage
+from app.models.domain import DomainConfig
 from app.models.schema import SchemaSnapshot
 from app.models.workflow import WorkflowPlan
-from app.nodes.execute_sql import ExecuteSQLNode
-from app.nodes.generate_sql import GenerateSQLNode
-from app.nodes.parse_nl import ParseNLNode
-from app.nodes.registry import NodeRegistry
-from app.nodes.schema_linking import SchemaLinkingNode
-from app.nodes.validate_sql import ValidateSQLNode
-from app.workflow.contracts import QueryCapacityError, QueryEventHandler, QueryEventName, QueryInput
+from app.workflow.contracts import (
+    QueryCapacityError,
+    QueryEventHandler,
+    QueryEventName,
+    QueryInput,
+    QueryPlanError,
+)
+from app.workflow.plan_runtime import (
+    NodeDependencies,
+    build_registry,
+    plan_blocker,
+    plan_has_node,
+    plan_output,
+    plan_stages,
+    request_overrides,
+    stage_for,
+)
 from app.workflow.query_audit import QueryAuditState, finish_audit
 
 if TYPE_CHECKING:
@@ -42,6 +53,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 _CONFIG_LOADER = ConfigLoader(str(_ROOT / "config/agent.yml"))
 _PLAN_LOADER = PlanLoader(str(_ROOT / "workflow/plans"))
 _PLAN_MTIME = -1
+_PLAN_STAMPS: dict[tuple[int, str], int] = {}
 
 
 def _request_plan() -> WorkflowPlan:
@@ -52,6 +64,59 @@ def _request_plan() -> WorkflowPlan:
         _PLAN_MTIME = stamp
         return plan
     return _PLAN_LOADER.load("request_query")
+
+
+def _plan_for(plan_id: str) -> WorkflowPlan:
+    """Load *plan_id* with the same mtime-based refresh as request_query."""
+    if plan_id == "request_query":
+        return _request_plan()
+    path = _ROOT / "workflow/plans" / f"{plan_id}.yml"
+    if not path.exists():
+        raise QueryPlanError(f"未知工作流计划: {plan_id}")
+    key = (id(_PLAN_LOADER), plan_id)
+    stamp = path.stat().st_mtime_ns
+    if _PLAN_STAMPS.get(key) != stamp:
+        plan = _PLAN_LOADER.reload(plan_id)
+        _PLAN_STAMPS[key] = stamp
+        return plan
+    return _PLAN_LOADER.load(plan_id)
+
+
+async def _resolve_plan(body: Any) -> tuple[WorkflowPlan, Any]:
+    """Resolve the workflow plan for a request and validate it can run.
+
+    Returns ``(plan, decision)`` where ``decision`` is a ``PlanDecision`` when
+    automatic routing ran, or ``None`` for an explicit/default request.
+    """
+    from app.workflow.plan_selection import select_plan
+
+    requested = (getattr(body, "plan_id", "") or "request_query").strip()
+    decision = None
+
+    if getattr(body, "auto_plan", False):
+        decision = await select_plan(body.nl_text, getattr(body, "domain", "") or "")
+        plan_id = decision.plan_id
+    else:
+        plan_id = requested
+
+    blocker = plan_blocker(plan_id)
+    if blocker:
+        raise QueryPlanError(f"工作流计划 {plan_id} 当前不可执行：{blocker}")
+
+    plan = _plan_for(plan_id)
+
+    if plan_has_node(plan, "reflection") and not (
+        body.execute and str(getattr(body, "database", "")).strip()
+    ):
+        raise QueryPlanError(
+            f"工作流计划 {plan_id} 含执行反馈回路，需要 execute=true 且指定 database"
+        )
+
+    if decision is not None:
+        decision.requested = requested
+        if plan_id != requested and requested != "request_query":
+            decision.reason = f"{decision.reason}; requested '{requested}'"
+    return plan, decision
 
 
 def describe_query_policy() -> dict[str, Any]:
@@ -69,7 +134,10 @@ def describe_query_policy() -> dict[str, Any]:
         return {"value": value, "source": source}
 
     return {
-        "scope": "JSON/SSE request_query; MCP nl_query uses the same submit_query path",
+        "scope": (
+            "JSON/SSE default request_query; plan_id selects another executable template "
+            "and auto_plan enables capability-filtered selection; MCP nl_query shares this path"
+        ),
         "workflow": {
             "plan_id": plan.id,
             "source": "app/workflow/plans/request_query.yml",
@@ -122,6 +190,10 @@ async def run_query(
     from app.config.settings import settings
     from app.db.runtime import gate
 
+    # Plan resolution happens before admission so a bad plan never occupies a
+    # slot, creates a session, or makes an LLM call.
+    plan, decision = await _resolve_plan(body)
+
     admission = gate("query-admission", max(1, settings.max_concurrent_queries))
     if admission.locked():
         raise QueryCapacityError("Query capacity reached; retry explicitly later")
@@ -144,6 +216,8 @@ async def run_query(
                     llm_router=llm_router,
                     audit=audit,
                     schema_retriever=schema_retriever,
+                    plan=plan,
+                    decision=decision,
                 )
                 status = result.get("status")
                 audit.outcome = (
@@ -164,7 +238,24 @@ async def run_query(
             result["llm_audit"] = {"status": persistence, "query_id": audit.query_id}
             if persistence == "failed":
                 result.setdefault("warnings", []).append("LLM usage audit was not persisted")
+            _record_plan_use(body, plan, result, decision)
             return result
+
+
+def _record_plan_use(
+    body: QueryInput, plan: WorkflowPlan, result: dict[str, Any], decision: Any
+) -> None:
+    """Feed plan history only when selection can use it; never fail a request."""
+    if decision is None and plan.id == "request_query":
+        return
+    from app.workflow.plan_selection import record_decision
+
+    record_decision(
+        body.nl_text,
+        plan.id,
+        domain=str(getattr(body, "domain", "") or ""),
+        success=result.get("status") == "completed",
+    )
 
 
 async def _run_query(
@@ -174,6 +265,8 @@ async def _run_query(
     llm_router: CompletionRouter | None = None,
     audit: QueryAuditState,
     schema_retriever: SchemaRetriever | None = None,
+    plan: WorkflowPlan,
+    decision: Any = None,
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
@@ -186,8 +279,11 @@ async def _run_query(
     session_id = body.session_id or f"s_{uuid.uuid4().hex[:16]}"
     warnings: list[str] = []
     errors: list[str] = []
+    if body.execute and not plan_has_node(plan, "validate_sql"):
+        warnings.append(
+            f"计划 {plan.id} 不包含校验节点；执行仍强制只读、行数上限与语句超时"
+        )
     config = _CONFIG_LOADER.load()
-    plan = _request_plan()
     limits = ConstraintEnforcer(ConstraintLimits(**asdict(config.constraints)))
     router = llm_router or get_default_router()
     from app.knowledge.schema_retriever import SchemaRetriever
@@ -208,6 +304,47 @@ async def _run_query(
     domain = _domain_manager.get(body.domain) if body.domain else None
     if body.domain not in {"", "default"} and domain is None:
         warnings.append(f"Domain '{body.domain}' not found")
+
+    domain_rules = list(domain.rules) if domain else []
+    prompt_rules = domain_rules
+    validation_rules = domain_rules
+    applied_rules: list[dict[str, Any]] = []
+    try:
+        from app.learning.rule_registry import learned_rule_registry
+
+        learned = learned_rule_registry.business_rules(str(getattr(body, "domain", "") or ""))
+        if learned_rule_registry.last_error:
+            warnings.append("学习规则存储不可读；本次未应用已审批规则")
+        matched = learned_rule_registry.match(body.nl_text, learned)
+        if matched:
+            # PromptBuilder filters by pattern against the question, so the
+            # matched rules keep their patterns.  SQLValidator filters by
+            # pattern against the SQL, so enforcement is scoped to queries the
+            # rule already matched and the pattern is cleared for that check.
+            prompt_rules = [*domain_rules, *matched]
+            scoped = [replace(rule, pattern="") for rule in matched if rule.enforce]
+            validation_rules = [*domain_rules, *scoped]
+            applied_rules = [
+                {
+                    "id": rule.id,
+                    "description": rule.description,
+                    "pattern": rule.pattern,
+                    "source": "learned",
+                }
+                for rule in matched
+            ]
+    except Exception:
+        warnings.append("学习规则不可用；本次仅使用领域配置规则")
+
+    prompt_domain = domain
+    if applied_rules:
+        # PromptBuilder reads rules from the domain object, so learned rules
+        # must be merged there to reach generation rather than validation only.
+        if domain is not None:
+            prompt_domain = replace(domain, rules=prompt_rules)
+        else:
+            prompt_domain = DomainConfig(name="", rules=prompt_rules)
+
     resolved_targets = (
         await resolve_query_targets(body.database, warnings) if body.link_schema else {}
     )
@@ -240,6 +377,7 @@ async def _run_query(
     primary_validation = None
     execution = None
     sqr = None
+    last_context: dict[str, Any] = {}
     traces = []
     statuses = []
     actual_nodes: list[str] = []
@@ -252,8 +390,9 @@ async def _run_query(
         "workflow_start",
         {
             "workflow_id": query_id,
-            "plan_id": "request_query",
-            "stages": ["parse", "retrieve", "generate", "validate", "execute"],
+            "plan_id": plan.id,
+            "stages": plan_stages(plan)
+            or ["parse", "retrieve", "generate", "validate", "execute"],
         },
     )
     collector = audit.collector
@@ -268,71 +407,46 @@ async def _run_query(
             execution_error = ""
             metadata = (
                 _detect_metadata_query(body.nl_text, {db_id: (schema, db_name, dialect)})
-                if schema and db_id
+                if schema and db_id and plan_has_node(plan, "generate_sql")
                 else None
             )
-            registry = NodeRegistry()
-            nodes = [
-                ParseNLNode(),
-                SchemaLinkingNode(retriever=retriever),
-                GenerateSQLNode(router=BudgetedRouter(router)),
-                ValidateSQLNode(dialect=dialect),
-                ExecuteSQLNode(),
-            ]
-            node_configs: dict[str, dict[str, Any]] = {}
-            ids = ["parse", "link", "gen", "validate", "exec"]
-            for node_id, node in zip(ids, nodes, strict=True):
-                node_configs[node_id] = {}
-                registered = config.nodes.get(node.name)
-                if registered:
-                    if hasattr(node, "agentic_config"):
-                        node.agentic_config.permission_rules = [registered.permissions]
-                    node_configs[node_id] = {
-                        "tools": registered.tools,
-                        "permissions": registered.permissions,
-                    }
-                registry.register(node)
-            node_configs["link"].update({"enabled": body.link_schema, "db_id": db_id})
-            node_configs["gen"].update(
-                {
-                    "num_candidates": body.num_candidates,
-                    "model": body.model,
-                    "dialect": dialect,
-                    "database_name": db_name,
-                    "prepared_candidates": metadata,
-                    "schema_notes": notes,
-                }
+            dependencies = NodeDependencies(
+                retriever=retriever, router=router, dialect=dialect
             )
-            node_configs["validate"].update(
-                {
-                    "enabled": body.run_validation or body.execute,
-                    "dialect": dialect,
-                    "skip_schema": bool(metadata),
-                }
+            registry = build_registry(plan, dependencies)
+            node_configs = request_overrides(
+                plan,
+                body=body,
+                limits=limits,
+                db_id=db_id,
+                dialect=dialect,
+                db_name=db_name,
+                prepared=metadata,
+                notes=notes,
             )
-            node_configs["exec"].update(
-                {
-                    "enabled": bool(body.execute and db_id),
-                    "max_rows": limits.limits.max_result_rows,
-                    "timeout_ms": limits.limits.statement_timeout_ms,
-                }
-            )
+            for node_name in registry.list_all():
+                node = registry.get(node_name)
+                registered = config.nodes.get(node_name)
+                if registered and hasattr(node, "agentic_config"):
+                    node.agentic_config.permission_rules = [registered.permissions]
+                for definition in plan.node_order:
+                    if definition.node != node_name:
+                        continue
+                    node_configs.setdefault(definition.id, {})
+                    if registered:
+                        node_configs[definition.id].update(
+                            {"tools": registered.tools, "permissions": registered.permissions}
+                        )
 
             async def on_node_event(
                 status: NodeEventStatus, data: NodeEvent, target_db_id: str = db_id
             ) -> None:
                 nonlocal execution_error
-                node_id = data["node_id"]
-                stage = {
-                    "parse": "parse",
-                    "link": "retrieve",
-                    "gen": "generate",
-                    "validate": "validate",
-                    "exec": "execute",
-                }[node_id]
+                node_name = data["node"]
+                stage = stage_for(node_name)
                 output = data.get("output")
                 if (
-                    node_id == "exec" and output and output.errors
+                    node_name == "execute_sql" and output and output.errors
                     and output.metadata.get("status") == "execution_error"
                 ):
                     execution_error = "; ".join(output.errors)
@@ -349,8 +463,8 @@ async def _run_query(
                 )
                 if output is None or output.metadata.get("status") == "skipped":
                     return
-                actual_nodes.append(data["node"])
-                if node_id == "parse" and output.result is not None:
+                actual_nodes.append(node_name)
+                if node_name == "parse_nl" and output.result is not None:
                     parsed = output.result
                     await publish(
                         "parse",
@@ -360,9 +474,9 @@ async def _run_query(
                             "confidence": parsed.confidence,
                         },
                     )
-                elif node_id == "link":
+                elif node_name == "schema_linking":
                     await publish("schema", output.result or {})
-                elif node_id == "gen":
+                elif node_name == "generate_sql":
                     await publish(
                         "sql",
                         {
@@ -370,11 +484,11 @@ async def _run_query(
                             "db_id": target_db_id,
                         },
                     )
-                elif node_id == "validate":
+                elif node_name == "validate_sql":
                     report = output.context.get("validation_report")
                     if report:
                         await publish("validation", asdict(report))
-                elif node_id == "exec" and not output.errors:
+                elif node_name == "execute_sql" and not output.errors:
                     await publish("execution", {"db_id": target_db_id, **(output.result or {})})
 
             runner = WorkflowRunner(plan, registry, constraints=limits)
@@ -385,14 +499,15 @@ async def _run_query(
                 on_node_event=on_node_event,
                 reset_constraints=False,
                 schema=schema,
-                domain=domain,
+                domain=prompt_domain,
                 history=history,
                 connection=resolved_targets[db_id].connection if db_id else None,
                 db_id=db_id,
-                require_validation=body.execute,
-                business_rules=domain.rules if domain else [],
+                require_validation=bool(body.execute and plan_has_node(plan, "validate_sql")),
+                business_rules=validation_rules,
             )
             context = result.context
+            last_context = context
             statuses.append(result.status)
             sqr = context.get("sqr") or sqr
             if result.trace:
@@ -401,7 +516,9 @@ async def _run_query(
                     warnings.append("Workflow trace could not be persisted")
             if result.error:
                 errors.append(f"{db_id or source}: {result.error}")
-            linked_tables.extend(context.get("linked_tables", []))
+            linked_tables.extend(
+                context.get("linked_tables") or context.get("relevant_tables", [])
+            )
             linked_columns.extend(context.get("linked_columns", []))
             for warning in context.get("schema_linking_warnings", []):
                 if warning not in warnings:
@@ -429,11 +546,11 @@ async def _run_query(
                 candidate.dialect = dialect
                 if index > 0 and (body.run_validation or body.execute):
                     candidate.validation = asdict(await SQLValidator(dialect).validate(
-                        candidate.sql_text, schema=schema, rules=domain.rules if domain else [],
+                        candidate.sql_text, schema=schema, rules=validation_rules,
                     ))
                 candidate.evidence = candidate_evidence(
                     candidate, None if metadata else schema, basis,
-                    domain.rules if domain else [], notes=notes,
+                    validation_rules, notes=notes,
                     ambiguities=[a.description for a in sqr.ambiguities] if sqr else [],
                     execution_error=execution_error if index == 0 else "",
                 )
@@ -454,7 +571,7 @@ async def _run_query(
         "query_id": query_id,
         "session_id": session_id,
         "status": status,
-        "plan_id": "request_query",
+        "plan_id": plan.id,
         "workflow_ids": traces,
         "llm_calls": limits.llm_calls_used,
         "llm_usage": collector.summary(),
@@ -468,11 +585,15 @@ async def _run_query(
         "execution": execution,
         "linked_tables": list(dict.fromkeys(linked_tables)),
         "linked_columns": linked_columns,
+        "plan_output": plan_output(plan, last_context),
+        "applied_rules": applied_rules,
         "warnings": warnings,
         "errors": errors,
         "source": source,
         "source_note": source_note,
     }
+    if decision is not None:
+        response["plan_selection"] = decision.to_dict()
     turn = {
         "turn_id": query_id,
         "nl_input": body.nl_text,
@@ -504,7 +625,7 @@ async def _run_query(
         except Exception:
             warnings.append("Query history was not persisted; session is process-local")
     record_trace(
-        plan="request_query",
+        plan=plan.id,
         status="success" if status == "completed" else "failed",
         duration_ms=int((time.perf_counter() - started) * 1000),
         nl_input=body.nl_text,

@@ -12,6 +12,7 @@ Phase 2 implementation:
 from __future__ import annotations
 
 from dataclasses import replace
+from typing import Any
 
 from app.core.prompt_builder import PromptBuilder
 from app.core.sql_generator import SQLGenerator, _split_alternatives
@@ -22,6 +23,32 @@ from app.llm.streaming import StreamEvent, events_for
 from app.nodes.agentic import AgenticNode
 from app.nodes.base import NodeInput, NodeOutput
 from app.workflow.contracts import QueryCapacityError
+
+
+def _repair_context(context: dict[str, Any]) -> str | None:
+    """Build self-heal error context from the reflection node's output.
+
+    A plan's ``revise`` step cannot receive dynamic configuration, so the
+    previous SQL and the reflection analysis are read from shared context.
+    Returns ``None`` when there is nothing to repair.
+    """
+    previous = str(context.get("sql") or context.get("primary_sql") or "").strip()
+    analysis = str(context.get("error_analysis") or "").strip()
+    hints = [
+        str(hint).strip()
+        for hint in (context.get("fix_hints") or [])
+        if str(hint).strip()
+    ]
+    if not (previous or analysis or hints):
+        return None
+    parts: list[str] = []
+    if previous:
+        parts.append(f"上一轮 SQL：\n{previous}")
+    if analysis:
+        parts.append(f"执行错误：\n{analysis}")
+    if hints:
+        parts.append("修复提示：\n" + "\n".join(f"- {hint}" for hint in hints))
+    return "\n\n".join(parts)
 
 
 class GenerateSQLNode(AgenticNode):
@@ -123,6 +150,8 @@ class GenerateSQLNode(AgenticNode):
         streaming = input.config.get("streaming", False)
         rag_context = input.config.get("rag_context")
         error_context = input.config.get("error_context")
+        if error_context is None and input.config.get("mode") == "self_heal":
+            error_context = _repair_context(input.context)
         multi_table_hint = input.config.get("multi_table_hint")
         database_name = input.config.get("database_name", "")
 

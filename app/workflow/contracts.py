@@ -31,6 +31,8 @@ class QueryInput(Protocol):
     run_validation: bool
     link_schema: bool
     model: str | None
+    plan_id: str
+    auto_plan: bool
 
 
 class QueryErrorPayload(TypedDict):
@@ -41,6 +43,14 @@ class QueryErrorPayload(TypedDict):
 
 class QueryCapacityError(RuntimeError):
     """The bounded request execution slots are occupied."""
+
+
+class QueryPlanError(ValueError):
+    """The requested workflow plan cannot run for this request.
+
+    Raised before a session or LLM call is created so a bad ``plan_id`` is a
+    client error rather than a partially executed workflow.
+    """
 
 
 @dataclass(frozen=True)
@@ -82,4 +92,6 @@ def classify_query_failure(exc: Exception) -> QueryFailure:
         return QueryFailure(
             "QUERY_CAPACITY", "Query capacity reached; retry explicitly later", 503, 1
         )
+    if isinstance(exc, QueryPlanError):
+        return QueryFailure("INVALID_REQUEST", str(exc), 400)
     return QueryFailure("INTERNAL_ERROR", "Query failed; inspect server logs", 500)

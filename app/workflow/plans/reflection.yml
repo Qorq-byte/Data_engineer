@@ -27,6 +27,9 @@ plan:
     - id: exec
       node: execute_sql
       depends_on: [gen]
+      # An execution error is the input to the reflection step, not a reason to
+      # abort the plan. The reflect node decides whether to revise.
+      on_failure: skip
       config:
         max_rows: 100
         timeout_ms: 30000

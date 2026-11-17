@@ -328,6 +328,15 @@ class QueryRequest(BaseModel):
         default=None,
         description="LLM model override (must be an enabled model; defaults to system default)",
     )
+    plan_id: str = Field(
+        default="request_query",
+        max_length=64,
+        description="Workflow plan to execute; unknown or blocked plans are rejected",
+    )
+    auto_plan: bool = Field(
+        default=False,
+        description="Let capability-filtered plan selection choose among gensql_agentic/ez_query",
+    )
 
 
 class CandidateResult(BaseModel):
@@ -370,6 +379,9 @@ class QueryResponse(BaseModel):
     linked_tables: list[str] = []
     linked_columns: list[dict[str, Any]] = []
     execution: dict[str, Any] | None = None
+    plan_output: dict[str, Any] = Field(default_factory=dict)
+    plan_selection: dict[str, Any] = Field(default_factory=dict)
+    applied_rules: list[dict[str, Any]] = []
     errors: list[str] = []
     warnings: list[str] = []
     source: str = "database"

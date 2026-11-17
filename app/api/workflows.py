@@ -17,11 +17,13 @@ router = APIRouter()
 
 def _load_plan_catalog() -> list[dict[str, Any]]:
     from app.harness.plan_loader import PlanLoader
+    from app.workflow.plan_runtime import plan_blocker
 
     loader = PlanLoader(str(Path(__file__).resolve().parents[1] / "workflow/plans"))
     plans = []
     for plan_id in loader.list_available():
         plan = loader.load(plan_id)
+        blocker = plan_blocker(plan_id)
         plans.append(
             {
                 "id": plan.id,
@@ -29,10 +31,12 @@ def _load_plan_catalog() -> list[dict[str, Any]]:
                 "description": plan.description,
                 "node_count": len(plan.node_order),
                 "nodes": [
-                    {"name": node.node, "label": node.node, "icon": "⚙"} for node in plan.node_order
+                    {"name": node.node, "label": node.node, "icon": "⚙"}
+                    for node in plan.node_order
                 ],
-                "category": "active" if plan_id == "request_query" else "template",
-                "query_executable": plan_id == "request_query",
+                "category": "active" if not blocker else "template",
+                "query_executable": not blocker,
+                "blocker": blocker,
             }
         )
     return plans
@@ -167,34 +171,35 @@ async def create_custom_workflow(body: dict[str, Any]) -> dict[str, Any]:
 
 @router.post("/workflows/simulate")
 async def simulate_routing(body: dict[str, Any]) -> dict[str, Any]:
-    """Simulate workflow routing for a given NL query.
+    """Explain which plan a query would use under automatic routing.
+
+    Uses the same capability-filtered selector as the query path, so the
+    answer can be compared with a real request instead of a separate guess.
 
     Request body: {"nl_text": "...", "domain": "..."}
     """
+    from app.workflow.plan_selection import plan_catalog_state, select_plan
+
     nl_text = body.get("nl_text", "")
     domain = body.get("domain", "default")
-    # Simple heuristic routing simulation
-    nl_lower = nl_text.lower()
-    if any(kw in nl_lower for kw in ["trend", "trending", "over time", "monthly", "weekly"]):
-        selected = "reflection"
-    elif any(kw in nl_lower for kw in ["metric", "kpi", "gmv", "arpu"]):
-        selected = "metric_query"
-    elif len(nl_text.split()) < 5:
-        selected = "ez_query"
-    elif "?" in nl_lower or any(kw in nl_lower for kw in ["what about", "and also", "previous"]):
-        selected = "chat_agentic"
-    else:
-        selected = "gensql_agentic"
-
-    plan = next((p for p in _WORKFLOW_PLANS if p["id"] == selected), _WORKFLOW_PLANS[0])
+    decision = await select_plan(nl_text, "" if domain in {"", "default"} else domain)
+    executable, blocker = plan_catalog_state(decision.plan_id)
+    plan = next(
+        (item for item in _load_plan_catalog() if item["id"] == decision.plan_id),
+        None,
+    )
     return {
         "status": "simulation",
-        "actual_query_plan": "request_query",
+        "actual_query_plan": decision.plan_id if executable else "request_query",
         "nl_text": nl_text,
         "domain": domain,
-        "selected_workflow": selected,
-        "workflow_name": plan["name"],
-        "estimated_cost": "medium",
-        "estimated_nodes": plan["node_count"],
-        "reason": "Matched based on query complexity and keywords",
+        "selected_workflow": decision.plan_id,
+        "workflow_name": plan["name"] if plan else decision.plan_id,
+        "estimated_cost": "low" if decision.plan_id == "ez_query" else "medium",
+        "estimated_nodes": plan["node_count"] if plan else 0,
+        "reason": decision.reason,
+        "layer": decision.layer,
+        "confidence": decision.confidence,
+        "query_executable": executable,
+        "execution_note": blocker or "executable via request plan_id",
     }
