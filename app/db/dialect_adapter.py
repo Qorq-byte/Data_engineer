@@ -19,7 +19,7 @@ class DialectConfig:
     supports: set[str] = field(default_factory=set)  # {"cte", "window", "json", ...}
 
 
-# ── Pre-built dialect configs (11 total, 4 complete in Phase 1) ────────────
+# ── SQL translation profiles; connector implementation is tracked separately ──
 
 PRESET_DIALECTS: dict[str, DialectConfig] = {
     "postgresql": DialectConfig(

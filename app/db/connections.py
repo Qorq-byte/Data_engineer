@@ -1,6 +1,6 @@
 """Multi-database connection factory.
 
-Connects SQLite, DuckDB, PostgreSQL, MySQL, ClickHouse, Trino and StarRocks.
+Connects SQLite, DuckDB, PostgreSQL, MySQL, Snowflake, ClickHouse, Trino and StarRocks.
 """
 
 import asyncio
@@ -81,15 +81,21 @@ class ConnectionFactory:
             if db_id:
                 if db_id in cls._connections:
                     await cls.aclose(db_id)
-                if db_type == DatabaseType.SQLITE and not config.get("check_same_thread", False):
+                if (
+                    db_type == DatabaseType.SNOWFLAKE
+                    or (
+                        db_type == DatabaseType.SQLITE
+                        and not config.get("check_same_thread", False)
+                    )
+                ):
                     cls._offload_connections[id(conn)] = conn
                 cls._connections[db_id] = conn
                 cls._infos[db_id] = ConnectionInfo(
                     db_id=db_id,
                     db_type=db_type,
                     alias=config.get("alias", db_id),
-                    host=config.get("host", ""),
-                    port=config.get("port", 0),
+                    host=config.get("host") or config.get("account", ""),
+                    port=config.get("port", 443 if db_type == DatabaseType.SNOWFLAKE else 0),
                     database_name=config.get("database", config.get("path", "")),
                 )
             return conn
@@ -127,9 +133,12 @@ class ConnectionFactory:
                 from app.db.starrocks_source import StarRocksConnection
 
                 return await StarRocksConnection.connect(config)
+            case DatabaseType.SNOWFLAKE:
+                from app.db.snowflake_source import SnowflakeConnection
+
+                return await SnowflakeConnection.connect(config)
             case (
-                DatabaseType.SNOWFLAKE
-                | DatabaseType.BIGQUERY
+                DatabaseType.BIGQUERY
                 | DatabaseType.REDSHIFT
                 | DatabaseType.DATABRICKS
             ):
@@ -243,6 +252,9 @@ class ConnectionFactory:
             DatabaseType.CLICKHOUSE: ("httpx", "async_single_connection"),
             DatabaseType.TRINO: ("httpx", "async_single_connection"),
             DatabaseType.STARROCKS: ("aiomysql", "pool_acquired_connection"),
+            DatabaseType.SNOWFLAKE: (
+                "snowflake.connector", "thread_offloaded_single_connection"
+            ),
         }
         counts = dict.fromkeys(DatabaseType, 0)
         for db_id in list(cls._connections):

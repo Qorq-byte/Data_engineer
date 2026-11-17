@@ -27,6 +27,7 @@ from app.db.clickhouse_source import ClickHouseConnection
 from app.db.duckdb_source import DuckDBSourceScopeError, require_source_state
 from app.db.execution_types import CursorConnection, DuckReadConnection, ExecutionResult
 from app.db.mysql_query import bounded_mysql_query
+from app.db.snowflake_source import SnowflakeConnection
 from app.db.sqlite_source import SchemaSourceChangedError, read_scope
 from app.db.starrocks_source import StarRocksConnection
 from app.db.trino_source import TrinoConnection
@@ -135,6 +136,10 @@ class ExecuteSQLNode(AgenticNode):
             dialect = "trino"
         elif isinstance(conn, StarRocksConnection):
             dialect = "starrocks"
+        elif isinstance(conn, SnowflakeConnection):
+            dialect = "snowflake"
+        elif self._is_aiomysql_connection(conn):
+            dialect = "mysql"
         if self._is_write_statement(sql, dialect):
             return NodeOutput(
                 result=None,
@@ -179,7 +184,11 @@ class ExecuteSQLNode(AgenticNode):
         try:
             async_driver = (
                 self._is_asyncpg_connection(conn) or self._is_aiomysql_connection(conn)
-                or isinstance(conn, ClickHouseConnection | TrinoConnection | StarRocksConnection)
+                or isinstance(
+                    conn,
+                    ClickHouseConnection | TrinoConnection | StarRocksConnection
+                    | SnowflakeConnection,
+                )
             )
             deadline = asyncio.get_running_loop().time() + timeout_ms / 1000
 
@@ -267,7 +276,10 @@ class ExecuteSQLNode(AgenticNode):
         *, explain: bool = False,
     ) -> ExecutionResult:
         timeout = timeout_ms / 1000
-        if isinstance(conn, ClickHouseConnection | TrinoConnection | StarRocksConnection):
+        if isinstance(
+            conn,
+            ClickHouseConnection | TrinoConnection | StarRocksConnection | SnowflakeConnection,
+        ):
             if explain:
                 raise ValueError("EXPLAIN is not supported by this connector")
             return await conn.query(sql, max_rows, timeout)
