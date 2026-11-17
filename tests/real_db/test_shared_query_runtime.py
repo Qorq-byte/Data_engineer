@@ -77,7 +77,9 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
     if getattr(request, "param", {}).get("immutable"):
         from tests.fixtures.immutable_release import build_release
 
-        environment.update(await build_release(config, tmp_path))
+        environment.update(await build_release(
+            config, tmp_path, with_metrics=getattr(request, "param", {}).get("metrics", False)
+        ))
         environment["SHARED_WORKER_NAMESPACE"] = database
         environment["MAX_CONCURRENT_QUERIES"] = "2"
         environment["LLM_MAX_CONCURRENCY"] = "1"
