@@ -4,9 +4,10 @@ What is wired, what is only declared, and which databases and models have actual
 
 ## Feature status
 
-Status reflects running code, not design documents. `Implemented` means the path is wired and covered
-by tests; `Partial` means the code exists but a documented part of the surface does not work or is not
-reachable from the request path.
+Status reflects running code, not design documents. Track four separate questions: code implemented,
+request path wired, local behavior tested, and target deployment externally accepted. `Implemented`
+in the summary below does not certify every deployment, model or real-data quality. `Partial` means
+a documented part of the surface does not work or is not reachable from the supported request path.
 
 | Feature | Status | Where |
 |---|---|---|
@@ -23,14 +24,33 @@ reachable from the request path.
 | SQL workbench utilities: explain, format, validate, translate | Implemented | `app/api/sql_utils.py`, `app/nodes/` |
 | Request-scoped usage record plus optional SQL-free audit | Implemented | `app/llm/usage.py`, `app/audit/store.py` |
 | Offline evaluation CLIs (SQL contracts, retrieval, NL2SQL batches) | Implemented | `app/evaluation/`, `scripts/` |
+| Scoped metric discovery and MCP metric tools | Wired and locally tested — REST operator gate, HTTP MCP operator JWT, explicit host trust for local metric tools | `app/api/metrics.py`, `app/mcp/metric_tools.py`, `app/workflow/metric_runtime.py` |
 | Seven read-only database connectors | Implemented and tested | `app/db/connections.py` |
 | Automatic plan selection at runtime | Implemented — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default | `app/workflow/plan_selection.py` |
-| Template plans besides `request_query` | Implemented — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic`, `explore` execute via `plan_id`; `metric_query` is rejected because no metric catalog is configured | `app/workflow/plan_runtime.py`, `app/api/query.py` |
-| Multi-agent orchestrator / sub-agents | **Partial** — registered at boot; the request path uses the workflow runner | `main.py` |
+| Template plans besides `request_query` | Five available by default; deterministic `metric_query` v1 additionally requires a valid server catalog; shared workers require it sealed in the active release | `app/workflow/plan_runtime.py`, `app/workflow/metric_runtime.py` |
+| Multi-agent orchestrator / sub-agents | **Partial** — experimental agents registered at boot; REST subagent NL queries now use the fixed workflow with configured scope and operator/user checks; autonomous orchestration is not a supported query path | `main.py`, `app/api/subagents.py`, `app/subagent/workflow.py` |
 | Feedback-driven rule learning | Implemented — approved rules reach the generation prompt and validation warnings, and are echoed in `applied_rules`; rules never rewrite SQL | `app/learning/rule_registry.py`, `app/workflow/query_service.py` |
 | Fixed-configuration MySQL shared workers | Opt-in, single host | [immutable-workers.md](optimization/immutable-workers.md) |
 | Multi-tenant isolation | **Not implemented** — one shared administrator workbench | `app/auth/access.py` |
 | Answer-accuracy / recall baseline on real data | **Not established** | see the roadmap in `README.md` |
+
+### Focused audit, 2026-11-17
+
+| Capability | Implemented | Wired | Local evidence | External acceptance |
+|---|---|---|---|---|
+| Snowflake | Password connector, bounded SELECT, selected namespace metadata | Factory, schema, execute node, API and form | 51 pure policy tests; quoted namespace/table-function regressions fixed; no simulated driver evidence | **Pending**: four opt-in real tests skip without an explicitly supplied fixture/account |
+| `metric_query` | Versioned structured catalog, scoped selection, SQL candidate bridge; optional release sealing with path/version/SHA256 and db_id checks | JSON/SSE and MCP metric_query → fixed resolve/validate/execute; REST/MCP scoped discovery; shared catalog from active immutable runtime; no LLM calls | v1: 37 catalog/SQL + 28 API; discovery: 11 REST + 19 MCP; sealing: 13 file/SQLite/process tests + inactive-runtime API negative; real MySQL: 4 new cases + existing restart regression passed | Business definitions and other target deployments pending; shared metrics tested on MySQL 8.4.13, one host; no cross-table/time-grain, external MCP deployment or subagent metric actions |
+| Multi-agent / subagents | Registry, bus, collaboration algorithms, lifecycle, scoped REST adapter | REST NL requests → `submit_query` → fixed `request_query`; experimental orchestrator remains separate | SQLite API tests prove scope, ACL, no-execute, read-only, row cap, LLM budget and persisted five-node traces | Deployment must bind `context.databases[].db_id`; sample legacy `connection_ref` is not executable |
+| Tenant isolation | **Absent**; operator access only | Shared connection/settings/history/RAG/learning/session stores | Operator and subagent scope checks tested; these are not tenant isolation | Requires product boundary, storage migrations and cross-tenant negative acceptance |
+| Accuracy / recall / capacity | Offline scoring and bounded load tools | Offline only; no calibration in `confidence` | This run: 7 synthetic BM25 queries, 12 schema cases, 18 validator cases; fixed-SQL ASGI/SQLite probe | No business labels, production SLO/environment or calibrated accuracy evidence |
+
+Commands, code evidence, stages, results and blockers are in
+[the completion path](optimization/completion-path-2026-11-17.md) and
+[metric_query v1 configuration and acceptance](optimization/metric-query-v1.md), plus
+[metric discovery/MCP access boundaries](optimization/metric-discovery-mcp.md) and
+[shared catalog sealing and MySQL process acceptance](optimization/shared-metric-catalog.md).
+This stage exercised disposable MySQL metrics; it did **not re-certify all seven connector acceptance suites**. Test counts certify
+the exercised conditions, not a completion percentage.
 
 ## Databases
 
@@ -56,6 +76,9 @@ relationships are not exposed as verified evidence. Install the optional driver 
 snapshot and must be pinned separately for deployment. Row limits and statement timeouts do not cap
 Snowflake warehouse charges. See
 [Stage 67.1 implementation and acceptance limits](optimization/stage-67-snowflake.md).
+The dedicated fixture, native read-only/timeout/cancel checks and opt-in command are in
+[Snowflake acceptance](optimization/snowflake-acceptance.md); its four tests have not run on a real
+Snowflake account in this session.
 
 Acceptance against one disposable instance does not establish compatibility with every server version,
 catalog, deployment or authentication mode. Use a native read-only account on the target database. The

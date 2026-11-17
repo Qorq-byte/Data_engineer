@@ -144,6 +144,19 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 
 ## Web workspace
 
+For explicit metric requests, see [metric_query v1](optimization/metric-query-v1.md). This JSON/SSE/MCP
+plan uses a versioned server catalog and fixed resolve/validate/execute nodes with no model calls.
+The default remains disabled until configured. Operator-only `GET /api/v1/metrics` and MCP
+`list_metrics` discover one explicit domain/database binding; MCP `metric_query` reuses the same plan.
+See [metric discovery and MCP access](optimization/metric-discovery-mcp.md) for request fields,
+HTTP Bearer authentication, explicit host trust for local calls and result limits.
+Fixed-configuration shared workers additionally require a catalog sealed in the active release;
+see [shared metric catalog setup and evidence](optimization/shared-metric-catalog.md).
+
+Scoped subagent REST queries share the same fixed Harness and operator gate. See
+[subagent REST configuration and limits](optimization/subagent-rest-boundary.md) for explicit db_id
+bindings, user allow-lists, execution opt-in and the QueryResponse inside the response envelope.
+
 Three pages, all served from `frontend_dist/`:
 
 | Page | Path | Purpose |

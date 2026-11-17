@@ -1,5 +1,9 @@
 # 查询执行与流式契约
 
+2026-11-17 接线补充：API 现支持显式 plan_id 与受限自动选择；确定性 metric_query 已接
+JSON/SSE/MCP，同一固定三节点服务。范围以 [指标 v1](metric-query-v1.md) 和
+[指标发现/MCP 访问契约](metric-discovery-mcp.md) 为准。下方早期阶段文字保留为历史记录。
+
 阶段27新增[模型完成状态门禁](llm-completion-policy.md)：明确未正常结束的响应整条丢弃，全部失败沿用WORKFLOW_FAILED；独立完整候选成功时warnings说明舍弃。JSON/SSE使用primary_sql，MCP使用sql（失败为空字符串）；MCP固定单候选，SSE工作流事件不等于模型token流。
 
 JSON `POST /api/v1/query`、SSE `POST /api/v1/query/stream` 和 MCP `nl_query` 共用 `app/workflow/query_service.py:run_query`。API 不能传入计划 ID；由 `request_query.yml` 和 `WorkflowRunner` 固定执行 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql。节点不调用其他节点，LLM 只提供候选 SQL。
