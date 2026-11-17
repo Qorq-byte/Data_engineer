@@ -77,9 +77,9 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
 | 制約、権限、SQL ポリシーの適用 | **実装済み** |
 | スキーマリンク、多段階検証、ハイブリッド検索 | **実装済み** |
 | 七つの読み取り専用データベースコネクタ | **実装・テスト済み**。Snowflake は受け入れ待ち |
-| 残り六つのワークフロープラン | **五つが実行可能** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore` は `plan_id` で実行可能。`metric_query` は指標名の明示が必要なため拒否 |
+| 残り六つのワークフロープラン | **既定で五つが実行可能** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`。決定的な `metric_query` v1 はカタログ設定と明示的な指標名が必要 |
 | 自動プラン選択 | **実装済み** —— `auto_plan=true` で L1 ルール、L2 履歴、能力フィルタ後の既定の順に選択。既定は `request_query` |
-| マルチエージェントオーケストレーターとサブエージェント | **一部実装** —— 起動時に登録。リクエストはワークフローランナーを使用 |
+| マルチエージェントオーケストレーターとサブエージェント | **一部実装** —— スコープ付き REST クエリはアクセス確認と固定ワークフローを使用。自律的な協調は実験段階 |
 | フィードバック駆動のルール学習 | **実装済み** —— 承認済みルールは生成プロンプトと検証に反映され、`applied_rules` で返却。ルールが SQL を書き換えることはない |
 | マルチテナント分離 | **未実装** —— 一つの管理者グループが一つのデータセットを共有 |
 | 校正済みの精度、再現率、容量ベースライン | **未確立** —— 合成スイートは契約一致を評価 |
@@ -155,7 +155,7 @@ pip install -e ".[snowflake]"               # 任意の Snowflake ドライバ�
 |---|---|
 | `app/config/agent.yml` | プロバイダのデフォルト、ノード→ツール→権限の対応、厳格な制約 |
 | `app/workflow/plans/request_query.yml` | 実行可能なプラン：`node_order`、`failure_policy`、評価指標 |
-| `app/workflow/plans/*.yml` | 追加の六つのプラン。うち五つは `plan_id` で実行可能、`metric_query` は指標カタログ待ち |
+| `app/workflow/plans/*.yml` | 追加の六つのプラン。既定で五つが実行可能、サーバー指標カタログで `metric_query` v1 を有効化 |
 | `app/config/domains/*.yml` | ドメインごとの用語集、ビジネスルール、用語対応 |
 | `app/config/subagents/*.yaml` | 範囲を限定したサブエージェント定義と配信先 |
 
@@ -247,7 +247,19 @@ curl -X POST http://localhost:8001/api/v1/query \
 ```
 
 `reflection` は `execute: true` と `database` の両方が必要で、欠けるとセッション作成前に失敗します。
-`metric_query` は `400 INVALID_REQUEST` と理由を返します。指標名を解決する指標カタログが未設定です。
+`metric_query` v1 は解決 → 検証 → 実行の固定プランを使い、モデルを呼び出しません。
+サーバー側の `METRIC_CATALOG_PATH`、明示的な指標名・バージョン・ドメイン・データベースと
+`num_candidates: 1` が必要です。有効なカタログがない場合は `400 INVALID_REQUEST` です。
+共有 worker には稼働中のリリースに封印されたカタログが必要です。
+[共有カタログの設定と検証](docs/optimization/shared-metric-catalog.md)を参照してください。
+[設定と受け入れ](docs/optimization/metric-query-v1.md)を参照してください。
+
+管理者用 `GET /api/v1/metrics?domain=...&database=...` で指標名とバージョンを取得できます。
+MCP も `list_metrics` と `metric_query` を提供します。HTTP Bearer 認証とローカルプロセスの明示的な信頼は
+[アクセスと使用方法](docs/optimization/metric-discovery-mcp.md)を参照してください。
+
+サブエージェント REST は同じ五ノードの固定ワークフローを使用します。明示的な `db_id` とユーザー ID の許可が必要で、
+実行は既定で無効です。[REST の範囲](docs/optimization/subagent-rest-boundary.md)を参照してください。
 
 `"auto_plan"` を `true` にすると、能力で絞り込んだ選択器が `request_query` と `ez_query` の間で
 選びます。応答には `plan_selection` が付き、`layer`（`L1` ルール、`L2` 履歴、`default`、
@@ -343,6 +355,7 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 - [アーキテクチャ](docs/architecture.md) —— ハーネスの不変条件、レイヤー、リポジトリ構成、設計判断。
 - [サポートマトリクス](docs/support-matrix.md) —— 機能状況、データベース、モデル。
 - [ギャップ収束計画](docs/optimization/gap-closure-plan-2026-11-16.md) —— 接線済みと未接線の領域、マルチテナントとベースラインの草案。
+- [完成経路と受け入れ](docs/optimization/completion-path-2026-11-17.md) —— 各段階、検証の根拠と外部条件。
 - [ランタイムフロー](docs/runtime-flow.md) —— 図が何を主張するか、再生成の方法。
 - [クエリ契約](docs/optimization/query-contract.md) —— ステータスコードとエラーの意味。
 - [ノード開発](docs/node-development.md) —— ノードのライフサイクルと雛形。

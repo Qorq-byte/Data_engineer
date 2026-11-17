@@ -10,12 +10,21 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Added
 
+- Deterministic `metric_query` with explicit versioned server catalogs, scoped discovery,
+  and authenticated MCP metric tools. Fixed YAML resolution, validation and optional read-only
+  execution use no model calls. Immutable shared workers seal catalog paths, versions and hashes.
+- Snowflake password connector with selected-namespace metadata and bounded read-only execution;
+  cloud acceptance remains pending dedicated credentials and fixtures.
+- Scoped subagent REST queries now use the fixed workflow, operator/user checks and explicit db_id.
+- Synthetic SQLite and MySQL multi-process acceptance evidence, including restart recovery and
+  catalog/control-plane drift rejection; this does not establish production business quality.
+
 - Plan-driven execution: `POST /api/v1/query` and `/query/stream` accept `plan_id`, so
   `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic` and `explore` run through the same
-  admission, read-only, row-cap, timeout and LLM-budget path as `request_query`. `metric_query` is
-  rejected with its reason because no metric catalog is configured.
+  admission, read-only, row-cap, timeout and LLM-budget path as `request_query`. `metric_query`
+  additionally requires a configured catalog; shared workers require a sealed active release.
 - Automatic plan selection behind `auto_plan=true`: L1 rules, L2 history and a capability-filtered
-  default. The selector only chooses between `gensql_agentic` and `ez_query`; the default request
+  default. The selector only chooses between `request_query` and `ez_query`; the default request
   remains `request_query`.
 - Responses carry `plan_output`, `plan_selection` (only when selection ran) and `applied_rules`.
 - `/api/v1/workflows/simulate` now runs the same selector as the query path instead of a separate

@@ -71,9 +71,9 @@
 | 约束、权限与 SQL 策略执行 | **已实现** |
 | Schema 链接、多阶段校验、混合检索 | **已实现** |
 | 7 个只读数据库连接器 | **已实现并测试**；Snowflake 待验收 |
-| 其余 6 个工作流计划 | **5 个可执行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore` 可经 `plan_id` 执行；`metric_query` 需显式指标名，当前明确拒绝 |
+| 其余 6 个工作流计划 | **默认 5 个可执行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`；确定性 `metric_query` v1 需配置目录并显式给出指标名 |
 | 自动计划选择 | **已实现** —— `auto_plan=true` 依次走 L1 规则、L2 历史与能力过滤后的兜底；默认仍为 `request_query` |
-| 多 Agent 编排与子 Agent | **部分实现** —— 启动时注册；请求仍走工作流执行器 |
+| 多 Agent 编排与子 Agent | **部分实现** —— 限域 REST 自然语言查询已接固定工作流及访问检查；自主编排仍属实验组件 |
 | 反馈驱动的规则学习 | **已实现** —— 审批通过的规则进入生成提示与校验，并在 `applied_rules` 回显；规则不自动改写 SQL |
 | 多租户隔离 | **未实现** —— 一个管理员组共享一份数据 |
 | 经过校准的准确率、召回率或容量基线 | **未建立** —— 合成套件评的是契约匹配 |
@@ -146,7 +146,7 @@ pip install -e ".[snowflake]"               # 可选 Snowflake 驱动（不在 c
 |---|---|
 | `app/config/agent.yml` | 提供方默认值、节点→工具→权限映射、硬约束 |
 | `app/workflow/plans/request_query.yml` | 可执行计划：`node_order`、`failure_policy`、评估指标 |
-| `app/workflow/plans/*.yml` | 另外 6 个计划；其中 5 个可经 `plan_id` 执行，`metric_query` 待指标目录 |
+| `app/workflow/plans/*.yml` | 另外 6 个计划；默认 5 个可执行，服务端指标目录可启用 `metric_query` v1 |
 | `app/config/domains/*.yml` | 按领域的术语表、业务规则与术语映射 |
 | `app/config/subagents/*.yaml` | 限定范围的子 Agent 定义与交付目标 |
 
@@ -234,7 +234,18 @@ curl -X POST http://localhost:8001/api/v1/query \
 ```
 
 `reflection` 必须同时给出 `execute: true` 与 `database`，否则在创建会话之前就会失败。
-`metric_query` 返回 `400 INVALID_REQUEST` 并附原因——当前部署没有可解析指标名的指标目录。
+`metric_query` v1 使用固定的解析 → 校验 → 执行计划，不调用模型。
+需配置服务端 `METRIC_CATALOG_PATH`，显式给出指标名、版本、域、数据库和 `num_candidates: 1`。
+未配置有效目录时返回 `400 INVALID_REQUEST`。共享 worker 必须在活跃发布包内显式封存目录，
+见[共享目录配置与验收](docs/optimization/shared-metric-catalog.md)。
+详见 [配置与验收](docs/optimization/metric-query-v1.md)。
+
+管理员可通过 `GET /api/v1/metrics?domain=...&database=...` 发现名称和版本。
+MCP 也提供 `list_metrics`、`metric_query`；HTTP Bearer 认证与本地进程显式信任方式见
+[访问与使用](docs/optimization/metric-discovery-mcp.md)。
+
+子 Agent REST 请求复用固定五节点工作流，需绑定明确的 `db_id`、允许 operator 的用户 ID，执行默认关闭。
+详见 [REST 边界](docs/optimization/subagent-rest-boundary.md)。
 
 把 `"auto_plan"` 设为 `true`，则由能力过滤后的选择器在 `request_query` 与 `ez_query` 之间选择。
 响应会带 `plan_selection`：`layer`（`L1` 规则、`L2` 历史、`default` 或 `filtered`）、`reason`、
@@ -323,6 +334,7 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 - [架构](docs/architecture.md) —— Harness 不变量、分层、目录结构、设计取舍。
 - [支持矩阵](docs/support-matrix.md) —— 特性状态、数据库、模型。
 - [缺口收口计划](docs/optimization/gap-closure-plan-2026-11-16.md) —— 哪些已接线、哪些仍未做，以及多租户与基线草案。
+- [完成路径与验收](docs/optimization/completion-path-2026-11-17.md) —— 阶段、当前证据和外部阻塞。
 - [运行流程](docs/runtime-flow.md) —— 图里声称了什么，以及如何重新生成。
 - [查询契约](docs/optimization/query-contract.md) —— 状态码与错误语义。
 - [节点开发](docs/node-development.md) —— 节点生命周期与骨架代码。
