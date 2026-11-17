@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from app.harness.mysql_coordination import CoordinationUnavailableError
+from app.knowledge.metric_catalog import MetricCatalog, load_catalog
 from app.security.crypto import decrypt_secret, encrypt_secret
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +49,12 @@ def validate_profiles(value: object) -> list[dict[str, Any]]:
     return value
 
 
+def _catalog_binding_check(catalog: MetricCatalog, profiles: list[dict[str, Any]]) -> None:
+    identities = {item["db_id"] for item in profiles}
+    if any(binding.database not in identities for binding in catalog.bindings):
+        raise ValueError("Metric catalog references an unsealed database identity")
+
+
 class WorkerRelease:
     def __init__(self, path: Path) -> None:
         try:
@@ -74,6 +81,25 @@ class WorkerRelease:
             self.profiles = validate_profiles(json.loads(plaintext))
             self.path = path
             self.files: dict[str, str] = files
+            self.metric_catalog_path: Path | None = None
+            self.metric_catalog: MetricCatalog | None = None
+            metric = raw.get("metric_catalog")
+            if metric is not None:
+                if not isinstance(metric, dict) or set(metric) != {"path", "version", "sha256"}:
+                    raise ValueError("Invalid sealed metric catalog metadata")
+                name = metric["path"]
+                if not isinstance(name, str) or not Path(name).is_absolute():
+                    raise ValueError("Absolute metric catalog path required")
+                catalog = load_catalog(name)
+                if (
+                    self.files.get(name) != catalog.sha256
+                    or metric["sha256"] != catalog.sha256
+                    or metric["version"] != catalog.version
+                ):
+                    raise ValueError("Sealed metric catalog content does not match")
+                _catalog_binding_check(catalog, self.profiles)
+                self.metric_catalog_path = Path(name).resolve()
+                self.metric_catalog = catalog
             roots = raw.get("index_roots", [])
             if not isinstance(roots, list) or not all(
                 isinstance(name, str) and Path(name).is_absolute() for name in roots
@@ -85,6 +111,29 @@ class WorkerRelease:
             self.verify_contents()
         except Exception:
             raise CoordinationUnavailableError("Immutable worker release is invalid") from None
+
+    def catalog_for(self, configured_path: str) -> MetricCatalog | None:
+        """Require exact configuration and content; never adopt an online replacement."""
+        try:
+            if not configured_path.strip():
+                if self.metric_catalog is not None:
+                    raise ValueError("Sealed metric catalog must be configured explicitly")
+                return None
+            configured = Path(configured_path)
+            if (
+                not configured.is_absolute() or self.metric_catalog is None
+                or configured.resolve() != self.metric_catalog_path
+            ):
+                raise ValueError("Configured metric catalog is not sealed")
+            self.verify_metadata()
+            if (
+                _digest(self.path) != self.digest
+                or _digest(configured) != self.metric_catalog.sha256
+            ):
+                raise ValueError("Sealed metric catalog or release changed")
+            return self.metric_catalog
+        except Exception:
+            raise CoordinationUnavailableError("Immutable metric catalog is unavailable") from None
 
     def verify_contents(self) -> None:
         try:
@@ -130,17 +179,33 @@ def write_release(
     output: Path,
     *,
     index_roots: list[Path] | None = None,
+    metric_catalog: Path | None = None,
 ) -> None:
     """Offline-only construction. Does not connect to databases or call embedding models."""
     checked = validate_profiles(profiles)
     if not 1 <= len(files) <= 4096 or output.exists():
         raise ValueError("New output path and bounded file list required")
+    selected = {path.resolve() for path in files}
+    metric = None
+    if metric_catalog is not None:
+        path = metric_catalog.resolve()
+        catalog = load_catalog(str(path))
+        _catalog_binding_check(catalog, checked)
+        selected.add(path)
+        metric = {"path": str(path), "version": catalog.version, "sha256": catalog.sha256}
+    if len(selected) > 4096 or output.resolve() in selected:
+        raise ValueError("Invalid release file inventory or output alias")
+    file_hashes = {str(path): _digest(path) for path in sorted(selected)}
+    if metric is not None and file_hashes[metric["path"]] != metric["sha256"]:
+        raise ValueError("Metric catalog changed while sealing")
     payload = {
         "format_version": 1,
         "connections_enc": encrypt_secret(json.dumps(checked, ensure_ascii=False)),
-        "files": {str(path.resolve()): _digest(path) for path in files},
+        "files": file_hashes,
         "index_roots": [str(path.resolve()) for path in (index_roots or [])],
     }
+    if metric is not None:
+        payload["metric_catalog"] = metric
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     if len(encoded.encode("utf-8")) > 1024 * 1024:
         raise ValueError("Worker release exceeds 1 MiB")

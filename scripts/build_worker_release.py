@@ -32,6 +32,9 @@ def main() -> None:
     files.update((ROOT / "app/config").rglob("*.yml"))
     files.update((ROOT / "app/workflow/plans").rglob("*.yml"))
     files.update({sparse, Path(settings.agent_config_path).resolve()})
+    catalog = Path(settings.metric_catalog_path) if settings.metric_catalog_path.strip() else None
+    if catalog is not None and not catalog.is_absolute():
+        raise ValueError("METRIC_CATALOG_PATH must be an absolute path for shared workers")
     selected = sorted(
         path
         for path in files
@@ -42,6 +45,7 @@ def main() -> None:
         selected,
         args.output,
         index_roots=[dense],
+        metric_catalog=catalog,
     )
     print("Immutable worker release created; credentials sealed, no external calls")
 
