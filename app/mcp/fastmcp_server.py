@@ -5,12 +5,14 @@ See SPEC §3.3.7 (MCP Server external exposure) for the full specification.
 This server wraps the NL2SQL pipeline as MCP tools, allowing any MCP-compatible
 host (Claude Desktop, etc.) to use natural-language SQL generation.
 
-Tools (5):
+Tools (7):
   - nl_query       → NL → SQL → execute
   - explain_sql    → EXPLAIN + interpret
   - translate_sql  → dialect translation
   - validate_sql   → syntax/schema validation
   - search_schema  → keyword schema search
+  - list_metrics   → scoped configured catalog discovery (operator access)
+  - metric_query   → deterministic metric workflow (operator access)
 
 Resources (4):
   - nlsql://schema/{db_id}   → database schema
@@ -43,6 +45,8 @@ def create_nl2sql_server(
     name: str = "NL2SQL Agent",
     host: str = "127.0.0.1",
     port: int = 8090,
+    *,
+    trust_local_metric_tools: bool = False,
 ) -> Any:
     """Create and configure the NL2SQL FastMCP server.
 
@@ -53,6 +57,8 @@ def create_nl2sql_server(
         name: Server name (shown in MCP host UI).
         host: Bind address for SSE transport.
         port: Port for SSE transport.
+        trust_local_metric_tools: Allow metric tools in an explicitly trusted local process.
+            HTTP always requires an operator Bearer token, regardless of this setting.
 
     Returns:
         Configured FastMCP instance.
@@ -89,6 +95,9 @@ def create_nl2sql_server(
     _register_translate_sql(mcp)
     _register_validate_sql(mcp)
     _register_search_schema(mcp)
+    from app.mcp.metric_tools import register_metric_tools
+
+    register_metric_tools(mcp, trust_local=trust_local_metric_tools)
 
     # ── Register resources ─────────────────────────────────────────────
 
@@ -133,73 +142,14 @@ def _register_nl_query(mcp: FastMCP) -> None:
                     num_candidates=1,
                 )
             )
-            execution = response.execution or {}
-            errors = list(response.errors)
-            if not execution and not errors:
-                errors.append("Query did not produce an execution result")
+            from app.mcp.query_projection import project_query
 
-            return {
-                "status": "failed" if errors else response.status,
-                "query_id": response.query_id,
-                "session_id": response.session_id,
-                "plan_id": response.plan_id,
-                "workflow_ids": response.workflow_ids,
-                "llm_calls": response.llm_calls,
-                "llm_usage": response.llm_usage,
-                "llm_audit": response.llm_audit,
-                "sql": response.primary_sql or "",
-                "candidates": [
-                    candidate.model_dump(exclude={"execution"}) for candidate in response.candidates
-                ],
-                "columns": execution.get("columns", []),
-                "rows": execution.get("rows", [])[:100],
-                "row_count": min(execution.get("row_count", 0), 100),
-                "truncated": execution.get("truncated", False)
-                or execution.get("row_count", 0) > 100,
-                "errors": errors,
-                "warnings": response.warnings,
-                **({"error": "; ".join(errors), "error_code": "WORKFLOW_FAILED"} if errors else {}),
-            }
+            return project_query(response)
 
         except Exception as exc:
-            from fastapi import HTTPException
-            from pydantic import ValidationError
+            from app.mcp.query_projection import query_error
 
-            from app.workflow.contracts import (
-                QueryCapacityError,
-                QueryFailure,
-                classify_query_failure,
-            )
-
-            failure = classify_query_failure(exc)
-            if isinstance(exc, ValidationError):
-                failure = QueryFailure("INVALID_REQUEST", "Invalid query request", 422)
-            elif isinstance(exc, HTTPException):
-                detail: dict[str, Any] = exc.detail if isinstance(exc.detail, dict) else {}
-                if detail.get("code") == "QUERY_TIMEOUT":
-                    failure = classify_query_failure(TimeoutError())
-                elif detail.get("code") == "QUERY_CAPACITY":
-                    failure = classify_query_failure(QueryCapacityError())
-                elif 400 <= exc.status_code < 500:
-                    failure = QueryFailure(
-                        "INVALID_REQUEST", "Invalid query request", exc.status_code
-                    )
-            return {
-                "status": "failed",
-                "error": failure.message,
-                "error_code": failure.code,
-                "http_status": failure.http_status,
-                "error_type": type(exc).__name__,
-                "errors": [failure.message],
-                "warnings": [],
-                "sql": "",
-                "columns": [],
-                "rows": [],
-                "row_count": 0,
-                "truncated": False,
-                **({"retry_after_seconds": failure.retry_after_seconds}
-                   if failure.retry_after_seconds is not None else {}),
-            }
+            return query_error(exc)
 
 
 def _register_explain_sql(mcp: FastMCP) -> None:
