@@ -1,0 +1,12 @@
+# Synthetic test definitions only; not a signed-off business metric catalog.
+version: synthetic-ecommerce-v1
+bindings:
+  - domain: ecommerce
+    database: metric-db
+    metrics:
+      - {name: revenue, table: orders, column: amount, aggregation: sum, dimensions: [region, status]}
+      - {name: order_count, table: orders, column: '*', aggregation: count, dimensions: [region, status]}
+      - {name: avg_amount, table: orders, column: amount, aggregation: avg, dimensions: [region, status]}
+      - {name: min_amount, table: orders, column: amount, aggregation: min, dimensions: [region, status]}
+      - {name: max_amount, table: orders, column: amount, aggregation: max, dimensions: [region, status]}
+      - {name: product_count, table: products, column: '*', aggregation: count, dimensions: [category]}
