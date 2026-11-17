@@ -2,6 +2,10 @@
 
 日期：2026-11-12。此记录覆盖连接代码和本地契约接线，不代表 Snowflake 实库验收完成。
 
+2026-11-17 补充：新增 51 项本地策略回归并修复 quoted namespace 大小写比较与表函数绕过；
+新增四项显式 opt-in 的实库套件，但无凭据时仅跳过，不计实库通过。
+完整 fixture、命令与权限/费用/取消验收条件见 [Snowflake 独立验收](snowflake-acceptance.md)。
+
 ## 已实现
 
 - `ConnectionFactory` 可创建、登记、关闭 Snowflake 会话；能力报告区分连接器已实现与驱动是否安装。
