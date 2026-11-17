@@ -24,10 +24,10 @@ reachable from the request path.
 | Request-scoped usage record plus optional SQL-free audit | Implemented | `app/llm/usage.py`, `app/audit/store.py` |
 | Offline evaluation CLIs (SQL contracts, retrieval, NL2SQL batches) | Implemented | `app/evaluation/`, `scripts/` |
 | Seven read-only database connectors | Implemented and tested | `app/db/connections.py` |
-| Automatic plan selection at runtime | **Partial** — `PlanSelector` is built at boot and never consulted by the request path | `main.py`, `app/api/query.py` |
-| Six template plans besides `request_query` | **Partial** — loaded and listed, but only `request_query` is executable through the API | `app/api/workflows.py` |
+| Automatic plan selection at runtime | Implemented — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default | `app/workflow/plan_selection.py` |
+| Template plans besides `request_query` | Implemented — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic`, `explore` execute via `plan_id`; `metric_query` is rejected because no metric catalog is configured | `app/workflow/plan_runtime.py`, `app/api/query.py` |
 | Multi-agent orchestrator / sub-agents | **Partial** — registered at boot; the request path uses the workflow runner | `main.py` |
-| Feedback-driven rule learning | **Partial** — collection, review and stats exist; no automatic repair is wired in | `app/learning/` |
+| Feedback-driven rule learning | Implemented — approved rules reach the generation prompt and validation warnings, and are echoed in `applied_rules`; rules never rewrite SQL | `app/learning/rule_registry.py`, `app/workflow/query_service.py` |
 | Fixed-configuration MySQL shared workers | Opt-in, single host | [immutable-workers.md](optimization/immutable-workers.md) |
 | Multi-tenant isolation | **Not implemented** — one shared administrator workbench | `app/auth/access.py` |
 | Answer-accuracy / recall baseline on real data | **Not established** | see the roadmap in `README.md` |

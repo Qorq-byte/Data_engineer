@@ -29,8 +29,8 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
 
 設計は三つの原則に従います：
 
-- **モデルはルーティングしない。** `request_query.yml` がノード順を固定し、`WorkflowRunner` が実行
-  します。
+- **モデルはルーティングしない。** YAML プランがノード順を固定し、`plan_id` または `auto_plan` は
+  どのプランを使うかだけを決め、`WorkflowRunner` が実行します。
 - **読み取り専用は要求ではなく強制。** 単一ステートメントの AST ポリシー、`execute_sql` 内の書き込み
   検査、ドライバが提供するガード（SQLite authorizer、ClickHouse の読み取り専用プロファイル）が
   それぞれ独立して機能します。
@@ -42,9 +42,9 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
 
 ## 主な機能
 
-- **決定的な制御フロー。** `request_query.yml` が固定した順序で五つのノードを実行します。ノード同士は
-  呼び出さず、`WorkflowContext` だけで通信します。失敗したノードは再ルーティングせず中止します。
-  このプランの `max_retries` は `0` です。
+- **決定的な制御フロー。** 選択したプランがノード順を固定します（既定の `request_query.yml` は五つ）。
+  ノード同士は呼び出さず、`WorkflowContext` だけで通信します。失敗したノードは、プランが
+  `on_failure: skip` を宣言しない限り中止します。既定プランの `max_retries` は `0` です。
 - **多層の読み取り専用。** 単一ステートメントを解析して AST 検査します。`execute_sql` はデータベース
   に触れる前に書き込みを遮断します。SQLite と ClickHouse はドライバ側のガードを追加します。対象
   データベースではネイティブの読み取り専用アカウントを使用してください。
@@ -52,6 +52,9 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
   合格 / 不合格 / 未検証を持ちます。校正済み確率が存在しないため、`confidence` は設計上 `0` です。
 - **スキーマ認識の生成。** テーブル、カラム、キー、コメント、ビジネス用語集、ドメインルール。BM25 と
   ベクトル検索を逆順位融合（RRF）で統合します。
+- **学習は提案のみ、SQL は書き換えない。** 承認済みの編集パターンは次に一致するクエリのプロンプトと
+  検証警告になります。`applied_rules` が適用ルールを示し、SQL は検証と読み取り専用実行をそのまま
+  経由します。
 - **実データベースで受け入れ済みの七つのコネクタ。** SQLite、DuckDB、PostgreSQL、MySQL、ClickHouse、
   Trino、StarRocks。Snowflake は実装済みですが、独立した受け入れは未完了です。
 - **一つのパイプライン、三つの出口。** Web ワークスペース、JSON/SSE API、MCP ツールは同じリクエスト
@@ -74,10 +77,10 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
 | 制約、権限、SQL ポリシーの適用 | **実装済み** |
 | スキーマリンク、多段階検証、ハイブリッド検索 | **実装済み** |
 | 七つの読み取り専用データベースコネクタ | **実装・テスト済み**。Snowflake は受け入れ待ち |
-| 残り六つのワークフロープラン | **テンプレートのみ** —— 読み込みと一覧表示は可能だが API では実行不可 |
-| 自動プラン選択 | **一部実装** —— `PlanSelector` は起動時に構築されるがリクエストでは未使用 |
+| 残り六つのワークフロープラン | **五つが実行可能** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore` は `plan_id` で実行可能。`metric_query` は指標名の明示が必要なため拒否 |
+| 自動プラン選択 | **実装済み** —— `auto_plan=true` で L1 ルール、L2 履歴、能力フィルタ後の既定の順に選択。既定は `request_query` |
 | マルチエージェントオーケストレーターとサブエージェント | **一部実装** —— 起動時に登録。リクエストはワークフローランナーを使用 |
-| フィードバック駆動のルール学習 | **一部実装** —— 収集とレビューはあるが自動修復は未接続 |
+| フィードバック駆動のルール学習 | **実装済み** —— 承認済みルールは生成プロンプトと検証に反映され、`applied_rules` で返却。ルールが SQL を書き換えることはない |
 | マルチテナント分離 | **未実装** —— 一つの管理者グループが一つのデータセットを共有 |
 | 校正済みの精度、再現率、容量ベースライン | **未確立** —— 合成スイートは契約一致を評価 |
 
@@ -152,7 +155,7 @@ pip install -e ".[snowflake]"               # 任意の Snowflake ドライバ�
 |---|---|
 | `app/config/agent.yml` | プロバイダのデフォルト、ノード→ツール→権限の対応、厳格な制約 |
 | `app/workflow/plans/request_query.yml` | 実行可能なプラン：`node_order`、`failure_policy`、評価指標 |
-| `app/workflow/plans/*.yml` | 追加の六つのテンプレート（chat、explore、metric、reflection など） |
+| `app/workflow/plans/*.yml` | 追加の六つのプラン。うち五つは `plan_id` で実行可能、`metric_query` は指標カタログ待ち |
 | `app/config/domains/*.yml` | ドメインごとの用語集、ビジネスルール、用語対応 |
 | `app/config/subagents/*.yaml` | 範囲を限定したサブエージェント定義と配信先 |
 
@@ -223,6 +226,37 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 `"execute"` を `true` にすると、検証通過後に実行されます。実行オブジェクトには `columns`、`rows`、
 `row_count`、`truncated` が含まれ、行数は `MAX_RESULT_ROWS` で制限されます。
+
+### ワークフロープランを選ぶ
+
+既定は `request_query` です。残り五つのプランは同じエンドポイントで実行され、受け入れ、読み取り専用
+チェック、行数上限、ステートメント期限、LLM 予算を共有します。
+
+| `plan_id` | パイプライン | 使う場面 |
+|---|---|---|
+| `gensql_agentic` | リンク → 生成 → 検証 → 実行 | NL 解析を除いた標準パイプライン |
+| `ez_query` | リンク → 生成 → 実行 | 検証を省ける単純な読み取り |
+| `reflection` | 生成 → 実行 → 反射 → 修正 → 実行 | 実行エラーを想定し、一度だけ自動修正したい |
+| `chat_agentic` | 解析 → 検索 → 生成 → 検証 → 応答 | SQL だけでなく自然言語の回答が欲しい |
+| `explore` | 解析 → 検索 → 整形 | テーブルと文書の探索だけをしたい |
+
+```bash
+curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nl_text":"注文を一覧表示","database":"<db_id>","execute":true,"plan_id":"ez_query","num_candidates":1}'
+```
+
+`reflection` は `execute: true` と `database` の両方が必要で、欠けるとセッション作成前に失敗します。
+`metric_query` は `400 INVALID_REQUEST` と理由を返します。指標名を解決する指標カタログが未設定です。
+
+`"auto_plan"` を `true` にすると、能力で絞り込んだ選択器が `request_query` と `ez_query` の間で
+選びます。応答には `plan_selection` が付き、`layer`（`L1` ルール、`L2` 履歴、`default`、
+`filtered`）、`reason`、`confidence`、代替プランを含みます。`metric_query`、`reflection`、
+`chat_agentic`、`explore` は選ばれず、集合外の判定は `request_query` に戻して理由を残します。
+不要なときは無効のままにでき、リクエストは完全に決定的です。
+
+承認済みの学習ルールは生成プロンプトに統合され、検証時に非ブロッキングのルール警告を出します。
+応答の `applied_rules` が実際に適用したルールを示します。ルールが SQL を書き換えることはありません。
 
 ### SSE ストリーム
 
@@ -308,6 +342,7 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 - [使用法](docs/usage.md) —— アカウント、接続先、リクエストフィールド、応答の根拠、エンドポイント。
 - [アーキテクチャ](docs/architecture.md) —— ハーネスの不変条件、レイヤー、リポジトリ構成、設計判断。
 - [サポートマトリクス](docs/support-matrix.md) —— 機能状況、データベース、モデル。
+- [ギャップ収束計画](docs/optimization/gap-closure-plan-2026-11-16.md) —— 接線済みと未接線の領域、マルチテナントとベースラインの草案。
 - [ランタイムフロー](docs/runtime-flow.md) —— 図が何を主張するか、再生成の方法。
 - [クエリ契約](docs/optimization/query-contract.md) —— ステータスコードとエラーの意味。
 - [ノード開発](docs/node-development.md) —— ノードのライフサイクルと雛形。
@@ -372,13 +407,14 @@ python scripts/load_test.py                  # 有界な同時実行プローブ
 
 ```text
 app/api/             create_app() ファクトリ、13 ルーター、オペレーター依存、静的フロントエンド
-app/workflow/        リクエストサービス、QueryResponse 契約、7 つの YAML プラン
+app/workflow/        リクエストサービス、プラン実行と選択、QueryResponse 契約、7 つの YAML プラン
 app/harness/         PlanLoader · WorkflowRunner · 権限 · 制約 · セッション
 app/nodes/           登録済み 12 ノード。request_query の五つが主経路
 app/core/            NL 解析、プロンプト構築、SQL 生成と検証
 app/db/              接続、スキーマ内省、ダイアレクトアダプタ、固定クエリターゲット
 app/rag/             LanceDB ベクトル、BM25/FTS5、RRF 融合、インデックス保守
 app/knowledge/       スキーマグラフ、用語集、ビジネスルール、検索プリミティブ
+app/learning/        フィードバック収集、編集パターン分析、承認済みルールストア
 app/llm/             LiteLLM ルーター、予算、完了ポリシー、利用量、キー暗号化
 app/auth/            JWT 発行、MySQL ユーザーストア、管理者ゲート
 app/mcp/             四つの FastMCP サーバーと外部ツールクライアント

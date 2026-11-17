@@ -30,7 +30,8 @@ performed.
 
 The design follows three rules:
 
-- **The model never routes.** `request_query.yml` fixes the node order; `WorkflowRunner` executes it.
+- **The model never routes.** The YAML plan fixes the node order; `plan_id` or `auto_plan` only
+  selects which plan file runs, and `WorkflowRunner` executes it.
 - **Read-only is enforced, not requested.** A single-statement AST policy, a write check inside
   `execute_sql`, and driver-side guards where the driver exposes them (SQLite authorizer, ClickHouse
   read-only profile) each stand on their own.
@@ -42,9 +43,10 @@ wired, what is partial and what is deliberately absent.
 
 ## Core features
 
-- **Deterministic control flow.** Five nodes in an order fixed by `request_query.yml`. Nodes never
+- **Deterministic control flow.** The selected plan fixes the node order — five nodes on the default
+  `request_query.yml`. Nodes never
   call one another and communicate only through `WorkflowContext`; a failed node aborts instead of
-  rerouting. `max_retries` is `0` on this plan.
+  rerouting unless the plan declares `on_failure: skip`. `max_retries` is `0` on the default plan.
 - **Read-only in layers.** One statement, parsed and AST-checked; `execute_sql` blocks writes before
   touching a database; SQLite and ClickHouse add driver-side guards. Deploy with a native read-only
   account on the target.
@@ -53,6 +55,9 @@ wired, what is partial and what is deliberately absent.
   because no calibrated probability exists.
 - **Schema-aware generation.** Tables, columns, keys, comments, a business glossary and domain rules,
   with BM25 and vector retrieval fused by reciprocal rank fusion.
+- **Learning recommends, it never rewrites.** Approved edit patterns become prompt guidance and
+  non-blocking rule warnings for the next matching query; `applied_rules` reports what was used, and
+  SQL still goes through validation and read-only execution unchanged.
 - **Seven connectors with real-database acceptance.** SQLite, DuckDB, PostgreSQL, MySQL, ClickHouse,
   Trino and StarRocks. Snowflake is implemented but its standalone acceptance is still pending.
 - **One pipeline, three surfaces.** The web workspace, the JSON/SSE API and the MCP tool all call
@@ -75,10 +80,10 @@ Status reflects running code, not design documents. The per-feature matrix is in
 | Constraint, permission and SQL-policy enforcement | **Implemented** |
 | Schema linking, multi-stage validation, hybrid retrieval | **Implemented** |
 | Seven read-only database connectors | **Implemented and tested**; Snowflake pending acceptance |
-| Six other workflow plans | **Template only** — loaded and listed, not executable through the API |
-| Automatic plan selection | **Partial** — `PlanSelector` is built at boot and never consulted |
+| Six other workflow plans | **Five executable** — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic` and `explore` run via `plan_id`; `metric_query` needs explicit metric names and is rejected |
+| Automatic plan selection | **Implemented** — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default |
 | Multi-agent orchestrator and sub-agents | **Partial** — registered at boot; requests use the workflow runner |
-| Feedback-driven rule learning | **Partial** — collection and review exist; no automatic repair |
+| Feedback-driven rule learning | **Implemented** — approved rules reach the generation prompt and validation, and are echoed in `applied_rules`; rules never rewrite SQL |
 | Multi-tenant isolation | **Not implemented** — one administrator group shares one data set |
 | Calibrated accuracy, recall or capacity baseline | **Not established** — synthetic suites score contract matching |
 
@@ -153,7 +158,7 @@ remaining knob is commented in the example file.
 |---|---|
 | `app/config/agent.yml` | Provider defaults, node→tool→permission mapping, hard constraints |
 | `app/workflow/plans/request_query.yml` | The executable plan: `node_order`, `failure_policy`, evaluation metrics |
-| `app/workflow/plans/*.yml` | Six additional templates (chat, explore, metric, reflection, …) |
+| `app/workflow/plans/*.yml` | Six additional plans; five execute through `plan_id`, `metric_query` awaits a metric catalog |
 | `app/config/domains/*.yml` | Glossary, business rules and term mappings per domain |
 | `app/config/subagents/*.yaml` | Scoped sub-agent definitions and delivery targets |
 
@@ -222,6 +227,39 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 Set `"execute": true` to run the statement after validation. The execution object then contains
 `columns`, `rows`, `row_count` and `truncated`; rows are capped at `MAX_RESULT_ROWS`.
+
+### Choose a workflow plan
+
+`request_query` is the default. Five other plans run through the same endpoint, with the same
+admission, read-only check, row cap, statement timeout and LLM budget:
+
+| `plan_id` | Pipeline | Use it when |
+|---|---|---|
+| `gensql_agentic` | linking → generate → validate → execute | You want the standard pipeline without NL parsing |
+| `ez_query` | linking → generate → execute | Simple reads where the validation step is redundant |
+| `reflection` | generate → execute → reflect → revise → execute | Execution errors are expected and you want one automatic revise |
+| `chat_agentic` | parse → search → generate → validate → respond | You want a natural-language answer, not only SQL |
+| `explore` | parse → search → format | You want table and document discovery without SQL |
+
+```bash
+curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nl_text":"list orders","database":"<db_id>","execute":true,"plan_id":"ez_query","num_candidates":1}'
+```
+
+`reflection` requires `execute: true` and a `database`; without them the request fails before a
+session is created. `metric_query` returns `400 INVALID_REQUEST` with the reason — the deployment
+has no metric catalog to resolve metric names against.
+
+Set `"auto_plan": true` to let the capability-filtered selector choose between `request_query` and
+`ez_query`. The response then carries a `plan_selection` object with `layer` (`L1` rule, `L2`
+history, `default`, or `filtered`), `reason`, `confidence` and the alternatives. Selection never
+picks `metric_query`, `reflection`, `chat_agentic` or `explore`; a verdict outside that set falls
+back to `request_query` and says so. Leave it off to keep the request fully deterministic.
+
+Approved learning rules are merged into the generation prompt and produce non-blocking rule
+warnings during validation; the response lists what was applied in `applied_rules`. Rules never
+rewrite SQL.
 
 ### Stream over SSE
 
@@ -308,6 +346,7 @@ The rendering notes, the exact claims and the regeneration command are in
 - [Usage](docs/usage.md) — accounts, targets, request fields, response evidence, endpoints.
 - [Architecture](docs/architecture.md) — the harness invariant, layers, repository layout, decisions.
 - [Support matrix](docs/support-matrix.md) — feature status, databases, models.
+- [Gap closure plan](docs/optimization/gap-closure-plan-2026-11-16.md) — what was wired, what remains, and the tenant/baseline drafts.
 - [Runtime flow](docs/runtime-flow.md) — what the diagram claims and how to regenerate it.
 - [Query contract](docs/optimization/query-contract.md) — status codes and error semantics.
 - [Node development](docs/node-development.md) — the node lifecycle and a skeleton.
@@ -373,13 +412,14 @@ capacity or accuracy baseline.
 
 ```text
 app/api/             create_app() factory, 13 routers, operator dependency, static frontend
-app/workflow/        request service, QueryResponse contract, 7 YAML plans
+app/workflow/        request service, plan runtime and selection, QueryResponse contract, 7 YAML plans
 app/harness/         PlanLoader · WorkflowRunner · permissions · constraints · sessions
 app/nodes/           12 registered nodes; the five request_query nodes are the main path
 app/core/            NL parsing, prompt building, SQL generation and validation
 app/db/              connections, schema introspection, dialect adapter, pinned query targets
 app/rag/             LanceDB vectors, BM25/FTS5, RRF fusion, index maintenance
 app/knowledge/       schema graph, glossary, business rules, retrieval primitives
+app/learning/        feedback collector, pattern analyzer, approved-rule store
 app/llm/             LiteLLM router, budget, completion policy, usage, key encryption
 app/auth/            JWT issuing, MySQL user store, administrator gate
 app/mcp/             four FastMCP servers plus an external-tool client

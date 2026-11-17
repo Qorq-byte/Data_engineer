@@ -10,6 +10,30 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Added
 
+- Plan-driven execution: `POST /api/v1/query` and `/query/stream` accept `plan_id`, so
+  `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic` and `explore` run through the same
+  admission, read-only, row-cap, timeout and LLM-budget path as `request_query`. `metric_query` is
+  rejected with its reason because no metric catalog is configured.
+- Automatic plan selection behind `auto_plan=true`: L1 rules, L2 history and a capability-filtered
+  default. The selector only chooses between `gensql_agentic` and `ez_query`; the default request
+  remains `request_query`.
+- Responses carry `plan_output`, `plan_selection` (only when selection ran) and `applied_rules`.
+- `/api/v1/workflows/simulate` now runs the same selector as the query path instead of a separate
+  keyword guess, and the plan catalog derives `query_executable` from the capability table.
+- Approved review candidates persist to a local learned-rule store and reach the generation prompt
+  and validation as business rules; the response lists which rules were applied.
+- `docs/optimization/gap-closure-plan-2026-11-16.md` records the remaining gaps (multi-agent
+  routing, tenant isolation, calibrated baselines) with priorities and acceptance gates.
+
+### Changed
+
+- `reflection.yml` marks its first `execute_sql` as `on_failure: skip`: an execution error is the
+  reflection input, and the revise step now receives the previous SQL plus the error analysis.
+- `agent.yml` allows the reflection node's declared `compare_results` tool; denying a declared tool
+  made the plan impossible to run once it became executable.
+- README capability tables in all four languages and `docs/support-matrix.md` no longer claim that
+  the other plans are template-only or that plan selection is never consulted.
+
 - SQL generation accepts user-provided CREATE TABLE declarations, field descriptions and an
   offline dialect, while connected targets retain their introspected structure and dialect.
 - Per-candidate SQL evidence identifies live, cached, user-supplied and inferred structure,

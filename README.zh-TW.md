@@ -28,7 +28,8 @@
 
 設計遵循三條規則：
 
-- **模型不做路由。** `request_query.yml` 固定節點順序；`WorkflowRunner` 負責執行。
+- **模型不做路由。** YAML 計畫固定節點順序；`plan_id` 或 `auto_plan` 只決定執行哪份計畫，
+  `WorkflowRunner` 負責執行。
 - **唯讀是被強制的，不是被請求的。** 單一語句 AST 策略、`execute_sql` 內部的寫入檢查，以及驅動端
   提供的防護（SQLite authorizer、ClickHouse 唯讀 profile）各自獨立生效。
 - **缺口就寫成缺口。** 跳過的執行、缺少的結構、mock 提供者與未驗證的關聯，都是明確的欄位、
@@ -39,14 +40,17 @@
 
 ## 核心特性
 
-- **確定性的控制流程。** 五個節點依 `request_query.yml` 的固定順序執行。節點之間互不呼叫，只透過
-  `WorkflowContext` 溝通；節點失敗就中止，不會改道。此計畫的 `max_retries` 為 `0`。
+- **確定性的控制流程。** 所選計畫固定節點順序——預設 `request_query.yml` 為五個節點。節點之間互不呼叫，只透過
+  `WorkflowContext` 溝通；節點失敗就中止，除非計畫明確宣告 `on_failure: skip`。預設計畫的
+  `max_retries` 為 `0`。
 - **分層唯讀。** 單一語句解析與 AST 檢查；`execute_sql` 在接觸資料庫前阻擋寫入；SQLite 與
   ClickHouse 另有驅動端防護。部署時請使用目標資料庫原生的唯讀帳號。
 - **提供證據，不提供信心分數。** 每個候選 SQL 都記錄結構來源、取得時間、方言、假設，以及逐項
   檢查的通過 / 未通過 / 未驗證。`confidence` 依設計恆為 `0`，因為沒有經過校正的機率。
 - **結構感知的產生。** 資料表、欄位、鍵、註解、業務詞彙表與領域規則，BM25 與向量檢索再以
   倒數排名融合（RRF）合併。
+- **學習只做建議，不改寫 SQL。** 審查通過的編輯規則會成為下一次匹配查詢的提示與驗證警告；
+  `applied_rules` 說明本次用了哪些規則，SQL 仍須經過驗證與唯讀執行，不會被悄悄改寫。
 - **七個連接器已通過實庫驗收。** SQLite、DuckDB、PostgreSQL、MySQL、ClickHouse、Trino、StarRocks。
   Snowflake 已實作，但獨立驗收仍待完成。
 - **一條流水線，三種出口。** Web 工作區、JSON/SSE API 與 MCP 工具都呼叫同一個請求服務。JSON 與
@@ -67,10 +71,10 @@
 | 約束、權限與 SQL 策略執行 | **已實作** |
 | Schema 連結、多階段驗證、混合檢索 | **已實作** |
 | 七個唯讀資料庫連接器 | **已實作並測試**；Snowflake 待驗收 |
-| 其餘六個工作流程計畫 | **僅範本** —— 可載入、可列出，但 API 無法執行 |
-| 自動計畫選擇 | **部分實作** —— `PlanSelector` 啟動時建構，請求流程從不呼叫 |
+| 其餘六個工作流程計畫 | **五個可執行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore` 可經 `plan_id` 執行；`metric_query` 需明確指標名稱，目前明確拒絕 |
+| 自動計畫選擇 | **已實作** —— `auto_plan=true` 依序走 L1 規則、L2 歷史與能力過濾後的預設；預設仍為 `request_query` |
 | 多代理協調器與子代理 | **部分實作** —— 啟動時註冊；請求仍走工作流程執行器 |
-| 回饋驅動的規則學習 | **部分實作** —— 收集與審查已有，尚無自動修復 |
+| 回饋驅動的規則學習 | **已實作** —— 審查通過的規則進入生成提示與驗證，並在 `applied_rules` 回顯；規則不會自動改寫 SQL |
 | 多租戶隔離 | **未實作** —— 一個管理員群組共用一份資料集 |
 | 經校正的準確率、召回率或容量基線 | **未建立** —— 合成套件評估的是契約一致 |
 
@@ -142,7 +146,7 @@ pip install -e ".[snowflake]"               # 可選 Snowflake 驅動（不在 c
 |---|---|
 | `app/config/agent.yml` | 提供者預設值、節點→工具→權限對應、硬性約束 |
 | `app/workflow/plans/request_query.yml` | 可執行計畫：`node_order`、`failure_policy`、評估指標 |
-| `app/workflow/plans/*.yml` | 另外六個範本（chat、explore、metric、reflection 等） |
+| `app/workflow/plans/*.yml` | 另外六個計畫；其中五個可經 `plan_id` 執行，`metric_query` 待指標目錄 |
 | `app/config/domains/*.yml` | 依領域的詞彙表、業務規則與術語對應 |
 | `app/config/subagents/*.yaml` | 限定範圍的子代理定義與交付目標 |
 
@@ -209,6 +213,36 @@ curl -X POST http://localhost:8001/api/v1/query \
 
 把 `"execute"` 設為 `true`，驗證通過後就會執行。執行物件包含 `columns`、`rows`、`row_count` 與
 `truncated`；資料列受 `MAX_RESULT_ROWS` 限制。
+
+### 選擇工作流程計畫
+
+`request_query` 是預設計畫。另外五個計畫走同一個介面，並共用准入、唯讀檢查、資料列上限、語句逾時與
+LLM 預算：
+
+| `plan_id` | 流水線 | 適用情境 |
+|---|---|---|
+| `gensql_agentic` | 連結 → 生成 → 驗證 → 執行 | 不需要 NL 解析的標準流水線 |
+| `ez_query` | 連結 → 生成 → 執行 | 簡單讀取，驗證步驟可省 |
+| `reflection` | 生成 → 執行 → 反射 → 修正 → 執行 | 預期會執行失敗，需要一次自動修正 |
+| `chat_agentic` | 解析 → 檢索 → 生成 → 驗證 → 回覆 | 需要自然語言答覆，而不只是 SQL |
+| `explore` | 解析 → 檢索 → 格式化 | 只想看表與文件，不生成 SQL |
+
+```bash
+curl -X POST http://localhost:8001/api/v1/query \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"nl_text":"列出訂單","database":"<db_id>","execute":true,"plan_id":"ez_query","num_candidates":1}'
+```
+
+`reflection` 必須同時提供 `execute: true` 與 `database`，否則會在建立工作階段前就失敗。
+`metric_query` 回傳 `400 INVALID_REQUEST` 並附原因——目前部署沒有可解析指標名稱的指標目錄。
+
+把 `"auto_plan"` 設為 `true`，則由能力過濾後的選擇器在 `request_query` 與 `ez_query` 之間選擇。
+回應會帶 `plan_selection`：`layer`（`L1` 規則、`L2` 歷史、`default` 或 `filtered`）、`reason`、
+`confidence` 與備選計畫。選擇器不會選 `metric_query`、`reflection`、`chat_agentic` 或 `explore`；
+若判決落在集合之外，會回退到 `request_query` 並在原因中說明。不需要時保持關閉，請求仍完全確定。
+
+審查通過的學習規則會合併進生成提示，並在驗證時產生非阻斷的規則警告；回應以 `applied_rules`
+列出本次實際套用的規則。規則不會改寫 SQL。
 
 ### SSE 串流
 
@@ -288,6 +322,7 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 - [使用說明](docs/usage.md) —— 帳號、目標、請求欄位、回應證據、端點。
 - [架構](docs/architecture.md) —— Harness 不變量、分層、目錄結構、設計取捨。
 - [支援矩陣](docs/support-matrix.md) —— 功能狀態、資料庫、模型。
+- [缺口收口計畫](docs/optimization/gap-closure-plan-2026-11-16.md) —— 哪些已接線、哪些仍未做，以及多租戶與基線草案。
 - [執行流程](docs/runtime-flow.md) —— 圖中聲明了什麼，以及如何重新產生。
 - [查詢契約](docs/optimization/query-contract.md) —— 狀態碼與錯誤語意。
 - [節點開發](docs/node-development.md) —— 節點生命週期與骨架。
@@ -351,13 +386,14 @@ python scripts/load_test.py                  # 有界併發探測
 
 ```text
 app/api/             create_app() 工廠、13 個路由、操作員相依、靜態前端
-app/workflow/        請求服務、QueryResponse 契約、7 個 YAML 計畫
+app/workflow/        請求服務、計畫執行期與選擇、QueryResponse 契約、7 個 YAML 計畫
 app/harness/         PlanLoader · WorkflowRunner · 權限 · 約束 · 工作階段
 app/nodes/           12 個已註冊節點；request_query 的五個是主鏈路
 app/core/            NL 解析、提示建構、SQL 產生與驗證
 app/db/              連線、結構內省、方言適配器、固定的查詢目標
 app/rag/             LanceDB 向量、BM25/FTS5、RRF 融合、索引維護
 app/knowledge/       Schema 圖、詞彙表、業務規則、檢索原語
+app/learning/        回饋收集、編輯模式分析、已審查規則儲存
 app/llm/             LiteLLM 路由、預算、完成策略、用量、金鑰加密
 app/auth/            JWT 簽發、MySQL 使用者庫、管理員閘門
 app/mcp/             四個 FastMCP 服務與外部工具用戶端

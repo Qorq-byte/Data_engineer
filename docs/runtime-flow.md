@@ -15,7 +15,7 @@ Static, motion-free version for print and diff review: [`assets/runtime-flow-sta
 |---|---|
 | Boot line | `main.py` → `create_app()` → lifespan catalogs and 10-second probes → `:8001 ready`. A failed probe marks a component unavailable instead of aborting; shutdown closes background work, sub-agents, database leases, the auth pool, storage, RAG and the router in order. 启动只做一次，失败降级；关闭按固定顺序等待释放。 |
 | Entry row | Web, JSON, SSE and MCP enter the same service; the operator gate returns 401/403, request validation 422, admission 503, session conflict 409 and the 120-second deadline 504. 四种入口共用一条服务链路，错误类别在入口处就分开。 |
-| Plan bar | `request_query.yml` fixes `node_order`; `WorkflowRunner` walks it with `max_retries 0` and aborts on failure. 顺序来自计划文件，模型不能插入、跳过或重试节点。 |
+| Plan bar | `request_query.yml` fixes `node_order` for the default request; `WorkflowRunner` walks it with `max_retries 0` and aborts on failure. An explicit `plan_id` or `auto_plan=true` selects another executable plan before admission, but the planner never inserts or skips nodes at runtime. 默认请求的顺序来自 `request_query.yml`；`plan_id`/`auto_plan` 只决定选哪份计划，运行期仍不能插入、跳过或重试节点。 |
 | Node row | `parse_nl → schema_linking → generate_sql → validate_sql → execute_sql`. Each card names the value it writes into `WorkflowContext`; the SQL policy and the write check gate execution. 五个节点只通过上下文通信。 |
 | Response card | JSON and SSE return `QueryResponse`; MCP projects the same status, identifiers, SQL and errors into a tool result. The trace is persisted before the reply. 一份结果契约，三种出口。 |
 | Footnotes | Guards: `PermissionManager`, `ConstraintEnforcer`, SQL policy, LLM budget. Branches: skipped execution, blocked validation, node abort, explicit degradation and HTTP error classes. 护栏与分支各压成一行。 |
