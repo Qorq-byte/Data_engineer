@@ -1,0 +1,365 @@
+{
+  "date": "2026-11-17",
+  "scope": "Current working tree; synthetic local acceptance only. No external model or Snowflake calls.",
+  "git_head": "0212e1356bfb7618592c1a5e8c3a4d427cdc78b5",
+  "source_sha256": {
+    "app/db/snowflake_source.py": "7f965065a13454ad0665a1b9ff7bd6527a5dee3a1f3aececac42c3a792fd92f2",
+    "app/api/subagents.py": "d858af3c9a23248e627052a4b60790c79252859ca91113f51f634e1a23625ccd",
+    "app/subagent/workflow.py": "9095902eb1901a576004f6996b8682daf6c711130c058c3524ab5a5730f9eaa5",
+    "app/api/schema.py": "127d3f8ccdb41fdc39cfdf0cdcc30d9bec9189b4d46ed759b932293da26ded64",
+    "app/db/connections.py": "b8d353a36bd330b2fc75a442ac9d6e699a1c922927c3f13ed08073f9ba60f114",
+    "app/db/schema_extractor.py": "7858f0957f9c37a6e7350247c7bf4d6c4644be77c7e06d7987a302a20e612cb0",
+    "app/nodes/execute_sql.py": "a8b9d15a47d6cdded40e4395133acbf410fe7c6cfdcb60193dd93c67eaa80184",
+    "app/workflow/plan_runtime.py": "350e7ff211413037324bbbaa62dc835ee56ee019808b7897ca089314f1ff75ee",
+    "app/nodes/metric_resolve.py": "befeb9a9bf9f3d5a05a7b0ac58b1dcde1f5e41d0bd0a05824760f43e083955f3",
+    "app/nodes/generate_sql.py": "1dcf1ee13aae587d0b54e89f410fddc31f94cbaf7a2cf5a5755d3d92ecef8685",
+    "tests/test_db/test_snowflake_source.py": "fdb0b523847f22867c652eb7fc5d410094921f36c1ffc688627bd15b2b4b5b21",
+    "tests/test_api/test_subagent_workflow.py": "e4c7bc79ca0b1e376cd2ca7253e8065b42f33c2c6cde76be6c0f3d06813ccb7b",
+    "tests/real_db/test_snowflake.py": "97c773895005e355e8dcfb79d570bc0017f92d7f3d68d6b4d65adae88cbfab86",
+    "pyproject.toml": "860595f0386436d78acfce384a7342a1a14b96c4aa394c320b2f2d5b09452c15",
+    "constraints.txt": "522f02b86d1d98d60d9b69f6d8ce2dc2c007e32f296178704de38aecca85b50d"
+  },
+  "python": "3.12.13",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "interpreter": ".stage62/.venv/Scripts/python.exe (imports current workspace app)",
+  "dependencies": {
+    "ok": true,
+    "checked": 33,
+    "errors": []
+  },
+  "versions": {
+    "pytest": "9.2.0",
+    "pytest-asyncio": "1.4.1",
+    "ruff": "0.17.1",
+    "mypy": "2.4.0",
+    "sqlglot": "30.29.0",
+    "litellm": "1.106.6",
+    "fastapi": "0.162.0",
+    "duckdb": "2.0.0"
+  },
+  "final_local_suite": {
+    "tests": 4660,
+    "passed": 4659,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 1,
+    "seconds": 274.899,
+    "junit_sha256": "0a8dd83c5ab10a457b237d4a9908cc671e451bafb9b12309ac6b2bf07018d68e"
+  },
+  "supplementary_python313_suite": {
+    "tests": 4660,
+    "passed": 4659,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 1,
+    "seconds": 262.206,
+    "junit_sha256": "d84dda0b4c43d0a306aba2f82ef359d56aa00f66725d8e763a35e3c61af4519f"
+  },
+  "targeted_python313_suite": {
+    "tests": 439,
+    "passed": 435,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 4,
+    "seconds": 14.736,
+    "junit_sha256": "9fd3c67c54e8122dfd40e085c306e2388a8e87a0cbb5b61ed9dc168eea346bf8"
+  },
+  "snowflake_optin_without_credentials": {
+    "tests": 4,
+    "passed": 0,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 4,
+    "seconds": 6.041,
+    "junit_sha256": "33bf3b9de26a3262cafe25ed23197a36e5de78374f874b8e4ee5348c6c9cb41a"
+  },
+  "quality_gates": {
+    "ruff": "passed (all repository files)",
+    "mypy": "passed (209 app source files; includes AGENTS.md core)",
+    "frontend_contracts": "passed",
+    "frontend_reproducible_build_and_failure_preservation": "passed",
+    "readmes": "passed (four languages, links, diagrams)"
+  },
+  "offline": {
+    "bm25": {
+      "dataset": "synthetic-smoke-v1",
+      "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a",
+      "k": 3,
+      "document_count": 8,
+      "query_count": 7,
+      "retrieval": {
+        "recall_at_k": 1.0,
+        "precision_at_k": 0.38095238095238093,
+        "mrr_at_k": 1.0,
+        "ndcg_at_k": 1.0,
+        "latency_ms": 0.2544571429357997
+      },
+      "sql_model_metrics": null,
+      "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."
+    },
+    "schema_linking": {
+      "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c",
+      "case_count": 12,
+      "passed": 12
+    },
+    "sql_validation": {
+      "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9",
+      "case_count": 18,
+      "passed": 18
+    },
+    "sql_contracts": {
+      "gold_self_check_count": 12,
+      "case_count": 4,
+      "prediction_count": 0,
+      "robust_match_count": 0,
+      "error_counts": {
+        "MISSING_PREDICTION": 12
+      },
+      "measurement_scope": "Four predictions, three local datasets; not twelve model calls. Not comparable to v1 scores or a business accuracy estimate."
+    }
+  },
+  "load_probe": {
+    "environment": {
+      "python": "3.12.13",
+      "platform": "Windows-11-10.0.26200-SP0",
+      "logical_cpus": 24,
+      "sqlite": "3.50.4",
+      "httpx": "0.28.1",
+      "transport": "in-process ASGI; lifespan not run",
+      "database": "single factory-managed in-memory SQLite connection",
+      "rows": 1000,
+      "llm": "scripted fixed SQL; no external model calls",
+      "rag": "not initialized",
+      "query_capacity": 8,
+      "warmup_requests_per_scenario": 3,
+      "requests_per_level": 20
+    },
+    "runs": [
+      {
+        "scenario": "direct_sql",
+        "concurrency": 1,
+        "requests": 20,
+        "wall_seconds": 0.036606699984986335,
+        "attempt_rps": 546.348073117836,
+        "successful_rps": 546.348073117836,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 1.7576999962329865,
+          "p95_ms": 2.3403349972795695,
+          "p99_ms": 2.3651870095636696
+        },
+        "success_latency": {
+          "p50_ms": 1.7576999962329865,
+          "p95_ms": 2.3403349972795695,
+          "p99_ms": 2.3651870095636696
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "direct_sql",
+        "concurrency": 2,
+        "requests": 20,
+        "wall_seconds": 0.03159939998295158,
+        "attempt_rps": 632.9234102796364,
+        "successful_rps": 632.9234102796364,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 2.74764999630861,
+          "p95_ms": 3.0079499643761665,
+          "p99_ms": 3.1394299922976643
+        },
+        "success_latency": {
+          "p50_ms": 2.74764999630861,
+          "p95_ms": 3.0079499643761665,
+          "p99_ms": 3.1394299922976643
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "direct_sql",
+        "concurrency": 5,
+        "requests": 20,
+        "wall_seconds": 0.032347100030165166,
+        "attempt_rps": 618.2934476768884,
+        "successful_rps": 618.2934476768884,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 7.355300011113286,
+          "p95_ms": 8.218944998225197,
+          "p99_ms": 8.24242900009267
+        },
+        "success_latency": {
+          "p50_ms": 7.355300011113286,
+          "p95_ms": 8.218944998225197,
+          "p99_ms": 8.24242900009267
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "direct_sql",
+        "concurrency": 10,
+        "requests": 20,
+        "wall_seconds": 0.0311760000186041,
+        "attempt_rps": 641.5191168868718,
+        "successful_rps": 641.5191168868718,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 12.18834999599494,
+          "p95_ms": 15.18102497793734,
+          "p99_ms": 15.217884993180633
+        },
+        "success_latency": {
+          "p50_ms": 12.18834999599494,
+          "p95_ms": 15.18102497793734,
+          "p99_ms": 15.217884993180633
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "fixed_sql_pipeline",
+        "concurrency": 1,
+        "requests": 20,
+        "wall_seconds": 0.21908469998743385,
+        "attempt_rps": 91.28889420916728,
+        "successful_rps": 91.28889420916728,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 10.853100015083328,
+          "p95_ms": 11.558800004422665,
+          "p99_ms": 11.677360022440553
+        },
+        "success_latency": {
+          "p50_ms": 10.853100015083328,
+          "p95_ms": 11.558800004422665,
+          "p99_ms": 11.677360022440553
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "fixed_sql_pipeline",
+        "concurrency": 2,
+        "requests": 20,
+        "wall_seconds": 0.20476990001043305,
+        "attempt_rps": 97.67060490326458,
+        "successful_rps": 97.67060490326458,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 20.056149980518967,
+          "p95_ms": 25.236734960344624,
+          "p99_ms": 28.616226991289288
+        },
+        "success_latency": {
+          "p50_ms": 20.056149980518967,
+          "p95_ms": 25.236734960344624,
+          "p99_ms": 28.616226991289288
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "fixed_sql_pipeline",
+        "concurrency": 5,
+        "requests": 20,
+        "wall_seconds": 0.19908450002549216,
+        "attempt_rps": 100.45985497333575,
+        "successful_rps": 100.45985497333575,
+        "error_rate": 0.0,
+        "statuses": {
+          "ok": 20
+        },
+        "all_latency": {
+          "p50_ms": 47.73764999117702,
+          "p95_ms": 55.72121501027141,
+          "p99_ms": 58.51368299510795
+        },
+        "success_latency": {
+          "p50_ms": 47.73764999117702,
+          "p95_ms": 55.72121501027141,
+          "p99_ms": 58.51368299510795
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      },
+      {
+        "scenario": "fixed_sql_pipeline",
+        "concurrency": 10,
+        "requests": 20,
+        "wall_seconds": 0.09062569995876402,
+        "attempt_rps": 220.6879506486602,
+        "successful_rps": 88.27518025946408,
+        "error_rate": 0.6,
+        "statuses": {
+          "http_503": 12,
+          "ok": 8
+        },
+        "all_latency": {
+          "p50_ms": 0.8835000335238874,
+          "p95_ms": 82.48304001172073,
+          "p99_ms": 83.39564797119237
+        },
+        "success_latency": {
+          "p50_ms": 77.7832499879878,
+          "p95_ms": 83.20351997972466,
+          "p99_ms": 83.53974396479316
+        },
+        "event_loop_lag_p95_ms": 0.0,
+        "process_peak_rss_bytes": null,
+        "process_cpu_seconds": null,
+        "cpu_percent_one_core": null
+      }
+    ]
+  },
+  "artifact_sha256": {
+    "pinned-quality.json": "2dc2c4d57088f49962ad11e29b8184ef2bf64531d813e3ce83ebc0276ec3e3a3",
+    "pinned-schema-linking.json": "a87c93b74b501dd9c07c27969df62d0c92444675e815f2a9e0e7d6dbdd0b8bc5",
+    "pinned-sql-validation.json": "13ec028ee7560f36bbf240d87f4526db3dae06a8dac4023cb4428c63d03d9ef0",
+    "pinned-sql-contracts.json": "b9f7755ebd75272eff5426601b7e5793f5477052a1fbe5c60476aeb2a3905e75",
+    "pinned-load.json": "f5850e1598ccf7bd8af462795dd353a1114b6ad9f13ff4c341a3a95d74421642"
+  },
+  "limitations": [
+    "Snowflake native driver, privileges, terminal cancellation and service compatibility remain unaccepted.",
+    "The original .venv has 18 constraint mismatches; its results are supplementary only.",
+    "BM25 synthetic lexical recall is not semantic/business recall or answer accuracy.",
+    "No SQL predictions were supplied; 0/4 robust matches is missing-input evidence, not model accuracy.",
+    "Load is a short in-process ASGI/SQLite fixed-SQL probe, not a production capacity baseline.",
+    "CPU/RSS are null when psutil is unavailable; no memory or CPU headroom claim is made.",
+    "Production tenants and autonomous multi-agent execution are not implemented."
+  ]
+}

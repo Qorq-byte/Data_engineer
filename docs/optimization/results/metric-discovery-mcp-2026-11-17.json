@@ -1,0 +1,107 @@
+{
+  "date": "2026-11-17",
+  "scope": "Current working tree; scoped metric discovery and MCP tools",
+  "git_head": "0212e1356bfb7618592c1a5e8c3a4d427cdc78b5",
+  "source_sha256": {
+    "app/api/__init__.py": "8294e688405c11d0cc46d48a0765bfb54aa0fe601788cf5da42853d58c9279e7",
+    "app/api/metrics.py": "fbdc47f78b4cb26832566ba571fb751420f3c0e11d23444d8b6b46392e37d78e",
+    "app/api/query.py": "0e67c863869f5e4ca4a47800c23c953ced91fc1c122d4864d0c85a0c35823785",
+    "app/api/auth.py": "e234ca51752172fb500e01802487981f97ff6644f3477708bb8ecbc40b2fc0e1",
+    "app/auth/access.py": "970e5ca1a5428c84d33495ff6ca5396cb15cb1f5d72dacac383d4147cc1683aa",
+    "app/auth/security.py": "c00080464fce059d2433d7c4aa2c3787ad93b3efb68f56d4a921f88b1f1bf4ec",
+    "app/workflow/metric_runtime.py": "8fe3fe767ee1fd4bc61ef48a69bde7dc6055b2ec4587ae97558d161b1f7b0e9e",
+    "app/workflow/query_service.py": "cdf3b7fa2711a554b1b2e6db066c80d8b4d1d4d210c44302f70e3c35c5b4e56f",
+    "app/workflow/plans/metric_query.yml": "018f043c408ae480ff611bb2df2628a4601bac7376a084e573e8773db127d7b3",
+    "app/knowledge/metric_catalog.py": "1b6e7cc8a13d63cc391fb043a615ebc3ac1bb57988b87755013bf2564efd15bf",
+    "app/mcp/fastmcp_server.py": "a795538acd43a7a2e14a1f7a2c9e1c0c4e7928ef923d158822ca6123d1a34a7e",
+    "app/mcp/metric_tools.py": "f53195421df69917f4e7ac9964ca7407d21cb0daa640b88a425fdacbc8daae55",
+    "app/mcp/query_projection.py": "3edf01cca18620766d85b34ec8fde4ae831e4b7e0511af80597e6ae9555d0e3e",
+    "tests/test_api/test_metric_discovery.py": "2acdd7979603e01f72fdbd5a7b372e5735b8c0415343e98615d04e8081f506ea",
+    "tests/test_mcp/test_metric_tools.py": "02f0c6ce9157c6f21a82e5143da85ed430a6c3676b39c06ce7bd08693fa8bbdd",
+    "tests/fixtures/metric_catalog.yml": "46d5b3fb698b53061c6455b32ec259dfbcaa4fdfb7d43a723c38d1f7bf271c79",
+    "tests/fixtures/test_schema.sql": "e453667017c6185fd9cefdd40b2fe783314cd83637e2d4ca3b03cdd98ef84b60",
+    "constraints.txt": "522f02b86d1d98d60d9b69f6d8ce2dc2c007e32f296178704de38aecca85b50d",
+    "pyproject.toml": "860595f0386436d78acfce384a7342a1a14b96c4aa394c320b2f2d5b09452c15"
+  },
+  "python": "3.12.13",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "interpreter": ".stage62/.venv/Scripts/python.exe (imports current workspace)",
+  "dependencies": {
+    "ok": true,
+    "checked": 33,
+    "errors": []
+  },
+  "versions": {
+    "pytest": "9.2.0",
+    "ruff": "0.17.1",
+    "mypy": "2.4.0",
+    "sqlglot": "30.29.0",
+    "fastmcp": "4.1.4",
+    "mcp": "2.3.0",
+    "pydantic": "2.14.2",
+    "fastapi": "0.162.0",
+    "httpx": "0.28.1"
+  },
+  "final_local_suite": {
+    "passed": 4756,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 1,
+    "skip_reasons": [
+      "uvloop is not supported/installed on this platform"
+    ],
+    "seconds": 359.218,
+    "xml_sha256": "2236af7ebf6beda4007487f56407f3f2d664a2faafc19b5dda215344acf1e693"
+  },
+  "targeted_suite": {
+    "passed": 162,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "skip_reasons": [],
+    "seconds": 48.462,
+    "xml_sha256": "c05755cf37f3978fa66f053de01f58fa2122b691a11a7222fffc08d4778fd12e"
+  },
+  "new_tests": {
+    "rest_discovery": 11,
+    "mcp_metric_tools": 19
+  },
+  "quality_gates": {
+    "ruff": "passed",
+    "mypy": "passed (214 app files)",
+    "frontend_contracts": "passed",
+    "frontend_reproducible_build": "passed",
+    "four_language_readmes_and_links": "passed"
+  },
+  "data": {
+    "origin": "Repository synthetic fixtures and temporary real SQLite",
+    "orders": 5,
+    "users": 3,
+    "products": 4,
+    "extra_groups_in_cap_test": 150,
+    "method": "REST/MCP metadata, SQL and result parity; real JWT and ASGI MCP requests",
+    "llm_calls": 0,
+    "external_service_calls": 0
+  },
+  "verified": [
+    "REST discovery requires an explicit domain/database and authenticated operator.",
+    "One binding only; no catalog path, other bindings or credentials in discovery output.",
+    "Configuration evidence is not schema/business certification.",
+    "New HTTP MCP tools require valid operator JWT even when the factory trusts local calls.",
+    "Local in-process calls default to denied and require explicit host trust.",
+    "Token and host-trust flags are not tool parameters; extra parameters are rejected by FastMCP.",
+    "MCP metric_query defaults to validation only and shares fixed resolve/validate/execute service.",
+    "MCP row projection caps at 100 with accurate truncation; candidates omit execution rows.",
+    "Unknown/out-of-scope/version-stale requests fail; zero provider calls.",
+    "Real resource gates produce timeout/capacity errors; cancellation propagates and capacity recovers.",
+    "Legacy nl_query projection and error contracts remain covered by regression tests."
+  ],
+  "limitations": [
+    "No real network listener, external MCP client, TLS/proxy/OAuth or separate stdio subprocess acceptance.",
+    "Existing five MCP tools retain their prior access policy; this is not server-wide auth hardening.",
+    "Shared-worker metric catalog sealing is not implemented; metric plan/discovery remain blocked there.",
+    "No cross-table/time-grain, tenant isolation or subagent metric actions.",
+    "No Snowflake or other external database execution acceptance; no business sign-off or production capacity baseline.",
+    "Original .venv remains unmodified; pinned environment supplies the verification evidence."
+  ]
+}
