@@ -315,6 +315,7 @@ async def rule_candidates(status: str = "pending_review") -> dict[str, Any]:
                 "source_count": d.get("source_count", 0),
                 "status": d.get("status", "pending_review"),
                 "domain_id": d.get("domain", d.get("domain_id", "")),
+                "suggested_enforcement": d.get("suggested_enforcement", {}),
             }
             old = old_by_id.get(rid, {})
             if "rejected_source_count" in old:
@@ -391,6 +392,15 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict[s
         except Exception as e:
             logger.warning("Failed to persist review to MySQL for %s: %s", rid, e)
 
+    # Helper: persist to the local learned-rule store that queries read.
+    def _persist_learned(rid: str, st: str, info: dict[str, Any]) -> None:
+        try:
+            from app.learning.rule_registry import learned_rule_registry
+
+            learned_rule_registry.record_review(rid, st, info)
+        except Exception as e:
+            logger.warning("Failed to persist learned rule %s: %s", rid, e)
+
     # Tier 1: Check in-memory store
     for r in _learning_store["rule_candidates"]:
         rid = r.get("id") or r.get("rule_id", "")
@@ -402,6 +412,7 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict[s
             if new_status == "rejected":
                 r["rejected_source_count"] = r.get("source_count", 0)
             await _persist_review(rule_id, new_status, r)
+            _persist_learned(rule_id, new_status, r)
             return {
                 "status": "ok",
                 "message": "Rule approved" if action == "approve" else "Rule rejected",
@@ -427,10 +438,12 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict[s
                     "source_count": c.occurrence_count,
                     "status": c.status,
                     "domain": c.domain_id or "",
+                    "suggested_enforcement": c.suggested_enforcement,
                 }
                 if new_status == "rejected":
                     rule_info["rejected_source_count"] = c.occurrence_count
                 await _persist_review(rule_id, new_status, rule_info)
+                _persist_learned(rule_id, new_status, rule_info)
                 # Also add to in-memory store so it survives this session
                 _learning_store["rule_candidates"].append(rule_info)
                 return {
@@ -447,6 +460,17 @@ async def review_rule_candidate(rule_id: str, action: str = "approve") -> dict[s
         if store is not None:
             updated = await store.update_rule_candidate_status(rule_id, new_status)
             if updated:
+                # Only mirror the status: the local store must already have the
+                # rule's pattern, otherwise an empty pattern would match every query.
+                try:
+                    from app.learning.rule_registry import learned_rule_registry
+
+                    if learned_rule_registry.store.set_status(rule_id, new_status):
+                        learned_rule_registry.reset_cache()
+                except Exception as learned_error:
+                    logger.warning(
+                        "Learned rule status not mirrored for %s: %s", rule_id, learned_error
+                    )
                 return {
                     "status": "ok",
                     "message": "Rule approved" if action == "approve" else "Rule rejected",
