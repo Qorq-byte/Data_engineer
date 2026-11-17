@@ -5,10 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import math
+import stat
 import time
 import uuid
 from collections import Counter
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from contextvars import ContextVar
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,19 @@ from app.evaluation.predictions import export_predictions, fingerprint
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
 from app.llm.budget import active_call_guard, active_call_limits
 from app.llm.router import LiteLLMRouter, ProviderConfig, RouterConfig
+
+
+def artifact_bytes(paths: Iterable[Path]) -> int:
+    """Count one stat per file; SQLite journals can disappear during enumeration."""
+    total = 0
+    for path in paths:
+        try:
+            metadata = path.stat()
+        except FileNotFoundError:
+            continue
+        if stat.S_ISREG(metadata.st_mode):
+            total += metadata.st_size
+    return total
 
 
 def error_code(exc: BaseException) -> str:
@@ -209,7 +223,7 @@ async def run_batch(manifest: dict[str, Any], api_key: str, directory: Path) -> 
         write_atomic(directory / "responses.json", responses)
         write_atomic(directory / "bindings.json", bindings)
         write_atomic(directory / "report.json", report)
-        if sum(p.stat().st_size for p in directory.rglob("*") if p.is_file()) > LIMITS[
+        if artifact_bytes(directory.rglob("*")) > LIMITS[
                 "max_artifact_bytes"]:
             raise RuntimeError("ARTIFACT_BUDGET_EXCEEDED")
 
