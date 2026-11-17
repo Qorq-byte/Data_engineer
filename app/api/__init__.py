@@ -140,6 +140,7 @@ def create_app() -> FastAPI:
         health,
         learning,
         mcp_api,
+        metrics,
         query,
         schema,
         sql_utils,
@@ -154,6 +155,7 @@ def create_app() -> FastAPI:
     protected = [Depends(require_operator)]
     app.include_router(query.router, dependencies=protected, prefix="/api/v1", tags=["Query"])
     app.include_router(schema.router, dependencies=protected, prefix="/api/v1", tags=["Schema"])
+    app.include_router(metrics.router, dependencies=protected, prefix="/api/v1", tags=["Metrics"])
     app.include_router(domains.router, dependencies=protected, prefix="/api/v1", tags=["Domains"])
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["Auth"])
     app.include_router(

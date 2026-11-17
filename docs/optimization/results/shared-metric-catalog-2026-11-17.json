@@ -1,0 +1,169 @@
+{
+  "date": "2026-11-17",
+  "scope": "Current workspace; immutable shared metric catalog",
+  "git_head": "0212e1356bfb7618592c1a5e8c3a4d427cdc78b5",
+  "source_sha256": {
+    "app/harness/worker_release.py": "7cb2d5178012758df7f8d8337db32cc2064b70c739a9aef2acd86d91ed4b088d",
+    "app/harness/worker_bootstrap.py": "a22879a0957ac3f6f4d650542be3b5dd84d1a04622920adc78bb3a663dc36427",
+    "app/harness/shared_query_runtime.py": "7ac505f0c9c8b459ff9afcdb6ea7745c50269436bd482580e568d20a2dbcda68",
+    "app/harness/metric_catalog_runtime.py": "74f66d8e0ad88ca977fe8abdacc1e4e0877a24f0e4fdcefbc34064338727d8de",
+    "app/workflow/query_service.py": "bf907aba89edf9d80c70a904378e21be895e7d26023f7664188062075e4b64c8",
+    "app/workflow/plan_runtime.py": "56df8736cab25b5f4d91b0ac2de0b26503852eabb926947f708f42eaac7c252d",
+    "app/workflow/metric_runtime.py": "c9582ad65475cbcce229afe5e220ac12994a2ac448b4e3899d2b2191a2800992",
+    "app/workflow/plans/metric_query.yml": "018f043c408ae480ff611bb2df2628a4601bac7376a084e573e8773db127d7b3",
+    "app/knowledge/metric_catalog.py": "1b6e7cc8a13d63cc391fb043a615ebc3ac1bb57988b87755013bf2564efd15bf",
+    "app/api/metrics.py": "72bdcd8c6492f4472eaef0d18642f9a2e98b32f8e70fa284107246198931a396",
+    "app/mcp/metric_tools.py": "7617015cae41faf5f9c646fe4e2e9b6a4f17609bbc2e0eb6b4faaec8d5230dd0",
+    "scripts/build_worker_release.py": "50627676777038ba65ff13c65a8b00b5d2dac4f11cdfc44f11ea0174749484c0",
+    "scripts/run_real_db_tests.py": "efc3e338ca4bee0b36623cc5b2c69e90f7d50013b788223aa3d94164969ff026",
+    "tests/test_harness/test_worker_metric_catalog.py": "e03e7e69c32fd2ef159dbbf51df90b47f4932cfd054fbb80310a2892ca84f75d",
+    "tests/test_harness/test_worker_release.py": "b11cc36fed35ac164db4545a8864022fff5f0a4252489157c30a026a3ebabab9",
+    "tests/test_api/test_metric_query.py": "913fa800f6acffb406b6de18e16efacfb635b0eb18df31eb140c77a383b5a8b9",
+    "tests/test_api/test_metric_discovery.py": "2acdd7979603e01f72fdbd5a7b372e5735b8c0415343e98615d04e8081f506ea",
+    "tests/test_mcp/test_metric_tools.py": "02f0c6ce9157c6f21a82e5143da85ed430a6c3676b39c06ce7bd08693fa8bbdd",
+    "tests/fixtures/immutable_release.py": "f2b197cceba6aac6484653248d6fb2aa61a23f5f32dde1e3c8bf61ca29bdc2a0",
+    "tests/fixtures/metric_catalog.yml": "46d5b3fb698b53061c6455b32ec259dfbcaa4fdfb7d43a723c38d1f7bf271c79",
+    "tests/fixtures/test_schema.sql": "e453667017c6185fd9cefdd40b2fe783314cd83637e2d4ca3b03cdd98ef84b60",
+    "tests/fixtures/shared_query_worker.py": "e3e65de48cc8a7c6c89d89e90735bfe4ca6a4c36eb6d010d10032cc0ec16c619",
+    "tests/real_db/test_shared_metric_catalog.py": "c5d34dc0a228fd37d491e2627b3877a78aa05768a2f4ffe322066e7da1e08c9b",
+    "tests/real_db/test_shared_query_runtime.py": "f5ce3498e17c5d425698ca69a838d9f1a0f81b3ca069cdaf679f38c29f22ef89",
+    "tests/real_db/test_immutable_workers.py": "97877f86621f3d1d72e99d364bc6b1046e4071137a43119067462fafdd198d9a",
+    "tests/real_db/support.py": "d601e30c99ee1ef105071bd7642634efe654aca75cb46a9a9ba970d5bcb7e056",
+    "constraints.txt": "522f02b86d1d98d60d9b69f6d8ce2dc2c007e32f296178704de38aecca85b50d",
+    "pyproject.toml": "860595f0386436d78acfce384a7342a1a14b96c4aa394c320b2f2d5b09452c15"
+  },
+  "python": "3.12.13",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "interpreter": ".stage62/.venv/Scripts/python.exe (imports current workspace)",
+  "versions": {
+    "pytest": "9.2.0",
+    "ruff": "0.17.1",
+    "mypy": "2.4.0",
+    "sqlglot": "30.29.0",
+    "fastmcp": "4.1.4",
+    "fastapi": "0.162.0",
+    "pydantic": "2.14.2",
+    "aiomysql": "0.3.2"
+  },
+  "final_local_suite": {
+    "passed": 4770,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 1,
+    "skip_reasons": [
+      "uvloop is not supported/installed on this platform"
+    ],
+    "seconds": 308.968,
+    "junit_sha256": "b1e0b57a98b7d0a15b8b1b6344c8a653bb257496bd0b723a1baac7e13ec2a8ab",
+    "deselected": 149
+  },
+  "targeted_suite": {
+    "passed": 79,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "skip_reasons": [],
+    "seconds": 15.494,
+    "junit_sha256": "1b9fc9db53af4ff63e7d3eb3bed2869b9d883814ab509afab6ee57af78fa70b4"
+  },
+  "real_mysql_suite": {
+    "passed": 5,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "skip_reasons": [],
+    "seconds": 136.525,
+    "junit_sha256": "59e534f46077c2792f04caf02efc67dd55393022a1494dbc2ff048db0a512e52",
+    "deselected": 144,
+    "server_versions": {
+      "server_mysql": "8.4.13"
+    },
+    "new_metric_cases": 4,
+    "existing_no_catalog_restart_regression": 1,
+    "serving_processes": 2,
+    "replacement_process": true,
+    "services": {
+      "postgresql": {
+        "image": "postgres:16",
+        "image_id": "sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97"
+      },
+      "mysql": {
+        "image": "mysql:8.4",
+        "image_id": "sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69"
+      }
+    },
+    "tested_services": {
+      "mysql": 5,
+      "postgresql": 0
+    },
+    "owned_containers_removed": 2,
+    "raw_report_sha256": "d12b4b4431cb43388eb2d150be24e7369ef8285067a257ecb46cd83c1a01eac6"
+  },
+  "quality_gates": {
+    "ruff": "passed",
+    "mypy": "passed (215 app files; build script also checked)",
+    "dependencies": {
+      "ok": true,
+      "checked": 33,
+      "errors": []
+    },
+    "frontend_contracts": "passed",
+    "frontend_reproducible_build": "passed",
+    "four_language_readmes_and_links": "passed",
+    "git_diff_whitespace": "passed"
+  },
+  "data": {
+    "origin": "Repository synthetic SQLite and disposable MySQL fixtures",
+    "mysql_orders": 5,
+    "mysql_order_ids": [
+      10,
+      20,
+      30,
+      40,
+      50
+    ],
+    "mysql_results": [
+      [
+        5,
+        "150"
+      ]
+    ],
+    "decimal_contract": "MySQL SUM(integer) serializes as decimal text",
+    "local_comparison": "Two independent Python processes select sealed definitions and execute real SQLite",
+    "model_calls_in_metric_path": 0,
+    "external_cloud_calls": 0
+  },
+  "verified": [
+    "Optional release path/version/SHA256 and closed db_id bindings; old no-catalog releases remain compatible.",
+    "Configured catalog missing from a release is rejected before connection/application initialization.",
+    "Catalog/manifest version, digest, descriptor, deletion and output alias negatives fail closed.",
+    "Only an activated runtime supplies shared metrics; inactive JSON/discovery return503 and SSE emits error.",
+    "Two HTTP workers share catalog, JSON/SSE results, sessions and replacement-process recovery.",
+    "Same-size/mtime-preserving catalog tamper fences both workers, discovery, queries and readiness.",
+    "Wrong catalog configuration prevents a new process from serving; control-plane drift rejects discovery.",
+    "Fixed YAML resolve/validate/execute lifecycle, default-deny and read-only policy remain in effect."
+  ],
+  "failed_attempts": [
+    {
+      "scope": "Independent SQLite subprocess",
+      "reason": "Missing Windows USERNAME caused aiomysql getpass import failure",
+      "resolution": "Retain ordinary USERNAME/USER without forwarding credentials"
+    },
+    {
+      "scope": "First MySQL run",
+      "passed": 3,
+      "failed": 2,
+      "reason": "Test expected numeric SUM instead of DECIMAL text and HTTP503 for an established SSE stream",
+      "resolution": "Preserve existing implementation contracts; correct assertions and rerun all five cases",
+      "owned_containers_removed": 2
+    }
+  ],
+  "limitations": [
+    "Single host immutable deployment with MySQL8.4.13 control plane and target; no arbitrary replicas or tenant isolation.",
+    "PostgreSQL companion container had zero selected cases; other database metric deployments are not certified.",
+    "No business catalog sign-off, accuracy/recall calibration or production capacity SLO.",
+    "MCP uses shared helper and local regressions; this real-process run covers REST JSON/SSE, no external MCP/stdio/TLS/OAuth client.",
+    "No cross-table/time-grain, subagent metric actions, Snowflake credentials or cloud acceptance.",
+    "Original .venv remains unmodified with known dependency drift; no deploy, publish or merge."
+  ]
+}

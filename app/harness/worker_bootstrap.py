@@ -44,6 +44,7 @@ async def immutable_worker_lifespan(
     ):
         raise ValueError("Shared query/model concurrency must be 1..64")
     release = await asyncio.to_thread(WorkerRelease, Path(settings.shared_worker_release))
+    await asyncio.to_thread(release.catalog_for, settings.metric_catalog_path)
     required = {Path(settings.agent_config_path).resolve(), Path(settings.rag_bm25_path)}
     required.update((ROOT / "app/config").rglob("*.yml"))
     required.update((ROOT / "app/workflow/plans").rglob("*.yml"))
@@ -165,6 +166,7 @@ async def immutable_worker_lifespan(
                 try:
                     async with asyncio.timeout(5):
                         await asyncio.to_thread(release.verify_metadata)
+                        await asyncio.to_thread(release.catalog_for, settings.metric_catalog_path)
                         if any(dense.parent.glob("index-pending-*.json")):
                             raise ValueError("Interrupted index maintenance")
                         current_yaml = set((ROOT / "app/config").rglob("*.yml"))
@@ -184,6 +186,7 @@ async def immutable_worker_lifespan(
                     ) from None
 
             runtime.verify_configuration = verify
+            runtime.worker_release = release
             publish_shared_runtime(runtime)
             app.state.components["shared_worker"] = True
             yield

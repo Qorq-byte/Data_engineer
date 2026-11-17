@@ -12,7 +12,7 @@ from app.knowledge.retrieval.schema_rag import SchemaMetadataRAG
 from app.rag.converters import snapshot_to_schema_docs
 
 
-async def build_release(config, directory: Path):
+async def build_release(config, directory: Path, *, with_metrics: bool = False):
     dense_path, sparse_path = directory / "lance", directory / "sparse.sqlite3"
     provider = MockEmbeddingProvider()
     embedding = EmbeddingGenerator(provider)
@@ -45,16 +45,30 @@ async def build_release(config, directory: Path):
     files.update((ROOT / "app/config").rglob("*.yml"))
     files.update((ROOT / "app/workflow/plans").rglob("*.yml"))
     files.add(sparse_path)
+    catalog = None
+    if with_metrics:
+        catalog = directory / "metrics.yml"
+        catalog.write_text(
+            "version: shared-fixture-v1\nbindings:\n"
+            "  - domain: ecommerce\n    database: fixture\n    metrics:\n"
+            "      - {name: order_count, table: orders, column: '*', aggregation: count, "
+            "dimensions: [status]}\n"
+            "      - {name: id_sum, table: orders, column: id, aggregation: sum, "
+            "dimensions: [status]}\n",
+            encoding="utf-8",
+        )
     bundle = directory / "release.json"
     write_release(
         [{"db_id": "fixture", "db_type": "mysql", "config": reader}],
         sorted(files),
         bundle,
         index_roots=[dense_path],
+        metric_catalog=catalog,
     )
     return {
         "SHARED_WORKER_RELEASE": str(bundle),
         "RAG_LANCEDB_DIR": str(dense_path),
         "RAG_BM25_PATH": str(sparse_path),
         "LLM_AUDIT_PATH": str(directory / "shared-audit.sqlite3"),
+        **({"METRIC_CATALOG_PATH": str(catalog)} if catalog is not None else {}),
     }

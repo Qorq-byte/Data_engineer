@@ -25,6 +25,13 @@ latency figures. Those live in [`query-contract.md`](optimization/query-contract
 [`runtime-and-load.md`](optimization/runtime-and-load.md), because drawing them would break the
 one-page layout.
 
+The node row shows the default plan. Explicit `metric_query` v1 uses the separate fixed
+`metric_resolve → validate_sql → execute_sql` YAML, a versioned server catalog and zero model calls.
+See [its configuration and acceptance boundary](optimization/metric-query-v1.md).
+MCP `metric_query` uses that same plan, while REST/MCP metric discovery reads one configured binding
+without running SQL. New MCP metric tools require operator HTTP JWT or explicitly trusted local
+hosting; see [discovery and access](optimization/metric-discovery-mcp.md).
+
 图有意省略 SSE 心跳帧、逐驱动连接租约与逐节点耗时。这些写在[查询契约](optimization/query-contract.md)
 与[运行与负载](optimization/runtime-and-load.md) 里，画上去会破坏一页式布局。
 
@@ -47,6 +54,11 @@ gate  PermissionManager · ConstraintEnforcer · SQL policy · LLM budget (every
 ```
 
 ## Regenerate / 重新生成
+
+The JSON/REST entry also covers scoped `POST /api/v1/subagents/{name}/query`: the adapter validates
+configured user/domain/db_id scope and calls the same `submit_query` with fixed `request_query`.
+It does not invoke the experimental orchestrator. The five nodes and guards shown above are unchanged.
+See [the subagent REST boundary](optimization/subagent-rest-boundary.md).
 
 ```bash
 python scripts/render_runtime_flow.py

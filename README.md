@@ -80,9 +80,9 @@ Status reflects running code, not design documents. The per-feature matrix is in
 | Constraint, permission and SQL-policy enforcement | **Implemented** |
 | Schema linking, multi-stage validation, hybrid retrieval | **Implemented** |
 | Seven read-only database connectors | **Implemented and tested**; Snowflake pending acceptance |
-| Six other workflow plans | **Five executable** — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic` and `explore` run via `plan_id`; `metric_query` needs explicit metric names and is rejected |
+| Six other workflow plans | **Five available by default** — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic`, `explore`; deterministic `metric_query` v1 additionally requires a configured catalog and explicit metric names |
 | Automatic plan selection | **Implemented** — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default |
-| Multi-agent orchestrator and sub-agents | **Partial** — registered at boot; requests use the workflow runner |
+| Multi-agent orchestrator and sub-agents | **Partial** — scoped REST NL queries use the fixed workflow with access checks; autonomous orchestration remains experimental |
 | Feedback-driven rule learning | **Implemented** — approved rules reach the generation prompt and validation, and are echoed in `applied_rules`; rules never rewrite SQL |
 | Multi-tenant isolation | **Not implemented** — one administrator group shares one data set |
 | Calibrated accuracy, recall or capacity baseline | **Not established** — synthetic suites score contract matching |
@@ -158,7 +158,7 @@ remaining knob is commented in the example file.
 |---|---|
 | `app/config/agent.yml` | Provider defaults, node→tool→permission mapping, hard constraints |
 | `app/workflow/plans/request_query.yml` | The executable plan: `node_order`, `failure_policy`, evaluation metrics |
-| `app/workflow/plans/*.yml` | Six additional plans; five execute through `plan_id`, `metric_query` awaits a metric catalog |
+| `app/workflow/plans/*.yml` | Six additional plans; five available by default, `metric_query` v1 enabled by a server-owned catalog |
 | `app/config/domains/*.yml` | Glossary, business rules and term mappings per domain |
 | `app/config/subagents/*.yaml` | Scoped sub-agent definitions and delivery targets |
 
@@ -248,8 +248,19 @@ curl -X POST http://localhost:8001/api/v1/query \
 ```
 
 `reflection` requires `execute: true` and a `database`; without them the request fails before a
-session is created. `metric_query` returns `400 INVALID_REQUEST` with the reason — the deployment
-has no metric catalog to resolve metric names against.
+session is created. `metric_query` v1 uses a fixed resolve → validate → execute plan with no model calls.
+It requires a server-owned `METRIC_CATALOG_PATH`, explicit names/version/domain/database and
+`num_candidates: 1`. Without a valid catalog it returns `400 INVALID_REQUEST`.
+Shared workers require an explicitly sealed catalog in the active release; see
+[shared catalog configuration and acceptance](docs/optimization/shared-metric-catalog.md).
+See [v1 configuration and acceptance](docs/optimization/metric-query-v1.md).
+
+Discover names/version with operator-only `GET /api/v1/metrics?domain=...&database=...`.
+MCP also exposes `list_metrics` and `metric_query`; see [access and usage](docs/optimization/metric-discovery-mcp.md)
+for HTTP Bearer authentication and explicit local-process trust.
+
+Scoped subagent REST requests use the same five-node workflow. Bind an explicit `db_id`, allow the
+operator's user ID, and opt in to execution; see [the REST boundary](docs/optimization/subagent-rest-boundary.md).
 
 Set `"auto_plan": true` to let the capability-filtered selector choose between `request_query` and
 `ez_query`. The response then carries a `plan_selection` object with `layer` (`L1` rule, `L2`
@@ -347,6 +358,7 @@ The rendering notes, the exact claims and the regeneration command are in
 - [Architecture](docs/architecture.md) — the harness invariant, layers, repository layout, decisions.
 - [Support matrix](docs/support-matrix.md) — feature status, databases, models.
 - [Gap closure plan](docs/optimization/gap-closure-plan-2026-11-16.md) — what was wired, what remains, and the tenant/baseline drafts.
+- [Completion path and acceptance](docs/optimization/completion-path-2026-11-17.md) — stages, current evidence and external blockers.
 - [Runtime flow](docs/runtime-flow.md) — what the diagram claims and how to regenerate it.
 - [Query contract](docs/optimization/query-contract.md) — status codes and error semantics.
 - [Node development](docs/node-development.md) — the node lifecycle and a skeleton.

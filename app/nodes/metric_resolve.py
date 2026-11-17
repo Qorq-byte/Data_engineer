@@ -48,6 +48,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from app.knowledge.metric_catalog import MetricSelection
+from app.models.query import SQLCandidate
 from app.nodes.base import BaseNode, NodeInput, NodeOutput
 
 # ── Result model ───────────────────────────────────────────────────────
@@ -114,7 +116,7 @@ class MetricResolveNode(BaseNode):
         "statements via the MetricFlow semantic layer"
     )
 
-    def __init__(self, engine: Any = None) -> None:
+    def __init__(self, engine: Any = None, selection: MetricSelection | None = None) -> None:
         """Create a MetricResolveNode with an optional pre-configured engine.
 
         Args:
@@ -123,6 +125,7 @@ class MetricResolveNode(BaseNode):
         """
         super().__init__()
         self._engine = engine
+        self._selection = selection
 
     # ── Properties ─────────────────────────────────────────────────────
 
@@ -145,6 +148,8 @@ class MetricResolveNode(BaseNode):
             ``metric_sql`` + ``metric_resolve_result`` in ``context``.
         """
         config = input.config
+        if self._selection is not None:
+            return self._resolve_catalog(input)
 
         # Resolve engine: constructor arg takes priority, then context
         engine = self._engine
@@ -240,6 +245,42 @@ class MetricResolveNode(BaseNode):
             context={
                 "metric_sql": sql,
                 "metric_resolve_result": output,
+            },
+        )
+
+    def _resolve_catalog(self, input: NodeInput) -> NodeOutput:
+        selection = self._selection
+        assert selection is not None
+        if input.context.get("db_id") != selection.database:
+            return NodeOutput(errors=["Metric catalog target does not match the captured database"])
+        dialect = input.config.get("dialect", "ansi")
+        try:
+            sql = selection.sql(dialect)
+        except ValueError:
+            return NodeOutput(errors=["Metric SQL preparation failed the read-only policy"])
+        names = [metric.name for metric in selection.metrics]
+        result = MetricResolveOutput(
+            metrics=names, sql=sql, dialect=dialect, table=selection.metrics[0].table,
+            columns=[*selection.dimensions, *names],
+        )
+        candidate = SQLCandidate(
+            id="metric_1", sql_text=sql, generation_mode="metric_catalog",
+            generation_source="prepared", dialect=dialect, db_id=selection.database,
+            database_name=input.config.get("database_name", ""),
+        )
+        return NodeOutput(
+            result=result,
+            metadata={
+                "status": "success", "metric_count": len(names), "llm_calls": 0, "dialect": dialect,
+            },
+            context={
+                "metric_sql": sql, "metric_resolve_result": result,
+                "sql": sql, "primary_sql": sql, "candidates": [candidate],
+                "linked_tables": [selection.metrics[0].table],
+                "metric_catalog": {
+                    "version": selection.version, "sha256": selection.catalog_sha256,
+                    "domain": selection.domain, "database": selection.database, "metrics": names,
+                },
             },
         )
 

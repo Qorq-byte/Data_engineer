@@ -100,6 +100,7 @@ class Settings(BaseSettings):
 
     # --- Agent Config ---
     agent_config_path: str = "app/config/agent.yml"
+    metric_catalog_path: str = ""  # Server-owned YAML; empty disables explicit metric queries.
 
 
 # Global singleton

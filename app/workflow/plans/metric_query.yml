@@ -1,11 +1,10 @@
 # metric_query workflow plan — MetricFlow semantic layer query
 # See SPEC §3.4.2 and implementation-plan §4.9.1
 #
-# DAG: metric_resolve → generate_sql → validate_sql → execute_sql
+# Fixed order: metric_resolve → validate_sql → execute_sql
 #
-# Uses MetricResolveNode to resolve named business metrics to complete SQL,
-# then optionally refines, validates, and executes.  This is the primary
-# plan for business KPIs ("monthly revenue by region", "AOV trend", etc.)
+# Resolves explicitly named metrics from the server-owned v1 catalog.
+# Single-table aggregates only. No LLM refinement or natural-language inference.
 
 id: metric_query
 name: "指标查询（MetricFlow）"
@@ -19,17 +18,9 @@ plan:
       config:
         timeout_ms: 15000
 
-    - id: gen
-      node: generate_sql
-      depends_on: [resolve]
-      config:
-        temperature: 0.2
-        max_candidates: 1
-        mode: refine             # refine the resolved SQL rather than generate from scratch
-
     - id: validate
       node: validate_sql
-      depends_on: [gen]
+      depends_on: [resolve]
 
     - id: exec
       node: execute_sql

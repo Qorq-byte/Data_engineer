@@ -1,0 +1,134 @@
+{
+  "date": "2026-11-17",
+  "scope": "Deterministic metric_query v1; current working tree, local synthetic SQLite acceptance.",
+  "git_head": "0212e1356bfb7618592c1a5e8c3a4d427cdc78b5",
+  "source_sha256": {
+    "app/knowledge/metric_catalog.py": "1b6e7cc8a13d63cc391fb043a615ebc3ac1bb57988b87755013bf2564efd15bf",
+    "app/workflow/metric_runtime.py": "8b6c023fa4df19df1cd523c3a5820be25187079810a22c62fb38241e2f53edab",
+    "app/api/query.py": "0e67c863869f5e4ca4a47800c23c953ced91fc1c122d4864d0c85a0c35823785",
+    "app/api/workflows.py": "87525bdddd4a9eb1a7eb39ce4671c46c4722d27669b108745e55f735485a8a66",
+    "app/workflow/plan_runtime.py": "9d9cdcd456e3b22d8d74f557c5cb004e89219f2996b2b275bb93495814f50849",
+    "app/workflow/query_service.py": "cdf3b7fa2711a554b1b2e6db066c80d8b4d1d4d210c44302f70e3c35c5b4e56f",
+    "app/workflow/plans/metric_query.yml": "018f043c408ae480ff611bb2df2628a4601bac7376a084e573e8773db127d7b3",
+    "app/nodes/metric_resolve.py": "6ad326abf1527a413c7b7353184961a873d0c8afcb1188eab414668617bfa7ae",
+    "app/harness/runner.py": "fbdd110f3c284a3791b0d2cf3c325f60779ebecad66b222005d2c03c84a42b69",
+    "app/nodes/execute_sql.py": "650e1cfea71766089889c38cdcd3944c6322f60232cdf171f4068a0c530259e0",
+    "app/config/settings.py": "794ec60ab87f68051c41440d2375d600cc695666e098bf9922ab451d45d54661",
+    "app/evaluation/nl2sql_runtime.py": "c33bb7151a435ab61d1acec3ec6767ea754d73dda2ce31d4ab44414c23475791",
+    "tests/test_knowledge/test_metric_catalog.py": "f5cbea9294dc650c7f7c74f6058be7f45d5e421d2ec32487f5cd5308a409a861",
+    "tests/test_api/test_metric_query.py": "d406e2c8fcf7e754c461ae0ff1a1decdac6d3bff5a7cc42fb17775356a569c12",
+    "tests/test_evaluation/test_artifact_inventory.py": "29c028ca494c4ef9c9444a6ba139307f608b05fcd4e3b5a98b589f8847227419",
+    "tests/test_workflow/test_plans.py": "6c05f7e3cf8ee19bf16578336500f2eda34ec64aea77b5b288c26ffa32b8718a",
+    "tests/fixtures/metric_catalog.yml": "46d5b3fb698b53061c6455b32ec259dfbcaa4fdfb7d43a723c38d1f7bf271c79",
+    "tests/fixtures/test_schema.sql": "e453667017c6185fd9cefdd40b2fe783314cd83637e2d4ca3b03cdd98ef84b60",
+    "constraints.txt": "522f02b86d1d98d60d9b69f6d8ce2dc2c007e32f296178704de38aecca85b50d",
+    "pyproject.toml": "860595f0386436d78acfce384a7342a1a14b96c4aa394c320b2f2d5b09452c15"
+  },
+  "interpreter": ".stage62/.venv/Scripts/python.exe (current workspace imports)",
+  "python": "3.12.13",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "dependencies": {
+    "ok": true,
+    "checked": 33,
+    "errors": []
+  },
+  "versions": {
+    "pytest": "9.2.0",
+    "ruff": "0.17.1",
+    "mypy": "2.4.0",
+    "sqlglot": "30.29.0",
+    "pydantic": "2.14.2",
+    "fastapi": "0.162.0",
+    "litellm": "1.106.6"
+  },
+  "final_local_suite": {
+    "passed": 4726,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 1,
+    "skip_reasons": [
+      "uvloop is not supported/installed on this platform"
+    ],
+    "seconds": 254.985,
+    "xml_sha256": "c960e1f17cc211e5ad1e85fd64cc18a4a9825484ce6231ef260045813b652d79"
+  },
+  "targeted_suite": {
+    "passed": 494,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "skip_reasons": [],
+    "seconds": 21.945,
+    "xml_sha256": "cbe2f68e6a68f6109e5d2078786d3e738c3b4c1a6c1423e718242dfab1d88f43"
+  },
+  "repair_suite": {
+    "passed": 85,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "skip_reasons": [],
+    "seconds": 26.237,
+    "xml_sha256": "47871088e490dfd37b73e32ec6f841863f262ffaa90fbb6a2419aff850a506d5"
+  },
+  "new_tests": {
+    "metric_catalog_and_sql": 37,
+    "metric_api_and_safety": 28,
+    "sqlite_artifact_inventory": 2
+  },
+  "quality_gates": {
+    "ruff": "passed",
+    "mypy": "passed (211 app source files)",
+    "frontend_contracts": "passed",
+    "frontend_reproducible_build": "passed",
+    "readmes_and_local_links": "passed"
+  },
+  "data": {
+    "origin": "Repository synthetic e-commerce fixture, temporary real SQLite databases",
+    "orders": 5,
+    "users": 3,
+    "products": 4,
+    "method": "Compare structured aggregates/grouping/filters against direct SQL on same fixture",
+    "llm_calls": 0,
+    "external_service_calls": 0
+  },
+  "runtime_contract": {
+    "plan": [
+      "metric_resolve",
+      "validate_sql",
+      "execute_sql"
+    ],
+    "default": "disabled until METRIC_CATALOG_PATH points to a valid server-owned catalog",
+    "transport": [
+      "JSON",
+      "SSE"
+    ],
+    "scope": "domain + connected database ID + explicit names + catalog version",
+    "validation": "mandatory even for execute=false",
+    "execution": "opt-in",
+    "shared_workers": "explicitly blocked until catalog sealing is implemented"
+  },
+  "failure_investigation": {
+    "prior_full_suite": {
+      "passed": 4723,
+      "failed": 1,
+      "errors": 0,
+      "skipped": 1,
+      "skip_reasons": [
+        "uvloop is not supported/installed on this platform"
+      ],
+      "seconds": 269.329,
+      "xml_sha256": "96e98ca077a0b7731f2b99e0ac977e07111082d5318961fd361cc47b30d171a6"
+    },
+    "cause": "TOCTOU during artifact inventory: SQLite audit journal disappeared between is_file and stat",
+    "fix": "One stat per path; tolerate FileNotFoundError, preserve byte cap and other exceptions",
+    "regression": "Real SQLite DELETE journal is enumerated, committed/deleted, then inventoried"
+  },
+  "limitations": [
+    "Synthetic metric definitions are not business sign-off or model accuracy evidence.",
+    "Only SQLite has end-to-end execution acceptance; five dialect render/policy checks are not driver certification.",
+    "No cross-table formulas, JOINs, time grains, NULL/range filters, tenant isolation or metric discovery API.",
+    "MCP tools and scoped subagent REST do not expose metric parameters in this slice.",
+    "No Snowflake, real model, embedding, business dataset or production capacity acceptance was run.",
+    "Original .venv remains unmodified and differs from constraints; pinned environment used for evidence."
+  ]
+}

@@ -10,6 +10,7 @@ from app.harness.mysql_coordination import (
     MySQLCoordinator,
 )
 from app.harness.mysql_rate_limit import MySQLProviderRateLimit
+from app.harness.worker_release import WorkerRelease
 from app.storage.shared_sessions import MySQLSessionStore
 from app.workflow.contracts import QueryCapacityError
 
@@ -24,6 +25,7 @@ class SharedQueryRuntime:
         self.ready = False
         self.verify_configuration: Callable[[], Awaitable[None]] | None = None
         self.model_coordinator: MySQLCoordinator | None = None
+        self.worker_release: WorkerRelease | None = None
 
     async def initialize(self) -> None:
         self.ready = False

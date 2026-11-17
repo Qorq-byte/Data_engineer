@@ -44,10 +44,10 @@ async def test_connection_factory_create_sqlite():
 
 
 @pytest.mark.asyncio
-async def test_unsupported_database_raises():
+async def test_unimplemented_database_raises():
     """Test that unimplemented databases raise NotImplementedError."""
     with pytest.raises(NotImplementedError):
-        await ConnectionFactory._connect(DatabaseType.SNOWFLAKE, {})
+        await ConnectionFactory._connect(DatabaseType.BIGQUERY, {})
 
 
 

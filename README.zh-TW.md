@@ -71,9 +71,9 @@
 | 約束、權限與 SQL 策略執行 | **已實作** |
 | Schema 連結、多階段驗證、混合檢索 | **已實作** |
 | 七個唯讀資料庫連接器 | **已實作並測試**；Snowflake 待驗收 |
-| 其餘六個工作流程計畫 | **五個可執行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore` 可經 `plan_id` 執行；`metric_query` 需明確指標名稱，目前明確拒絕 |
+| 其餘六個工作流程計畫 | **預設五個可執行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`；確定性 `metric_query` v1 需設定目錄並明確指定指標名稱 |
 | 自動計畫選擇 | **已實作** —— `auto_plan=true` 依序走 L1 規則、L2 歷史與能力過濾後的預設；預設仍為 `request_query` |
-| 多代理協調器與子代理 | **部分實作** —— 啟動時註冊；請求仍走工作流程執行器 |
+| 多代理協調器與子代理 | **部分實作** —— 限域 REST 自然語言查詢已接固定工作流程及存取檢查；自主協調仍屬實驗元件 |
 | 回饋驅動的規則學習 | **已實作** —— 審查通過的規則進入生成提示與驗證，並在 `applied_rules` 回顯；規則不會自動改寫 SQL |
 | 多租戶隔離 | **未實作** —— 一個管理員群組共用一份資料集 |
 | 經校正的準確率、召回率或容量基線 | **未建立** —— 合成套件評估的是契約一致 |
@@ -146,7 +146,7 @@ pip install -e ".[snowflake]"               # 可選 Snowflake 驅動（不在 c
 |---|---|
 | `app/config/agent.yml` | 提供者預設值、節點→工具→權限對應、硬性約束 |
 | `app/workflow/plans/request_query.yml` | 可執行計畫：`node_order`、`failure_policy`、評估指標 |
-| `app/workflow/plans/*.yml` | 另外六個計畫；其中五個可經 `plan_id` 執行，`metric_query` 待指標目錄 |
+| `app/workflow/plans/*.yml` | 另外六個計畫；預設五個可執行，伺服器指標目錄可啟用 `metric_query` v1 |
 | `app/config/domains/*.yml` | 依領域的詞彙表、業務規則與術語對應 |
 | `app/config/subagents/*.yaml` | 限定範圍的子代理定義與交付目標 |
 
@@ -234,7 +234,18 @@ curl -X POST http://localhost:8001/api/v1/query \
 ```
 
 `reflection` 必須同時提供 `execute: true` 與 `database`，否則會在建立工作階段前就失敗。
-`metric_query` 回傳 `400 INVALID_REQUEST` 並附原因——目前部署沒有可解析指標名稱的指標目錄。
+`metric_query` v1 使用固定的解析 → 驗證 → 執行計畫，不呼叫模型。
+需設定伺服器 `METRIC_CATALOG_PATH`，明確指定指標名稱、版本、領域、資料庫和 `num_candidates: 1`。
+未設定有效目錄時回傳 `400 INVALID_REQUEST`。共用 worker 必須在啟用的發布套件內明確封存目錄，
+見[共用目錄設定與驗收](docs/optimization/shared-metric-catalog.md)。
+詳見 [設定與驗收](docs/optimization/metric-query-v1.md)。
+
+管理員可透過 `GET /api/v1/metrics?domain=...&database=...` 取得名稱和版本。
+MCP 也提供 `list_metrics`、`metric_query`；HTTP Bearer 驗證與本機行程明確信任方式見
+[存取與使用](docs/optimization/metric-discovery-mcp.md)。
+
+子代理 REST 請求共用固定五節點工作流程，需綁定明確的 `db_id`、允許 operator 的使用者 ID，執行預設關閉。
+詳見 [REST 邊界](docs/optimization/subagent-rest-boundary.md)。
 
 把 `"auto_plan"` 設為 `true`，則由能力過濾後的選擇器在 `request_query` 與 `ez_query` 之間選擇。
 回應會帶 `plan_selection`：`layer`（`L1` 規則、`L2` 歷史、`default` 或 `filtered`）、`reason`、
@@ -323,6 +334,7 @@ print(payload["primary_sql"], payload["validation"]["passed"])
 - [架構](docs/architecture.md) —— Harness 不變量、分層、目錄結構、設計取捨。
 - [支援矩陣](docs/support-matrix.md) —— 功能狀態、資料庫、模型。
 - [缺口收口計畫](docs/optimization/gap-closure-plan-2026-11-16.md) —— 哪些已接線、哪些仍未做，以及多租戶與基線草案。
+- [完成路徑與驗收](docs/optimization/completion-path-2026-11-17.md) —— 階段、目前證據與外部阻塞。
 - [執行流程](docs/runtime-flow.md) —— 圖中聲明了什麼，以及如何重新產生。
 - [查詢契約](docs/optimization/query-contract.md) —— 狀態碼與錯誤語意。
 - [節點開發](docs/node-development.md) —— 節點生命週期與骨架。

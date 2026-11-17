@@ -3595,7 +3595,7 @@ const databaseCapabilitiesSnapshot = (value) => {
         || !Number.isInteger(row.registered_connections) || row.registered_connections < 0) return null;
     if (row.implemented) {
       if (typeof row.driver_module !== 'string' || !row.driver_module.trim()
-          || !['native_single_connection', 'async_single_connection', 'pool_acquired_connection'].includes(row.management)
+          || !['native_single_connection', 'async_single_connection', 'pool_acquired_connection', 'thread_offloaded_single_connection'].includes(row.management)
           || ![true, false, null].includes(row.module_discoverable)) return null;
     } else if (row.management !== 'not_implemented' || row.driver_module !== null || row.module_discoverable !== null) return null;
   }
@@ -4623,7 +4623,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
                     <div key={db.type} data-database-type={db.type} className="p-3 min-w-0 rounded-lg bg-gray-50 dark:bg-neutral-800 text-xs flex flex-col gap-2">
                       <span className="font-medium text-sm capitalize">{db.type} · {db.implemented ? "连接已实现" : "连接未实现"}</span>
                       <span>驱动：{!db.implemented ? "不适用" : db.module_discoverable === null ? "发现状态未知" : db.module_discoverable ? "模块可发现" : "模块未发现"}{db.driver_module ? ` (${db.driver_module})` : ''}</span>
-                      <span>{({native_single_connection: '原生单连接', async_single_connection: '异步单连接', pool_acquired_connection: '建池后持有一个连接', not_implemented: '暂不支持建立连接'})[db.management]}</span>
+                      <span>{({native_single_connection: '原生单连接', async_single_connection: '异步单连接', pool_acquired_connection: '建池后持有一个连接', thread_offloaded_single_connection: '工作线程单连接', not_implemented: '暂不支持建立连接'})[db.management]}</span>
                       <span className="font-mono">当前注册：{db.registered_connections}</span>
                     </div>
                   ))}
@@ -4878,7 +4878,7 @@ const DB_TYPES = [
   { value: "mysql", label: "MySQL", fields: ["host","port","user","password","database"], defaults: { host: "127.0.0.1", port: 3306, user: "root", password: "", database: "mysql" } },
   { value: "duckdb", label: "DuckDB", fields: ["path"], defaults: { path: "./data/app.duckdb" } },
   { value: "clickhouse", label: "ClickHouse", fields: ["host","port","user","password","database"], defaults: { host: "127.0.0.1", port: 8123, user: "default", password: "", database: "default" } },
-  { value: "snowflake", label: "Snowflake", fields: ["host","port","user","password","database"], defaults: { host: "", port: 443, user: "", password: "", database: "" } },
+  { value: "snowflake", label: "Snowflake", fields: ["account","user","password","warehouse","database","schema","role"], defaults: { account: "", user: "", password: "", warehouse: "", database: "", schema: "PUBLIC", role: "" } },
   { value: "starrocks", label: "StarRocks", fields: ["host","port","user","password","database"], defaults: { host: "127.0.0.1", port: 9030, user: "root", password: "", database: "" } },
   { value: "bigquery", label: "BigQuery", fields: ["path"], defaults: { path: "./service-account.json" } },
   { value: "redshift", label: "Redshift", fields: ["host","port","user","password","database"], defaults: { host: "", port: 5439, user: "", password: "", database: "" } },
@@ -4886,8 +4886,8 @@ const DB_TYPES = [
   { value: "trino", label: "Trino", fields: ["host","port","user","database"], defaults: { host: "127.0.0.1", port: 8080, user: "trino", database: "" } },
 ];
 
-const FIELD_LABELS = { host: "主机", port: "端口", user: "用户名", password: "密码", database: "数据库名", path: "路径" };
-const FIELD_TYPES = { host: "text", port: "number", user: "text", password: "password", database: "text", path: "text" };
+const FIELD_LABELS = { host: "主机", port: "端口", user: "用户名", password: "密码", database: "数据库名", path: "路径", account: "账户标识", warehouse: "计算仓库", schema: "Schema", role: "角色（可选）" };
+const FIELD_TYPES = { host: "text", port: "number", user: "text", password: "password", database: "text", path: "text", account: "text", warehouse: "text", schema: "text", role: "text" };
 
 const ConnectPanel = ({ onDbChange }) => {
   const [dbType, setDbType] = useState("sqlite");
@@ -5039,6 +5039,7 @@ const ConnectPanel = ({ onDbChange }) => {
             <div key={f} className={f === "path" || f === "database" ? "col-span-2" : ""}>
               <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400 mb-1">
                 {FIELD_LABELS[f] || f}
+                {dbType === "snowflake" && f !== "role" && <span className="ml-1 text-red-400">*</span>}
                 {hasCatalogs && <span className="ml-1 text-emerald-500">({catalogs.length} 个可用)</span>}
               </label>
               <div className="flex gap-2">
@@ -5049,7 +5050,7 @@ const ConnectPanel = ({ onDbChange }) => {
                   value={config[f] !== undefined ? config[f] : ""}
                   onChange={e => updateField(f, e.target.value)}
                 />
-                {isDbField && (
+                {isDbField && dbType !== "snowflake" && (
                   <button className="btn-outline text-xs" onClick={handleTest} disabled={testing} title="测试连接并获取数据库列表">
                     {testing ? "…" : "浏览"}
                   </button>
@@ -5069,6 +5070,12 @@ const ConnectPanel = ({ onDbChange }) => {
             );
           })}
         </div>
+
+        {dbType === "snowflake" && (
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 -mt-2 mb-4">
+            当前连接器使用密码验证；数据库、Schema、Warehouse 和角色需填写未加引号的标识符。请使用数据库侧只读角色。
+          </p>
+        )}
 
         <div className="flex items-center gap-2 flex-wrap">
           <button className="btn-outline" onClick={handleTest} disabled={testing}>

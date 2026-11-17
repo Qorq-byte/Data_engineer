@@ -190,25 +190,22 @@ class TestMetricQueryPlan:
         assert "MetricFlow" in plan.name or "指标" in plan.name
 
     def test_node_count(self, plan):
-        assert len(plan.node_order) == 4
+        assert len(plan.node_order) == 3
 
     def test_node_ids(self, plan):
         ids = [n.id for n in plan.node_order]
-        assert ids == ["resolve", "gen", "validate", "exec"]
+        assert ids == ["resolve", "validate", "exec"]
 
     def test_dag_topology(self, plan):
         nodes = {n.id: n for n in plan.node_order}
-        assert nodes["gen"].depends_on == ["resolve"]
-        assert nodes["validate"].depends_on == ["gen"]
+        assert nodes["validate"].depends_on == ["resolve"]
         assert nodes["exec"].depends_on == ["validate"]
 
     def test_first_node_is_metric_resolve(self, plan):
         assert plan.node_order[0].node == "metric_resolve"
 
-    def test_generate_sql_in_refine_mode(self, plan):
-        gen = next(n for n in plan.node_order if n.id == "gen")
-        assert gen.config.mode == "refine"
-        assert gen.config.temperature == 0.2
+    def test_deterministic_plan_has_no_model_generation(self, plan):
+        assert all(n.node != "generate_sql" for n in plan.node_order)
 
     def test_execute_max_rows(self, plan):
         exec_node = next(n for n in plan.node_order if n.id == "exec")

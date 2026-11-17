@@ -4,10 +4,8 @@ The YAML plan and ``WorkflowRunner`` own node order.  This module only maps a
 plan's ``node`` names to concrete node instances and request-scoped overrides,
 so the query API can execute a template without hard-coding a five-node list.
 
-Capability reporting is deliberately explicit: a template is executable only
-when every node it references is constructible here.  ``metric_query`` stays
-blocked because ``MetricResolveNode`` requires explicit metric names and the
-deployment has no metric catalog.
+Capability reporting is explicit. ``metric_query`` additionally requires a
+valid server-owned catalog and explicit, scoped metric names in the request.
 """
 
 from __future__ import annotations
@@ -15,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from app.knowledge.metric_catalog import CatalogError, MetricSelection
 from app.llm.budget import BudgetedRouter
 from app.llm.protocols import CompletionRouter
 from app.models.workflow import WorkflowPlan
@@ -55,12 +54,7 @@ STAGE_BY_NODE: dict[str, str] = {
 
 # Plans the request API may execute.  A non-empty reason blocks the plan with a
 # 400 instead of failing halfway through a run.
-PLAN_BLOCKERS: dict[str, str] = {
-    "metric_query": (
-        "metric_query needs explicit metric names and a configured metric catalog; "
-        "none is configured in this deployment"
-    ),
-}
+PLAN_BLOCKERS: dict[str, str] = {}
 
 # Plans automatic routing may choose at the API boundary.  ``gensql_agentic``
 # omits parse_nl, so the selector's "full pipeline" verdict maps to
@@ -78,6 +72,14 @@ def stage_for(node_name: str) -> str:
 
 def plan_blocker(plan_id: str) -> str:
     """Return why *plan_id* cannot run, or an empty string when it can."""
+    if plan_id == "metric_query":
+        from app.harness.metric_catalog_runtime import configured_metric_catalog
+        from app.harness.mysql_coordination import CoordinationUnavailableError
+
+        try:
+            configured_metric_catalog()
+        except (CatalogError, CoordinationUnavailableError) as exc:
+            return str(exc)
     return PLAN_BLOCKERS.get(plan_id, "")
 
 
@@ -116,6 +118,7 @@ class NodeDependencies:
     router: CompletionRouter | None = None
     dialect: str = "ansi"
     metric_engine: Any = None
+    metric_selection: MetricSelection | None = None
 
 
 def _build_node(name: str, deps: NodeDependencies) -> BaseNode:
@@ -142,7 +145,7 @@ def _build_node(name: str, deps: NodeDependencies) -> BaseNode:
         case "execute_sql":
             return ExecuteSQLNode()
         case "metric_resolve":
-            return MetricResolveNode(engine=deps.metric_engine)
+            return MetricResolveNode(engine=deps.metric_engine, selection=deps.metric_selection)
         case "reflection":
             return ReflectionNode()
         case "respond":
@@ -233,10 +236,14 @@ def request_overrides(
                     first_generate = False
             case "validate_sql":
                 config = {
-                    "enabled": bool(body.run_validation or body.execute),
+                    "enabled": bool(
+                        body.run_validation or body.execute or plan.id == "metric_query"
+                    ),
                     "dialect": dialect,
                     "skip_schema": bool(prepared),
                 }
+            case "metric_resolve":
+                config = {"dialect": dialect, "db_id": db_id, "database_name": db_name}
             case "execute_sql":
                 config = {
                     "enabled": bool(body.execute and db_id),
@@ -300,6 +307,8 @@ def plan_output(plan: WorkflowPlan, context: dict[str, Any]) -> dict[str, Any]:
     metric_sql = context.get("resolved_sql") or context.get("metric_sql")
     if metric_sql:
         output["resolved_sql"] = _jsonable(metric_sql)
+    if "metric_catalog" in context:
+        output["metric_catalog"] = _jsonable(context["metric_catalog"])
 
     output["node_names"] = [definition.node for definition in plan.node_order]
     return output
