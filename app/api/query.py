@@ -20,7 +20,14 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi import Path as PathParam
 from fastapi.responses import StreamingResponse
 from fastapi.routing import APIRoute
-from pydantic import AliasChoices, BaseModel, Field, ValidationInfo, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from app.db.connections import ConnectionFactory
 from app.db.query_targets import resolve_query_targets
@@ -280,6 +287,22 @@ def _detect_metadata_query(
 class QueryRequest(BaseModel):
     """Request body for POST /api/v1/query."""
 
+    @model_validator(mode="before")
+    @classmethod
+    def metric_request_fields(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            plan = value.get("plan_id")
+            metric_fields = any(
+                isinstance(key, str) and (key.startswith("metric_") or key == "metrics")
+                for key in value
+            )
+            metric_request = (
+                isinstance(plan, str) and plan.strip() == "metric_query"
+            ) or metric_fields
+            if metric_request and set(value) - set(cls.model_fields) - {"validate"}:
+                raise ValueError("Unsupported metric request fields")
+        return value
+
     nl_text: str = Field(
         ..., description="Natural language query text", min_length=1, max_length=10000
     )
@@ -337,6 +360,10 @@ class QueryRequest(BaseModel):
         default=False,
         description="Let capability-filtered plan selection choose among gensql_agentic/ez_query",
     )
+    metrics: list[str] = Field(default_factory=list, max_length=8)
+    metric_catalog_version: str = Field(default="", max_length=128)
+    metric_dimensions: list[str] = Field(default_factory=list, max_length=32)
+    metric_filters: dict[str, str] = Field(default_factory=dict, max_length=32)
 
 
 class CandidateResult(BaseModel):

@@ -86,10 +86,19 @@ def record_trace(
 
 @router.get("/workflows")
 async def list_workflows() -> dict[str, Any]:
+    from app.workflow.plan_runtime import plan_blocker
+
+    plans = []
+    for item in _WORKFLOW_PLANS:
+        if item["id"] == "metric_query":
+            blocker = plan_blocker("metric_query")
+            item = {**item, "query_executable": not blocker, "blocker": blocker,
+                    "category": "template" if blocker else "active"}
+        plans.append(item)
     return {
-        "plans": _WORKFLOW_PLANS,
-        "total": len(_WORKFLOW_PLANS),
-        "categories": sorted({p["category"] for p in _WORKFLOW_PLANS}),
+        "plans": plans,
+        "total": len(plans),
+        "categories": sorted({p["category"] for p in plans}),
     }
 
 

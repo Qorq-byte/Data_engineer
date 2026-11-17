@@ -362,7 +362,9 @@ class WorkflowRunner:
                 details="not applicable: no SQL found in output",
             )
         try:
-            sqlglot.parse_one(sql)
+            dialect = output.metadata.get("dialect")
+            read = dialect if isinstance(dialect, str) and dialect not in {"", "ansi"} else None
+            sqlglot.parse_one(sql, read=read)
         except Exception as exc:  # sqlglot raises ParseError/TokenError/ValueError
             return MetricResult(
                 name="syntax_valid",

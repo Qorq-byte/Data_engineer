@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 import uuid
+from contextlib import suppress
 from dataclasses import asdict, replace
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +21,7 @@ from app.harness.events import NodeEvent, NodeEventStatus
 from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
 from app.harness.shared_query_runtime import shared_query_scope
+from app.knowledge.metric_catalog import MetricSelection
 from app.llm.budget import active_budget
 from app.llm.factory import get_default_router
 from app.llm.protocols import CompletionRouter
@@ -98,6 +100,16 @@ async def _resolve_plan(body: Any) -> tuple[WorkflowPlan, Any]:
         plan_id = decision.plan_id
     else:
         plan_id = requested
+
+    if plan_id == "metric_query":
+        from app.config.settings import settings
+        from app.harness.metric_catalog_runtime import configured_metric_catalog
+        from app.knowledge.metric_catalog import CatalogError
+
+        if settings.shared_worker_release:
+            # Infrastructure drift is 503, not a bad metric name/version (400).
+            with suppress(CatalogError):
+                configured_metric_catalog()
 
     blocker = plan_blocker(plan_id)
     if blocker:
@@ -193,6 +205,9 @@ async def run_query(
     # Plan resolution happens before admission so a bad plan never occupies a
     # slot, creates a session, or makes an LLM call.
     plan, decision = await _resolve_plan(body)
+    from app.workflow.metric_runtime import metric_selection
+
+    selected_metrics = metric_selection(body, plan.id)
 
     admission = gate("query-admission", max(1, settings.max_concurrent_queries))
     if admission.locked():
@@ -218,6 +233,7 @@ async def run_query(
                     schema_retriever=schema_retriever,
                     plan=plan,
                     decision=decision,
+                    selected_metrics=selected_metrics,
                 )
                 status = result.get("status")
                 audit.outcome = (
@@ -267,6 +283,7 @@ async def _run_query(
     schema_retriever: SchemaRetriever | None = None,
     plan: WorkflowPlan,
     decision: Any = None,
+    selected_metrics: MetricSelection | None = None,
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
     from app.api.domains import _domain_manager
@@ -290,7 +307,7 @@ async def _run_query(
     from app.rag.engine import get_schema_rag
 
     retriever = schema_retriever
-    if retriever is None:
+    if retriever is None and selected_metrics is None:
         try:
             schema_rag = get_schema_rag()
             retriever = SchemaRetriever(schema_rag)
@@ -299,7 +316,7 @@ async def _run_query(
                 warnings.append("MOCK embeddings: retrieval is not a semantic quality guarantee")
         except RuntimeError:
             warnings.append("RAG unavailable; schema linking uses keyword matching")
-    if getattr(router, "mock_mode", False):
+    if getattr(router, "mock_mode", False) and selected_metrics is None:
         warnings.append("MOCK LLM: output is a test placeholder, not a verified database answer")
     domain = _domain_manager.get(body.domain) if body.domain else None
     if body.domain not in {"", "default"} and domain is None:
@@ -352,6 +369,8 @@ async def _run_query(
         db_id: (target.schema, target.database_name, target.dialect)
         for db_id, target in resolved_targets.items()
     }
+    if selected_metrics is not None and set(schemas) != {selected_metrics.database}:
+        raise QueryPlanError("metric_query could not capture its connected schema and database")
     user_schema = None
     ddl = getattr(body, "schema_ddl", "").strip()
     notes = getattr(body, "schema_notes", "").strip()
@@ -411,7 +430,8 @@ async def _run_query(
                 else None
             )
             dependencies = NodeDependencies(
-                retriever=retriever, router=router, dialect=dialect
+                retriever=retriever, router=router, dialect=dialect,
+                metric_selection=selected_metrics,
             )
             registry = build_registry(plan, dependencies)
             node_configs = request_overrides(
@@ -476,11 +496,14 @@ async def _run_query(
                     )
                 elif node_name == "schema_linking":
                     await publish("schema", output.result or {})
-                elif node_name == "generate_sql":
+                elif node_name in {"generate_sql", "metric_resolve"}:
                     await publish(
                         "sql",
                         {
-                            "primary_sql": (output.result or {}).get("primary_sql"),
+                            "primary_sql": (
+                                output.context.get("primary_sql") if node_name == "metric_resolve"
+                                else (output.result or {}).get("primary_sql")
+                            ),
                             "db_id": target_db_id,
                         },
                     )
