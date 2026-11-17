@@ -12,8 +12,9 @@ function data() {
   return { status: 'ok', mode: 'read_only', editable_fields: [], legacy_stored_settings_applied: false,
     connection_pool_size: null, connection_timeout_s: null, scope: 'current process', configuration_source: 'implementation',
     connectors: ['sqlite','duckdb','postgresql','mysql','snowflake','starrocks','bigquery','redshift','clickhouse','databricks','trino'].map((type, index) => ({
-      type, implemented: index < 4, driver_module: index < 4 ? 'synthetic' : null,
-      module_discoverable: index < 4 ? true : null, management: index < 4 ? 'native_single_connection' : 'not_implemented', registered_connections: 0 })) };
+      type, implemented: index < 5, driver_module: index < 5 ? 'synthetic' : null,
+      module_discoverable: index < 5 ? true : null,
+      management: index === 4 ? 'thread_offloaded_single_connection' : index < 4 ? 'native_single_connection' : 'not_implemented', registered_connections: 0 })) };
 }
 function harness(read = async () => data()) {
   const state = { settings: data(), loading: false, error: 'old error', calls: [] };

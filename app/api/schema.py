@@ -71,20 +71,26 @@ async def test_connection(body: dict[str, Any]) -> dict[str, Any]:
     catalogs: list[str] = []
     try:
         conn = await ConnectionFactory.create(db_type, config, db_id="test_probe")
-        # Quick test: try a simple query
-        if db_type == DatabaseType.SQLITE or db_type == DatabaseType.DUCKDB:
-            conn.execute("SELECT 1")
-        elif db_type == DatabaseType.POSTGRESQL:
-            await conn.fetch("SELECT 1")
-        elif db_type == DatabaseType.MYSQL:
-            cursor = await conn.cursor()
-            try:
-                await cursor.execute("SHOW DATABASES")
-                rows = await cursor.fetchall()
-                catalogs = [r[0] for r in rows]
-            finally:
-                await cursor.close()
-        await ConnectionFactory.aclose("test_probe")
+        try:
+            # Quick test: try a simple query on drivers with a query interface.
+            if db_type == DatabaseType.SQLITE or db_type == DatabaseType.DUCKDB:
+                conn.execute("SELECT 1")
+            elif db_type == DatabaseType.POSTGRESQL:
+                await conn.fetch("SELECT 1")
+            elif db_type == DatabaseType.MYSQL:
+                cursor = await conn.cursor()
+                try:
+                    await cursor.execute("SHOW DATABASES")
+                    rows = await cursor.fetchall()
+                    catalogs = [r[0] for r in rows]
+                finally:
+                    await cursor.close()
+            elif db_type == DatabaseType.SNOWFLAKE:
+                probe_result = await conn.query("SELECT 1", max_rows=1, timeout=10.0)
+                if probe_result["rows"] != [[1]]:
+                    raise ConnectionError("Snowflake test query returned an unexpected result")
+        finally:
+            await ConnectionFactory.aclose("test_probe")
         result: dict[str, Any] = {
             "status": "ok",
             "message": f"Successfully connected to {db_type_str}",

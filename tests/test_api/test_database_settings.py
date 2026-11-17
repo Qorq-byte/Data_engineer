@@ -35,7 +35,8 @@ def test_real_connectors_not_legacy_dialect_switches(client):
     assert data["mode"] == "read_only"
     implemented = {row["type"] for row in data["connectors"] if row["implemented"]}
     assert implemented == {
-        "sqlite", "duckdb", "postgresql", "mysql", "clickhouse", "trino", "starrocks",
+        "sqlite", "duckdb", "postgresql", "mysql", "snowflake", "clickhouse", "trino",
+        "starrocks",
     }
 
 
@@ -64,6 +65,7 @@ def test_all_legacy_writes_rejected_without_side_effects(client, payload):
             DatabaseType.CLICKHOUSE,
             DatabaseType.TRINO,
             DatabaseType.STARROCKS,
+            DatabaseType.SNOWFLAKE,
         }
     ],
 )
