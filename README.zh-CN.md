@@ -243,6 +243,7 @@ curl -X POST http://localhost:8001/api/v1/query \
 管理员可通过 `GET /api/v1/metrics?domain=...&database=...` 发现名称和版本。
 MCP 也提供 `list_metrics`、`metric_query`；HTTP Bearer 认证与本地进程显式信任方式见
 [访问与使用](docs/optimization/metric-discovery-mcp.md)。
+独立 stdio 与回环 HTTP 传输验收见[指标 MCP 传输验收](docs/optimization/metric-mcp-transports.md)。
 
 子 Agent REST 请求复用固定五节点工作流，需绑定明确的 `db_id`、允许 operator 的用户 ID，执行默认关闭。
 详见 [REST 边界](docs/optimization/subagent-rest-boundary.md)。

@@ -74,6 +74,8 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
         }
     }
     environment.update(PYTHONPATH=str(ROOT), PYTHONUTF8="1")
+    if getattr(request, "param", {}).get("metric_mcp"):
+        environment["DE_SHARED_METRIC_MCP"] = "1"
     if getattr(request, "param", {}).get("immutable"):
         from tests.fixtures.immutable_release import build_release
 

@@ -257,6 +257,7 @@ curl -X POST http://localhost:8001/api/v1/query \
 管理者用 `GET /api/v1/metrics?domain=...&database=...` で指標名とバージョンを取得できます。
 MCP も `list_metrics` と `metric_query` を提供します。HTTP Bearer 認証とローカルプロセスの明示的な信頼は
 [アクセスと使用方法](docs/optimization/metric-discovery-mcp.md)を参照してください。
+独立 stdio とループバック HTTP の検証は[メトリクス MCP トランスポート検証](docs/optimization/metric-mcp-transports.md)に記録しています。
 
 サブエージェント REST は同じ五ノードの固定ワークフローを使用します。明示的な `db_id` とユーザー ID の許可が必要で、
 実行は既定で無効です。[REST の範囲](docs/optimization/subagent-rest-boundary.md)を参照してください。

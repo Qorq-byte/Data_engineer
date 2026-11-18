@@ -54,6 +54,10 @@ def query_error(exc: Exception) -> dict[str, Any]:
             failure = classify_query_failure(TimeoutError())
         elif detail.get("code") == "QUERY_CAPACITY":
             failure = classify_query_failure(QueryCapacityError())
+        elif exc.status_code == 503 and detail.get("code") == "SHARED_STATE_UNAVAILABLE":
+            from app.harness.mysql_coordination import CoordinationUnavailableError
+
+            failure = classify_query_failure(CoordinationUnavailableError())
         elif exc.status_code in {401, 403}:
             failure = QueryFailure(
                 "INVALID_REQUEST", "Operator authentication required", exc.status_code

@@ -24,7 +24,7 @@ a documented part of the surface does not work or is not reachable from the supp
 | SQL workbench utilities: explain, format, validate, translate | Implemented | `app/api/sql_utils.py`, `app/nodes/` |
 | Request-scoped usage record plus optional SQL-free audit | Implemented | `app/llm/usage.py`, `app/audit/store.py` |
 | Offline evaluation CLIs (SQL contracts, retrieval, NL2SQL batches) | Implemented | `app/evaluation/`, `scripts/` |
-| Scoped metric discovery and MCP metric tools | Wired and locally tested — REST operator gate, HTTP MCP operator JWT, explicit host trust for local metric tools | `app/api/metrics.py`, `app/mcp/metric_tools.py`, `app/workflow/metric_runtime.py` |
+| Scoped metric discovery and MCP metric tools | Wired and tested — REST operator gate, independent stdio client with explicit host trust, loopback HTTP MCP operator JWT, shared-worker drift fences | `app/api/metrics.py`, `app/mcp/metric_tools.py`, `app/mcp/query_projection.py`, `app/workflow/metric_runtime.py` |
 | Seven read-only database connectors | Implemented and tested | `app/db/connections.py` |
 | Automatic plan selection at runtime | Implemented — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default | `app/workflow/plan_selection.py` |
 | Template plans besides `request_query` | Five available by default; deterministic `metric_query` v1 additionally requires a valid server catalog; shared workers require it sealed in the active release | `app/workflow/plan_runtime.py`, `app/workflow/metric_runtime.py` |
@@ -49,6 +49,8 @@ Commands, code evidence, stages, results and blockers are in
 [metric_query v1 configuration and acceptance](optimization/metric-query-v1.md), plus
 [metric discovery/MCP access boundaries](optimization/metric-discovery-mcp.md) and
 [shared catalog sealing and MySQL process acceptance](optimization/shared-metric-catalog.md).
+The independent MCP transport evidence is in
+[metric MCP transport acceptance](optimization/metric-mcp-transports.md).
 This stage exercised disposable MySQL metrics; it did **not re-certify all seven connector acceptance suites**. Test counts certify
 the exercised conditions, not a completion percentage.
 

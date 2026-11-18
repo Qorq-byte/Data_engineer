@@ -257,7 +257,8 @@ See [v1 configuration and acceptance](docs/optimization/metric-query-v1.md).
 
 Discover names/version with operator-only `GET /api/v1/metrics?domain=...&database=...`.
 MCP also exposes `list_metrics` and `metric_query`; see [access and usage](docs/optimization/metric-discovery-mcp.md)
-for HTTP Bearer authentication and explicit local-process trust.
+for HTTP Bearer authentication and explicit local-process trust. Independent stdio and loopback HTTP
+transport evidence is recorded in [MCP transport acceptance](docs/optimization/metric-mcp-transports.md).
 
 Scoped subagent REST requests use the same five-node workflow. Bind an explicit `db_id`, allow the
 operator's user ID, and opt in to execution; see [the REST boundary](docs/optimization/subagent-rest-boundary.md).

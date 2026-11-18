@@ -6,6 +6,7 @@ import json
 import os
 import re
 import socket
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 SECRET = "shared-query-fixture-signing-secret-never-used-outside-tests"
@@ -94,6 +95,22 @@ async def run(args):
             "fixture",
         )
     app = create_app()
+    if os.environ.get("DE_SHARED_METRIC_MCP") == "1":
+        from app.mcp.fastmcp_server import create_nl2sql_server
+
+        # Explicit test host composition. Local trust must never override HTTP JWT.
+        mcp_app = create_nl2sql_server(trust_local_metric_tools=True).http_app(
+            path="/", stateless_http=True, json_response=True,
+        )
+        application_lifespan = app.router.lifespan_context
+
+        @asynccontextmanager
+        async def combined_lifespan(application):
+            async with application_lifespan(application), mcp_app.router.lifespan_context(mcp_app):
+                yield
+
+        app.router.lifespan_context = combined_lifespan
+        app.mount("/metric-mcp", mcp_app)
     server = uvicorn.Server(uvicorn.Config(app, log_level="error", lifespan="on"))
 
     @app.get("/probe/local-sessions", dependencies=[Depends(require_operator)])
