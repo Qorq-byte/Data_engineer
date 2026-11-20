@@ -24,11 +24,16 @@ from collections import defaultdict, deque
 from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
+
+import httpx
+from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, AsyncStream
+from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
 
 from app.llm.completion import IncompleteCompletionError, check_completion, response_field
 from app.llm.responses import normalize_completion
 from app.llm.streaming import StreamEvent, checked_events
+from app.llm.tenant_endpoints import approved_tenant_endpoint, resolve_public_model_address
 from app.llm.usage import active_usage, current_attempt, observe, observe_response
 
 # ── LiteLLM integration (optional — graceful degradation) ────────────
@@ -62,6 +67,7 @@ class ProviderConfig:
     base_url: str | None = None
     rate_limit_rpm: int = 0
     api_key: str | None = None
+    isolated: bool = False
 
 
 @dataclass
@@ -797,6 +803,10 @@ class LiteLLMRouter:
         """
         if self.mock_mode:
             return await self._mock_call(provider, model, messages, n, stream)
+        if provider.isolated:
+            return await self._call_tenant_provider(
+                provider, model, messages, temperature, n, stream, **kwargs,
+            )
 
         if not _LITELLM_AVAILABLE:
             raise RuntimeError("litellm is not installed. Install with: pip install litellm")
@@ -905,6 +915,79 @@ class LiteLLMRouter:
                     yield event.text
         finally:
             await stream.aclose()
+
+    async def _call_tenant_provider(
+        self, provider: ProviderConfig, model: str, messages: list[dict[str, str]],
+        temperature: float, n: int, stream: bool, **kwargs: Any,
+    ) -> Any:
+        if not provider.api_key or not provider.base_url:
+            raise ProviderConfigurationError("Tenant model credentials or endpoint unavailable")
+        api_key = provider.api_key
+        try:
+            base_url = approved_tenant_endpoint(provider.base_url)
+            host = httpx.URL(base_url).host
+            address = await resolve_public_model_address(host)
+        except ValueError:
+            raise ProviderConfigurationError("Tenant model endpoint unavailable") from None
+        except OSError:
+            raise ProviderConnectionError("Tenant model address unavailable") from None
+
+        async def set_tenant_headers(request: httpx.Request) -> None:
+            # The SDK merges OPENAI_CUSTOM_HEADERS even with an explicit key and base URL.
+            request.headers = httpx.Headers({
+                "Host": host,
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "Content-Length": str(len(request.content)),
+                "Accept": "text/event-stream" if stream else "application/json",
+            })
+            # Dial the checked address and verify the certificate against the approved host.
+            request.url = request.url.copy_with(host=address)
+            request.extensions["sni_hostname"] = host
+
+        client = AsyncOpenAI(
+            api_key=api_key, base_url=base_url, max_retries=0,
+            organization="", project="", admin_api_key="", webhook_secret="",
+            timeout=self.config.timeout_seconds,
+            http_client=httpx.AsyncClient(
+                trust_env=False, follow_redirects=False,
+                event_hooks={"request": [set_tenant_headers]},
+            ),
+        )
+        try:
+            response = await client.chat.completions.create(
+                model=model, messages=cast("list[ChatCompletionMessageParam]", messages),
+                temperature=temperature, n=n, stream=stream,
+                **self._completion_options(kwargs),
+            )
+        except BaseException as exc:
+            await client.close()
+            if isinstance(exc, APIStatusError):
+                observe_response(exc, usage_basis="sdk_normalized")
+            if isinstance(exc, APITimeoutError):
+                raise ProviderTimeoutError("Tenant model deadline exceeded") from None
+            if isinstance(exc, APIConnectionError):
+                raise ProviderConnectionError("Tenant model connection failed") from None
+            if isinstance(exc, APIStatusError):
+                if exc.status_code == 429:
+                    raise RateLimitError("Tenant model rate limited") from None
+                if exc.status_code >= 500:
+                    raise ProviderServerError("Tenant model service unavailable") from None
+                raise ProviderConfigurationError("Tenant model rejected the request") from None
+            raise
+        if not stream:
+            async with client:
+                observe_response(response, usage_basis="sdk_normalized")
+                return normalize_completion(response)
+
+        wire_stream = cast("AsyncStream[ChatCompletionChunk]", response)
+
+        async def events() -> AsyncGenerator[StreamEvent, None]:
+            async with client, wire_stream:
+                async for event in self._stream_to_events(wire_stream):
+                    yield event
+
+        return events()
 
     @staticmethod
     async def _stream_to_events(response: Any) -> AsyncGenerator[StreamEvent, None]:
