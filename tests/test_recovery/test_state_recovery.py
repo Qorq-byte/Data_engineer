@@ -4,6 +4,7 @@ The subprocess cases start a real lifespan in a new process so that "restart"
 is not simulated by re-initialising an in-process singleton.
 """
 
+import hashlib
 import json
 import os
 import sqlite3
@@ -195,7 +196,8 @@ def _documents(count: int = 2) -> list[SchemaDocument]:
 
 
 def test_pending_marker_blocks_trust_on_construction(tmp_path):
-    marker = tmp_path / "index-pending-deadbeefdeadbeef.json"
+    digest = hashlib.sha256(b"probe").hexdigest()[:16]
+    marker = tmp_path / f"index-pending-{digest}.json"
     marker.write_text(json.dumps({"db_id": "probe", "started_unix": 1}), encoding="utf-8")
     rag = _rag(tmp_path)
     assert rag.pending_replacements() == ("probe",)
@@ -230,7 +232,7 @@ def _run_worker(state_root: Path, mode: str,
     return subprocess.run(
         [sys.executable, str(WORKER), "--state-root", str(state_root),
          "--mode", mode, "--documents", str(documents)],
-        cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=300, check=False)
+        cwd=str(ROOT), env=env, capture_output=True, encoding="utf-8", timeout=300, check=False)
 
 
 def _last_json(output: str) -> dict[str, object]:
