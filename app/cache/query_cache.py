@@ -19,8 +19,13 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from app.auth.tenant import get_current_tenant_id
 from app.knowledge.retrieval.embedding import EmbeddingGenerator
-from app.knowledge.retrieval.lancedb_store import NAMESPACE_QUERY_CACHE, LanceDBStore
+from app.knowledge.retrieval.lancedb_store import (
+    NAMESPACE_QUERY_CACHE,
+    LanceDBStore,
+    tenant_namespace,
+)
 
 # ── Data model ──────────────────────────────────────────────────────────
 
@@ -54,6 +59,14 @@ class CachedQuery:
 # ── Two-tier cache ──────────────────────────────────────────────────────
 
 
+@dataclass
+class _CacheState:
+    entries: OrderedDict[str, CachedQuery] = field(default_factory=OrderedDict)
+    exact_hits: int = 0
+    semantic_hits: int = 0
+    misses: int = 0
+
+
 class QueryPairCache:
     """Two-tier NL→SQL cache combining exact-match hash and semantic vector search.
 
@@ -62,7 +75,7 @@ class QueryPairCache:
             instance for L2 semantic caching.  When ``None``, only L1 is used.
         embedding_generator: :class:`~app.knowledge.retrieval.embedding.EmbeddingGenerator`
             for query vectorization.  Required when *lance_db* is provided for L2.
-        l1_max_size: Maximum entries in the L1 in-memory cache before LRU eviction.
+        l1_max_size: Maximum L1 entries per tenant before LRU eviction.
         l2_threshold: Cosine **distance** threshold for L2 semantic match.
             Default ``0.05`` → cosine similarity ≥ 0.95.
     """
@@ -78,15 +91,17 @@ class QueryPairCache:
             raise ValueError(
                 "embedding_generator is required when lance_db is provided for L2 caching"
             )
-        self._l1: OrderedDict[str, CachedQuery] = OrderedDict()
+        self._states: dict[int, _CacheState] = {}
         self._l1_max_size = max(1, l1_max_size)
         self._l2_threshold = l2_threshold
         self._lance_db = lance_db
         self._embedding_gen = embedding_generator
-        # Counters
-        self._l1_hits: int = 0
-        self._l2_hits: int = 0
-        self._misses: int = 0
+
+    def _tenant_state(self) -> _CacheState:
+        tenant_id = get_current_tenant_id()
+        if tenant_id not in self._states:
+            self._states[tenant_id] = _CacheState()
+        return self._states[tenant_id]
 
     # ── Public API ──────────────────────────────────────────────────────
 
@@ -101,26 +116,27 @@ class QueryPairCache:
         """
         normalized = self._normalize(query)
         cache_id = self._hash(normalized)
+        state = self._tenant_state()
 
         # ── L1: exact match ─────────────────────────────────────────
-        if cache_id in self._l1:
-            entry = self._l1[cache_id]
+        if cache_id in state.entries:
+            entry = state.entries[cache_id]
             # Move to end (most-recently-used)
-            self._l1.move_to_end(cache_id)
+            state.entries.move_to_end(cache_id)
             entry.hit_count += 1
-            self._l1_hits += 1
+            state.exact_hits += 1
             return entry
 
         # ── L2: semantic match ──────────────────────────────────────
         if self._lance_db is not None and self._embedding_gen is not None:
             result = await self._semantic_lookup(normalized, cache_id)
             if result is not None:
-                self._l2_hits += 1
+                state.semantic_hits += 1
                 # Promote to L1
-                self._add_to_l1(cache_id, result)
+                self._add_to_l1(state, result)
                 return result
 
-        self._misses += 1
+        state.misses += 1
         return None
 
     async def store(
@@ -155,7 +171,7 @@ class QueryPairCache:
         )
 
         # L1
-        self._add_to_l1(cache_id, entry)
+        self._add_to_l1(self._tenant_state(), entry)
 
         # L2
         if self._lance_db is not None and self._embedding_gen is not None:
@@ -165,26 +181,29 @@ class QueryPairCache:
 
     def stats(self) -> dict[str, Any]:
         """Return cache statistics."""
-        total = self._l1_hits + self._l2_hits + self._misses
+        state = self._tenant_state()
+        hits = state.exact_hits + state.semantic_hits
+        total = hits + state.misses
         return {
-            "l1_size": len(self._l1),
+            "l1_size": len(state.entries),
             "l1_max_size": self._l1_max_size,
-            "l1_hits": self._l1_hits,
-            "l2_hits": self._l2_hits,
-            "misses": self._misses,
+            "l1_hits": state.exact_hits,
+            "l2_hits": state.semantic_hits,
+            "misses": state.misses,
             "total_lookups": total,
-            "hit_ratio": (self._l1_hits + self._l2_hits) / max(total, 1),
+            "hit_ratio": hits / max(total, 1),
             "l2_enabled": self._lance_db is not None,
             "l2_threshold": self._l2_threshold,
             "l2_row_count": self._l2_count() if self._lance_db else 0,
         }
 
     def clear(self) -> None:
-        """Clear the L1 in-memory cache.  L2 (LanceDB) is **not** cleared."""
-        self._l1.clear()
-        self._l1_hits = 0
-        self._l2_hits = 0
-        self._misses = 0
+        """Clear the current tenant's L1 entries and counters, retaining L2."""
+        state = self._tenant_state()
+        state.entries.clear()
+        state.exact_hits = 0
+        state.semantic_hits = 0
+        state.misses = 0
 
     # ── L1 helpers ──────────────────────────────────────────────────────
 
@@ -198,15 +217,16 @@ class QueryPairCache:
         """SHA256 hex digest of a normalized query."""
         return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
-    def _add_to_l1(self, cache_id: str, entry: CachedQuery) -> None:
+    def _add_to_l1(self, state: _CacheState, entry: CachedQuery) -> None:
         """Insert into L1, evicting LRU entry if at capacity."""
-        if cache_id in self._l1:
-            self._l1[entry.cache_id] = entry  # update in place
-            self._l1.move_to_end(cache_id)
+        entries = state.entries
+        if entry.cache_id in entries:
+            entries[entry.cache_id] = entry
+            entries.move_to_end(entry.cache_id)
             return
-        if len(self._l1) >= self._l1_max_size:
-            self._l1.popitem(last=False)  # pop oldest (Least Recently Used)
-        self._l1[cache_id] = entry
+        if len(entries) >= self._l1_max_size:
+            entries.popitem(last=False)  # pop oldest (Least Recently Used)
+        entries[entry.cache_id] = entry
 
     # ── L2 helpers ──────────────────────────────────────────────────────
 
@@ -221,7 +241,7 @@ class QueryPairCache:
 
         try:
             results = self._lance_db.search(  # type: ignore[union-attr]
-                namespace=NAMESPACE_QUERY_CACHE,
+                namespace=tenant_namespace(NAMESPACE_QUERY_CACHE),
                 vector=vector,
                 top_k=1,
             )
@@ -271,11 +291,15 @@ class QueryPairCache:
         }
 
         with contextlib.suppress(Exception):
-            self._lance_db.insert(NAMESPACE_QUERY_CACHE, [record])  # type: ignore[union-attr]
+            self._lance_db.insert(  # type: ignore[union-attr]
+                tenant_namespace(NAMESPACE_QUERY_CACHE), [record],
+            )
 
     def _l2_count(self) -> int:
         """Row count of the L2 LanceDB namespace."""
         try:
-            return self._lance_db.count(NAMESPACE_QUERY_CACHE)  # type: ignore[union-attr]
+            return self._lance_db.count(  # type: ignore[union-attr]
+                tenant_namespace(NAMESPACE_QUERY_CACHE),
+            )
         except Exception:
             return 0

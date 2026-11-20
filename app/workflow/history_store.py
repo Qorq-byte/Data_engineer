@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
+from app.auth.tenant import get_current_tenant_id
 from app.knowledge.retrieval.bm25_index import BM25Tokenizer
 
 # ── Constants ──────────────────────────────────────────────────────────
@@ -122,6 +123,7 @@ class PlanHistoryStore:
             """
             CREATE TABLE IF NOT EXISTS plan_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL DEFAULT 1,
                 query_text TEXT NOT NULL,
                 normalized_text TEXT NOT NULL,
                 plan_id TEXT NOT NULL,
@@ -129,9 +131,16 @@ class PlanHistoryStore:
                 success INTEGER NOT NULL DEFAULT 1,
                 created_at TEXT NOT NULL
             );
-            CREATE INDEX IF NOT EXISTS idx_plan_history_normalized
-                ON plan_history (normalized_text);
             """
+        )
+        columns = {row[1] for row in self._conn.execute("PRAGMA table_info(plan_history)")}
+        if "tenant_id" not in columns:
+            self._conn.execute(
+                "ALTER TABLE plan_history ADD COLUMN tenant_id INTEGER NOT NULL DEFAULT 1"
+            )
+        self._conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_plan_history_tenant_normalized "
+            "ON plan_history (tenant_id, normalized_text)"
         )
         self._conn.commit()
 
@@ -154,9 +163,10 @@ class PlanHistoryStore:
         """
         self._conn.execute(
             "INSERT INTO plan_history "
-            "(query_text, normalized_text, plan_id, domain, success, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            "(tenant_id, query_text, normalized_text, plan_id, domain, success, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
+                get_current_tenant_id(),
                 query_text,
                 normalize_query(query_text),
                 plan_id,
@@ -193,13 +203,14 @@ class PlanHistoryStore:
 
         domain_clause = "" if domain is None else " AND domain = ?"
         domain_params: tuple[str, ...] = () if domain is None else (domain,)
+        tenant_id = get_current_tenant_id()
 
         # Tier 1: exact normalized match
         rows = self._conn.execute(
-            "SELECT * FROM plan_history WHERE normalized_text = ?"
+            "SELECT * FROM plan_history WHERE tenant_id = ? AND normalized_text = ?"
             + domain_clause
             + " ORDER BY id DESC LIMIT ?",
-            (normalized, *domain_params, limit),
+            (tenant_id, normalized, *domain_params, limit),
         ).fetchall()
         results = [self._to_record(r, similarity=1.0) for r in rows]
 
@@ -209,8 +220,9 @@ class PlanHistoryStore:
         # Tier 2: Jaccard token overlap on remaining rows
         query_tokens = _tokenize(query_text)
         rows = self._conn.execute(
-            "SELECT * FROM plan_history WHERE normalized_text != ?" + domain_clause,
-            (normalized, *domain_params),
+            "SELECT * FROM plan_history WHERE tenant_id = ? AND normalized_text != ?"
+            + domain_clause,
+            (tenant_id, normalized, *domain_params),
         ).fetchall()
 
         scored: list[tuple[float, int, sqlite3.Row]] = []
@@ -226,12 +238,17 @@ class PlanHistoryStore:
 
     def count(self) -> int:
         """Return the total number of recorded entries."""
-        row = self._conn.execute("SELECT COUNT(*) AS n FROM plan_history").fetchone()
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS n FROM plan_history WHERE tenant_id = ?",
+            (get_current_tenant_id(),),
+        ).fetchone()
         return int(row["n"])
 
     def clear(self) -> None:
         """Delete all recorded entries."""
-        self._conn.execute("DELETE FROM plan_history")
+        self._conn.execute(
+            "DELETE FROM plan_history WHERE tenant_id = ?", (get_current_tenant_id(),)
+        )
         self._conn.commit()
 
     def close(self) -> None:

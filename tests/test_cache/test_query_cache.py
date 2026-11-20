@@ -256,7 +256,7 @@ class TestL2SemanticMatch:
     async def test_store_and_semantic_lookup(self, full_cache):
         await full_cache.store("show me all users", "SELECT * FROM users")
         # Clear L1 to force L2 lookup
-        full_cache._l1.clear()
+        full_cache._tenant_state().entries.clear()
         result = await full_cache.lookup("show me all users")
         assert result is not None
         assert result.sql_text == "SELECT * FROM users"
@@ -268,7 +268,7 @@ class TestL2SemanticMatch:
         await full_cache.store(
             "total revenue by month", "SELECT month, SUM(amount) FROM orders GROUP BY 1"
         )
-        full_cache._l1.clear()
+        full_cache._tenant_state().entries.clear()
         # Same intent, slightly different wording
         result = await full_cache.lookup("total revenue by month")
         assert result is not None
@@ -278,7 +278,7 @@ class TestL2SemanticMatch:
     async def test_dissimilar_query_is_miss(self, full_cache):
         """A completely different query should miss L2."""
         await full_cache.store("count all users", "SELECT COUNT(*) FROM users")
-        full_cache._l1.clear()
+        full_cache._tenant_state().entries.clear()
         result = await full_cache.lookup("what is the average order value per product category")
         # This should be semantically different enough to miss
         # (MockEmbeddingProvider uses deterministic hash-based vectors)
@@ -287,12 +287,12 @@ class TestL2SemanticMatch:
     @pytest.mark.asyncio
     async def test_semantic_hit_promotes_to_l1(self, full_cache):
         await full_cache.store("active user count", "SELECT COUNT(*) FROM users WHERE active=1")
-        full_cache._l1.clear()
+        full_cache._tenant_state().entries.clear()
         # L2 hit should add back to L1
         result = await full_cache.lookup("active user count")
         assert result is not None
         # Now L1 should have it
-        l1_result = full_cache._l1.get(
+        l1_result = full_cache._tenant_state().entries.get(
             QueryPairCache._hash(QueryPairCache._normalize("active user count"))
         )
         assert l1_result is not None
@@ -301,11 +301,11 @@ class TestL2SemanticMatch:
     async def test_l1_hit_skips_l2(self, full_cache):
         await full_cache.store("daily orders", "SELECT date, COUNT(*) FROM orders GROUP BY 1")
         # L1 hit: should not increment L2 counter
-        l2_before = full_cache._l2_hits
+        l2_before = full_cache.stats()["l2_hits"]
         result = await full_cache.lookup("daily orders")
         assert result is not None
         assert result.match_level == "exact"
-        assert full_cache._l2_hits == l2_before  # Unchanged
+        assert full_cache.stats()["l2_hits"] == l2_before  # Unchanged
 
     @pytest.mark.asyncio
     async def test_l2_threshold_zero_rejects_all(self, lance_db, embedding_gen):
@@ -316,7 +316,7 @@ class TestL2SemanticMatch:
             l2_threshold=0.0,
         )
         await cache.store("test query", "SELECT 1")
-        cache._l1.clear()
+        cache._tenant_state().entries.clear()
         result = await cache.lookup("test query")
         # With distance threshold 0.0, even the exact same query may have
         # tiny float differences — it should typically miss
@@ -333,7 +333,7 @@ class TestL2SemanticMatch:
             l2_threshold=1.0,
         )
         await cache.store("alpha beta", "SELECT 1")
-        cache._l1.clear()
+        cache._tenant_state().entries.clear()
         # Any query should hit L2 with threshold=1.0 (max cosine distance = 2)
         result = await cache.lookup("alpha beta")
         assert result is not None
@@ -366,7 +366,7 @@ class TestL1OnlyMode:
     async def test_l2_hits_always_zero(self, l1_cache):
         await l1_cache.store("q", "SELECT 1")
         await l1_cache.lookup("q")
-        assert l1_cache._l2_hits == 0
+        assert l1_cache.stats()["l2_hits"] == 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -403,7 +403,7 @@ class TestStats:
         await full_cache.store(
             "monthly revenue", "SELECT month, SUM(amount) FROM orders GROUP BY 1"
         )
-        full_cache._l1.clear()
+        full_cache._tenant_state().entries.clear()
         await full_cache.lookup("monthly revenue")
         s = full_cache.stats()
         assert s["l2_hits"] >= 1
@@ -431,18 +431,18 @@ class TestClear:
     @pytest.mark.asyncio
     async def test_clear_empties_l1(self, l1_cache):
         await l1_cache.store("q", "SELECT 1")
-        assert len(l1_cache._l1) == 1
+        assert l1_cache.stats()["l1_size"] == 1
         l1_cache.clear()
-        assert len(l1_cache._l1) == 0
+        assert l1_cache.stats()["l1_size"] == 0
 
     @pytest.mark.asyncio
     async def test_clear_resets_counters(self, l1_cache):
         await l1_cache.store("q", "SELECT 1")
         await l1_cache.lookup("q")
         l1_cache.clear()
-        assert l1_cache._l1_hits == 0
-        assert l1_cache._l2_hits == 0
-        assert l1_cache._misses == 0
+        assert l1_cache.stats()["l1_hits"] == 0
+        assert l1_cache.stats()["l2_hits"] == 0
+        assert l1_cache.stats()["misses"] == 0
 
     @pytest.mark.asyncio
     async def test_clear_does_not_crash_l2(self, full_cache):
@@ -470,7 +470,7 @@ class TestErrorHandling:
     async def test_l2_lookup_survives_embedding_failure(self, full_cache):
         """If embedding fails, L2 lookup should return None gracefully."""
         await full_cache.store("test", "SELECT 1")
-        full_cache._l1.clear()
+        full_cache._tenant_state().entries.clear()
         # Corrupt the embedding generator
         full_cache._embedding_gen = None
         result = await full_cache.lookup("test")
@@ -570,7 +570,7 @@ class TestIntegration:
         id2 = await l1_cache.store("show users", "SELECT * FROM users_v2")
         assert id1 == id2
         # L1 should have 1 entry
-        assert len(l1_cache._l1) == 1
+        assert l1_cache.stats()["l1_size"] == 1
         result = await l1_cache.lookup("show users")
         assert result.sql_text == "SELECT * FROM users_v2"
 

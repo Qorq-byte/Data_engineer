@@ -9,8 +9,8 @@ Scope limits, stated explicitly:
 
 - Rules are guidance and non-blocking warnings, matching the existing business
   rule contract.  They never rewrite SQL on their own.
-- The store is a local SQLite file.  It is per process/deployment; sharing rules
-  across workers needs the multi-worker work, not this module.
+- Each tenant has its own local SQLite store. The default tenant retains the
+  original file. The registry caches reads within the current process.
 - A rule with an empty domain applies to every domain; a rule with a domain only
   applies to requests for that domain.
 """
@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.models.domain import BusinessRule
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -79,17 +80,24 @@ class LearnedRuleStore:
     """SQLite persistence for review decisions."""
 
     def __init__(self, db_path: str | Path | None = None) -> None:
-        self._db_path = str(db_path or _default_path())
-        self._conn: sqlite3.Connection | None = None
+        self._db_path = Path(db_path or _default_path())
+        self._connections: dict[int, sqlite3.Connection] = {}
 
     # ── Connection ─────────────────────────────────────────────────
 
     def _connection(self) -> sqlite3.Connection:
-        if self._conn is None:
-            Path(self._db_path).parent.mkdir(parents=True, exist_ok=True)
-            self._conn = sqlite3.connect(self._db_path, check_same_thread=False)
-            self._conn.row_factory = sqlite3.Row
-            self._conn.executescript(
+        tenant_id = get_current_tenant_id()
+        connection = self._connections.get(tenant_id)
+        if connection is not None:
+            return connection
+        path = self._db_path
+        if tenant_id != DEFAULT_TENANT_ID and str(path) != ":memory:":
+            path = path.with_name(f"{path.stem}.tenant-{tenant_id}{path.suffix}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(path, check_same_thread=False)
+        connection.row_factory = sqlite3.Row
+        try:
+            connection.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS learned_rules (
                     rule_id TEXT PRIMARY KEY,
@@ -107,8 +115,12 @@ class LearnedRuleStore:
                     ON learned_rules (status, domain);
                 """
             )
-            self._conn.commit()
-        return self._conn
+            connection.commit()
+        except BaseException:
+            connection.close()
+            raise
+        self._connections[tenant_id] = connection
+        return connection
 
     # ── Writes ─────────────────────────────────────────────────────
 
@@ -185,9 +197,9 @@ class LearnedRuleStore:
         return self.list_rules(status="approved", domain=domain)
 
     def close(self) -> None:
-        if self._conn is not None:
-            self._conn.close()
-            self._conn = None
+        for connection in self._connections.values():
+            connection.close()
+        self._connections.clear()
 
 
 def _row_to_rule(row: sqlite3.Row) -> RuleRow:
@@ -213,8 +225,8 @@ class LearnedRuleRegistry:
 
     def __init__(self, store: LearnedRuleStore | None = None) -> None:
         self._store = store or LearnedRuleStore()
-        self._cache: dict[str, tuple[float, list[RuleRow]]] = {}
-        self._last_error = ""
+        self._cache: dict[tuple[int, str], tuple[float, list[RuleRow], str]] = {}
+        self._last_error: dict[int, str] = {}
 
     @property
     def store(self) -> LearnedRuleStore:
@@ -223,10 +235,12 @@ class LearnedRuleRegistry:
     @property
     def last_error(self) -> str:
         """Last read failure, or an empty string after a successful read."""
-        return self._last_error
+        return self._last_error.get(get_current_tenant_id(), "")
 
     def reset_cache(self) -> None:
-        self._cache.clear()
+        tenant_id = get_current_tenant_id()
+        for key in [key for key in self._cache if key[0] == tenant_id]:
+            del self._cache[key]
 
     def record_review(
         self,
@@ -281,18 +295,21 @@ class LearnedRuleRegistry:
 
     def approved_rules(self, domain: str = "") -> list[RuleRow]:
         """Return approved rules for *domain* (plus domain-agnostic rules)."""
-        key = domain or "*"
+        tenant_id = get_current_tenant_id()
+        key = (tenant_id, domain)
         cached = self._cache.get(key)
         now = time.monotonic()
         if cached and now - cached[0] < _CACHE_TTL_SECONDS:
+            self._last_error[tenant_id] = cached[2]
             return cached[1]
+        error = ""
         try:
             rules = self._store.approved(domain)
-            self._last_error = ""
         except Exception as exc:
             rules = []
-            self._last_error = type(exc).__name__
-        self._cache[key] = (now, rules)
+            error = type(exc).__name__
+        self._last_error[tenant_id] = error
+        self._cache[key] = (now, rules, error)
         return rules
 
     def business_rules(self, domain: str = "") -> list[BusinessRule]:
