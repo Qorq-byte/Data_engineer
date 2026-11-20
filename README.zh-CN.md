@@ -75,8 +75,8 @@
 | 自动计划选择 | **已实现** —— `auto_plan=true` 依次走 L1 规则、L2 历史与能力过滤后的兜底；默认仍为 `request_query` |
 | 多 Agent 编排与子 Agent | **部分实现** —— 限域 REST 自然语言查询已接固定工作流及访问检查；自主编排仍属实验组件 |
 | 反馈驱动的规则学习 | **已实现** —— 审批通过的规则进入生成提示与校验，并在 `applied_rules` 回显；规则不自动改写 SQL |
-| 多租户隔离 | **未实现** —— 一个管理员组共享一份数据 |
-| 经过校准的准确率、召回率或容量基线 | **未建立** —— 合成套件评的是契约匹配 |
+| 多租户隔离 | **部分实现** —— 单 worker 和单机不可变多 worker 支持租户工作台、REST 和 MCP HTTP。双 worker 已在 MySQL 上验收数据源隔离、会话恢复和漂移拒绝。[部署与验收](docs/optimization/immutable-workers.md#v2-租户发布包) |
+| 合成与校准基线 | **已记录合成基线**，覆盖检索、SQL 契约和有界负载。业务准确率、召回率和生产容量仍待校准。[基线报告](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
 
 ## 快速开始
 
@@ -391,9 +391,11 @@ python scripts/evaluate_quality.py           # 合成质量报告
 python scripts/run_nl2sql_acceptance.py      # 冻结集批处理验收
 python scripts/run_real_db_tests.py          # 驱动级验收
 python scripts/load_test.py                  # 有界并发探测
+python -m scripts.run_synthetic_baseline --output data/synthetic-baseline-20261118/aggregate.json --requests 20 --rows 1000
 ```
 
-合成套件评的是契约匹配，不是业务正确性。结果不构成生产容量或准确率基线。
+汇总入口会在一份报告中记录所有 fixture 哈希和分母。合成套件评的是契约匹配，不是业务正确性，
+结果不构成生产容量或准确率基线。见[2026-11-18 范围与结果](docs/optimization/synthetic-quality-baseline-2026-11-18.md)。
 
 ## 目录结构
 
@@ -439,7 +441,7 @@ SQLite、DuckDB、PostgreSQL、MySQL、ClickHouse、Trino、StarRocks 有只读�
 待独立验收；BigQuery、Redshift、Databricks 只有方言定义。
 
 **一套部署能给多个团队共用吗？**
-不能。没有租户隔离，一个管理员组共享一份数据。
+单 worker 和单机不可变多 worker 部署可按租户开放查询、领域和模型配置，由部署端预配数据源。不可变模式通过停服维护更新配置。系统管理由默认租户管理员操作。[配置说明](docs/usage.md#tenant-operator-setup)
 
 **为什么启动时报 JWT 错误？**
 `JWT_SECRET` 缺失、仍是 `change-me-in-production`，或不足 32 位。这是 `create_app()` 里刻意的

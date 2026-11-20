@@ -84,8 +84,8 @@ Status reflects running code, not design documents. The per-feature matrix is in
 | Automatic plan selection | **Implemented** — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default |
 | Multi-agent orchestrator and sub-agents | **Partial** — scoped REST NL queries use the fixed workflow with access checks; autonomous orchestration remains experimental |
 | Feedback-driven rule learning | **Implemented** — approved rules reach the generation prompt and validation, and are echoed in `applied_rules`; rules never rewrite SQL |
-| Multi-tenant isolation | **Not implemented** — one administrator group shares one data set |
-| Calibrated accuracy, recall or capacity baseline | **Not established** — synthetic suites score contract matching |
+| Multi-tenant isolation | **Partial** — tenant workbench, REST and MCP HTTP on single-worker and single-host immutable deployments. Two MySQL workers verified tenant-scoped query targets, session recovery and drift rejection. [Deployment and evidence](docs/optimization/immutable-workers.md#v2-租户发布包) |
+| Synthetic and calibrated baselines | **Synthetic baseline recorded** for retrieval, SQL contracts and bounded load. Calibrated business accuracy, recall and production capacity remain pending. [Baseline evidence](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
 
 ## Quick start
 
@@ -416,10 +416,12 @@ python scripts/evaluate_quality.py           # synthetic quality report
 python scripts/run_nl2sql_acceptance.py      # batch acceptance over frozen sets
 python scripts/run_real_db_tests.py          # driver-level acceptance
 python scripts/load_test.py                  # bounded concurrency probe
+python -m scripts.run_synthetic_baseline --output data/synthetic-baseline-20261118/aggregate.json --requests 20 --rows 1000
 ```
 
-The synthetic suites score contract matching, not business accuracy. Results are not a production
-capacity or accuracy baseline.
+The aggregate runner records all fixture hashes and denominators in one report. The synthetic suites
+score contract matching, not business accuracy; results are not a production capacity or accuracy
+baseline. See [the 2026-11-18 scope and results](docs/optimization/synthetic-quality-baseline-2026-11-18.md).
 
 ## Repository layout
 
@@ -468,7 +470,10 @@ Snowflake has an implementation but awaits standalone acceptance; BigQuery, Reds
 are dialect definitions only.
 
 **Can several teams share one deployment?**
-No. There is no tenant isolation; one administrator group shares one data set.
+Single-worker and single-host immutable deployments can opt into tenant-scoped queries, domain
+knowledge and model settings with host-provisioned data sources. Immutable deployments update
+configuration during stopped maintenance. System administration requires a default-tenant operator.
+See [tenant operator setup](docs/usage.md#tenant-operator-setup).
 
 **Why does the app refuse to start with a JWT error?**
 `JWT_SECRET` is missing, still `change-me-in-production`, or shorter than 32 characters. This is a
