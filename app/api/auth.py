@@ -18,9 +18,10 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from aiomysql import IntegrityError
-from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Response, UploadFile
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.auth import database
 from app.auth.database import get_connection
 from app.auth.models import (
     ChangePasswordRequest,
@@ -36,9 +37,15 @@ from app.auth.security import (
     hash_password,
     verify_password,
 )
+from app.auth.tenant import DEFAULT_TENANT_ID, normalize_tenant_id
 
 router = APIRouter()
 _security = HTTPBearer(auto_error=False)
+_ACCOUNT_KEY = "id = %s AND tenant_id = %s AND token_version = %s"
+
+
+def _account_params(user: dict[str, Any]) -> tuple[int, int, int]:
+    return user["user_id"], user["tenant_id"], user["token_version"]
 
 
 def _auth_column_names(description: Sequence[Sequence[object]] | None) -> list[str]:
@@ -77,6 +84,7 @@ def _row_to_response(row: dict[str, Any]) -> UserResponse:
         id=row["id"],
         username=row["username"],
         email=row["email"],
+        tenant_id=normalize_tenant_id(row.get("tenant_id", DEFAULT_TENANT_ID)),
         avatar_url=row.get("avatar_url", ""),
         created_at=row["created_at"].isoformat()
         if hasattr(row["created_at"], "isoformat")
@@ -88,7 +96,8 @@ def _row_to_token(row: dict[str, Any]) -> TokenResponse:
     """Convert a users table row dict to a TokenResponse with JWT."""
     user_id = row["id"]
     username = row["username"]
-    token = create_access_token(user_id, username)
+    tenant_id = normalize_tenant_id(row.get("tenant_id", DEFAULT_TENANT_ID))
+    token = create_access_token(user_id, username, tenant_id, token_version=row["token_version"])
     return TokenResponse(
         access_token=token,
         user=_row_to_response(row),
@@ -101,7 +110,7 @@ def _row_to_token(row: dict[str, Any]) -> TokenResponse:
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_security)],
 ) -> dict[str, Any]:
-    """FastAPI dependency that validates the Bearer token and returns user info."""
+    """Authenticate the signed claims against the current account before authorization."""
     if credentials is None:
         raise HTTPException(status_code=401, detail="Authentication required")
     try:
@@ -118,7 +127,24 @@ async def get_current_user(
         numeric_id = int(user_id)
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token subject") from None
-    return {"user_id": numeric_id, "username": username}
+    if not 1 <= numeric_id <= 2**31 - 1:
+        raise HTTPException(status_code=401, detail="Invalid token subject")
+    tenant_id = payload.get("tenant_id", DEFAULT_TENANT_ID)
+    if type(tenant_id) is not int or tenant_id < 1:
+        raise HTTPException(status_code=401, detail="Invalid tenant claim")
+    version = payload.get("token_version", 0)
+    if type(version) is not int or version < 0:
+        raise HTTPException(status_code=401, detail="Invalid token version")
+    try:
+        state = await database.read_token_state(numeric_id)
+    except Exception:
+        raise HTTPException(status_code=503, detail="Authentication database unavailable") from None
+    if state != (tenant_id, version):
+        raise HTTPException(status_code=401, detail="Session expired, sign in again")
+    return {
+        "user_id": numeric_id, "username": username,
+        "tenant_id": tenant_id, "token_version": version,
+    }
 
 
 # ── Endpoints ───────────────────────────────────────────────────
@@ -212,10 +238,12 @@ async def me(current_user: Annotated[dict[str, Any], Depends(get_current_user)])
     """Return the currently authenticated user's profile."""
     try:
         async with get_connection() as conn, conn.cursor() as cur:
-            await cur.execute("SELECT * FROM users WHERE id = %s", (current_user["user_id"],))
+            await cur.execute(
+                f"SELECT * FROM users WHERE {_ACCOUNT_KEY}", _account_params(current_user),
+            )
             row = await cur.fetchone()
             if row is None:
-                raise HTTPException(status_code=404, detail="用户不存在")
+                raise HTTPException(status_code=401, detail="Session expired, sign in again")
 
             cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
@@ -228,6 +256,26 @@ async def me(current_user: Annotated[dict[str, Any], Depends(get_current_user)])
     return _row_to_response(user_row)
 
 
+@router.get("/workspace")
+async def workspace(
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    response: Response,
+) -> dict[str, Any]:
+    from app.auth.access import workspace_access
+    from app.config.settings import settings
+
+    response.headers["Cache-Control"] = "no-store"
+    access = workspace_access(current_user)
+    return {
+        "id": current_user["user_id"],
+        "tenant_id": current_user["tenant_id"],
+        "username": current_user["username"],
+        "access": access,
+        **({"configuration_read_only": True} if access == "tenant"
+           and settings.shared_worker_release else {}),
+    }
+
+
 @router.put("/password")
 async def change_password(
     body: ChangePasswordRequest,
@@ -237,10 +285,11 @@ async def change_password(
     try:
         async with get_connection() as conn, conn.cursor() as cur:
             # Fetch current user
-            await cur.execute("SELECT * FROM users WHERE id = %s", (current_user["user_id"],))
+            params = _account_params(current_user)
+            await cur.execute(f"SELECT * FROM users WHERE {_ACCOUNT_KEY}", params)
             row = await cur.fetchone()
             if row is None:
-                raise HTTPException(status_code=404, detail="用户不存在")
+                raise HTTPException(status_code=401, detail="Session expired, sign in again")
 
             cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
@@ -251,10 +300,12 @@ async def change_password(
 
             # Update password
             new_hash = hash_password(body.new_password)
-            await cur.execute(
-                "UPDATE users SET password_hash = %s WHERE id = %s",
-                (new_hash, current_user["user_id"]),
+            changed = await cur.execute(
+                f"UPDATE users SET password_hash = %s WHERE {_ACCOUNT_KEY} AND password_hash = %s",
+                (new_hash, *params, user_row["password_hash"]),
             )
+            if changed != 1:
+                raise HTTPException(status_code=401, detail="Account changed, sign in again")
 
     except HTTPException:
         raise
@@ -296,10 +347,15 @@ async def upload_avatar(
     # Update database
     try:
         async with get_connection() as conn, conn.cursor() as cur:
-            await cur.execute(
-                "UPDATE users SET avatar_url = %s WHERE id = %s",
-                (avatar_url, current_user["user_id"]),
+            changed = await cur.execute(
+                f"UPDATE users SET avatar_url = %s WHERE {_ACCOUNT_KEY}",
+                (avatar_url, *_account_params(current_user)),
             )
+            if changed != 1:
+                raise HTTPException(status_code=401, detail="Session expired, sign in again")
+    except HTTPException:
+        filepath.unlink(missing_ok=True)
+        raise
     except Exception as e:
         # Clean up uploaded file on DB failure
         if filepath.exists():
@@ -318,10 +374,11 @@ async def delete_account(
     try:
         async with get_connection() as conn, conn.cursor() as cur:
             # Fetch current user
-            await cur.execute("SELECT * FROM users WHERE id = %s", (current_user["user_id"],))
+            params = _account_params(current_user)
+            await cur.execute(f"SELECT * FROM users WHERE {_ACCOUNT_KEY}", params)
             row = await cur.fetchone()
             if row is None:
-                raise HTTPException(status_code=404, detail="用户不存在")
+                raise HTTPException(status_code=401, detail="Session expired, sign in again")
 
             cols = _auth_column_names(cur.description)
             user_row = dict(zip(cols, row, strict=True))
@@ -331,7 +388,12 @@ async def delete_account(
                 raise HTTPException(status_code=400, detail="密码错误，无法注销账号")
 
             # Delete user
-            await cur.execute("DELETE FROM users WHERE id = %s", (current_user["user_id"],))
+            removed = await cur.execute(
+                f"DELETE FROM users WHERE {_ACCOUNT_KEY} AND password_hash = %s",
+                (*params, user_row["password_hash"]),
+            )
+            if removed != 1:
+                raise HTTPException(status_code=401, detail="Account changed, sign in again")
 
     except HTTPException:
         raise

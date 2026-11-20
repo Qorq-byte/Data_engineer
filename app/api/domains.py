@@ -15,6 +15,7 @@ import yaml
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.api import tenant_domains
 from app.knowledge.domain_manager import DomainManager
 from app.knowledge.glossary import GlossaryManager
 from app.knowledge.rule_engine import RuleEngine
@@ -39,11 +40,15 @@ _rule_engine.load_from_domains()
 # ── YAML persistence helper ──────────────────────────────────────────────
 
 
-def _safe_domain_path(domain_id: str) -> Path:
+def _validate_domain_name(domain_id: str) -> None:
     import re
 
     if not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", domain_id):
         raise HTTPException(status_code=422, detail="Invalid domain identifier")
+
+
+def _safe_domain_path(domain_id: str) -> Path:
+    _validate_domain_name(domain_id)
     target = (DOMAINS_DIR / f"{domain_id}.yml").resolve()
     if target.parent != DOMAINS_DIR.resolve():
         raise HTTPException(status_code=422, detail="Invalid domain path")
@@ -186,6 +191,8 @@ class DetectRequest(BaseModel):
 @router.get("/domains")
 async def list_domains() -> dict[str, Any]:
     """List all available domains with their configurations."""
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.list_domains()
     # Try MySQL first
     store = _get_store()
     if store is not None:
@@ -254,6 +261,9 @@ async def list_domains() -> dict[str, Any]:
 async def create_domain(req: DomainCreateRequest) -> dict[str, Any]:
     """Create a new domain and persist it as a YAML file."""
     name = req.name.strip()
+    if tenant_domains.uses_mysql_catalog():
+        _validate_domain_name(name)
+        return await tenant_domains.create_domain(name, req.model_dump())
 
     # Check for duplicates
     if name in _domain_manager:
@@ -317,6 +327,8 @@ async def update_domain(domain_id: str, req: DomainUpdateRequest) -> dict[str, A
     Only supplied fields are updated; omitted fields keep their current values.
     """
     domain_id = domain_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.update_domain(domain_id, req.model_dump(exclude_none=True))
 
     cfg = _domain_manager.get(domain_id)
     if cfg is None:
@@ -395,6 +407,8 @@ async def update_domain(domain_id: str, req: DomainUpdateRequest) -> dict[str, A
 async def list_glossary(domain_id: str) -> dict[str, Any]:
     """List all glossary terms for a domain."""
     domain_id = domain_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.list_items(domain_id, "term")
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -458,6 +472,8 @@ async def list_glossary(domain_id: str) -> dict[str, Any]:
 async def add_glossary_term(domain_id: str, req: TermAddRequest) -> dict[str, Any]:
     """Add a new glossary term to a domain."""
     domain_id = domain_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.write_item(domain_id, "term", req.model_dump())
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -526,6 +542,10 @@ async def update_glossary_term(domain_id: str, term: str, req: TermAddRequest) -
     """Update an existing glossary term in a domain."""
     domain_id = domain_id.strip()
     term = term.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.write_item(
+            domain_id, "term", req.model_dump(), current_key=term,
+        )
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -613,6 +633,8 @@ async def update_glossary_term(domain_id: str, term: str, req: TermAddRequest) -
 async def delete_domain(domain_id: str) -> dict[str, Any]:
     """Delete a domain and its YAML file."""
     domain_id = domain_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.delete_domain(domain_id)
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -660,6 +682,8 @@ async def delete_glossary_term(domain_id: str, term: str) -> dict[str, Any]:
     """Delete a glossary term from a domain and persist to YAML."""
     domain_id = domain_id.strip()
     term = term.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.write_item(domain_id, "term", None, current_key=term)
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -693,6 +717,8 @@ async def delete_glossary_term(domain_id: str, term: str) -> dict[str, Any]:
 async def list_rules(domain_id: str) -> dict[str, Any]:
     """List all business rules for a domain."""
     domain_id = domain_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.list_items(domain_id, "rule")
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -744,6 +770,8 @@ async def list_rules(domain_id: str) -> dict[str, Any]:
 async def add_rule(domain_id: str, req: RuleAddRequest) -> dict[str, Any]:
     """Add a new business rule to a domain."""
     domain_id = domain_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.write_item(domain_id, "rule", req.model_dump())
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -801,6 +829,10 @@ async def update_rule(domain_id: str, rule_id: str, req: RuleAddRequest) -> dict
     """Update an existing business rule in a domain."""
     domain_id = domain_id.strip()
     rule_id = rule_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.write_item(
+            domain_id, "rule", req.model_dump(), current_key=rule_id,
+        )
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -878,6 +910,8 @@ async def delete_rule(domain_id: str, rule_id: str) -> dict[str, Any]:
     """Delete a business rule from a domain."""
     domain_id = domain_id.strip()
     rule_id = rule_id.strip()
+    if tenant_domains.uses_mysql_catalog():
+        return await tenant_domains.write_item(domain_id, "rule", None, current_key=rule_id)
 
     if domain_id not in _domain_manager:
         raise HTTPException(status_code=404, detail=f"Domain '{domain_id}' not found")
@@ -914,8 +948,11 @@ async def detect_domain(req: DetectRequest) -> dict[str, Any]:
     Uses the 3-layer detection strategy (keywords → terms → schema)
     and returns the best match if confidence >= 0.6.
     """
-    matches = _domain_manager.detect(req.query_text)
-    best = _domain_manager.detect_best(req.query_text)
+    matches = (
+        await tenant_domains.detect_domains(req.query_text)
+        if tenant_domains.uses_mysql_catalog() else _domain_manager.detect(req.query_text)
+    )
+    best = matches[0] if matches and matches[0].score >= 0.6 else None
 
     return {
         "query_text": req.query_text,

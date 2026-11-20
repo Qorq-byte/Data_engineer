@@ -39,6 +39,24 @@ def isolated_api_domains(tmp_path_factory):
     domains._domain_manager._domain_dir = original_manager_dir
 
 
+@pytest.fixture(autouse=True)
+def auth_token_states(request, monkeypatch):
+    """Use synthetic account state for local HTTP tests and real MySQL for acceptance."""
+    if request.node.get_closest_marker("real_database") is not None:
+        return None
+    from app.auth import database
+
+    states = dict.fromkeys((1, 2, 99, 99999, 999999), (1, 0))
+    states[3] = (2, 0)
+
+    async def lookup(user_id):
+        return states.get(user_id)
+
+    monkeypatch.setattr(database, "read_token_state", lookup)
+    monkeypatch.setattr(database, "auth_database_ready", lambda: True)
+    return states
+
+
 @pytest.fixture
 def test_sqlite_db(tmp_path) -> str:
     """Create a temporary SQLite database with test schema."""

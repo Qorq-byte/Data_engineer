@@ -29,9 +29,11 @@ from pydantic import (
     model_validator,
 )
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.db.connections import ConnectionFactory
 from app.db.query_targets import resolve_query_targets
 from app.harness.mysql_coordination import CoordinationUnavailableError
+from app.harness.session_keys import scoped_session_key
 from app.harness.shared_query_runtime import current_shared_runtime, shared_query_scope
 from app.llm.factory import get_default_router
 from app.models.query import SQLCandidate
@@ -89,7 +91,7 @@ router = APIRouter(route_class=QueryRoute)
 
 def _validate_model(model: str | None) -> None:
     """Reject unknown / disabled models with 422 before running the pipeline."""
-    if not model:
+    if not model or get_current_tenant_id() != DEFAULT_TENANT_ID:
         return
     try:
         from app.api.settings import _settings_store
@@ -426,7 +428,10 @@ async def submit_query(body: QueryRequest) -> QueryResponse:
     _validate_model(body.model)
     try:
         response = await asyncio.wait_for(
-            run_query(body, llm_router=get_default_router()), settings.query_timeout_seconds
+            run_query(
+                body, llm_router=get_default_router()
+                if get_current_tenant_id() == DEFAULT_TENANT_ID else None,
+            ), settings.query_timeout_seconds,
         )
         return QueryResponse.model_validate(response)
     except Exception as exc:
@@ -572,7 +577,10 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
                 from app.config.settings import settings
 
                 result = await asyncio.wait_for(
-                    run_query(body, emit, llm_router=get_default_router()),
+                    run_query(
+                        body, emit, llm_router=get_default_router()
+                        if get_current_tenant_id() == DEFAULT_TENANT_ID else None,
+                    ),
                     settings.query_timeout_seconds,
                 )
                 response = QueryResponse.model_validate(result)
@@ -611,7 +619,7 @@ async def submit_query_stream(body: QueryRequest) -> StreamingResponse:
 
 
 # In-memory session store (populated by query submissions)
-_SESSION_STORE: dict[str, dict[str, Any]] = {}
+_SESSION_STORE: dict[str | bytes, dict[str, Any]] = {}
 
 
 def _prune_sessions() -> None:
@@ -646,21 +654,22 @@ def _prune_sessions() -> None:
 
 def _get_or_create_session(session_id: str) -> dict[str, Any]:
     """Get or create an in-memory session record."""
-    if session_id not in _SESSION_STORE:
+    key = scoped_session_key(session_id)
+    if key not in _SESSION_STORE:
         _prune_sessions()
-        _SESSION_STORE[session_id] = {
+        _SESSION_STORE[key] = {
             "session_id": session_id,
             "turns": [],
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
         }
-    session = _SESSION_STORE[session_id]
+    session = _SESSION_STORE[key]
     from app.config.settings import settings
 
     if (
         datetime.now() - datetime.fromisoformat(session["updated_at"])
     ).total_seconds() > settings.session_ttl_seconds:
-        _SESSION_STORE.pop(session_id)
+        _SESSION_STORE.pop(key)
         return _get_or_create_session(session_id)
     return session
 
@@ -668,7 +677,7 @@ def _get_or_create_session(session_id: str) -> dict[str, Any]:
 async def _read_session_snapshot(session_id: str) -> tuple[dict[str, Any] | None, str | None]:
     runtime = current_shared_runtime()
     if runtime is None:
-        return _SESSION_STORE.get(session_id), None
+        return _SESSION_STORE.get(scoped_session_key(session_id)), None
     if not runtime.ready:
         raise CoordinationUnavailableError("Shared session runtime is not ready")
     if runtime.verify_configuration is not None:

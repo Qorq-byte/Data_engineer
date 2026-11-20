@@ -12,6 +12,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from app.auth.tenant import get_current_tenant_id
+
 router = APIRouter()
 
 
@@ -67,6 +69,7 @@ def record_trace(
     _TRACE_STORE.append(
         {
             "id": trace_id,
+            "tenant_id": get_current_tenant_id(),
             "plan": plan,
             "status": status,
             "duration": f"{duration_ms / 1000:.2f}s",
@@ -82,6 +85,12 @@ def record_trace(
     # Keep only last 100 traces
     if len(_TRACE_STORE) > 100:
         _TRACE_STORE[:] = _TRACE_STORE[-100:]
+
+
+def _tenant_traces() -> list[dict[str, Any]]:
+    """Return traces visible to the current request tenant."""
+    tenant_id = get_current_tenant_id()
+    return [trace for trace in _TRACE_STORE if trace.get("tenant_id", 1) == tenant_id]
 
 
 @router.get("/workflows")
@@ -104,27 +113,28 @@ async def list_workflows() -> dict[str, Any]:
 
 @router.get("/workflows/stats")
 async def workflow_stats() -> dict[str, Any]:
-    success_traces = [t for t in _TRACE_STORE if t["status"] == "success"]
+    traces = _tenant_traces()
+    success_traces = [t for t in traces if t["status"] == "success"]
     durations = []
-    for t in _TRACE_STORE:
+    for t in traces:
         d = t["duration"].replace("s", "")
         with contextlib.suppress(ValueError):
             durations.append(float(d))
     avg_duration = sum(durations) / len(durations) if durations else 0.0
     return {
-        "total_executions": len(_TRACE_STORE),
-        "success_rate": round(len(success_traces) / len(_TRACE_STORE) * 100, 1)
-        if _TRACE_STORE
+        "total_executions": len(traces),
+        "success_rate": round(len(success_traces) / len(traces) * 100, 1)
+        if traces
         else 0.0,
         "avg_duration_ms": round(avg_duration * 1000),
-        "failed_count": len([t for t in _TRACE_STORE if t["status"] == "failed"]),
-        "plans_used": sorted({t["plan"] for t in _TRACE_STORE}),
+        "failed_count": len([t for t in traces if t["status"] == "failed"]),
+        "plans_used": sorted({t["plan"] for t in traces}),
     }
 
 
 @router.get("/workflows/traces")
 async def workflow_traces(limit: int = 20, plan: str = "") -> dict[str, Any]:
-    traces = _TRACE_STORE
+    traces = _tenant_traces()
     if plan:
         traces = [t for t in traces if t["plan"] == plan]
     return {"traces": list(reversed(traces[-limit:])), "total": len(traces)}
@@ -132,7 +142,7 @@ async def workflow_traces(limit: int = 20, plan: str = "") -> dict[str, Any]:
 
 @router.get("/workflows/{workflow_id}/history")
 async def workflow_history(workflow_id: str, limit: int = 20) -> dict[str, Any]:
-    traces = [t for t in _TRACE_STORE if t["plan"].startswith(workflow_id)]
+    traces = [t for t in _tenant_traces() if t["plan"].startswith(workflow_id)]
     if not traces:
         raise HTTPException(
             status_code=404, detail=f"No history found for workflow '{workflow_id}'"

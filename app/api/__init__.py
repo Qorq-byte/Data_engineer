@@ -21,6 +21,7 @@ async def _single_lifespan(app: FastAPI) -> AsyncIterator[None]:
     from app.auth.database import close_auth_pool, init_auth_db
     from app.bootstrap import initialize_catalogs
     from app.db.connections import ConnectionFactory
+    from app.db.tenant_profiles import load_tenant_query_profiles
     from app.llm.factory import get_default_router, publish_llm_router, reset_default_router
     from app.llm.router import LiteLLMRouter, RouterConfig
     from app.rag.engine import close_rag_engine, get_rag_engine, initialize_rag_engine
@@ -60,8 +61,9 @@ async def _single_lifespan(app: FastAPI) -> AsyncIterator[None]:
         # Keep failure visible until a successful settings update or reload.
         publish_llm_router(LiteLLMRouter(RouterConfig(), mock_mode=True))
         components["llm"] = False
-    app.state.initialized = True
     try:
+        await load_tenant_query_profiles()
+        app.state.initialized = True
         yield
     finally:
         app.state.initialized = False
