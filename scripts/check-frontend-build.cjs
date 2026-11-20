@@ -39,7 +39,8 @@ async function check() {
   assert(fs.readFileSync(path.join(output, workspaceJs), 'utf8').includes('/assets/default-avatar.svg'));
   assert.deepEqual(await buildFrontend(), first, 'Consecutive builds must be byte-identical');
 
-  const fixture = fs.mkdtempSync(path.join(os.tmpdir(), 'nl2sql-build-check-'));
+  const tempRoot = path.resolve(os.tmpdir());
+  const fixture = fs.mkdtempSync(path.join(tempRoot, 'nl2sql-build-check-'));
   try {
     for (const page of ['landing_page', 'form', 'workspace']) {
       let source = fs.readFileSync(path.join(root, 'frontend_design', `${page}.html`), 'utf8');
@@ -52,7 +53,7 @@ async function check() {
       assert.equal(hash(fs.readFileSync(path.join(output, filename))), info.sha256);
     }
   } finally {
-    if (path.dirname(fixture) !== os.tmpdir() || !path.basename(fixture).startsWith('nl2sql-build-check-')) throw new Error('Unsafe fixture directory');
+    if (path.dirname(fixture) !== tempRoot || !path.basename(fixture).startsWith('nl2sql-build-check-')) throw new Error('Unsafe fixture directory');
     fs.rmSync(fixture, { recursive: true, force: true });
   }
   console.log('[PASS] Three local pages, assets/fonts/licenses, SHA-256 integrity, repeatable build and failed-build preservation');
