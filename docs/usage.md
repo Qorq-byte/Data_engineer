@@ -16,8 +16,9 @@ curl -X POST http://localhost:8001/api/v1/auth/register \
 # → 201 {"access_token":"…","token_type":"bearer","user":{…}}
 ```
 
-Sign in later with `POST /api/v1/auth/login` and the same email and password. Business access is
-governed by the operator allow-list (`ADMIN_USER_IDS`), not by registration alone.
+Sign in later with `POST /api/v1/auth/login` and the same email and password. Business access requires
+an operator allow-list entry. The default tenant uses `ADMIN_USER_IDS`. See
+[tenant operator setup](#tenant-operator-setup) for additional tenants.
 
 ## 2. Connect a target
 
@@ -142,7 +143,74 @@ payload = response.json()
 print(payload["primary_sql"], payload["validation"]["passed"])
 ```
 
+## NL2SQL MCP over HTTP
+
+Configure the MCP client to send `Authorization: Bearer <access_token>` with every request.
+Use a token from `POST /api/v1/auth/login` for an allow-listed administrator.
+This applies to Streamable HTTP and to both routes of the SSE transport.
+HTTP `401` indicates an absent or invalid token. HTTP `403` indicates that the account is
+outside the supported workspace or administrator allow-list. Handle these at the transport layer.
+Session requests with another administrator's token return `404`. A login after token revocation
+requires a fresh MCP session.
+Authorized tool and resource calls keep their MCP result formats.
+
+The five original tools and four resources remain available to the local stdio or in-process host.
+The two metric tools require `trust_local_metric_tools=True` for local calls.
+See [the transport acceptance record](optimization/metric-mcp-transports.md#mcp-http-operator-gate).
+
+## Tenant operator setup
+
+For a single-worker deployment, assign existing accounts to tenants in the authentication
+database and configure their actual user IDs in the deployment environment. REST and MCP HTTP
+validate the account's current tenant and token version on each request.
+
+```dotenv
+TENANT_ADMIN_USER_IDS={"2":[42],"3":[57]}
+TENANT_LLM_ENDPOINTS={"2":["https://models-a.example.test/v1"],"3":["https://models-b.example.test/v1"]}
+TENANT_QUERY_PROFILES_PATH=/absolute/path/tenant-query-profiles.json
+```
+
+The host-owned profile file maps tenant IDs to connection lists. Use separate database-native
+read-only accounts and limit file access to the deployment service. Both MySQL and PostgreSQL
+profiles use the following structure.
+
+```json
+{
+  "2": [
+    {
+      "db_id": "reporting",
+      "db_type": "mysql",
+      "config": {
+        "host": "mysql.example.test",
+        "port": 3306,
+        "database": "tenant2",
+        "user": "tenant2_reader",
+        "password": "<database credential>"
+      }
+    }
+  ]
+}
+```
+
+Use the configured `db_id` for queries. Tenant administrators can use REST JSON/SSE queries,
+domain management, metadata reads and model settings. A model configuration needs a tenant key
+and an exact approved HTTPS base URL. The runtime validates DNS and pins the connection to a
+checked public IP while keeping TLS verification against the approved hostname. Database
+connection creation, global settings and subagent administration require a default-tenant operator.
+For a deployment with frozen settings, see [v2 tenant releases](optimization/immutable-workers.md#v2-租户发布包).
+Those workers load tenant data sources from the release and expose model and domain configuration
+as read-only. Use a stopped maintenance window to change the release.
+When retrieval uses a shared HTTP embedding service, non-default tenant queries use the tenant's
+local keyword index. In-process embedding providers can still supply semantic search.
+
 ## Web workspace
+
+After sign-in, the browser confirms the current account's workbench access with the server.
+Tenant administrators can use natural-language queries, read assigned schemas, manage domain
+knowledge and configure their models. Ordinary accounts can manage personal settings. Default
+operators can also use database connections, the SQL workbench and system administration.
+Browser query history is scoped to the account and tenant. Earlier browser entries that lack
+account ownership are excluded from the workbench history view.
 
 For explicit metric requests, see [metric_query v1](optimization/metric-query-v1.md). This JSON/SSE/MCP
 plan uses a versioned server catalog and fixed resolve/validate/execute nodes with no model calls.

@@ -1,5 +1,7 @@
 # 指标 MCP 跨进程传输验收
 
+当前 HTTP 认证契约见 [MCP HTTP operator gate](#mcp-http-operator-gate)。
+
 日期：2026-11-18；起点 main `affe17d`，保留本地日志与工作笔记。
 
 ## 目标、优先级与边界
@@ -47,3 +49,14 @@ $py='.stage62/.venv/Scripts/python.exe'
 证据已归档至 [metric-mcp-transports-2026-11-18.json](results/metric-mcp-transports-2026-11-18.json)。
 Snowflake 专用账号/fixture/warehouse 范围、生产目录签收、业务标注与容量 SLO 仍待外部条件。
 跨表/时间语义、自主多 Agent、租户迁移需要独立产品设计；本轮不实现 TLS、代理和 OAuth。
+
+## MCP HTTP operator gate
+
+NL2SQL FastMCP 的 HTTP 应用在处理协议消息前复用工作台的管理员白名单和默认租户检查。
+Streamable HTTP 的握手、工具调用、资源读取、会话读取和终止，以及 SSE 的订阅和消息提交均经过这一入口。
+HTTP 鉴权拒绝直接返回 `401` 或 `403`，认证库不可用返回 `503`，客户端在传输层处理。已授权请求沿用 MCP 工具或资源的原有返回格式。每次请求都核对账号的当前租户和令牌版本。[JWT 撤销与兼容性](tenant-mysql-migration.md#租户归属变更与-jwt-撤销)
+本地 stdio 和进程内调用继续由宿主管理权限，指标工具保留显式信任开关。
+
+本地 MCP 回归 215 项通过，另有 1 项验证持有 Streamable HTTP 会话 ID 仍须带 JWT。
+MySQL 8.4.13 网络与认证回归 6 项通过，覆盖真实 SDK、共享 worker 重启和漂移拒绝。两个临时容器已清理。
+网络验收报告存于 `data/mcp-http-operator-acceptance/network.json`。
