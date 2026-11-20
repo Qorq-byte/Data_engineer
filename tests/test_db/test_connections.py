@@ -51,15 +51,11 @@ async def test_unimplemented_database_raises():
 
 
 
-def test_connection_factory_list_and_close():
+async def test_connection_factory_list_and_close():
     """Test listing and closing connections."""
-    conn = ConnectionFactory._connect_sqlite({"path": ":memory:"})
-    ConnectionFactory._connections["test_list"] = conn
-    ConnectionFactory._infos["test_list"] = type(
-        "info", (), {"db_id": "test_list", "db_type": "sqlite"}
-    )()
-
-    assert len(ConnectionFactory.list_all()) >= 1
+    await ConnectionFactory.create(DatabaseType.SQLITE, {}, "test_list")
+    assert "test_list" in {info.db_id for info in ConnectionFactory.list_all()}
 
     ConnectionFactory.close("test_list")
-    assert "test_list" not in ConnectionFactory._connections
+    with pytest.raises(KeyError):
+        ConnectionFactory.get("test_list")
