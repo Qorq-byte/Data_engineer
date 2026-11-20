@@ -20,6 +20,7 @@ dependencies = [
 
     # LLM routing
     "litellm>=1.52.0",
+    "openai>=2.54.0,<3",
 
     # MCP framework
     "fastmcp>=4.0.0,<5",
