@@ -7,7 +7,6 @@ DELETE /api/v1/documents/{id}   — Delete a document and its chunks
 
 from __future__ import annotations
 
-import contextlib
 from datetime import datetime
 from typing import Any
 
@@ -115,17 +114,7 @@ async def delete_document(doc_id: str) -> dict[str, Any]:
 
         store = get_document_store()
 
-        # Delete from LanceDB (chunks have parent_doc_id or doc_id)
-        with contextlib.suppress(Exception):
-            store._lancedb.delete(
-                store.NAMESPACE,
-                f"doc_id = '{doc_id}' OR parent_doc_id = '{doc_id}'",
-            )
-
-        # Delete from BM25
-        with contextlib.suppress(Exception):
-            store._bm25.delete_by_field(store.NAMESPACE, "parent_doc_id", doc_id)
-            store._bm25.delete_by_field(store.NAMESPACE, "doc_id", doc_id)
+        store.delete_document(doc_id)
 
         return {"status": "deleted", "doc_id": doc_id}
     except Exception as e:

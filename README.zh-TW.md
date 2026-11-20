@@ -75,8 +75,8 @@
 | 自動計畫選擇 | **已實作** —— `auto_plan=true` 依序走 L1 規則、L2 歷史與能力過濾後的預設；預設仍為 `request_query` |
 | 多代理協調器與子代理 | **部分實作** —— 限域 REST 自然語言查詢已接固定工作流程及存取檢查；自主協調仍屬實驗元件 |
 | 回饋驅動的規則學習 | **已實作** —— 審查通過的規則進入生成提示與驗證，並在 `applied_rules` 回顯；規則不會自動改寫 SQL |
-| 多租戶隔離 | **未實作** —— 一個管理員群組共用一份資料集 |
-| 經校正的準確率、召回率或容量基線 | **未建立** —— 合成套件評估的是契約一致 |
+| 多租戶隔離 | **部分實作** —— 單 worker 和單機不可變多 worker 支援租戶工作台、REST 和 MCP HTTP。[設定說明](docs/usage.md#tenant-operator-setup) |
+| 合成與校正基線 | **已記錄合成基線**，涵蓋檢索、SQL 契約和有界負載。業務準確率、召回率及正式環境容量仍待校正。[基線報告](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
 
 ## 快速開始
 
@@ -243,6 +243,7 @@ curl -X POST http://localhost:8001/api/v1/query \
 管理員可透過 `GET /api/v1/metrics?domain=...&database=...` 取得名稱和版本。
 MCP 也提供 `list_metrics`、`metric_query`；HTTP Bearer 驗證與本機行程明確信任方式見
 [存取與使用](docs/optimization/metric-discovery-mcp.md)。
+獨立 stdio 與回環 HTTP 傳輸驗收見[指標 MCP 傳輸驗收](docs/optimization/metric-mcp-transports.md)。
 
 子代理 REST 請求共用固定五節點工作流程，需綁定明確的 `db_id`、允許 operator 的使用者 ID，執行預設關閉。
 詳見 [REST 邊界](docs/optimization/subagent-rest-boundary.md)。
@@ -390,9 +391,11 @@ python scripts/evaluate_quality.py           # 合成品質報告
 python scripts/run_nl2sql_acceptance.py      # 凍結集批次驗收
 python scripts/run_real_db_tests.py          # 驅動級驗收
 python scripts/load_test.py                  # 有界併發探測
+python -m scripts.run_synthetic_baseline --output data/synthetic-baseline-20261118/aggregate.json --requests 20 --rows 1000
 ```
 
-合成套件評估的是契約一致，不是業務正確性。結果不構成生產容量或準確率基線。
+彙總入口會在單一報告記錄所有 fixture 雜湊與分母。合成套件評估的是契約一致，不是業務正確性，
+結果不構成生產容量或準確率基線。見[2026-11-18 範圍與結果](docs/optimization/synthetic-quality-baseline-2026-11-18.md)。
 
 ## 目錄結構
 
@@ -439,7 +442,7 @@ SQLite、DuckDB、PostgreSQL、MySQL、ClickHouse、Trino、StarRocks 有唯讀�
 但待獨立驗收；BigQuery、Redshift、Databricks 只有方言定義。
 
 **一套部署能給多個團隊共用嗎？**
-不能。沒有租戶隔離，一個管理員群組共用一份資料集。
+單 worker 和單機不可變多 worker 部署可按租戶開放查詢、領域和模型設定，由部署端預先設定資料來源。不可變模式透過停機維護更新設定。系統管理由預設租戶管理員操作。[設定說明](docs/usage.md#tenant-operator-setup)
 
 **為什麼啟動時報 JWT 錯誤？**
 `JWT_SECRET` 缺少、仍是 `change-me-in-production`，或不足 32 字元。這是 `create_app()` 中

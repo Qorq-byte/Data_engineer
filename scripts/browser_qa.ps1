@@ -36,6 +36,7 @@ function FreshQuery($text) {
 B goto http://127.0.0.1:8018/workspace
 B eval .verify_tmp_scripts/browser_auth.js
 B goto http://127.0.0.1:8018/workspace
+B wait 'textarea[aria-label="数据问题"]'
 B js 'window.qaStart = await (await fetch("/qa-counts")).json()'
 FreshQuery normal_case
 Start-Sleep -Seconds 2

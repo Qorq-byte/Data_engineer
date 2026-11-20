@@ -36,4 +36,41 @@
 
 停止候选代并恢复旧版本设置与命名空间后，从旧代码、原路径的旧清单和索引重新启动两个 worker。两个进程均通过 readiness，读取到升级前相同的会话，看不到候选代会话，并可继续查询和共享新会话。三个阶段都验证了真实 MySQL 返回有序的五条合成记录。使用 Python 3.12.13 和仓库 CI 约束依赖复跑通过。模型传输使用合成响应。
 
-该证据适用于上述提交组合、兼容的控制面表和单机停服切换。涉及数据库迁移的候选版本需要额外验证恢复脚本及回退后的表兼容性。
+该证据适用于上述提交组合、兼容的控制面表和单机停服切换。另一次演练验证了多租户候选版本迁移后，以独立 MySQL 恢复旧表结构并重新启动旧版。[多租户迁移回退演练](tenant-mysql-migration.md#多租户迁移回退演练)
+
+## 会话兼容性补充
+
+默认租户沿用原版会话 ID 和 MySQL 摘要。部署命名空间保持相同时，原版尚未过期的会话快照可以直接读取，续写也使用相同的存储键。其他租户使用独立的会话键。快照读写和协调锁使用同一摘要，回收过期记录时保留仍持有锁的快照。共享会话容量仍由整个部署命名空间共用。
+
+测试以原版键格式为迁移基准。此前开发阶段的字符串前缀格式缺少可靠的归属标记，已有此类测试数据时需依据备份和已知归属单独整理。
+
+MySQL 8.4.13 使用一次性合成数据库分两批验收。会话与协调锁通过 15 项，共享 worker 通过 8 项，覆盖 JSON、SSE 和 MCP 的跨进程会话可见性。两个批次的临时容器均已清理。
+
+```powershell
+python -m scripts.run_real_db_tests --filter 'shared_sessions or mysql_coordination' --output data/tenant-session-acceptance/sessions.json
+python -m scripts.run_real_db_tests --filter shared_query_runtime --output data/tenant-session-acceptance/shared-workers.json
+```
+
+## v2 租户发布包
+
+发布构建器也接受按租户 ID 分组的连接文件。键 `"1"` 对应默认租户，至少再提供一个租户分组。每组使用 v1 的连接数组格式，最多封存 64 个连接。同一 `db_id` 可以出现在不同租户分组中。指标目录按租户 ID 与数据库 ID 的组合核对绑定。
+
+```json
+{
+  "1": [{"db_id":"reporting","db_type":"mysql","config":{"host":"db.example.test","port":3306,"database":"default_app","user":"default_reader","password":"<credential>"}}],
+  "2": [{"db_id":"reporting","db_type":"mysql","config":{"host":"db.example.test","port":3306,"database":"tenant_2","user":"tenant_2_reader","password":"<credential>"}}]
+}
+```
+
+停掉全部 worker 后准备各租户的 MySQL 模型配置、领域、术语、规则和各自的索引。使用上面的发布构建命令封存连接，并为 v2 分配新命名空间。所有 worker 设置相同的 `TENANT_ADMIN_USER_IDS`，名单须与清单中的非默认租户一致。模型端点通过 `TENANT_LLM_ENDPOINTS` 声明，连接来源由发布包决定，`TENANT_QUERY_PROFILES_PATH` 留空。v1 数组格式仍适用于默认租户。
+
+启动时固定已纳入租户的 MySQL 模型和领域快照。发布指纹包含这些快照、加密连接清单及进程配置。运行时发现漂移后暂停查询和租户配置读取，readiness 返回 `503`。工作台提供查询、Schema、领域和模型查看，在线配置写入返回 `409`。非默认租户查询使用发布中的领域规则，进程本地审批规则可在停服维护时整理到领域目录。
+
+同一发布命名空间的 worker 恢复共享会话。同名会话和模型供应商 RPM 按租户隔离，查询和模型并发上限由部署统一分配。MCP HTTP 可挂载到已启动的 worker，也可使用相同配置独立启动。标准输入输出 MCP 的运行方式沿用原有行为。
+
+```powershell
+python -m scripts.run_real_db_tests --filter 'immutable_tenants or tenant_llm_runtime' --output data/immutable-tenant-acceptance/verified.json
+python -m scripts.run_real_db_tests --filter 'immutable_workers or metric_mcp_network' --output data/immutable-tenant-acceptance/default-workers.json
+```
+
+MySQL 8.4.13 上租户组合通过 3 项，默认 v1 组合通过 7 项。本地回归通过 840 项。实库覆盖两个独立 worker、独立启动的 MCP HTTP、重启、配置拒绝和真实只读目标。模型传输使用脚本化响应。PostgreSQL 目标和生产环境容量仍需专项验收。

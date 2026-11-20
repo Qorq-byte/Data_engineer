@@ -14,6 +14,8 @@ from dataclasses import dataclass
 
 import aiomysql
 
+from app.harness.session_keys import shared_session_digest
+
 
 class CoordinationUnavailableError(RuntimeError):
     """Coordination is unconfirmed; the caller must not start a query."""
@@ -204,7 +206,7 @@ class MySQLCoordinator:
                     break
             if slot < 0:
                 raise CoordinationBusyError("Global query capacity reached")
-            session = hashlib.sha256(session_id.encode()).hexdigest()[:24]
+            session = shared_session_digest(session_id)[:24]
             name = f"de:{self.namespace}:s:{session}"
             result = await self._scalar(conn, "SELECT GET_LOCK(%s,0)", name)
             if result is None:

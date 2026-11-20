@@ -21,6 +21,7 @@ from app.audit.candidates import (
     audit_candidate_digests,
     checked_digests,
 )
+from app.auth.tenant import get_current_tenant_id
 
 _QUERY_ID = re.compile(r"q_[0-9a-f]{12}")
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}")
@@ -230,7 +231,13 @@ class UsageAuditStore:
     def __init__(self, path: str, max_records: int = 1000) -> None:
         if not path.strip() or type(max_records) is not int or not 1 <= max_records <= 10000:
             raise ValueError("Invalid audit configuration")
-        self.path = Path(path)
+        base_path = Path(path)
+        tenant_id = get_current_tenant_id()
+        self.path = (
+            base_path
+            if tenant_id == 1
+            else base_path.with_name(f"{base_path.stem}.tenant-{tenant_id}{base_path.suffix}")
+        )
         self.max_records = max_records
 
     def write(self, record: UsageAuditRecord) -> None:

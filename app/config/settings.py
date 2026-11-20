@@ -3,7 +3,7 @@
 All runtime configuration flows through this module.
 """
 
-from pydantic import Field, field_validator
+from pydantic import Field, PositiveInt, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = Field(default=30, gt=0)
     llm_cooldown_seconds: float = Field(default=5, ge=0)
     llm_rate_limit_rpm: int = Field(default=60, ge=0)
+    tenant_llm_endpoints: dict[PositiveInt, list[str]] = Field(default_factory=dict)
 
     query_timeout_seconds: float = Field(default=120, gt=0)
     max_concurrent_queries: int = Field(default=8, ge=1)
@@ -90,6 +91,8 @@ class Settings(BaseSettings):
     auth_mysql_database: str = "nl2sql_auth"
 
     admin_user_ids: list[int] = [1]
+    tenant_admin_user_ids: dict[PositiveInt, list[PositiveInt]] = Field(default_factory=dict)
+    tenant_query_profiles_path: str = ""
     registration_token: str | None = None
     cors_origins: list[str] = ["http://localhost:8001", "http://127.0.0.1:8001"]
 

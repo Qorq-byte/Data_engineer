@@ -18,6 +18,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from app.harness.session_keys import scoped_session_key
+
 # ── SQL schema ────────────────────────────────────────────────────────────
 
 CREATE_SESSIONS_SQL = """
@@ -55,9 +57,9 @@ class AdvancedSQLiteSession:
       - path on disk — persistent, for top-level chat interactions;
         parent directories are created automatically
 
-    Storage is isolated by ``node_name``: multiple instances sharing the
-    same database file but constructed with different node names never see
-    each other's sessions or turns.
+    Storage is scoped by tenant and ``node_name``. Tenant 1 uses the
+    original text keys. Other tenants store binary keys in the same SQLite
+    columns, where they cannot collide with text keys.
 
     Sessions expire after ``session_ttl`` seconds of inactivity (checked by
     :meth:`is_active`). A ``clock`` callable can be injected for testing;
@@ -109,6 +111,7 @@ class AdvancedSQLiteSession:
     def _touch_session(self, conn: sqlite3.Connection, session_id: str) -> None:
         """Create the session row if missing and refresh its activity timestamp."""
         now = self._clock()
+        scoped_id = scoped_session_key(session_id)
         conn.execute(
             """
             INSERT INTO sessions (node_name, session_id, summary, created_at, last_active_at)
@@ -116,7 +119,7 @@ class AdvancedSQLiteSession:
             ON CONFLICT (node_name, session_id)
             DO UPDATE SET last_active_at = excluded.last_active_at
             """,
-            (self.node_name, session_id, now, now),
+            (self.node_name, scoped_id, now, now),
         )
 
     # ── public API ─────────────────────────────────────────────────────
@@ -125,7 +128,7 @@ class AdvancedSQLiteSession:
         """Check if a session exists and hasn't expired (TTL on last activity)."""
         row = self._get_conn().execute(
             "SELECT last_active_at FROM sessions WHERE node_name = ? AND session_id = ?",
-            (self.node_name, session_id),
+            (self.node_name, scoped_session_key(session_id)),
         ).fetchone()
         if row is None:
             return False
@@ -135,7 +138,7 @@ class AdvancedSQLiteSession:
         """Return a compressed summary of the session history ('' if none)."""
         row = self._get_conn().execute(
             "SELECT summary FROM sessions WHERE node_name = ? AND session_id = ?",
-            (self.node_name, session_id),
+            (self.node_name, scoped_session_key(session_id)),
         ).fetchone()
         return row["summary"] if row is not None else ""
 
@@ -145,7 +148,7 @@ class AdvancedSQLiteSession:
         self._touch_session(conn, session_id)
         conn.execute(
             "UPDATE sessions SET summary = ? WHERE node_name = ? AND session_id = ?",
-            (summary, self.node_name, session_id),
+            (summary, self.node_name, scoped_session_key(session_id)),
         )
         self._maybe_commit(conn)
 
@@ -157,7 +160,7 @@ class AdvancedSQLiteSession:
             "INSERT INTO turns (node_name, session_id, turn_data, created_at) VALUES (?, ?, ?, ?)",
             (
                 self.node_name,
-                session_id,
+                scoped_session_key(session_id),
                 json.dumps(turn_data, ensure_ascii=False),
                 self._clock(),
             ),
@@ -168,7 +171,7 @@ class AdvancedSQLiteSession:
         """Return all turns of a session in insertion order."""
         rows = self._get_conn().execute(
             "SELECT turn_data FROM turns WHERE node_name = ? AND session_id = ? ORDER BY id",
-            (self.node_name, session_id),
+            (self.node_name, scoped_session_key(session_id)),
         ).fetchall()
         return [json.loads(row["turn_data"]) for row in rows]
 
@@ -177,11 +180,11 @@ class AdvancedSQLiteSession:
         conn = self._get_conn()
         conn.execute(
             "DELETE FROM turns WHERE node_name = ? AND session_id = ?",
-            (self.node_name, session_id),
+            (self.node_name, scoped_session_key(session_id)),
         )
         conn.execute(
             "DELETE FROM sessions WHERE node_name = ? AND session_id = ?",
-            (self.node_name, session_id),
+            (self.node_name, scoped_session_key(session_id)),
         )
         self._maybe_commit(conn)
 

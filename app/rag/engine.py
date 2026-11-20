@@ -20,13 +20,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.auth.tenant import get_current_tenant_id
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.document_store import DocumentStore
 from app.knowledge.retrieval.embedding import (
     EmbeddingGenerator,
     create_embedding_provider,
 )
-from app.knowledge.retrieval.lancedb_store import LanceDBStore
+from app.knowledge.retrieval.lancedb_store import LanceDBStore, tenant_namespace
 from app.knowledge.retrieval.metric_rag import MetricRAG
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
 from app.knowledge.retrieval.schema_rag import SchemaMetadataRAG
@@ -59,6 +60,7 @@ class _RAGEngine:
     document_store: DocumentStore
     index_refresher: Any  # IndexRefresher
     startup_schema_results: dict[str, bool] = field(default_factory=dict)
+    startup_tenant_id: int = field(default_factory=get_current_tenant_id)
 
 
 # ── Module-level singleton ────────────────────────────────────────────────
@@ -91,7 +93,10 @@ def get_schema_index_status() -> dict[str, object]:
         "status": "degraded" if required or unavailable else "ready",
         "refresh_required_databases": list(required),
         "recovery_failed_databases": list(unavailable),
-        "startup_schema_results": dict(engine.startup_schema_results),
+        "startup_schema_results": (
+            dict(engine.startup_schema_results)
+            if engine.startup_tenant_id == get_current_tenant_id() else {}
+        ),
         "scope": "schema indexes only; process state, not a live backend probe",
     }
 
@@ -276,12 +281,13 @@ async def _build_rag_engine() -> _RAGEngine:
         # ── Index existing data ────────────────────────────────────────────
         from app.db.connections import ConnectionFactory
 
+        schema_namespace = tenant_namespace(schema_rag.NAMESPACE)
         if settings.shared_worker_release:
             # Immutable serving workers open prebuilt indexes. They must never
             # rebuild shared files or invoke document embeddings during startup.
             expected = {info.db_id for info in ConnectionFactory.list_all()}
-            dense_ids = lancedb_store.database_ids(schema_rag.NAMESPACE)
-            sparse_ids = bm25_index.database_ids(schema_rag.NAMESPACE)
+            dense_ids = lancedb_store.database_ids(schema_namespace)
+            sparse_ids = bm25_index.database_ids(schema_namespace)
             if (
                 schema_rag.refresh_required_databases
                 or not expected
@@ -293,8 +299,8 @@ async def _build_rag_engine() -> _RAGEngine:
             return candidate
 
         schema_rag.require_refresh(
-            lancedb_store.database_ids(schema_rag.NAMESPACE)
-            | bm25_index.database_ids(schema_rag.NAMESPACE)
+            lancedb_store.database_ids(schema_namespace)
+            | bm25_index.database_ids(schema_namespace)
             | {info.db_id for info in ConnectionFactory.list_all()}
         )
         candidate.startup_schema_results = await _index_all_connected_schemas(candidate)

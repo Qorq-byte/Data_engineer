@@ -43,6 +43,7 @@ from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_DOCUMENTS,
     LanceDBStore,
     document_to_record,
+    tenant_namespace,
 )
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
 
@@ -339,8 +340,8 @@ class DocumentStore:
         # Ensure both backends are connected and the namespace exists
         self._lancedb.connect()
         self._bm25.connect()
-        self._lancedb.ensure_namespace(self.NAMESPACE)
-        self._bm25.ensure_namespace(self.NAMESPACE)
+        self._lancedb.ensure_namespace(self._namespace())
+        self._bm25.ensure_namespace(self._namespace())
 
     # ── Properties ─────────────────────────────────────────────────────
 
@@ -367,6 +368,10 @@ class DocumentStore:
     @property
     def overlap_tokens(self) -> int:
         return self._overlap_chars // _CHARS_PER_TOKEN
+
+    def _namespace(self) -> str:
+        """Return the document namespace for the current tenant."""
+        return tenant_namespace(self.NAMESPACE)
 
     # ── Indexing ───────────────────────────────────────────────────────
 
@@ -412,22 +417,22 @@ class DocumentStore:
         # 3. Delete existing chunks from LanceDB for these parent doc_ids
         parent_ids = {d.doc_id for d in docs}
         for pid in parent_ids:
-            self._bm25.delete_by_field(self.NAMESPACE, "parent_doc_id", pid)
-            self._bm25.delete(self.NAMESPACE, pid)
+            self._bm25.delete_by_field(self._namespace(), "parent_doc_id", pid)
+            self._bm25.delete(self._namespace(), pid)
             self._lancedb.delete(
-                self.NAMESPACE,
+                self._namespace(),
                 f"parent_doc_id = {literal(pid)} OR doc_id = {literal(pid)}",
             )
         # Also delete by chunk-level doc_ids (re-index of same doc)
         chunk_ids_str = ", ".join(literal(c.doc_id) for c in all_chunks)
-        self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({chunk_ids_str})")
+        self._lancedb.delete(self._namespace(), f"doc_id IN ({chunk_ids_str})")
 
         # 4. Insert into LanceDB
         lancedb_records = [
             document_to_record(chunk, vec)
             for chunk, vec in zip(all_chunks, emb_result.vectors, strict=False)
         ]
-        self._lancedb.insert(self.NAMESPACE, lancedb_records)
+        self._lancedb.insert(self._namespace(), lancedb_records)
 
         # 5. Insert into BM25
         bm25_docs: list[dict[str, Any]] = []
@@ -443,7 +448,7 @@ class DocumentStore:
                     "metadata": _extract_index_meta(chunk),
                 }
             )
-        self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
+        self._bm25.index(self._namespace(), bm25_docs, language=language)
 
         return len(all_chunks)
 
@@ -488,13 +493,13 @@ class DocumentStore:
         filter_expr = " AND ".join(filters) if filters else None
 
         # 1. Dense search (LanceDB)
-        query_vec = await self._embedding.embed_single(query)
+        query_vec = await self._embedding.embed_search_query(query)
         dense_raw = self._lancedb.search(
-            self.NAMESPACE,
+            self._namespace(),
             query_vec,
             top_k=max(top_k * 2, 20),
             filter_expr=filter_expr,
-        )
+        ) if query_vec is not None else []
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
             dist = row.get("_distance", 1.0)
@@ -507,7 +512,7 @@ class DocumentStore:
 
         # 2. Sparse search (BM25)
         sparse_raw = self._bm25.search(
-            self.NAMESPACE,
+            self._namespace(),
             query,
             top_k=max(top_k * 2, 20),
             language=language,
@@ -580,17 +585,25 @@ class DocumentStore:
 
     # ── Management ─────────────────────────────────────────────────────
 
+    def delete_document(self, doc_id: str) -> None:
+        """Remove a document and its chunks from the current tenant's index."""
+        namespace = self._namespace()
+        predicate = f"doc_id = {literal(doc_id)} OR parent_doc_id = {literal(doc_id)}"
+        self._lancedb.delete(namespace, predicate)
+        self._bm25.delete_by_field(namespace, "parent_doc_id", doc_id)
+        self._bm25.delete(namespace, doc_id)
+
     def clear(self) -> None:
         """Remove all indexed document chunks from both backends."""
-        self._lancedb.drop_namespace(self.NAMESPACE)
-        self._lancedb.ensure_namespace(self.NAMESPACE)
-        self._bm25.clear(self.NAMESPACE)
+        self._lancedb.drop_namespace(self._namespace())
+        self._lancedb.ensure_namespace(self._namespace())
+        self._bm25.clear(self._namespace())
 
     def stats(self) -> dict[str, int]:
         """Return chunk counts for both backends."""
         return {
-            "lancedb_count": self._lancedb.count(self.NAMESPACE),
-            "bm25_count": self._bm25.count(self.NAMESPACE),
+            "lancedb_count": self._lancedb.count(self._namespace()),
+            "bm25_count": self._bm25.count(self._namespace()),
         }
 
     # ── Convenience ────────────────────────────────────────────────────

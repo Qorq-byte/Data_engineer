@@ -28,6 +28,7 @@ Usage::
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -206,14 +207,18 @@ class DomainManager:
         Returns:
             List of ``DomainMatch`` sorted by score descending.
         """
-        if not self._domains:
-            return []
+        return self.detect_domains(self._domains.values(), query_text, schema)
 
+    @staticmethod
+    def detect_domains(
+        domains: Iterable[DomainConfig], query_text: str, schema: Any | None = None,
+    ) -> list[DomainMatch]:
+        """Score the caller's domain catalog using the usual detection rules."""
         text_lower = query_text.lower()
 
         matches: list[DomainMatch] = []
 
-        for domain in self._domains.values():
+        for domain in domains:
             matched_keywords: list[str] = []
             matched_terms: list[str] = []
 

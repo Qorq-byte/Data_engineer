@@ -25,9 +25,11 @@ from typing import Any
 
 import yaml
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.config.settings import settings
 from app.llm.router import LiteLLMRouter, ProviderConfig, RouterConfig
 from app.llm.settings_validation import validate_llm_settings
+from app.llm.tenant_endpoints import approved_tenant_endpoint
 
 # ── Model-prefix → provider inference rules ────────────────────────
 # (prefixes, provider_name, api_key_env, base_url_env)
@@ -181,6 +183,8 @@ _default_router: LiteLLMRouter | None = None
 def get_default_router() -> LiteLLMRouter:
     """Return the process-wide shared router (built on first use)."""
     global _default_router
+    if get_current_tenant_id() != DEFAULT_TENANT_ID:
+        raise RuntimeError("Tenant queries must resolve their persisted model configuration")
     if _default_router is None:
         _default_router = build_router()
     return _default_router
@@ -203,7 +207,7 @@ _ENV_KEYS = {
 }
 
 
-def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
+def _provider_api_key(name: str, cfg: dict[str, Any], *, allow_environment: bool) -> str:
     """Use an explicit saved key; consult env only when no ciphertext was saved."""
     from app.security.crypto import decrypt_secret
 
@@ -213,6 +217,8 @@ def _provider_api_key(name: str, cfg: dict[str, Any]) -> str:
         if key:
             return key
         raise ValueError("Persisted LLM credential could not be decrypted")
+    if not allow_environment:
+        return ""
     # Fallback: env key for built-in providers (agent.yml / .env setup)
     key_env = _ENV_KEYS.get(name, "")
     env_key = os.getenv(key_env, "") if key_env else ""
@@ -242,6 +248,7 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
         otherwise a mock-mode router.
     """
     validate_llm_settings(llm_settings)
+    isolated = get_current_tenant_id() != DEFAULT_TENANT_ID
     output_limit = llm_settings.get("max_tokens", 4096)
     providers: dict[str, ProviderConfig] = {}
     provider_cfg: dict[str, Any] = llm_settings.get("providers") or {}
@@ -249,17 +256,27 @@ def build_router_from_settings(llm_settings: dict[str, Any]) -> LiteLLMRouter:
     for name, cfg in provider_cfg.items():
         if not cfg.get("enabled", True):
             continue
-        api_key = _provider_api_key(name, cfg)
+        api_key = _provider_api_key(name, cfg, allow_environment=not isolated)
         if not api_key:
             continue  # No usable key — provider stays out of the chain
         models = [m for m in (cfg.get("models") or []) if m]
+        if isolated and not models:
+            continue
+        base_url = cfg.get("base_url") or None
+        if isolated:
+            if not base_url:
+                raise ValueError(
+                    "A tenant provider requires an explicit OpenAI-compatible endpoint"
+                )
+            base_url = approved_tenant_endpoint(base_url)
         providers[name] = ProviderConfig(
             provider=name,
-            api_key_env=_ENV_KEYS.get(name, f"{name.upper()}_API_KEY"),
+            api_key_env="" if isolated else _ENV_KEYS.get(name, f"{name.upper()}_API_KEY"),
             api_key=api_key,
-            base_url=cfg.get("base_url") or None,
+            base_url=base_url,
             models=models,
             rate_limit_rpm=cfg.get("rate_limit_rpm", settings.llm_rate_limit_rpm),
+            isolated=isolated,
         )
 
     available_models = [m for pc in providers.values() for m in pc.models]
@@ -316,11 +333,13 @@ def apply_llm_settings(llm_settings: dict[str, Any] | None = None) -> LiteLLMRou
 
 def current_llm_router() -> LiteLLMRouter | None:
     """Inspect without lazily creating a runtime instance."""
-    return _default_router
+    return _default_router if get_current_tenant_id() == DEFAULT_TENANT_ID else None
 
 
 def publish_llm_router(router: LiteLLMRouter) -> LiteLLMRouter:
     """Publish an already prepared router without I/O or rebuilding it."""
     global _default_router
+    if get_current_tenant_id() != DEFAULT_TENANT_ID:
+        raise RuntimeError("Cannot change the default router from another tenant")
     _default_router = router
     return router

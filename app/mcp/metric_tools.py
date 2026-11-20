@@ -5,10 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
-from fastapi.security import HTTPAuthorizationCredentials
 
-from app.api.auth import get_current_user
-from app.auth.access import require_operator
+from app.mcp.access import require_mcp_http_operator
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
@@ -25,12 +23,7 @@ async def require_metric_operator(trust_local: bool) -> None:
         raise HTTPException(
             status_code=401, detail="Local metric tools require explicit host trust"
         ) from None
-    parts = request.headers.get("authorization", "").split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Operator Bearer token required")
-    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=parts[1])
-    user = await get_current_user(credentials)
-    await require_operator(user, request)
+    await require_mcp_http_operator(request)
 
 
 def register_metric_tools(mcp: FastMCP, *, trust_local: bool = False) -> None:

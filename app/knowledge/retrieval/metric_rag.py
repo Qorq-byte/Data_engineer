@@ -46,6 +46,7 @@ from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_METRICS,
     LanceDBStore,
     metric_doc_to_record,
+    tenant_namespace,
 )
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
 
@@ -200,8 +201,9 @@ class MetricRAG:
         # Ensure both backends are connected and the namespace exists
         self._lancedb.connect()
         self._bm25.connect()
-        self._lancedb.ensure_namespace(self.NAMESPACE)
-        self._bm25.ensure_namespace(self.NAMESPACE)
+        namespace = tenant_namespace(self.NAMESPACE)
+        self._lancedb.ensure_namespace(namespace)
+        self._bm25.ensure_namespace(namespace)
 
     # ── Properties ─────────────────────────────────────────────────────
 
@@ -244,6 +246,7 @@ class MetricRAG:
         if not docs:
             return 0
 
+        namespace = tenant_namespace(self.NAMESPACE)
         # 1. Generate embeddings for all docs
         texts = [d.embedding_text for d in docs]
         emb_result = await self._embedding.embed(texts)
@@ -256,13 +259,13 @@ class MetricRAG:
         doc_ids_str = ", ".join(literal(d.doc_id) for d in docs)
         # table may be empty or filter syntax may fail — non-critical
         with contextlib.suppress(Exception):
-            self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
+            self._lancedb.delete(namespace, f"doc_id IN ({doc_ids_str})")
 
         lancedb_records = [
             metric_doc_to_record(doc, vec)
             for doc, vec in zip(docs, emb_result.vectors, strict=False)
         ]
-        self._lancedb.insert(self.NAMESPACE, lancedb_records)
+        self._lancedb.insert(namespace, lancedb_records)
 
         # 3. Insert into BM25 (keyword)
         bm25_docs: list[dict[str, Any]] = []
@@ -274,7 +277,7 @@ class MetricRAG:
                     "metadata": _extract_index_meta(doc),
                 }
             )
-        self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
+        self._bm25.index(namespace, bm25_docs, language=language)
 
         return len(docs)
 
@@ -312,17 +315,18 @@ class MetricRAG:
             List of :class:`MetricSearchResult`, sorted by RRF score (best first).
         """
         fusion = self._rrf  # Keep one configuration across embedding awaits.
+        namespace = tenant_namespace(self.NAMESPACE)
         # 1. Generate query embedding
-        query_vec = await self._embedding.embed_single(query)
+        query_vec = await self._embedding.embed_search_query(query)
 
         # 2. Dense search (LanceDB)
         filter_expr = f"domain = {literal(domain)}" if domain else None
         dense_raw = self._lancedb.search(
-            self.NAMESPACE,
+            namespace,
             query_vec,
             top_k=max(top_k * 2, 20),  # oversample for better fusion
             filter_expr=filter_expr,
-        )
+        ) if query_vec is not None else []
         # Normalise LanceDB distance → pseudo-score (lower distance = better)
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
@@ -336,7 +340,7 @@ class MetricRAG:
 
         # 3. Sparse search (BM25)
         sparse_raw = self._bm25.search(
-            self.NAMESPACE,
+            namespace,
             query,
             top_k=max(top_k * 2, 20),
             language=language,
@@ -367,15 +371,17 @@ class MetricRAG:
 
     def clear(self) -> None:
         """Remove all indexed metric documents from both backends."""
-        self._lancedb.drop_namespace(self.NAMESPACE)
-        self._lancedb.ensure_namespace(self.NAMESPACE)
-        self._bm25.clear(self.NAMESPACE)
+        namespace = tenant_namespace(self.NAMESPACE)
+        self._lancedb.drop_namespace(namespace)
+        self._lancedb.ensure_namespace(namespace)
+        self._bm25.clear(namespace)
 
     def stats(self) -> dict[str, int]:
         """Return document counts for both backends."""
+        namespace = tenant_namespace(self.NAMESPACE)
         return {
-            "lancedb_count": self._lancedb.count(self.NAMESPACE),
-            "bm25_count": self._bm25.count(self.NAMESPACE),
+            "lancedb_count": self._lancedb.count(namespace),
+            "bm25_count": self._bm25.count(namespace),
         }
 
     # ── Convenience: dimension helpers ─────────────────────────────────

@@ -17,6 +17,9 @@ type QueryErrorCode = Literal[
     "INVALID_REQUEST",
     "SESSION_CONFLICT",
     "SHARED_STATE_UNAVAILABLE",
+    "DOMAIN_CONFIG_UNAVAILABLE",
+    "LLM_CONFIG_UNAVAILABLE",
+    "LLM_MODEL_UNAVAILABLE",
 ]
 
 
@@ -53,6 +56,18 @@ class QueryPlanError(ValueError):
     """
 
 
+class QueryDomainUnavailableError(RuntimeError):
+    """The current tenant's domain configuration could not be read safely."""
+
+
+class QueryTenantLLMUnavailableError(RuntimeError):
+    """The current tenant has no usable persisted model configuration."""
+
+
+class QueryModelUnavailableError(ValueError):
+    """The requested model is unavailable in the tenant's configuration."""
+
+
 @dataclass(frozen=True)
 class QueryFailure:
     code: QueryErrorCode
@@ -84,6 +99,14 @@ def classify_query_failure(exc: Exception) -> QueryFailure:
         return QueryFailure("SESSION_CONFLICT", "Session changed; read before retrying", 409)
     if isinstance(exc, CoordinationUnavailableError | SessionStoreUnavailableError):
         return QueryFailure("SHARED_STATE_UNAVAILABLE", "Shared state unavailable", 503, 1)
+    if isinstance(exc, QueryDomainUnavailableError):
+        return QueryFailure("DOMAIN_CONFIG_UNAVAILABLE", "Domain configuration unavailable", 503, 1)
+    if isinstance(exc, QueryTenantLLMUnavailableError):
+        return QueryFailure("LLM_CONFIG_UNAVAILABLE", "Tenant model configuration unavailable", 503)
+    if isinstance(exc, QueryModelUnavailableError):
+        return QueryFailure(
+            "LLM_MODEL_UNAVAILABLE", "Requested model unavailable for this tenant", 422,
+        )
     if isinstance(exc, SessionCapacityError):
         return QueryFailure("QUERY_CAPACITY", "Shared session capacity reached", 503, 1)
     if isinstance(exc, TimeoutError):

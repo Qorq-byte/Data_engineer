@@ -17,10 +17,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
+from app.config.settings import settings
 from app.llm.settings_validation import validate_llm_settings
 from app.models.rag_settings import FusionWeights
 
 if TYPE_CHECKING:
+    from app.llm.router import LiteLLMRouter
     from app.storage.mysql_store import MySQLStore
 
 
@@ -55,6 +58,17 @@ logger = logging.getLogger(__name__)
 _settings_store: dict[str, Any] = {}
 _RAG_SETTINGS_TIMEOUT_SECONDS = 10.0
 _LLM_SETTINGS_TIMEOUT_SECONDS = 10.0
+_tenant_llm_runtimes: dict[int, tuple[dict[str, Any], LiteLLMRouter]] = {}
+
+
+def _tenant_llm_settings() -> bool:
+    return get_current_tenant_id() != DEFAULT_TENANT_ID
+
+
+def _llm_settings_gate() -> asyncio.Semaphore:
+    from app.db.runtime import gate
+
+    return gate(("llm-settings", get_current_tenant_id()))
 
 
 def _get_store() -> MySQLStore | None:
@@ -69,7 +83,7 @@ def _get_store() -> MySQLStore | None:
 
 async def _read_settings_snapshot() -> dict[str, Any]:
     """Read bulk settings without publishing partial or unvalidated state."""
-    snapshot = copy.deepcopy(_settings_store)
+    snapshot = {} if _tenant_llm_settings() else copy.deepcopy(_settings_store)
     store = _get_store()
     if store is not None:
         try:
@@ -223,9 +237,11 @@ async def get_all_settings() -> dict[str, Any]:
     """Get all system settings."""
     from app.db.runtime import gate
 
-    async with gate(("llm-settings",)), gate(("rag-settings",)):
+    async with _llm_settings_gate(), gate(("rag-settings",)):
         public = _public_settings(await _read_settings_snapshot())
         llm, _, llm_source = await _read_llm_configuration()
+        if _tenant_llm_settings():
+            _load_tenant_runtime(llm)
         rag, _, rag_source = await _load_rag_configuration()
         public["llm"] = _llm_public_view(llm, llm_source)
         public["harness"] = await get_harness_settings()
@@ -242,29 +258,26 @@ async def _read_llm_configuration() -> tuple[dict[str, Any], MySQLStore | None, 
     source = "memory"
     try:
         raw = None
-        if store is not None:
+        scoped = _tenant_llm_settings()
+        if scoped and settings.shared_worker_release:
+            from app.harness.shared_query_runtime import current_tenant_release_snapshot
+
+            snapshot = current_tenant_release_snapshot()
+            if snapshot is None:
+                raise RuntimeError("Tenant release settings unavailable")
+            raw = snapshot.settings.get("llm")
+        elif store is not None:
             raw = await asyncio.wait_for(store.get_setting("llm"), _LLM_SETTINGS_TIMEOUT_SECONDS)
-            if raw is not None:
-                source = "database"
+        elif scoped:
+            raise RuntimeError("Tenant settings store required")
+        if raw is not None:
+            source = "database"
         if raw is None:
-            raw = _settings_store.get("llm", _DEFAULT_SETTINGS["llm"])
-        validate_llm_settings(raw)
-        config = copy.deepcopy(_DEFAULT_SETTINGS["llm"])
-        config.update(copy.deepcopy(raw))
-        if "providers" in raw:
-            config["providers"] = {}
-            for name, value in raw["providers"].items():
-                config["providers"][name] = {
-                    "enabled": True,
-                    "models": [],
-                    "api_key_configured": False,
-                    "api_key_enc": "",
-                    "base_url": None,
-                    **copy.deepcopy(value),
-                }
-                if config["providers"][name]["models"] is None:
-                    config["providers"][name]["models"] = []
-        return config, store, source
+            if scoped:
+                raw, source = {}, "unconfigured"
+            else:
+                raw = _settings_store.get("llm", _DEFAULT_SETTINGS["llm"])
+        return _normalize_llm_configuration(raw), store, source
     except Exception:
         raise HTTPException(
             status_code=503,
@@ -275,10 +288,70 @@ async def _read_llm_configuration() -> tuple[dict[str, Any], MySQLStore | None, 
         ) from None
 
 
-def _llm_public_view(config: dict[str, Any], source: str) -> dict[str, Any]:
+def _normalize_llm_configuration(raw: dict[str, Any]) -> dict[str, Any]:
+    validate_llm_settings(raw)
+    config: dict[str, Any] = copy.deepcopy(_DEFAULT_SETTINGS["llm"])
+    if _tenant_llm_settings():
+        config.update(default_model="", providers={})
+    config.update(copy.deepcopy(raw))
+    if "providers" in raw:
+        config["providers"] = {
+            name: {
+                "enabled": True, "api_key_configured": False, "api_key_enc": "", "base_url": None,
+                **copy.deepcopy(value), "models": list(value.get("models") or []),
+            }
+            for name, value in raw["providers"].items()
+        }
+    return config
+
+
+def _load_tenant_runtime(config: dict[str, Any]) -> LiteLLMRouter:
+    from app.llm.factory import build_router_from_settings
+
+    tenant_id = get_current_tenant_id()
+    existing = _tenant_llm_runtimes.get(tenant_id)
+    if existing is not None and existing[0] == config:
+        return existing[1]
+    try:
+        prepared = build_router_from_settings(config)
+    except Exception:
+        raise HTTPException(status_code=503, detail={
+            "code": "LLM_SETTINGS_READ_FAILED", "message": "LLM configuration unavailable.",
+        }) from None
+    _tenant_llm_runtimes[tenant_id] = (config, prepared)
+    return prepared
+
+
+def _current_settings_router() -> LiteLLMRouter | None:
     from app.llm.factory import current_llm_router
 
-    current = current_llm_router()
+    if _tenant_llm_settings():
+        state = _tenant_llm_runtimes.get(get_current_tenant_id())
+        return state[1] if state is not None and state[1].config.providers else None
+    return current_llm_router()
+
+
+async def resolve_tenant_query_router(model: str | None) -> LiteLLMRouter:
+    """Resolve a persisted tenant snapshot without consulting the default router."""
+    from app.workflow.contracts import QueryModelUnavailableError, QueryTenantLLMUnavailableError
+
+    async with _llm_settings_gate():
+        try:
+            config, _, _ = await _read_llm_configuration()
+            runtime = _load_tenant_runtime(config)
+        except HTTPException:
+            raise QueryTenantLLMUnavailableError() from None
+    if not runtime.config.providers:
+        raise QueryTenantLLMUnavailableError()
+    if model and not any(
+        model in provider.models for provider in runtime.config.providers.values()
+    ):
+        raise QueryModelUnavailableError()
+    return runtime
+
+
+def _llm_public_view(config: dict[str, Any], source: str) -> dict[str, Any]:
+    current = _current_settings_router()
     return {
         "status": "ok",
         "configuration_source": source,
@@ -396,21 +469,68 @@ async def _commit_llm_configuration(
     }
 
 
+async def _edit_tenant_llm_configuration(
+    change: Callable[[dict[str, Any]], dict[str, Any]], *, status: str = "updated",
+) -> dict[str, Any]:
+    from app.llm.factory import build_router_from_settings
+
+    def prepare(raw: Any) -> tuple[dict[str, Any], LiteLLMRouter]:
+        try:
+            current = _normalize_llm_configuration(raw)
+        except Exception:
+            raise HTTPException(
+                status_code=503, detail={"code": "LLM_SETTINGS_READ_FAILED"},
+            ) from None
+        try:
+            candidate = change(current)
+            return candidate, build_router_from_settings(candidate)
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=400, detail={
+                "code": "LLM_SETTINGS_PREPARE_FAILED",
+                "message": "Unable to prepare LLM configuration.",
+            }) from None
+
+    store = _get_store()
+    if store is None:
+        raise HTTPException(status_code=503, detail={"code": "LLM_SETTINGS_READ_FAILED"})
+    try:
+        config, runtime = await asyncio.wait_for(
+            store.edit_setting("llm", prepare), _LLM_SETTINGS_TIMEOUT_SECONDS,
+        )
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail={
+            "code": "LLM_SETTINGS_PERSIST_FAILED",
+            "message": "Write result unconfirmed; read before retrying.",
+            "persistence": "unconfirmed", "runtime_applied": False,
+        }) from None
+    _tenant_llm_runtimes[get_current_tenant_id()] = (config, runtime)
+    return {
+        **_llm_public_view(config, "database"), "status": status,
+        "persistence": "persisted", "runtime_applied": True,
+        "active_model": runtime.config.default_model, "mock_mode": runtime.mock_mode,
+    }
+
+
 @router.get("/settings/llm")
 async def get_llm_settings() -> dict[str, Any]:
-    from app.db.runtime import gate
-
-    async with gate(("llm-settings",)):
+    async with _llm_settings_gate():
         config, _, source = await _read_llm_configuration()
-        _settings_store["llm"] = config
+        if _tenant_llm_settings():
+            _load_tenant_runtime(config)
+        else:
+            _settings_store["llm"] = config
         return _llm_public_view(config, source)
 
 
 @router.put("/settings/llm")
 async def update_llm_settings(body: LLMSettingsUpdate) -> dict[str, Any]:
-    from app.db.runtime import gate
-
-    async with gate(("llm-settings",)):
+    async with _llm_settings_gate():
+        if _tenant_llm_settings():
+            return await _edit_tenant_llm_configuration(lambda config: _llm_candidate(body, config))
         current, store, _ = await _read_llm_configuration()
         try:
             config = _llm_candidate(body, current)
@@ -613,44 +733,45 @@ async def get_available_models() -> dict[str, Any]:
     A model is ``available`` when its provider is enabled and either has a
     configured API key or the router is running in mock mode.
     """
-    await get_llm_settings()
-    try:
-        from app.llm.factory import current_llm_router
-
-        current = current_llm_router()
-        mock_mode = current.mock_mode if current is not None else False
-    except Exception:
-        mock_mode = False
+    config = await get_llm_settings()
+    current = _current_settings_router()
+    mock_mode = current.mock_mode if current is not None else False
+    scoped = _tenant_llm_settings()
 
     models = []
-    for provider_name, cfg in _settings_store["llm"]["providers"].items():
+    for provider_name, cfg in config["providers"].items():
         if not cfg["enabled"]:
             continue
-        has_key = bool(cfg.get("api_key_configured")) or _env_key_available(provider_name)
+        has_key = (
+            current is not None and provider_name in current.config.providers
+            if scoped else bool(cfg.get("api_key_configured")) or _env_key_available(provider_name)
+        )
         for model in cfg["models"]:
             models.append(
                 {
                     "model": model,
                     "provider": provider_name,
                     "api_key_configured": has_key,
-                    "available": has_key or mock_mode,
+                    "available": has_key or (mock_mode and not scoped),
                 }
             )
     return {
         "status": "ok",
         "models": models,
         "total": len(models),
-        "default": _settings_store["llm"]["default_model"],
+        "default": config["default_model"],
     }
 
 
 async def reload_llm_router_from_db() -> None:
     """Restore under the same gate as writes; failures must reach startup readiness."""
-    from app.db.runtime import gate
     from app.llm.factory import build_router_from_settings, publish_llm_router
 
-    async with gate(("llm-settings",)):
+    async with _llm_settings_gate():
         config, _, _ = await _read_llm_configuration()
+        if _tenant_llm_settings():
+            _load_tenant_runtime(config)
+            return
         try:
             prepared = build_router_from_settings(config)
         except Exception:
@@ -682,17 +803,19 @@ def _env_key_available(provider_name: str) -> bool:
 
 @router.delete("/settings/llm/providers/{provider_name}")
 async def delete_llm_provider(provider_name: str) -> dict[str, Any]:
-    from app.db.runtime import gate
-
-    async with gate(("llm-settings",)):
-        config, store, _ = await _read_llm_configuration()
-        provider_name = provider_name.strip().lower()
+    provider_name = provider_name.strip().lower()
+    def remove(config: dict[str, Any]) -> dict[str, Any]:
         if provider_name not in config["providers"]:
             raise HTTPException(status_code=404, detail="Provider not found")
         if provider_name in {"openai", "anthropic", "deepseek", "google"}:
             raise HTTPException(status_code=400, detail="Built-in providers cannot be deleted")
         del config["providers"][provider_name]
-        return {
-            **await _commit_llm_configuration(config, store, "deleted"),
-            "provider": provider_name,
-        }
+        return config
+
+    async with _llm_settings_gate():
+        if _tenant_llm_settings():
+            result = await _edit_tenant_llm_configuration(remove, status="deleted")
+        else:
+            config, store, _ = await _read_llm_configuration()
+            result = await _commit_llm_configuration(remove(config), store, "deleted")
+    return {**result, "provider": provider_name}

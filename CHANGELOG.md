@@ -10,6 +10,12 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Added
 
+- Tenant-scoped account authorization, query targets, sessions, retrieval, domain catalogs and
+  model routing, plus a workbench that loads capabilities from the verified account.
+- Encrypted v2 immutable worker releases with tenant-scoped target restoration, fixed settings
+  and domain snapshots, and drift rejection. MySQL acceptance covers restart and MCP HTTP.
+- A reproducible synthetic baseline for retrieval, SQL contracts and bounded query load.
+
 - Deterministic `metric_query` with explicit versioned server catalogs, scoped discovery,
   and authenticated MCP metric tools. Fixed YAML resolution, validation and optional read-only
   execution use no model calls. Immutable shared workers seal catalog paths, versions and hashes.

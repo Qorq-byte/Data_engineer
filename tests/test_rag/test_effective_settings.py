@@ -415,14 +415,16 @@ async def test_default_documents_are_not_aliased_by_edits(active):
     assert before == api_settings._DEFAULT_SETTINGS
 
 
-def test_rag_configuration_keeps_existing_administrator_boundary():
+def test_rag_configuration_keeps_existing_administrator_boundary(auth_token_states):
     from fastapi.testclient import TestClient
 
     from app.auth.security import create_access_token
 
     client = TestClient(create_app())
     assert client.get("/api/v1/settings/rag").status_code == 401
-    token = create_access_token(900000, "synthetic-unprivileged")
+    user_id = 900000
+    auth_token_states[user_id] = (1, 0)
+    token = create_access_token(user_id, "synthetic-unprivileged")
     headers = {"Authorization": f"Bearer {token}"}
     assert client.get("/api/v1/settings/rag", headers=headers).status_code == 403
     assert (

@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import socket
 
+import httpx
 import pytest
+import uvicorn
+from fastmcp import Client
+from fastmcp.client.transports import SSETransport
+
+from app.auth.security import create_access_token
+from app.config.settings import settings
+from tests.test_mcp.test_metric_tools import http_exchange
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Server creation
@@ -166,6 +176,126 @@ async def connected_mcp_server(test_sqlite_db, monkeypatch):
     )
     yield create_nl2sql_server()
     ConnectionFactory.close("mcp-test")
+
+
+@pytest.mark.parametrize("user, tenant, status", [
+    (None, 1, 401), (99999, 1, 403), (1, 2, 401), (3, 2, 403),
+])
+async def test_http_guards_ordinary_tools_and_resources(
+    connected_mcp_server, monkeypatch, user, tenant, status,
+):
+    monkeypatch.setattr(settings, "admin_user_ids", [1, 3])
+    token = create_access_token(user, "fixture", tenant) if user is not None else None
+    sql = {"sql": "SELECT id FROM orders", "db_id": "mcp-test"}
+    calls = [
+        ("nl_query", {"nl_text": "list orders", "db_id": "mcp-test"}),
+        ("explain_sql", sql),
+        ("validate_sql", sql),
+        ("search_schema", {"keywords": ["orders"], "db_id": "mcp-test"}),
+        ("translate_sql", {"sql": "SELECT 1", "target_dialect": "postgresql"}),
+    ]
+    resources = ["schema/mcp-test", "domains/", "nodes/", "workflows/"]
+    messages = [("tools/call", {"name": name, "arguments": args}) for name, args in calls]
+    messages.extend(("resources/read", {"uri": f"nlsql://{uri}"}) for uri in resources)
+    for method, params in messages:
+        result = await http_exchange(connected_mcp_server, method, params, token)
+        assert result.status_code == status and set(result.json()) == {"detail"}
+        if status == 401:
+            assert result.headers["www-authenticate"] == "Bearer"
+        if token:
+            assert token not in result.text
+
+
+async def test_authenticated_http_query_and_schema(connected_mcp_server, monkeypatch):
+    from app.api import query
+    from app.llm.router import LiteLLMRouter, RouterConfig
+
+    class ScriptedRouter(LiteLLMRouter):
+        async def complete(self, messages, **kwargs):
+            return {
+                "choices": [{"message": {"content": "SELECT id FROM orders ORDER BY id"}}],
+                "model": "scripted-test-model",
+            }
+
+    monkeypatch.setattr(settings, "admin_user_ids", [1])
+    router = ScriptedRouter(RouterConfig(), mock_mode=True)
+    monkeypatch.setattr(query, "get_default_router", lambda: router)
+    token = create_access_token(1, "fixture")
+    result = await http_exchange(connected_mcp_server, "tools/call", {
+        "name": "nl_query", "arguments": {"nl_text": "list orders", "db_id": "mcp-test"},
+    }, token)
+    assert result.status_code == 200
+    assert result.json()["result"]["structuredContent"]["rows"] == [[1], [2], [3], [4], [5]]
+
+    result = await http_exchange(
+        connected_mcp_server, "resources/read", {"uri": "nlsql://schema/mcp-test"}, token
+    )
+    assert result.status_code == 200
+    schema = json.loads(result.json()["result"]["contents"][0]["text"])
+    assert "orders" in schema["tables"]
+
+
+async def test_streamable_http_session_id_does_not_replace_jwt(connected_mcp_server, monkeypatch):
+    monkeypatch.setattr(settings, "admin_user_ids", [1])
+    app = connected_mcp_server.http_app(path="/mcp", stateless_http=False, json_response=True)
+    async with app.router.lifespan_context(app), httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://localhost",
+        headers={"Accept": "application/json, text/event-stream"},
+    ) as client:
+        token = create_access_token(1, "fixture")
+        opened = await client.post("/mcp", headers={"Authorization": f"Bearer {token}"}, json={
+            "jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+                "protocolVersion": "2025-06-18", "capabilities": {},
+                "clientInfo": {"name": "fixture", "version": "1"},
+            },
+        })
+        assert opened.status_code == 200
+        headers = {"Mcp-Session-Id": opened.headers["mcp-session-id"]}
+        assert (await client.get("/mcp", headers=headers)).status_code == 401
+        assert (await client.delete("/mcp", headers=headers)).status_code == 401
+        replay = await client.post("/mcp", headers=headers, json={
+            "jsonrpc": "2.0", "id": 2, "method": "resources/read",
+            "params": {"uri": "nlsql://schema/mcp-test"},
+        })
+        assert replay.status_code == 401
+        assert set(replay.json()) == {"detail"}
+
+
+async def test_sse_requires_operator_for_stream_and_messages(connected_mcp_server, monkeypatch):
+    monkeypatch.setattr(settings, "admin_user_ids", [1, 3])
+    app = connected_mcp_server.http_app(transport="sse", path="/sse")
+    server = uvicorn.Server(uvicorn.Config(app, log_level="error", lifespan="on"))
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen()
+        url = f"http://127.0.0.1:{listener.getsockname()[1]}"
+        running = asyncio.create_task(server.serve(sockets=[listener]))
+        try:
+            async with asyncio.timeout(10):
+                while not server.started:
+                    if running.done():
+                        await running
+                        pytest.fail("SSE test host exited without starting")
+                    await asyncio.sleep(0.01)
+            async with httpx.AsyncClient(base_url=url, timeout=5) as http:
+                assert (await http.get("/sse")).status_code == 401
+                denied = {"Authorization": f"Bearer {create_access_token(3, 'fixture', 2)}"}
+                assert (await http.get("/sse", headers=denied)).status_code == 403
+                assert (await http.post("/messages/", json={})).status_code == 401
+                assert (await http.post("/messages/", headers=denied, json={})).status_code == 403
+            headers = {"Authorization": f"Bearer {create_access_token(1, 'fixture')}"}
+            async with Client(SSETransport(url + "/sse", headers=headers), timeout=5) as client:
+                result = await client.call_tool(
+                    "search_schema", {"keywords": ["orders"], "db_id": "mcp-test"}
+                )
+                assert result.structured_content["tables"] == [
+                    {"table": "orders", "match_type": "name"}
+                ]
+                schema = await client.read_resource("nlsql://schema/mcp-test")
+                assert "orders" in json.loads(schema[0].text)["tables"]
+        finally:
+            server.should_exit = True
+            await asyncio.wait_for(running, timeout=10)
 
 
 class TestToolExecution:

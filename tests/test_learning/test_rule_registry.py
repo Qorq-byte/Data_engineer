@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.auth.tenant import reset_current_tenant_id, set_current_tenant_id
 from app.learning.rule_registry import LearnedRuleRegistry, LearnedRuleStore, RuleRow
 
 
@@ -120,3 +121,32 @@ def test_upsert_is_idempotent(tmp_path):
     store.upsert(rule)
 
     assert len(store.list_rules()) == 1
+
+
+def test_rule_review_and_cache_stay_in_the_current_tenant(tmp_path):
+    path = tmp_path / "rules.db"
+    original = LearnedRuleRegistry(LearnedRuleStore(path))
+    _approve(original, description="original rule", domain="sales")
+    original.store.close()
+
+    registry = LearnedRuleRegistry(LearnedRuleStore(path))
+    try:
+        assert [rule.description for rule in registry.approved_rules("sales")] == ["original rule"]
+        token = set_current_tenant_id(2)
+        try:
+            assert registry.approved_rules("sales") == []
+            assert registry.store.get("cr_1") is None
+            _approve(registry, description="tenant two rule", domain="sales")
+            assert [rule.description for rule in registry.approved_rules("sales")] == [
+                "tenant two rule"
+            ]
+            assert registry.store.set_status("cr_1", "rejected")
+            registry.reset_cache()
+            assert registry.approved_rules("sales") == []
+        finally:
+            reset_current_tenant_id(token)
+        assert [rule.description for rule in registry.approved_rules("sales")] == ["original rule"]
+        assert registry.store.get("cr_1").status == "approved"
+        assert path.is_file() and (tmp_path / "rules.tenant-2.db").is_file()
+    finally:
+        registry.store.close()

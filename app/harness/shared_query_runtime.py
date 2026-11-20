@@ -2,8 +2,11 @@
 
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Any
 from uuid import uuid4
 
+from app.auth.tenant import get_current_tenant_id
 from app.harness.mysql_coordination import (
     CoordinationBusyError,
     CoordinationUnavailableError,
@@ -13,6 +16,12 @@ from app.harness.mysql_rate_limit import MySQLProviderRateLimit
 from app.harness.worker_release import WorkerRelease
 from app.storage.shared_sessions import MySQLSessionStore
 from app.workflow.contracts import QueryCapacityError
+
+
+@dataclass(frozen=True)
+class TenantReleaseSnapshot:
+    settings: dict[str, Any]
+    domains: dict[str, dict[str, Any]]
 
 
 class SharedQueryRuntime:
@@ -26,6 +35,7 @@ class SharedQueryRuntime:
         self.verify_configuration: Callable[[], Awaitable[None]] | None = None
         self.model_coordinator: MySQLCoordinator | None = None
         self.worker_release: WorkerRelease | None = None
+        self.tenant_snapshots: dict[int, TenantReleaseSnapshot] = {}
 
     async def initialize(self) -> None:
         self.ready = False
@@ -45,6 +55,13 @@ def current_shared_runtime() -> SharedQueryRuntime | None:
 def publish_shared_runtime(runtime: SharedQueryRuntime | None) -> None:
     global _runtime
     _runtime = runtime
+
+
+def current_tenant_release_snapshot() -> TenantReleaseSnapshot | None:
+    runtime = current_shared_runtime()
+    if runtime is None or not runtime.ready:
+        return None
+    return runtime.tenant_snapshots.get(get_current_tenant_id())
 
 
 @asynccontextmanager

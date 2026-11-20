@@ -1,0 +1,86 @@
+{
+  "date": "2026-11-18",
+  "scope": "Independent MCP stdio and loopback HTTP transport acceptance",
+  "python": "3.12.13",
+  "interpreter": ".stage62/.venv/Scripts/python.exe",
+  "source_sha256": {
+    "app/mcp/metric_tools.py": "7617015cae41faf5f9c646fe4e2e9b6a4f17609bbc2e0eb6b4faaec8d5230dd0",
+    "app/mcp/query_projection.py": "73f8764d80d8bc33b961629f40f03f997b1ab57bd05166152fa6b482fb9c9691",
+    "app/mcp/fastmcp_server.py": "6da5257de177f7167410dcb1a90061ffdb55eba765b7a978f00202402d028035",
+    "app/workflow/metric_runtime.py": "c9582ad65475cbcce229afe5e220ac12994a2ac448b4e3899d2b2191a2800992",
+    "app/harness/metric_catalog_runtime.py": "74f66d8e0ad88ca977fe8abdacc1e4e0877a24f0e4fdcefbc34064338727d8de",
+    "tests/fixtures/metric_stdio_worker.py": "1e6b73b21259746f8b9529bc58e21555572dc138bc877a0767dcfe188bf7a834",
+    "tests/fixtures/shared_query_worker.py": "97b66df33d181a0b01365e019ebf18da94db5de385fd96a0e8e091fcc35420b5",
+    "tests/test_mcp/test_metric_stdio.py": "09bf0be628d8a9a92ab58995ba7a8eb09b8ce9b65f5a44f5c4dee85a9f8f378d",
+    "tests/test_mcp/test_query_projection.py": "3b5e0fe1166dc9afcdbb73106ed25d1a915ae6711da3be15429f87c20a59ea51",
+    "tests/test_mcp/test_metric_tools.py": "02f0c6ce9157c6f21a82e5143da85ed430a6c3676b39c06ce7bd08693fa8bbdd",
+    "tests/real_db/test_metric_mcp_network.py": "1beda3e81fa2b283ed93415a9d44e3de26650aca5959610b887bbd8213e7173c",
+    "tests/real_db/test_shared_query_runtime.py": "5e83749e881137b2f7c8a0a74047ada71867f5bdd2bba0c795b0004645ae5af0",
+    "docs/optimization/metric-mcp-transports.md": "ec15258679e700e91e791e41c2f4b252f561b8903794abd5161dbe50c74e13f6",
+    "docs/support-matrix.md": "625c316495b0621b7336cf9153d3d87d74078d98fe34fb4817015eddb93bf9df",
+    "README.md": "fb13833d7edc2574f21317413174a3ac0e172d0106a93f16bb32be88a54c22dd",
+    "README.zh-CN.md": "082c10f582e47b59f4d57d4d75613e5bb779952154cf0355ceaef8e836f86135",
+    "README.zh-TW.md": "d612dfd9d560b9fed87c3b151d07cd9b3eb61d21e511ac50b09bfff5e7239259",
+    "README.ja.md": "2e524a52cb6fdc8895243cd1011651a8470ff61f73d0b8ddfa8bb3732fb461cc"
+  },
+  "local_mcp_suite": {
+    "passed": 210,
+    "failed": 0,
+    "errors": 0,
+    "seconds": 99.896,
+    "junit_sha256": "3a6b21fcc4a832b104b656c270441870eca9f908e7654834b08c5c9297d6fc91"
+  },
+  "stdio_suite": {
+    "passed": 3,
+    "failed": 0,
+    "errors": 0,
+    "seconds": 79.205,
+    "junit_sha256": "644b73adbdd40674b29717bff6f1f89eaabdc6980f8f8475b20f8fa8f3025c9f",
+    "processes": 3,
+    "cold_start_timeout_seconds": 45
+  },
+  "real_http_suite": {
+    "passed": 3,
+    "failed": 0,
+    "deselected": 149,
+    "junit_sha256": "e4d58e3a121f4b55a21e2c13047275346bc61699e9b3a052bd694f8811e24767",
+    "seconds": 192.32,
+    "server_versions": {
+      "server_mysql": "8.4.13"
+    },
+    "serving_workers": 2,
+    "owned_containers_removed": 2,
+    "images": {
+      "postgresql": "sha256:9e2cf6287f25c3151f4c9421ccce2b17f3e60061c111a29165e0d2cdd9ff0a97",
+      "mysql": "sha256:76f0358884cb92d9a086d24e5671c38048d3fef40f2588703d73eb55392d6b69"
+    }
+  },
+  "quality_gates": {
+    "ruff": "passed",
+    "mypy": "passed (215 app files)",
+    "dependencies": {
+      "checked": 33,
+      "errors": []
+    },
+    "readmes": "passed",
+    "full_local": {
+      "passed": 4777,
+      "skipped": 1,
+      "deselected": 152,
+      "seconds": 457.83
+    }
+  },
+  "verified": [
+    "Independent stdio SDK process exposes metric tools; default local trust returns 401.",
+    "Explicit local trust permits discovery, validation-only and read-only execution with zero model calls.",
+    "A catalog version change rejects the old request and does not create a trace or execute SQL.",
+    "Independent HTTP SDK clients receive 401 for missing/malformed/expired and 403 for non-operator JWTs.",
+    "Two MySQL workers match REST results, share sessions, recover after replacement, and reject catalog/control-plane drift.",
+    "HTTP-wrapped shared-state failures preserve SHARED_STATE_UNAVAILABLE, status 503 and one-second retry without private details."
+  ],
+  "limitations": [
+    "Loopback HTTP and stdio only; no TLS, proxy, OAuth, external MCP host or production network test.",
+    "Synthetic SQLite/MySQL data, no business catalog sign-off or accuracy/recall/capacity baseline.",
+    "No tenant isolation, cross-table/time-grain metric semantics, Snowflake credentials or cloud acceptance."
+  ]
+}

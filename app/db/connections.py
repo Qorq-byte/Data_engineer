@@ -10,6 +10,10 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
+from app.auth.tenant import get_current_tenant_id
+
+type ConnectionKey = tuple[int, str]
+
 
 class DatabaseType(StrEnum):
     """Supported database types (11 total)."""
@@ -47,8 +51,8 @@ class ConnectionFactory:
     """
 
     # Registry of active connections
-    _connections: dict[str, Any] = {}
-    _infos: dict[str, ConnectionInfo] = {}
+    _connections: dict[ConnectionKey, Any] = {}
+    _infos: dict[ConnectionKey, ConnectionInfo] = {}
     _offload_connections: dict[int, Any] = {}
     _mysql_pools: dict[int, Any] = {}  # Track MySQL connection pools for proper cleanup
 
@@ -56,17 +60,20 @@ class ConnectionFactory:
     async def create(cls, db_type: DatabaseType, config: dict[str, Any], db_id: str = "") -> Any:
         from app.db.runtime import gate
 
-        async with gate(("connect", db_id)):
-            return await cls._create(db_type, config, db_id)
+        key = (get_current_tenant_id(), db_id)
+        async with gate(("connect", key)):
+            return await cls._create(db_type, config, key)
 
     @classmethod
-    async def _create(cls, db_type: DatabaseType, config: dict[str, Any], db_id: str = "") -> Any:
+    async def _create(
+        cls, db_type: DatabaseType, config: dict[str, Any], key: ConnectionKey,
+    ) -> Any:
         """Create a new database connection.
 
         Args:
             db_type: The database type enum.
             config: Connection config dict (keys vary by db_type).
-            db_id: Unique identifier for this connection.
+            key: Tenant and connection identifier. An empty ID leaves the handle unregistered.
 
         Returns:
             A native connection object (duckdb.DuckDBPyConnection,
@@ -76,11 +83,19 @@ class ConnectionFactory:
             ValueError: If db_type is unsupported.
             ConnectionError: If connection fails.
         """
+        _, db_id = key
         conn = await cls._connect(db_type, config)
         try:
             if db_id:
-                if db_id in cls._connections:
-                    await cls.aclose(db_id)
+                info = ConnectionInfo(
+                    db_id=db_id,
+                    db_type=db_type,
+                    alias=config.get("alias", db_id),
+                    host=config.get("host") or config.get("account", ""),
+                    port=config.get("port", 443 if db_type == DatabaseType.SNOWFLAKE else 0),
+                    database_name=config.get("database", config.get("path", "")),
+                )
+                await cls._aclose(key)
                 if (
                     db_type == DatabaseType.SNOWFLAKE
                     or (
@@ -89,23 +104,12 @@ class ConnectionFactory:
                     )
                 ):
                     cls._offload_connections[id(conn)] = conn
-                cls._connections[db_id] = conn
-                cls._infos[db_id] = ConnectionInfo(
-                    db_id=db_id,
-                    db_type=db_type,
-                    alias=config.get("alias", db_id),
-                    host=config.get("host") or config.get("account", ""),
-                    port=config.get("port", 443 if db_type == DatabaseType.SNOWFLAKE else 0),
-                    database_name=config.get("database", config.get("path", "")),
-                )
+                cls._connections[key] = conn
+                cls._infos[key] = info
             return conn
         except BaseException:
             # A replacement may be waiting for the old handle's lease. Its newly
             # connected candidate must not leak when that wait is cancelled.
-            if db_id and cls._connections.get(db_id) is conn:
-                cls._connections.pop(db_id, None)
-                cls._infos.pop(db_id, None)
-                cls._offload_connections.pop(id(conn), None)
             await cls._close_handle(conn)
             raise
 
@@ -212,7 +216,7 @@ class ConnectionFactory:
     @classmethod
     def get(cls, db_id: str) -> Any:
         """Get an active connection by ID."""
-        conn = cls._connections.get(db_id)
+        conn = cls._connections.get((get_current_tenant_id(), db_id))
         if conn is None:
             raise KeyError(f"No connection found for db_id='{db_id}'")
         return conn
@@ -220,7 +224,7 @@ class ConnectionFactory:
     @classmethod
     def get_info(cls, db_id: str) -> ConnectionInfo:
         """Get connection metadata."""
-        info = cls._infos.get(db_id)
+        info = cls._infos.get((get_current_tenant_id(), db_id))
         if info is None:
             raise KeyError(f"No connection info found for db_id='{db_id}'")
         return info
@@ -228,12 +232,13 @@ class ConnectionFactory:
     @classmethod
     def is_current(cls, db_id: str, connection: object) -> bool:
         """Compare identity without reconnecting or handing out a replacement."""
-        return cls._connections.get(db_id) is connection
+        return cls._connections.get((get_current_tenant_id(), db_id)) is connection
 
     @classmethod
     def list_all(cls) -> list[ConnectionInfo]:
-        """List all active connections."""
-        return list(cls._infos.values())
+        """List active connections in the current tenant."""
+        tenant_id = get_current_tenant_id()
+        return [info for (owner, _), info in cls._infos.items() if owner == tenant_id]
 
     @classmethod
     def describe_capabilities(cls) -> dict[str, Any]:
@@ -257,9 +262,8 @@ class ConnectionFactory:
             ),
         }
         counts = dict.fromkeys(DatabaseType, 0)
-        for db_id in list(cls._connections):
-            info = cls._infos.get(db_id)
-            if info is not None and info.db_type in counts:
+        for info in cls.list_all():
+            if info.db_type in counts:
                 counts[info.db_type] += 1
         connectors = []
         for db_type in DatabaseType:
@@ -289,18 +293,26 @@ class ConnectionFactory:
 
     @classmethod
     async def aclose(cls, db_id: str) -> None:
-        """Wait for users of a connection, then release native/async resources."""
+        """Wait for users of a current-tenant connection, then release it."""
+        from app.db.runtime import gate
+
+        key = (get_current_tenant_id(), db_id)
+        async with gate(("connect", key)):
+            await cls._aclose(key)
+
+    @classmethod
+    async def _aclose(cls, key: ConnectionKey) -> None:
         from app.db.runtime import lease
         from app.db.schema_extractor import SchemaExtractor
 
-        conn = cls._connections.get(db_id)
+        conn = cls._connections.get(key)
         if conn is None:
             return
         async with lease(conn):
-            if cls._connections.get(db_id) is not conn:
+            if cls._connections.get(key) is not conn:
                 return
-            cls._connections.pop(db_id, None)
-            cls._infos.pop(db_id, None)
+            cls._connections.pop(key, None)
+            cls._infos.pop(key, None)
             cls._offload_connections.pop(id(conn), None)
             SchemaExtractor.invalidate(conn)
             await cls._close_handle(conn)
@@ -332,20 +344,25 @@ class ConnectionFactory:
 
     @classmethod
     async def aclose_all(cls) -> None:
-        for db_id in list(cls._connections):
-            await cls.aclose(db_id)
+        """Release all tenants' connections at process shutdown."""
+        for key in list(cls._connections):
+            await cls._aclose(key)
 
     @classmethod
     def close(cls, db_id: str) -> None:
         """Legacy sync adapter; async applications must await aclose()."""
-        conn = cls._connections.get(db_id)
+        cls._close((get_current_tenant_id(), db_id))
+
+    @classmethod
+    def _close(cls, key: ConnectionKey) -> None:
+        conn = cls._connections.get(key)
         if conn is None:
             return
         if id(conn) not in cls._mysql_pools and not inspect.iscoroutinefunction(conn.close):
             from app.db.schema_extractor import SchemaExtractor
 
-            cls._connections.pop(db_id, None)
-            cls._infos.pop(db_id, None)
+            cls._connections.pop(key, None)
+            cls._infos.pop(key, None)
             cls._offload_connections.pop(id(conn), None)
             SchemaExtractor.invalidate(conn)
             conn.close()
@@ -353,12 +370,12 @@ class ConnectionFactory:
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
-            asyncio.run(cls.aclose(db_id))
+            asyncio.run(cls._aclose(key))
         else:
-            loop.create_task(cls.aclose(db_id))
+            loop.create_task(cls._aclose(key))
 
     @classmethod
     def close_all(cls) -> None:
         """Legacy adapter; use await aclose_all() during application shutdown."""
-        for db_id in list(cls._connections):
-            cls.close(db_id)
+        for key in list(cls._connections):
+            cls._close(key)

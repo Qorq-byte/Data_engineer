@@ -12,7 +12,7 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from app.auth.security import create_access_token
+from app.auth.security import create_access_token, hash_password
 from app.config.settings import settings
 from app.security.crypto import encrypt_secret
 from app.storage.mysql_store import MySQLStore
@@ -28,6 +28,35 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class ServingProcesses(list):
     """Fixture list with an explicit fresh-process launcher for restart tests."""
+
+
+def worker_environment(code_root=ROOT):
+    environment = {
+        key: value for key, value in os.environ.items()
+        if key.upper() in {
+            "PATH", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "HOME", "USERPROFILE",
+            "USERNAME", "USER", "LOGNAME", "LNAME",
+        }
+    }
+    return dict(environment, PYTHONPATH=str(code_root), PYTHONUTF8="1")
+
+
+async def launch_worker(directory, *, environment, port, database, children):
+    directory.mkdir()
+    with (directory / "stderr.txt").open("wb") as stderr:
+        process = await asyncio.create_subprocess_exec(
+            sys.executable, "-m", "tests.fixtures.shared_query_worker", "--port", str(port),
+            "--database", database, cwd=directory, env=environment,
+            stdout=asyncio.subprocess.DEVNULL, stderr=stderr,
+        )
+    children.append(process)
+    async with asyncio.timeout(35):
+        while not (directory / "ready.json").exists():
+            if process.returncode is not None:
+                raise AssertionError((directory / "stderr.txt").read_text(encoding="utf-8"))
+            await asyncio.sleep(0.02)
+    http_port = json.loads((directory / "ready.json").read_text(encoding="utf-8"))["port"]
+    return f"http://127.0.0.1:{http_port}", directory, process
 
 
 @pytest_asyncio.fixture
@@ -55,25 +84,9 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
             },
         },
     )
-    environment = {
-        k: v
-        for k, v in os.environ.items()
-        if k.upper()
-        in {
-            "PATH",
-            "SYSTEMROOT",
-            "WINDIR",
-            "TEMP",
-            "TMP",
-            "HOME",
-            "USERPROFILE",
-            "USERNAME",
-            "USER",
-            "LOGNAME",
-            "LNAME",
-        }
-    }
-    environment.update(PYTHONPATH=str(ROOT), PYTHONUTF8="1")
+    environment = worker_environment()
+    if getattr(request, "param", {}).get("metric_mcp"):
+        environment["DE_SHARED_METRIC_MCP"] = "1"
     if getattr(request, "param", {}).get("immutable"):
         from tests.fixtures.immutable_release import build_release
 
@@ -87,30 +100,11 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
     servers = ServingProcesses()
 
     async def launch(name, *, overrides=None, mysql_port=None):
-        directory = tmp_path / name
-        directory.mkdir()
-        with (directory / "stderr.txt").open("wb") as stderr:
-            process = await asyncio.create_subprocess_exec(
-                sys.executable,
-                "-m",
-                "tests.fixtures.shared_query_worker",
-                "--port",
-                str(config["port"] if mysql_port is None else mysql_port),
-                "--database",
-                database,
-                cwd=directory,
-                env={**environment, **(overrides or {})},
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=stderr,
-            )
-        children.append(process)
-        async with asyncio.timeout(35):
-            while not (directory / "ready.json").exists():
-                if process.returncode is not None:
-                    raise AssertionError((directory / "stderr.txt").read_text())
-                await asyncio.sleep(0.02)
-        port = json.loads((directory / "ready.json").read_text())["port"]
-        result = (f"http://127.0.0.1:{port}", directory, process)
+        result = await launch_worker(
+            tmp_path / name, environment={**environment, **(overrides or {})},
+            port=config["port"] if mysql_port is None else mysql_port,
+            database=database, children=children,
+        )
         servers.append(result)
         return result
 
@@ -119,6 +113,13 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
         try:
             for name in ("first", "second"):
                 await launch(name)
+            password_hash = hash_password("unshared-fixture-password")
+            await store._execute(
+                "INSERT INTO users (id,username,email,password_hash) VALUES "
+                "(1,'fixture','fixture@example.test',%s), "
+                "(99999,'outsider','outsider@example.test',%s)",
+                (password_hash, password_hash),
+            )
             yield client, servers
         finally:
             for url, _, process in servers:

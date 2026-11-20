@@ -8,6 +8,7 @@ from typing import Any
 import bcrypt
 import jwt
 
+from app.auth.tenant import DEFAULT_TENANT_ID, normalize_tenant_id
 from app.config.settings import settings
 
 # ── Password hashing ────────────────────────────────────────────
@@ -26,12 +27,23 @@ def verify_password(plain: str, hashed: str) -> bool:
 # ── JWT ─────────────────────────────────────────────────────────
 
 
-def create_access_token(user_id: int, username: str) -> str:
-    """Encode a JWT with ``sub``, ``username``, and ``exp`` claims."""
+def create_access_token(
+    user_id: int,
+    username: str,
+    tenant_id: int = DEFAULT_TENANT_ID,
+    *,
+    token_version: int = 0,
+) -> str:
+    """Encode a JWT with user, tenant and revocation version claims."""
+    tenant_id = normalize_tenant_id(tenant_id)
+    if type(token_version) is not int or token_version < 0:
+        raise ValueError("token_version must be a non-negative integer")
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "username": username,
+        "tenant_id": tenant_id,
+        "token_version": token_version,
         "iat": now,
         "exp": now + timedelta(minutes=settings.jwt_expire_minutes),
     }

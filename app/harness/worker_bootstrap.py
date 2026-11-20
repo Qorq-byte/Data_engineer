@@ -10,10 +10,12 @@ import re
 from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager, AsyncExitStack, asynccontextmanager
 from pathlib import Path
+from typing import Any
 
 import aiomysql
 from fastapi import FastAPI
 
+from app.auth.tenant import DEFAULT_TENANT_ID, tenant_scope
 from app.config.settings import settings
 from app.db.connections import ConnectionFactory, DatabaseType
 from app.harness.mysql_coordination import (
@@ -21,14 +23,51 @@ from app.harness.mysql_coordination import (
     CoordinationUnavailableError,
     MySQLCoordinator,
 )
-from app.harness.shared_query_runtime import SharedQueryRuntime, publish_shared_runtime
+from app.harness.shared_query_runtime import (
+    SharedQueryRuntime,
+    TenantReleaseSnapshot,
+    publish_shared_runtime,
+)
 from app.harness.worker_release import ROOT, WorkerRelease
+from app.knowledge.domain_snapshot import domain_from_snapshot
 from app.storage.mysql_store import MySQLStore, get_store
 from app.storage.shared_sessions import MySQLSessionStore
 
 
 def _hash(value: object) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, allow_nan=False).encode()).hexdigest()
+
+
+async def _persisted_state(
+    store: MySQLStore, tenants: frozenset[int],
+) -> tuple[dict[str, Any], dict[int, TenantReleaseSnapshot]]:
+    with tenant_scope(DEFAULT_TENANT_ID):
+        default = await store.get_settings()
+    snapshots = {}
+    for tenant in sorted(tenants):
+        with tenant_scope(tenant):
+            persisted = await store.get_settings()
+            rows = await store.get_domain_snapshots()
+        for row in rows:
+            row["glossary"] = sorted(row["glossary"] or [], key=lambda item: item["term"])
+            row["rules"] = sorted(row["rules"] or [], key=lambda item: item["id"])
+        snapshots[tenant] = TenantReleaseSnapshot(
+            settings=persisted, domains={row["name"].casefold(): row for row in rows},
+        )
+    return default, snapshots
+
+
+def _baseline_digest(state: tuple[dict[str, Any], dict[int, TenantReleaseSnapshot]]) -> str:
+    default, snapshots = state
+    if not snapshots:
+        return _hash(default)
+    return _hash({
+        "default": default,
+        "tenants": {
+            tenant: {"settings": snapshot.settings, "domains": snapshot.domains}
+            for tenant, snapshot in snapshots.items()
+        },
+    })
 
 
 @asynccontextmanager
@@ -45,6 +84,13 @@ async def immutable_worker_lifespan(
         raise ValueError("Shared query/model concurrency must be 1..64")
     release = await asyncio.to_thread(WorkerRelease, Path(settings.shared_worker_release))
     await asyncio.to_thread(release.catalog_for, settings.metric_catalog_path)
+    if release.tenant_ids and (
+        settings.tenant_query_profiles_path
+        or set(settings.tenant_admin_user_ids) != release.tenant_ids
+        or not all(settings.tenant_admin_user_ids.values())
+        or not settings.tenant_llm_endpoints.keys() <= release.tenant_ids
+    ):
+        raise CoordinationUnavailableError("Tenant operator or endpoint inventory mismatch")
     required = {Path(settings.agent_config_path).resolve(), Path(settings.rag_bm25_path)}
     required.update((ROOT / "app/config").rglob("*.yml"))
     required.update((ROOT / "app/workflow/plans").rglob("*.yml"))
@@ -71,7 +117,12 @@ async def immutable_worker_lifespan(
         maxsize=settings.max_concurrent_queries + settings.llm_max_concurrency + 3,
     )
     runtime = None
-    from app.api.settings import _settings_store
+    from app.api.settings import (
+        _load_tenant_runtime,
+        _normalize_llm_configuration,
+        _settings_store,
+        _tenant_llm_runtimes,
+    )
 
     prior_settings = copy.deepcopy(_settings_store)
     async with AsyncExitStack() as stack:
@@ -85,19 +136,29 @@ async def immutable_worker_lifespan(
             while True:
                 try:
                     async with coordinator.query("__immutable_worker_startup__"):
-                        persisted = await MySQLStore(pool).get_settings()
-                        baseline = _hash(persisted)
+                        state = await _persisted_state(MySQLStore(pool), release.tenant_ids)
+                        persisted, tenant_snapshots = state
+                        baseline = _baseline_digest(state)
                         _settings_store.update(copy.deepcopy(persisted))
-                        if ConnectionFactory.list_all():
-                            raise CoordinationUnavailableError(
-                                "Immutable worker requires a fresh registry"
-                            )
-                        for profile in release.profiles:
-                            await ConnectionFactory.create(
-                                DatabaseType(profile["db_type"]),
-                                profile["config"],
-                                profile["db_id"],
-                            )
+                        for tenant, profiles in release.profile_groups.items():
+                            with tenant_scope(tenant):
+                                if ConnectionFactory.list_all():
+                                    raise CoordinationUnavailableError(
+                                        "Immutable worker requires a fresh registry"
+                                    )
+                                for profile in profiles:
+                                    await ConnectionFactory.create(
+                                        DatabaseType(profile["db_type"]), profile["config"],
+                                        profile["db_id"],
+                                    )
+                        for tenant, snapshot in tenant_snapshots.items():
+                            with tenant_scope(tenant):
+                                models = snapshot.settings.get("llm")
+                                _load_tenant_runtime(
+                                    _normalize_llm_configuration({} if models is None else models),
+                                )
+                                for row in snapshot.domains.values():
+                                    domain_from_snapshot(row)
                         await stack.enter_async_context(initialize(app))
                         break
                 except CoordinationBusyError:
@@ -135,8 +196,12 @@ async def immutable_worker_lifespan(
             )
             await runtime.initialize()
             await runtime.model_coordinator.initialize()
-            local_settings = settings.model_dump()
-            if _hash(await store.get_settings()) != baseline:
+            # Keep v1 fingerprints compatible with existing default namespaces.
+            excluded_settings = set() if release.tenant_ids else {
+                "tenant_admin_user_ids", "tenant_llm_endpoints", "tenant_query_profiles_path",
+            }
+            local_settings = settings.model_dump(exclude=excluded_settings)
+            if _baseline_digest(await _persisted_state(store, release.tenant_ids)) != baseline:
                 raise CoordinationUnavailableError("Configuration changed during worker startup")
             fingerprint = _hash(
                 {
@@ -176,9 +241,13 @@ async def immutable_worker_lifespan(
                             <= release.files.keys()
                         ):
                             raise ValueError("Configuration inventory changed")
-                        if _hash(settings.model_dump()) != _hash(local_settings):
+                        if _hash(settings.model_dump(exclude=excluded_settings)) != _hash(
+                            local_settings
+                        ):
                             raise ValueError("Process configuration changed")
-                        if _hash(await store.get_settings()) != baseline:
+                        if _baseline_digest(
+                            await _persisted_state(store, release.tenant_ids)
+                        ) != baseline:
                             raise ValueError("Persisted configuration changed")
                 except Exception:
                     raise CoordinationUnavailableError(
@@ -187,6 +256,7 @@ async def immutable_worker_lifespan(
 
             runtime.verify_configuration = verify
             runtime.worker_release = release
+            runtime.tenant_snapshots = tenant_snapshots
             publish_shared_runtime(runtime)
             app.state.components["shared_worker"] = True
             yield
@@ -201,6 +271,8 @@ async def immutable_worker_lifespan(
             await pool.wait_closed()
             _settings_store.clear()
             _settings_store.update(prior_settings)
+            for tenant in release.tenant_ids:
+                _tenant_llm_runtimes.pop(tenant, None)
 
 
 def mutable_request_allowed(method: str, path: str) -> bool:

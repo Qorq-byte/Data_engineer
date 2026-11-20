@@ -81,8 +81,8 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
 | 自動プラン選択 | **実装済み** —— `auto_plan=true` で L1 ルール、L2 履歴、能力フィルタ後の既定の順に選択。既定は `request_query` |
 | マルチエージェントオーケストレーターとサブエージェント | **一部実装** —— スコープ付き REST クエリはアクセス確認と固定ワークフローを使用。自律的な協調は実験段階 |
 | フィードバック駆動のルール学習 | **実装済み** —— 承認済みルールは生成プロンプトと検証に反映され、`applied_rules` で返却。ルールが SQL を書き換えることはない |
-| マルチテナント分離 | **未実装** —— 一つの管理者グループが一つのデータセットを共有 |
-| 校正済みの精度、再現率、容量ベースライン | **未確立** —— 合成スイートは契約一致を評価 |
+| マルチテナント分離 | **一部実装** —— 単一ワーカーおよび単一ホストの固定構成で、テナント別のワークベンチ、REST、MCP HTTP をサポート。[設定手順](docs/usage.md#tenant-operator-setup) |
+| 合成・校正済みベースライン | **合成ベースラインを記録済み**。検索、SQL 契約、負荷を検証。実業務の精度、再現率、本番容量の校正は今後の検証項目。[検証結果](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
 
 ## クイックスタート
 
@@ -257,6 +257,7 @@ curl -X POST http://localhost:8001/api/v1/query \
 管理者用 `GET /api/v1/metrics?domain=...&database=...` で指標名とバージョンを取得できます。
 MCP も `list_metrics` と `metric_query` を提供します。HTTP Bearer 認証とローカルプロセスの明示的な信頼は
 [アクセスと使用方法](docs/optimization/metric-discovery-mcp.md)を参照してください。
+独立 stdio とループバック HTTP の検証は[メトリクス MCP トランスポート検証](docs/optimization/metric-mcp-transports.md)に記録しています。
 
 サブエージェント REST は同じ五ノードの固定ワークフローを使用します。明示的な `db_id` とユーザー ID の許可が必要で、
 実行は既定で無効です。[REST の範囲](docs/optimization/subagent-rest-boundary.md)を参照してください。
@@ -411,10 +412,11 @@ python scripts/evaluate_quality.py           # 合成品質レポート
 python scripts/run_nl2sql_acceptance.py      # 固定セットのバッチ受け入れ
 python scripts/run_real_db_tests.py          # ドライバレベルの受け入れ
 python scripts/load_test.py                  # 有界な同時実行プローブ
+python -m scripts.run_synthetic_baseline --output data/synthetic-baseline-20261118/aggregate.json --requests 20 --rows 1000
 ```
 
-合成スイートは契約一致を評価するもので、業務上の正しさではありません。結果は本番の容量や精度の
-ベースラインにはなりません。
+集約入口はすべての fixture ハッシュと分母を一つのレポートに記録します。合成スイートは契約一致を評価するもので、
+業務上の正しさではなく、本番の容量や精度のベースラインにはなりません。詳細は[2026-11-18 の範囲と結果](docs/optimization/synthetic-quality-baseline-2026-11-18.md)を参照してください。
 
 ## リポジトリ構成
 
@@ -464,7 +466,7 @@ Snowflake は実装済みですが独立した受け入れ待ち、BigQuery、Re
 のみです。
 
 **複数のチームで一つのデプロイを共有できますか？**
-いいえ。テナント分離はなく、一つの管理者グループが一つのデータセットを共有します。
+単一ワーカーおよび単一ホストの固定構成では、データソースを登録してテナント別のクエリ、ドメイン、モデル設定を有効化できます。固定構成の設定は停止中に更新します。システム管理は既定テナントの管理者が利用できます。[設定手順](docs/usage.md#tenant-operator-setup)
 
 **起動時に JWT エラーが出るのはなぜですか？**
 `JWT_SECRET` が未設定、`change-me-in-production` のまま、または 32 文字未満です。`create_app()` の

@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from app.auth.tenant import get_current_tenant_id
 from app.db.connections import ConnectionFactory
 from app.harness.metric_catalog_runtime import (
     configured_metric_catalog,
@@ -26,7 +27,11 @@ async def metric_catalog_view(domain: str, database: str) -> dict[str, Any]:
     except CatalogError as exc:
         raise QueryPlanError(str(exc)) from None
     binding = next(
-        (item for item in catalog.bindings if (item.domain, item.database) == (domain, database)),
+        (
+            item for item in catalog.bindings
+            if (item.domain, item.database, item.tenant_id)
+            == (domain, database, get_current_tenant_id())
+        ),
         None,
     )
     if binding is None:
@@ -70,6 +75,7 @@ def metric_selection(body: Any, plan_id: str) -> MetricSelection | None:
         return configured_metric_catalog().select(
             version=fields[1], domain=body.domain, database=body.database,
             metrics=fields[0], dimensions=fields[2], filters=fields[3],
+            tenant_id=get_current_tenant_id(),
         )
     except CatalogError as exc:
         raise QueryPlanError(str(exc)) from None

@@ -30,13 +30,19 @@ Usage::
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Mapping
+from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from fastmcp import FastMCP
+    from fastmcp.server.http import StarletteWithLifespan
     from fastmcp.server.server import Transport
+    from starlette.applications import Starlette
+    from starlette.middleware import Middleware
+    from starlette.types import Lifespan
 
 _APP_ROOT = Path(__file__).resolve().parents[1]
 
@@ -58,15 +64,41 @@ def create_nl2sql_server(
         host: Bind address for SSE transport.
         port: Port for SSE transport.
         trust_local_metric_tools: Allow metric tools in an explicitly trusted local process.
-            HTTP always requires an operator Bearer token, regardless of this setting.
+
+    All HTTP requests require an operator Bearer token.
 
     Returns:
         Configured FastMCP instance.
     """
     from fastmcp import FastMCP, settings
+    from starlette.middleware import Middleware
+
+    from app.mcp.access import OperatorHTTPMiddleware, mcp_auth_lifespan, mcp_tenant_lifespan
 
     class ConfiguredFastMCP(FastMCP):
         """Keep factory bind defaults through FastMCP's public transport API."""
+
+        def http_app(
+            self,
+            path: str | None = None,
+            middleware: list[Middleware] | None = None,
+            *args: Any,
+            **kwargs: Any,
+        ) -> StarletteWithLifespan:
+            app = super().http_app(
+                path, [*(middleware or []), Middleware(OperatorHTTPMiddleware)], *args, **kwargs
+            )
+            http_lifespan = app.router.lifespan_context
+
+            @asynccontextmanager
+            async def lifespan(application: Starlette) -> AsyncIterator[Mapping[str, Any] | None]:
+                async with (
+                    mcp_tenant_lifespan(), mcp_auth_lifespan(), http_lifespan(application) as state
+                ):
+                    yield state
+
+            app.router.lifespan_context = cast("Lifespan[Starlette]", lifespan)
+            return app
 
         async def run_async(
             self,
@@ -381,9 +413,14 @@ def _register_domains_resource(mcp: FastMCP) -> None:
         description="List of all domain configurations with terminology and rules",
         mime_type="application/json",
     )
-    def get_domains() -> str:
+    async def get_domains() -> str:
         import json
+
+        from app.api import tenant_domains
+
         try:
+            if tenant_domains.uses_mysql_catalog():
+                return json.dumps(await tenant_domains.list_domains(), indent=2)
             domains_dir = _APP_ROOT / "config" / "domains"
             domains: list[dict[str, Any]] = []
 

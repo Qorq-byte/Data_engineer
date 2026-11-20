@@ -4,11 +4,13 @@ import asyncio
 import json
 import os
 import sys
+from hashlib import sha256
 from pathlib import Path
 
 import aiomysql
 import pytest
 
+from app.auth.tenant import reset_current_tenant_id, set_current_tenant_id
 from app.harness.mysql_coordination import MySQLCoordinator
 from app.storage.shared_sessions import (
     MySQLSessionStore,
@@ -164,6 +166,41 @@ async def test_capacity_and_active_expired_session_protection(coordination):
     await store.put("other", payload("other"), None)
     assert await store.get("shared") is None
     assert (await store.get("other")).payload["session_id"] == "other"
+
+
+async def test_shared_sessions_preserve_legacy_and_scope_cas_and_locks(coordination):
+    database, pool, _, _ = coordination
+    store = await store_for(coordination, capacity=2)
+    coordinator = MySQLCoordinator(pool, database, 2)
+    await coordinator.initialize()
+    legacy_key = sha256(b"shared").hexdigest()
+    legacy_revision = "a" * 32
+    async with pool.acquire() as conn, conn.cursor() as cur:
+        await cur.execute(
+            "INSERT INTO worker_sessions VALUES (%s,%s,%s,%s,"
+            "DATE_ADD(UTC_TIMESTAMP(6),INTERVAL 60 SECOND))",
+            (store.namespace, legacy_key, legacy_revision, json.dumps(payload(value=1))),
+        )
+
+    assert (await store.get("shared")).revision == legacy_revision
+    async with coordinator.query("shared"):
+        tenant = set_current_tenant_id(2)
+        try:
+            assert await store.get("shared") is None
+            async with coordinator.query("shared"):
+                own_revision = await store.put("shared", payload(value=2), None)
+                with pytest.raises(SessionConflictError):
+                    await store.put("shared", payload(value=99), legacy_revision)
+                await expire(coordination)
+                with pytest.raises(SessionCapacityError):
+                    await store.put("new", payload("new"), None)
+                await store.put("shared", payload(value=3), own_revision)
+                assert (await store.get("shared")).payload["value"] == 3
+        finally:
+            reset_current_tenant_id(tenant)
+        assert await store.get("2:shared") is None
+        await store.put("shared", payload(value=4), legacy_revision)
+    assert (await store.get("shared")).payload["value"] == 4
 
 
 async def test_config_mismatch_and_corruption_fail_closed(coordination):

@@ -9,7 +9,10 @@ from pydantic import ValidationError
 
 from app.workflow.contracts import (
     QueryCapacityError,
+    QueryDomainUnavailableError,
     QueryFailure,
+    QueryModelUnavailableError,
+    QueryTenantLLMUnavailableError,
     classify_query_failure,
 )
 
@@ -54,6 +57,16 @@ def query_error(exc: Exception) -> dict[str, Any]:
             failure = classify_query_failure(TimeoutError())
         elif detail.get("code") == "QUERY_CAPACITY":
             failure = classify_query_failure(QueryCapacityError())
+        elif exc.status_code == 503 and detail.get("code") == "DOMAIN_CONFIG_UNAVAILABLE":
+            failure = classify_query_failure(QueryDomainUnavailableError())
+        elif exc.status_code == 503 and detail.get("code") == "LLM_CONFIG_UNAVAILABLE":
+            failure = classify_query_failure(QueryTenantLLMUnavailableError())
+        elif exc.status_code == 422 and detail.get("code") == "LLM_MODEL_UNAVAILABLE":
+            failure = classify_query_failure(QueryModelUnavailableError())
+        elif exc.status_code == 503 and detail.get("code") == "SHARED_STATE_UNAVAILABLE":
+            from app.harness.mysql_coordination import CoordinationUnavailableError
+
+            failure = classify_query_failure(CoordinationUnavailableError())
         elif exc.status_code in {401, 403}:
             failure = QueryFailure(
                 "INVALID_REQUEST", "Operator authentication required", exc.status_code

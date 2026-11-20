@@ -1,0 +1,1136 @@
+{
+  "version": "synthetic-quality-capacity-baseline-v1",
+  "date": "2026-11-18",
+  "python": "3.12.13",
+  "interpreter": ".stage62\\.venv\\Scripts\\python.exe",
+  "fixture_scope": {
+    "retrieval": "tests/fixtures/retrieval_eval.json; real SQLite FTS5 BM25",
+    "schema_linking": "tests/fixtures/schema_linking_eval.json; deterministic boundary seam",
+    "sql_validation": "tests/fixtures/sql_validation_eval.json; real temporary SQLite",
+    "sql_contracts": "tests/fixtures/model_eval_v2; three temporary SQLite scenarios",
+    "capacity": "in-process ASGI/SQLite; 20 requests per level; 1000 row cap"
+  },
+  "external_calls": {
+    "llm": 0,
+    "embedding": 0,
+    "database": 0
+  },
+  "reports": {
+    "retrieval": {
+      "report": "data\\synthetic-baseline-20261118\\quality.json",
+      "sha256": "06dd14cbaae9c641190bf8b7afd9a50a82fc164a30370f7a9fb8a2e550fe59a3",
+      "stdout": "{\"dataset_sha256\": \"076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a\", \"query_count\": 7, \"document_count\": 8, \"report_sha256\": \"19c191bfca8adbc5d1ba89752a42d32de7275be2a00130ad49bc06eb8fe8c13b\"}",
+      "result": {
+        "dataset": "synthetic-smoke-v1",
+        "dataset_sha256": "076c9a7c4fa79b467beca9b7f3ede447c00e92344ab858bcc0de2cfd0103550a",
+        "python": "3.12.13",
+        "retrieval_mode": "real SQLite FTS5 BM25 only; synthetic lexical smoke set",
+        "k": 3,
+        "query_count": 7,
+        "document_count": 8,
+        "retrieval": {
+          "recall_at_k": 1.0,
+          "precision_at_k": 0.38095238095238093,
+          "mrr_at_k": 1.0,
+          "ndcg_at_k": 1.0,
+          "latency_ms": 0.38508571118914653
+        },
+        "details": [
+          {
+            "id": "q1",
+            "retrieved": [
+              "users"
+            ],
+            "latency_ms": 0.9355999645777047,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "q2",
+            "retrieved": [
+              "products"
+            ],
+            "latency_ms": 0.3065000055357814,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "q3",
+            "retrieved": [
+              "refunds",
+              "orders"
+            ],
+            "latency_ms": 0.45730004785582423,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.6666666666666666,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "q4",
+            "retrieved": [
+              "orders"
+            ],
+            "latency_ms": 0.14640000881627202,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "q5",
+            "retrieved": [
+              "joins",
+              "users",
+              "orders"
+            ],
+            "latency_ms": 0.35639997804537416,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "q6",
+            "retrieved": [
+              "payroll"
+            ],
+            "latency_ms": 0.24309998843818903,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          },
+          {
+            "id": "q7",
+            "retrieved": [
+              "audit"
+            ],
+            "latency_ms": 0.2502999850548804,
+            "recall_at_k": 1.0,
+            "precision_at_k": 0.3333333333333333,
+            "mrr_at_k": 1.0,
+            "ndcg_at_k": 1.0
+          }
+        ],
+        "embedding_or_llm_cost_usd": 0,
+        "measurement_scope": "This tool calls no LLM/embedding; external SQL costs are reported only.",
+        "sql_model_metrics": null,
+        "limitations": "Not a business/semantic accuracy estimate. No reranker or real LLM run."
+      }
+    },
+    "schema_linking": {
+      "report": "data\\synthetic-baseline-20261118\\schema-linking.json",
+      "sha256": "a87c93b74b501dd9c07c27969df62d0c92444675e815f2a9e0e7d6dbdd0b8bc5",
+      "stdout": "{\"dataset_sha256\": \"549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c\", \"case_count\": 12, \"passed\": 12, \"report_sha256\": \"eeabdf0e1569ca680cb3d4b5882dc42de1bec6ed6ca6e92fb4a81756c6ce2917\"}",
+      "result": {
+        "dataset": "schema-linking-boundary-v1",
+        "scope": "synthetic functional contract cases; injected RAG boundary fixtures, not semantic retrieval quality",
+        "dataset_sha256": "549b4882ff39ba81463f122da8e05dbbcccf5156cf6c2951490a631ca495346c",
+        "case_count": 12,
+        "passed": 12,
+        "details": [
+          {
+            "id": "direct-users",
+            "tables": [
+              "users",
+              "orders"
+            ],
+            "expected": [
+              "users",
+              "orders"
+            ],
+            "columns": [
+              {
+                "name": "id",
+                "table": "users",
+                "confidence": 0.8,
+                "candidates": null
+              }
+            ],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 5
+          },
+          {
+            "id": "direct-orders",
+            "tables": [
+              "orders",
+              "order_items",
+              "users"
+            ],
+            "expected": [
+              "orders",
+              "users",
+              "order_items"
+            ],
+            "columns": [
+              {
+                "name": "id",
+                "table": "orders",
+                "confidence": 0.8,
+                "candidates": null
+              }
+            ],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 8
+          },
+          {
+            "id": "two-seeds",
+            "tables": [
+              "users",
+              "products",
+              "order_items",
+              "orders",
+              "suppliers"
+            ],
+            "expected": [
+              "users",
+              "products",
+              "orders",
+              "order_items",
+              "suppliers"
+            ],
+            "columns": [
+              {
+                "name": "id",
+                "table": "users",
+                "confidence": 0.8,
+                "candidates": null
+              },
+              {
+                "name": "id",
+                "table": "products",
+                "confidence": 0.8,
+                "candidates": null
+              }
+            ],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 12
+          },
+          {
+            "id": "cycle",
+            "tables": [
+              "products",
+              "order_items",
+              "suppliers"
+            ],
+            "expected": [
+              "products",
+              "order_items",
+              "suppliers"
+            ],
+            "columns": [
+              {
+                "name": "id",
+                "table": "products",
+                "confidence": 0.8,
+                "candidates": null
+              }
+            ],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 7
+          },
+          {
+            "id": "disabled-fk",
+            "tables": [
+              "orders"
+            ],
+            "expected": [
+              "orders"
+            ],
+            "columns": [
+              {
+                "name": "id",
+                "table": "orders",
+                "confidence": 0.8,
+                "candidates": null
+              }
+            ],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 3
+          },
+          {
+            "id": "wrong-db",
+            "tables": [],
+            "expected": [],
+            "columns": [],
+            "warnings": [
+              "SCHEMA_RAG_HITS_REJECTED: ignored invalid database/namespace/table/column matches",
+              "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
+            ],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 0
+          },
+          {
+            "id": "unknown-table",
+            "tables": [],
+            "expected": [],
+            "columns": [],
+            "warnings": [
+              "SCHEMA_RAG_HITS_REJECTED: ignored invalid database/namespace/table/column matches",
+              "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
+            ],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 0
+          },
+          {
+            "id": "stale-column",
+            "tables": [],
+            "expected": [],
+            "columns": [],
+            "warnings": [
+              "SCHEMA_RAG_HITS_REJECTED: ignored invalid database/namespace/table/column matches",
+              "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
+            ],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 0
+          },
+          {
+            "id": "empty-chinese-fallback",
+            "tables": [
+              "users",
+              "orders",
+              "order_items"
+            ],
+            "expected": [
+              "users",
+              "orders",
+              "order_items"
+            ],
+            "columns": [
+              {
+                "name": "user_id",
+                "table": "orders",
+                "confidence": 1.0,
+                "all_tables": [
+                  "orders"
+                ]
+              },
+              {
+                "name": "name",
+                "table": "users",
+                "confidence": 0.6,
+                "all_tables": []
+              }
+            ],
+            "warnings": [
+              "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
+            ],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 8
+          },
+          {
+            "id": "error-chinese-fallback",
+            "tables": [
+              "users",
+              "orders",
+              "order_items"
+            ],
+            "expected": [
+              "users",
+              "orders",
+              "order_items"
+            ],
+            "columns": [
+              {
+                "name": "user_id",
+                "table": "orders",
+                "confidence": 1.0,
+                "all_tables": [
+                  "orders"
+                ]
+              },
+              {
+                "name": "name",
+                "table": "users",
+                "confidence": 0.6,
+                "all_tables": []
+              }
+            ],
+            "warnings": [
+              "SCHEMA_RAG_UNAVAILABLE: search failed; using keyword matching",
+              "SCHEMA_LINKING_FALLBACK: no retrieval matches; using keyword matching"
+            ],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 8
+          },
+          {
+            "id": "keyword-no-rag",
+            "tables": [
+              "users",
+              "orders"
+            ],
+            "expected": [
+              "users",
+              "orders"
+            ],
+            "columns": [],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 5
+          },
+          {
+            "id": "table-level",
+            "tables": [
+              "audit"
+            ],
+            "expected": [
+              "audit"
+            ],
+            "columns": [],
+            "warnings": [],
+            "checks": {
+              "table_set": true,
+              "columns_valid": true,
+              "only_source_tables": true,
+              "warning_visible": true
+            },
+            "passed": true,
+            "detailed_schema_columns": 2
+          }
+        ],
+        "llm_or_embedding_calls": 0,
+        "limitations": "Functional boundary fixtures only; no semantic retrieval or SQL accuracy."
+      }
+    },
+    "sql_validation": {
+      "report": "data\\synthetic-baseline-20261118\\sql-validation.json",
+      "sha256": "13ec028ee7560f36bbf240d87f4526db3dae06a8dac4023cb4428c63d03d9ef0",
+      "stdout": "{\"dataset_sha256\": \"d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9\", \"case_count\": 18, \"passed\": 18, \"report_sha256\": \"3e8cca15b0d57e20851e228664723a4e22bfc5ecd44348010b63a4e796554679\"}",
+      "result": {
+        "dataset": "sql-validation-boundary-v1",
+        "scope": "synthetic SQL validation decisions against real SQLite fixture; no NL2SQL model run",
+        "python": "3.12.13",
+        "sqlglot": "30.29.0",
+        "dataset_sha256": "d94b860b398190b4434034b6e0ba7f5d01582a8ddca6d2a5691a52d4d668cac9",
+        "case_count": 18,
+        "passed": 18,
+        "details": [
+          {
+            "id": "simple",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "cte",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "derived",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "output-alias",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "shadowed-alias",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "correlated",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "cte-column-alias",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "star-derived",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "main-namespace",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": true,
+            "expected": true,
+            "syntax_errors": [],
+            "schema_errors": [],
+            "reference_execution_success": true,
+            "reference_error_code": null
+          },
+          {
+            "id": "out-of-scope",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [],
+            "schema_errors": [
+              "SCHEMA_ERROR: Column 'email' could not be resolved. Line: 1, Col: 12"
+            ],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_EXECUTION_ERROR"
+          },
+          {
+            "id": "ambiguous",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [],
+            "schema_errors": [
+              "SCHEMA_ERROR: Column 'id' could not be resolved. Line: 1, Col: 9"
+            ],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_EXECUTION_ERROR"
+          },
+          {
+            "id": "missing-table",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [],
+            "schema_errors": [
+              "SCHEMA_ERROR: Table 'ghosts' not found in schema"
+            ],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_EXECUTION_ERROR"
+          },
+          {
+            "id": "alias-masks-missing",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [],
+            "schema_errors": [
+              "SCHEMA_ERROR: Table 'ghosts' not found in schema"
+            ],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_EXECUTION_ERROR"
+          },
+          {
+            "id": "wrong-namespace",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [],
+            "schema_errors": [
+              "SCHEMA_ERROR: Qualified table namespace is not represented in source schema"
+            ],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_EXECUTION_ERROR"
+          },
+          {
+            "id": "derived-column-missing",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [],
+            "schema_errors": [
+              "SCHEMA_ERROR: Unknown column: missing"
+            ],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_EXECUTION_ERROR"
+          },
+          {
+            "id": "unsafe-function",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [
+              "READ_ONLY_ERROR: Side-effect and external functions are forbidden"
+            ],
+            "schema_errors": [],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_POLICY_REJECTED"
+          },
+          {
+            "id": "select-into",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [
+              "READ_ONLY_ERROR: Write operations, locks and side effects are forbidden"
+            ],
+            "schema_errors": [],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_POLICY_REJECTED"
+          },
+          {
+            "id": "multiple",
+            "passed": true,
+            "checks": {
+              "decision": true,
+              "reference": true,
+              "policy_rejected": true
+            },
+            "validator_accepted": false,
+            "expected": false,
+            "syntax_errors": [
+              "READ_ONLY_ERROR: Expected one SELECT query"
+            ],
+            "schema_errors": [],
+            "reference_execution_success": false,
+            "reference_error_code": "SQL_POLICY_REJECTED"
+          }
+        ],
+        "model_accuracy": null,
+        "llm_or_embedding_calls": 0
+      }
+    },
+    "sql_contracts": {
+      "report": "data\\synthetic-baseline-20261118\\sql-contracts.json",
+      "sha256": "b9f7755ebd75272eff5426601b7e5793f5477052a1fbe5c60476aeb2a3905e75",
+      "stdout": "Validated 12 gold checks; robust_matches=0/4",
+      "result": {
+        "report_version": "sql-contract-evaluation-v1",
+        "profile": "synthetic-sqlite-model-v2",
+        "suite_sha256": "30e3007c1bb3569afd2fc3ee67e805568bc907c59001450661484cc6abc7b45a",
+        "predictions_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "fixture_sha256": {
+          "base": "7520694551af33d9c3ffee047466416825470b8d506f0548822421e409eb7289",
+          "edge": "5bf91827224d611685b65e3bc955cef27977dfcd1903dc616c7aaf44df965efe",
+          "empty": "eb573968a9c5838fa80eae9534e673486f939cc92a9af9b0c5a3948127be523b"
+        },
+        "gold_self_check_count": 12,
+        "case_count": 4,
+        "prediction_count": 0,
+        "check_count": 12,
+        "execution_success_count": 0,
+        "contract_match_count": 0,
+        "robust_match_count": 0,
+        "robust_match_rate": 0.0,
+        "error_counts": {
+          "MISSING_PREDICTION": 12
+        },
+        "actual_cost_usd": null,
+        "details": [
+          {
+            "id": "v2_orders",
+            "scenario": "base",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_amount",
+            "scenario": "base",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_users",
+            "scenario": "base",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_category",
+            "scenario": "base",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_orders",
+            "scenario": "edge",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_amount",
+            "scenario": "edge",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_users",
+            "scenario": "edge",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_category",
+            "scenario": "edge",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_orders",
+            "scenario": "empty",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_amount",
+            "scenario": "empty",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_users",
+            "scenario": "empty",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          },
+          {
+            "id": "v2_category",
+            "scenario": "empty",
+            "execution_success": false,
+            "contract_match": false,
+            "error_code": "MISSING_PREDICTION"
+          }
+        ],
+        "measurement_scope": "Four predictions, three local datasets; not twelve model calls. Not comparable to v1 scores or a business accuracy estimate."
+      }
+    },
+    "capacity": {
+      "report": "data\\synthetic-baseline-20261118\\load.json",
+      "sha256": "5de36c818011d8aef073fe0bc01aa31942e4adb194c3a0b0d77a3a352f6be1be",
+      "stdout_tail": "25513805225688, \"error_rate\": 0.0, \"statuses\": {\"ok\": 20}, \"all_latency\": {\"p50_ms\": 97.43570000864565, \"p95_ms\": 130.45292497554328, \"p99_ms\": 137.62922498572152}, \"success_latency\": {\"p50_ms\": 97.43570000864565, \"p95_ms\": 130.45292497554328, \"p99_ms\": 137.62922498572152}, \"event_loop_lag_p95_ms\": 3.789600047748536, \"process_peak_rss_bytes\": null, \"process_cpu_seconds\": null, \"cpu_percent_one_core\": null}\n{\"scenario\": \"fixed_sql_pipeline\", \"concurrency\": 10, \"requests\": 20, \"wall_seconds\": 0.19282130000647157, \"attempt_rps\": 103.72298080828595, \"successful_rps\": 41.489192323314384, \"error_rate\": 0.6, \"statuses\": {\"http_503\": 12, \"ok\": 8}, \"all_latency\": {\"p50_ms\": 1.8631499842740595, \"p95_ms\": 175.5840649770107, \"p99_ms\": 177.86201298120432}, \"success_latency\": {\"p50_ms\": 167.3006500059273, \"p95_ms\": 177.38244498032145, \"p99_ms\": 178.22168898186646}, \"event_loop_lag_p95_ms\": 3.6617400345858186, \"process_peak_rss_bytes\": null, \"process_cpu_seconds\": null, \"cpu_percent_one_core\": null}\n",
+      "result": {
+        "environment": {
+          "python": "3.12.13",
+          "platform": "Windows-11-10.0.26200-SP0",
+          "logical_cpus": 24,
+          "sqlite": "3.50.4",
+          "httpx": "0.28.1",
+          "transport": "in-process ASGI; lifespan not run",
+          "database": "single factory-managed in-memory SQLite connection",
+          "rows": 1000,
+          "llm": "scripted fixed SQL; no external model calls",
+          "rag": "not initialized",
+          "query_capacity": 8,
+          "warmup_requests_per_scenario": 3,
+          "requests_per_level": 20
+        },
+        "runs": [
+          {
+            "scenario": "direct_sql",
+            "concurrency": 1,
+            "requests": 20,
+            "wall_seconds": 0.07601010001963004,
+            "attempt_rps": 263.12292701673704,
+            "successful_rps": 263.12292701673704,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 3.5917499917559326,
+              "p95_ms": 4.337494989158586,
+              "p99_ms": 4.755418986314907
+            },
+            "success_latency": {
+              "p50_ms": 3.5917499917559326,
+              "p95_ms": 4.337494989158586,
+              "p99_ms": 4.755418986314907
+            },
+            "event_loop_lag_p95_ms": 0.0,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "direct_sql",
+            "concurrency": 2,
+            "requests": 20,
+            "wall_seconds": 0.07203060004394501,
+            "attempt_rps": 277.65977220512167,
+            "successful_rps": 277.65977220512167,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 6.260499969357625,
+              "p95_ms": 6.733350001741202,
+              "p99_ms": 7.518429963383822
+            },
+            "success_latency": {
+              "p50_ms": 6.260499969357625,
+              "p95_ms": 6.733350001741202,
+              "p99_ms": 7.518429963383822
+            },
+            "event_loop_lag_p95_ms": 0.0,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "direct_sql",
+            "concurrency": 5,
+            "requests": 20,
+            "wall_seconds": 0.07505349995335564,
+            "attempt_rps": 266.476580205182,
+            "successful_rps": 266.476580205182,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 17.600799998035654,
+              "p95_ms": 18.02149000868667,
+              "p99_ms": 18.180938028381206
+            },
+            "success_latency": {
+              "p50_ms": 17.600799998035654,
+              "p95_ms": 18.02149000868667,
+              "p99_ms": 18.180938028381206
+            },
+            "event_loop_lag_p95_ms": 0.0,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "direct_sql",
+            "concurrency": 10,
+            "requests": 20,
+            "wall_seconds": 0.07708809996256605,
+            "attempt_rps": 259.44341616555596,
+            "successful_rps": 259.44341616555596,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 29.52764998190105,
+              "p95_ms": 37.18437503266614,
+              "p99_ms": 37.38159498607274
+            },
+            "success_latency": {
+              "p50_ms": 29.52764998190105,
+              "p95_ms": 37.18437503266614,
+              "p99_ms": 37.38159498607274
+            },
+            "event_loop_lag_p95_ms": 0.0,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "fixed_sql_pipeline",
+            "concurrency": 1,
+            "requests": 20,
+            "wall_seconds": 0.4373157999943942,
+            "attempt_rps": 45.73354084223889,
+            "successful_rps": 45.73354084223889,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 21.36255000368692,
+              "p95_ms": 24.28114495705813,
+              "p99_ms": 26.04046899359673
+            },
+            "success_latency": {
+              "p50_ms": 21.36255000368692,
+              "p95_ms": 24.28114495705813,
+              "p99_ms": 26.04046899359673
+            },
+            "event_loop_lag_p95_ms": 3.992199960630387,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "fixed_sql_pipeline",
+            "concurrency": 2,
+            "requests": 20,
+            "wall_seconds": 0.4085973000037484,
+            "attempt_rps": 48.94794948428813,
+            "successful_rps": 48.94794948428813,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 39.715400023851544,
+              "p95_ms": 55.1732500345679,
+              "p99_ms": 55.86257001908962
+            },
+            "success_latency": {
+              "p50_ms": 39.715400023851544,
+              "p95_ms": 55.1732500345679,
+              "p99_ms": 55.86257001908962
+            },
+            "event_loop_lag_p95_ms": 4.003529994515702,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "fixed_sql_pipeline",
+            "concurrency": 5,
+            "requests": 20,
+            "wall_seconds": 0.42323439999017864,
+            "attempt_rps": 47.25513805225688,
+            "successful_rps": 47.25513805225688,
+            "error_rate": 0.0,
+            "statuses": {
+              "ok": 20
+            },
+            "all_latency": {
+              "p50_ms": 97.43570000864565,
+              "p95_ms": 130.45292497554328,
+              "p99_ms": 137.62922498572152
+            },
+            "success_latency": {
+              "p50_ms": 97.43570000864565,
+              "p95_ms": 130.45292497554328,
+              "p99_ms": 137.62922498572152
+            },
+            "event_loop_lag_p95_ms": 3.789600047748536,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          },
+          {
+            "scenario": "fixed_sql_pipeline",
+            "concurrency": 10,
+            "requests": 20,
+            "wall_seconds": 0.19282130000647157,
+            "attempt_rps": 103.72298080828595,
+            "successful_rps": 41.489192323314384,
+            "error_rate": 0.6,
+            "statuses": {
+              "http_503": 12,
+              "ok": 8
+            },
+            "all_latency": {
+              "p50_ms": 1.8631499842740595,
+              "p95_ms": 175.5840649770107,
+              "p99_ms": 177.86201298120432
+            },
+            "success_latency": {
+              "p50_ms": 167.3006500059273,
+              "p95_ms": 177.38244498032145,
+              "p99_ms": 178.22168898186646
+            },
+            "event_loop_lag_p95_ms": 3.6617400345858186,
+            "process_peak_rss_bytes": null,
+            "process_cpu_seconds": null,
+            "cpu_percent_one_core": null
+          }
+        ]
+      }
+    }
+  },
+  "interpretation": {
+    "accuracy": "Not measured: no model predictions supplied.",
+    "recall": "Lexical BM25 binary relevance only; not semantic or business recall.",
+    "capacity": "Local orchestration/backpressure probe only; no production SLO, billing or network model.",
+    "required_external_inputs": [
+      "Frozen business questions and independent gold SQL/result labels",
+      "Semantic relevance annotations and production embedding/model configuration",
+      "Target deployment, concurrency budget, latency/error SLO and cost boundaries"
+    ]
+  }
+}

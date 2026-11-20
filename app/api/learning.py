@@ -714,9 +714,7 @@ async def clear_rag_index(request: Request, body: dict[str, Any] | None = None) 
         try:
             from app.rag import get_index_refresher
 
-            refresher = get_index_refresher()
-            refresher._version_cache.clear()
-            refresher._last_refresh.clear()
+            get_index_refresher().invalidate_all()
         except Exception:
             pass
 

@@ -1,5 +1,7 @@
 # 指标发现与 MCP：实施及验收
 
+> 当前版本的 HTTP 鉴权失败在传输层返回。见 [MCP HTTP operator gate](metric-mcp-transports.md#mcp-http-operator-gate)。
+
 日期：2026-11-17；前序本地验收 4726 passed，保持当前工作区已有修改。
 
 ## 目标与选择

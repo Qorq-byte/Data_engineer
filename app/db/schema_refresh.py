@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, replace
 from typing import Protocol
 
+from app.auth.tenant import get_current_tenant_id
 from app.db.connections import ConnectionFactory
 from app.db.runtime import gate
 from app.db.schema_extractor import SchemaExtractor
@@ -32,7 +33,7 @@ async def clear_database_schema_index(
     on_cleared: Callable[[str], None] | None = None,
 ) -> SchemaIndexClearResult:
     """Serialize index-only maintenance with full source refresh; no DB connection needed."""
-    async with gate(("schema-refresh", db_id)):
+    async with gate(("schema-refresh", get_current_tenant_id(), db_id)):
         result = await index.clear_database(db_id)
         if on_cleared is not None:
             on_cleared(db_id)
@@ -64,7 +65,7 @@ async def refresh_database_schema(
     db_id: str, index: SchemaIndexWriter | None = None,
     *, document_builder: Callable[[SchemaSnapshot, str], list[SchemaDocument]],
 ) -> SchemaRefreshResult:
-    async with gate(("schema-refresh", db_id)):
+    async with gate(("schema-refresh", get_current_tenant_id(), db_id)):
         try:
             connection = ConnectionFactory.get(db_id)
             info = ConnectionFactory.get_info(db_id)

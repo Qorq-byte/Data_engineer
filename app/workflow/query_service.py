@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from app.audit.store import UsageAuditStore
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.core.query_evidence import candidate_evidence, supplied_schema
 from app.core.sql_validator import SQLValidator
 from app.db.query_targets import resolve_query_targets
@@ -20,7 +21,8 @@ from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
 from app.harness.events import NodeEvent, NodeEventStatus
 from app.harness.plan_loader import PlanLoader
 from app.harness.runner import WorkflowRunner
-from app.harness.shared_query_runtime import shared_query_scope
+from app.harness.session_keys import scoped_session_key
+from app.harness.shared_query_runtime import current_tenant_release_snapshot, shared_query_scope
 from app.knowledge.metric_catalog import MetricSelection
 from app.llm.budget import active_budget
 from app.llm.factory import get_default_router
@@ -47,6 +49,7 @@ from app.workflow.plan_runtime import (
     stage_for,
 )
 from app.workflow.query_audit import QueryAuditState, finish_audit
+from app.workflow.query_domain import resolve_query_domain
 
 if TYPE_CHECKING:
     from app.knowledge.schema_retriever import SchemaRetriever
@@ -213,9 +216,11 @@ async def run_query(
     if admission.locked():
         raise QueryCapacityError("Query capacity reached; retry explicitly later")
     async with admission:
+        domain = await resolve_query_domain(body.domain)
         if not body.session_id:
             body.session_id = f"s_{uuid.uuid4().hex[:16]}"
-        async with shared_query_scope(body.session_id), gate(("session", body.session_id)):
+        session_key = scoped_session_key(body.session_id)
+        async with shared_query_scope(body.session_id), gate(("session", session_key)):
             audit = QueryAuditState(
                 capture_candidate_digests=settings.llm_audit_candidate_digests,
             )
@@ -234,6 +239,7 @@ async def run_query(
                     plan=plan,
                     decision=decision,
                     selected_metrics=selected_metrics,
+                    domain=domain,
                 )
                 status = result.get("status")
                 audit.outcome = (
@@ -280,13 +286,13 @@ async def _run_query(
     *,
     llm_router: CompletionRouter | None = None,
     audit: QueryAuditState,
+    domain: DomainConfig | None,
     schema_retriever: SchemaRetriever | None = None,
     plan: WorkflowPlan,
     decision: Any = None,
     selected_metrics: MetricSelection | None = None,
 ) -> dict[str, Any]:
     """Execute the same pipeline for every protocol; emit only actual node events."""
-    from app.api.domains import _domain_manager
     from app.api.query import _commit_query_session, _detect_metadata_query, _load_query_session
     from app.api.workflows import record_trace
     from app.storage.mysql_store import get_store
@@ -302,7 +308,14 @@ async def _run_query(
         )
     config = _CONFIG_LOADER.load()
     limits = ConstraintEnforcer(ConstraintLimits(**asdict(config.constraints)))
-    router = llm_router or get_default_router()
+    router = llm_router
+    if router is None and selected_metrics is None:
+        if get_current_tenant_id() == DEFAULT_TENANT_ID:
+            router = get_default_router()
+        else:
+            from app.api.settings import resolve_tenant_query_router
+
+            router = await resolve_tenant_query_router(body.model)
     from app.knowledge.schema_retriever import SchemaRetriever
     from app.rag.engine import get_schema_rag
 
@@ -318,7 +331,6 @@ async def _run_query(
             warnings.append("RAG unavailable; schema linking uses keyword matching")
     if getattr(router, "mock_mode", False) and selected_metrics is None:
         warnings.append("MOCK LLM: output is a test placeholder, not a verified database answer")
-    domain = _domain_manager.get(body.domain) if body.domain else None
     if body.domain not in {"", "default"} and domain is None:
         warnings.append(f"Domain '{body.domain}' not found")
 
@@ -329,7 +341,11 @@ async def _run_query(
     try:
         from app.learning.rule_registry import learned_rule_registry
 
-        learned = learned_rule_registry.business_rules(str(getattr(body, "domain", "") or ""))
+        domain_name = domain.name if domain is not None else body.domain
+        learned = (
+            learned_rule_registry.business_rules(domain_name)
+            if current_tenant_release_snapshot() is None else []
+        )
         if learned_rule_registry.last_error:
             warnings.append("学习规则存储不可读；本次未应用已审批规则")
         matched = learned_rule_registry.match(body.nl_text, learned)

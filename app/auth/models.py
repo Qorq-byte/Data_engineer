@@ -37,6 +37,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    tenant_id: int = 1
     avatar_url: str = ""
     created_at: str  # ISO-8601 string
 
@@ -75,3 +76,4 @@ class User:
     password_hash: str
     created_at: datetime
     updated_at: datetime
+    tenant_id: int = 1

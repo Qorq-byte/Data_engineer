@@ -17,7 +17,7 @@ function data(options = {}) { return { status: 'ok', configuration_source: 'memo
   providers: { fixture: { enabled: true, models: ['test-model'], api_key_configured: true, base_url: null } }, runtime: { available: true, active_model: 'test-model', mock_mode: true, max_output_tokens: 4096 }, ...options }; }
 function harness(options = {}) {
   const state = { settings: snapshot(data()), error: null, loading: false, busy: false, message: null, keys: { fixture: 'synthetic-key' }, calls: [] };
-  const ctx = { useCallback: fn => fn, llmConfigurationSnapshot: snapshot, llmBusyRef: { current: false }, llmReadSeq: { current: 0 }, llmLoading: false, llmError: null, llmSettings: state.settings,
+  const ctx = { useCallback: fn => fn, tenantWorkspace: false, llmConfigurationSnapshot: snapshot, llmBusyRef: { current: false }, llmReadSeq: { current: 0 }, llmLoading: false, llmError: null, llmSettings: state.settings,
     providerKeys: state.keys, newProvider: { name: 'new', api_key: 'synthetic-new-key', models: 'new-model', base_url: '' }, BUILTIN_PROVIDERS: [], confirm: () => true,
     setLlmSettings: value => { state.settings = value; ctx.llmSettings = value; }, setLlmError: value => { state.error = value; ctx.llmError = value; }, setLlmLoading: value => { state.loading = value; },
     setLlmBusy: value => { state.busy = value; }, setSaveMsg: value => { state.message = value; }, setProviderKeys: value => { state.keys = value; }, setNewProvider: value => { state.newProvider = value; }, setShowNewProvider: () => {}, setAvailableModels: () => {},
@@ -32,6 +32,8 @@ function harness(options = {}) {
   let n = 0;
   assert(snapshot(data())); n++;
   assert(snapshot(data({ runtime: { available: false, active_model: null, mock_mode: null, max_output_tokens: null } }))); n++;
+  assert(snapshot(data({ configuration_source: 'unconfigured', default_model: '', providers: {},
+    runtime: { available: false, active_model: null, mock_mode: null, max_output_tokens: null } }))); n++;
   const secret = data({ api_key: 'private', api_key_enc: 'cipher' }); secret.providers.fixture.api_key = 'private';
   assert(!JSON.stringify(snapshot(secret)).includes('private')); assert(!JSON.stringify(snapshot(secret)).includes('cipher')); n++;
   for (const value of [null, {}, data({ status: 'error' }), data({ configuration_source: 'unknown' }), data({ max_tokens: NaN }), data({ max_tokens: 0 }), data({ routing_policy: 'unknown' }), data({ providers: { bad: { enabled: true } } }), data({ runtime: { available: true, active_model: null, mock_mode: false } })]) { assert.equal(snapshot(value), null); n++; }

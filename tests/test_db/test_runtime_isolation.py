@@ -117,7 +117,7 @@ async def test_async_close_is_awaited(monkeypatch):
             await asyncio.sleep(0)
             closed.append(True)
 
-    monkeypatch.setattr(ConnectionFactory, "_connections", {"async": AsyncConnection()})
+    monkeypatch.setattr(ConnectionFactory, "_connections", {(2, "async"): AsyncConnection()})
     monkeypatch.setattr(ConnectionFactory, "_infos", {})
     await ConnectionFactory.aclose_all()
     assert closed == [True]

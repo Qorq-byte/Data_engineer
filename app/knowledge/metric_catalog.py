@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 from sqlglot import exp
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id, normalize_tenant_id
 from app.security.sql_policy import require_read_query
 
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]{0,127}\Z")
@@ -114,6 +115,7 @@ class MetricBinding:
     domain: str
     database: str
     metrics: tuple[CatalogMetric, ...]
+    tenant_id: int = DEFAULT_TENANT_ID
 
 
 @dataclass(frozen=True)
@@ -124,8 +126,9 @@ class MetricCatalog:
 
     def select(
         self, *, version: str, domain: str, database: str, metrics: Any,
-        dimensions: Any, filters: Any,
+        dimensions: Any, filters: Any, tenant_id: int | None = None,
     ) -> MetricSelection:
+        tenant_id = get_current_tenant_id() if tenant_id is None else normalize_tenant_id(tenant_id)
         if version != self.version:
             raise CatalogError("Metric catalog version must match the active version")
         names = _names(metrics, maximum=8)
@@ -133,7 +136,10 @@ class MetricCatalog:
         if not names:
             raise CatalogError("At least one explicit metric name is required")
         binding = next(
-            (b for b in self.bindings if (b.domain, b.database) == (domain, database)), None
+            (
+                b for b in self.bindings
+                if (b.domain, b.database, b.tenant_id) == (domain, database, tenant_id)
+            ), None
         )
         if binding is None:
             raise CatalogError("No metric binding for the requested domain and database")
@@ -177,13 +183,22 @@ def load_catalog(path: str) -> MetricCatalog:
     if not isinstance(rows, list) or not 1 <= len(rows) <= 100:
         raise CatalogError("Metric catalog requires 1 to 100 bindings")
     bindings: list[MetricBinding] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, int]] = set()
     for raw_binding in rows:
-        row = _object(raw_binding, {"domain", "database", "metrics"})
+        if not isinstance(raw_binding, dict) or set(raw_binding) not in (
+            {"domain", "database", "metrics"},
+            {"domain", "database", "metrics", "tenant_id"},
+        ):
+            raise CatalogError("Metric catalog fields do not match the v1 contract")
+        row = raw_binding
         domain, database = _text(row["domain"]), _text(row["database"])
-        if (domain, database) in seen:
+        try:
+            tenant_id = normalize_tenant_id(row.get("tenant_id"))
+        except ValueError:
+            raise CatalogError("Metric binding tenant_id must be a positive integer") from None
+        if (domain, database, tenant_id) in seen:
             raise CatalogError("Duplicate metric domain/database binding")
-        seen.add((domain, database))
+        seen.add((domain, database, tenant_id))
         definitions = row["metrics"]
         if not isinstance(definitions, list) or not 1 <= len(definitions) <= 100:
             raise CatalogError("Metric bindings require 1 to 100 definitions")
@@ -202,5 +217,5 @@ def load_catalog(path: str) -> MetricCatalog:
             ))
         if len({m.name.casefold() for m in parsed}) != len(parsed):
             raise CatalogError("Duplicate metric definitions")
-        bindings.append(MetricBinding(domain, database, tuple(parsed)))
+        bindings.append(MetricBinding(domain, database, tuple(parsed), tenant_id))
     return MetricCatalog(version, hashlib.sha256(raw).hexdigest(), tuple(bindings))
