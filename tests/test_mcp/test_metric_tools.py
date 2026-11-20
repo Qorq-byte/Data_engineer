@@ -28,7 +28,7 @@ async def call(server, name, arguments):
     return (await server.call_tool(name, arguments)).structured_content
 
 
-async def http_call(server, name, arguments, token=None):
+async def http_exchange(server, method, params, token=None):
     app = server.http_app(path="/mcp", stateless_http=True, json_response=True)
     headers = {"Accept": "application/json, text/event-stream"}
     if token:
@@ -36,10 +36,15 @@ async def http_call(server, name, arguments, token=None):
     async with app.router.lifespan_context(app), httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://localhost", headers=headers,
     ) as client:
-        response = await client.post("/mcp", json={
-            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-            "params": {"name": name, "arguments": arguments},
+        return await client.post("/mcp", json={
+            "jsonrpc": "2.0", "id": 1, "method": method, "params": params,
         })
+
+
+async def http_call(server, name, arguments, token=None):
+    response = await http_exchange(
+        server, "tools/call", {"name": name, "arguments": arguments}, token
+    )
     assert response.status_code == 200, response.text
     return response.json()["result"]["structuredContent"]
 
@@ -149,11 +154,13 @@ async def test_http_auth_cannot_be_bypassed_by_local_trust(metric_env, kind, sta
     arguments = args(execute=True) if tool == "metric_query" else {
         "domain": "ecommerce", "db_id": "metric-db",
     }
-    data = await http_call(server, tool, arguments, token)
-    assert data["status"] == "failed" and data["http_status"] == status
-    assert data["rows"] == [] and model.calls == []
+    result = await http_exchange(
+        server, "tools/call", {"name": tool, "arguments": arguments}, token
+    )
+    assert result.status_code == status and set(result.json()) == {"detail"}
+    assert model.calls == []
     if token:
-        assert token not in str(data)
+        assert token not in result.text
 
 
 async def test_timeout_capacity_cancel_and_recovery(metric_env, monkeypatch):
