@@ -8,6 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from app.auth.tenant import DEFAULT_TENANT_ID
 from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.knowledge.metric_catalog import MetricCatalog, load_catalog
 from app.security.crypto import decrypt_secret, encrypt_secret
@@ -49,9 +50,29 @@ def validate_profiles(value: object) -> list[dict[str, Any]]:
     return value
 
 
-def _catalog_binding_check(catalog: MetricCatalog, profiles: list[dict[str, Any]]) -> None:
-    identities = {item["db_id"] for item in profiles}
-    if any(binding.database not in identities for binding in catalog.bindings):
+def validate_profile_groups(value: object) -> dict[int, list[dict[str, Any]]]:
+    if not isinstance(value, dict) or not 2 <= len(value) <= 64:
+        raise ValueError("A tenant release requires the default group and at least one tenant")
+    groups = {}
+    for tenant, profiles in value.items():
+        if not isinstance(tenant, str) or not re.fullmatch(r"[1-9][0-9]{0,9}", tenant):
+            raise ValueError("Invalid tenant profile key")
+        tenant_id = int(tenant)
+        if tenant_id > 2**31 - 1:
+            raise ValueError("Invalid tenant profile key")
+        groups[tenant_id] = validate_profiles(profiles)
+    if DEFAULT_TENANT_ID not in groups or sum(map(len, groups.values())) > 64:
+        raise ValueError("Default tenant required and at most 64 connections per release")
+    return groups
+
+
+def _catalog_binding_check(
+    catalog: MetricCatalog, groups: dict[int, list[dict[str, Any]]],
+) -> None:
+    identities = {
+        (tenant, item["db_id"]) for tenant, profiles in groups.items() for item in profiles
+    }
+    if any((binding.tenant_id, binding.database) not in identities for binding in catalog.bindings):
         raise ValueError("Metric catalog references an unsealed database identity")
 
 
@@ -62,7 +83,11 @@ class WorkerRelease:
                 raise ValueError("Invalid bundle path or size")
             encoded = path.read_bytes()
             raw = json.loads(encoded)
-            if not isinstance(raw, dict) or raw.get("format_version") != 1:
+            if (
+                not isinstance(raw, dict)
+                or type(raw.get("format_version")) is not int
+                or raw["format_version"] not in (1, 2)
+            ):
                 raise ValueError("Invalid bundle format")
             files = raw["files"]
             if not isinstance(files, dict) or not 1 <= len(files) <= 4096:
@@ -78,7 +103,13 @@ class WorkerRelease:
             plaintext = decrypt_secret(raw["connections_enc"])
             if plaintext is None:
                 raise ValueError("Bundle credentials cannot be decrypted")
-            self.profiles = validate_profiles(json.loads(plaintext))
+            profiles = json.loads(plaintext)
+            self.profile_groups = (
+                validate_profile_groups(profiles) if raw["format_version"] == 2
+                else {DEFAULT_TENANT_ID: validate_profiles(profiles)}
+            )
+            self.profiles = self.profile_groups[DEFAULT_TENANT_ID]
+            self.tenant_ids = frozenset(self.profile_groups) - {DEFAULT_TENANT_ID}
             self.path = path
             self.files: dict[str, str] = files
             self.metric_catalog_path: Path | None = None
@@ -97,7 +128,7 @@ class WorkerRelease:
                     or metric["version"] != catalog.version
                 ):
                     raise ValueError("Sealed metric catalog content does not match")
-                _catalog_binding_check(catalog, self.profiles)
+                _catalog_binding_check(catalog, self.profile_groups)
                 self.metric_catalog_path = Path(name).resolve()
                 self.metric_catalog = catalog
             roots = raw.get("index_roots", [])
@@ -156,6 +187,10 @@ class WorkerRelease:
     def verify_metadata(self) -> None:
         """Detect ordinary drift; OS administrators must still honor offline maintenance."""
         try:
+            if self.tenant_ids and (
+                self.path.stat().st_size > 1024 * 1024 or _digest(self.path) != self.digest
+            ):
+                raise ValueError("Tenant release bundle changed")
             for root in self.index_roots:
                 actual = {
                     str(path.resolve())
@@ -182,7 +217,11 @@ def write_release(
     metric_catalog: Path | None = None,
 ) -> None:
     """Offline-only construction. Does not connect to databases or call embedding models."""
-    checked = validate_profiles(profiles)
+    tenant_release = isinstance(profiles, dict)
+    groups = (
+        validate_profile_groups(profiles) if tenant_release
+        else {DEFAULT_TENANT_ID: validate_profiles(profiles)}
+    )
     if not 1 <= len(files) <= 4096 or output.exists():
         raise ValueError("New output path and bounded file list required")
     selected = {path.resolve() for path in files}
@@ -190,7 +229,7 @@ def write_release(
     if metric_catalog is not None:
         path = metric_catalog.resolve()
         catalog = load_catalog(str(path))
-        _catalog_binding_check(catalog, checked)
+        _catalog_binding_check(catalog, groups)
         selected.add(path)
         metric = {"path": str(path), "version": catalog.version, "sha256": catalog.sha256}
     if len(selected) > 4096 or output.resolve() in selected:
@@ -199,8 +238,10 @@ def write_release(
     if metric is not None and file_hashes[metric["path"]] != metric["sha256"]:
         raise ValueError("Metric catalog changed while sealing")
     payload = {
-        "format_version": 1,
-        "connections_enc": encrypt_secret(json.dumps(checked, ensure_ascii=False)),
+        "format_version": 2 if tenant_release else 1,
+        "connections_enc": encrypt_secret(json.dumps(
+            groups if tenant_release else groups[DEFAULT_TENANT_ID], ensure_ascii=False,
+        )),
         "files": file_hashes,
         "index_roots": [str(path.resolve()) for path in (index_roots or [])],
     }

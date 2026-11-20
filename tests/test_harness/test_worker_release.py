@@ -1,5 +1,6 @@
 """Immutable bundle seals and real read-only local index handles."""
 
+import os
 import sqlite3
 
 import pytest
@@ -60,6 +61,33 @@ def test_bundle_seals_credentials_and_detects_file_or_key_drift(tmp_path, monkey
 def test_invalid_profiles_fail_before_connections(invalid):
     with pytest.raises(ValueError):
         validate_profiles(invalid)
+
+
+def test_tenant_release_checks_binding_scope_and_live_bundle_bytes(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "jwt_secret", "a" * 48)
+    source = tmp_path / "config.yml"
+    source.write_text("fixed", encoding="utf-8")
+    catalog = tmp_path / "metrics.yml"
+    catalog.write_text(
+        "version: fixture\nbindings:\n"
+        "  - {tenant_id: 2, domain: shared, database: fixture, metrics: "
+        "[{name: total, table: orders, column: id, aggregation: sum, dimensions: []}]}\n",
+        encoding="utf-8",
+    )
+    bundle = tmp_path / "release.json"
+    with pytest.raises(ValueError, match="unsealed database identity"):
+        write_release(profile(), [source], bundle, metric_catalog=catalog)
+    groups = {"1": profile(), "2": profile()}
+    write_release(groups, [source], bundle, metric_catalog=catalog)
+    release = WorkerRelease(bundle)
+    assert release.profile_groups == {1: profile(), 2: profile()}
+    assert release.tenant_ids == {2}
+    assert "private-fixture-password" not in bundle.read_text()
+    state = bundle.stat()
+    bundle.write_bytes(bundle.read_bytes().replace(b'format_version', b'FORMAT_VERSION'))
+    os.utime(bundle, ns=(state.st_atime_ns, state.st_mtime_ns))
+    with pytest.raises(CoordinationUnavailableError):
+        release.verify_metadata()
 
 
 def test_sparse_read_only_handle_searches_and_cannot_mutate(tmp_path):
