@@ -95,7 +95,14 @@ async def run(args):
             "fixture",
         )
     app = create_app()
-    if os.environ.get("DE_SHARED_METRIC_MCP") == "1":
+    serving_app = app
+    if os.environ.get("DE_SHARED_STANDALONE_MCP") == "1":
+        from app.mcp.fastmcp_server import create_nl2sql_server
+
+        serving_app = create_nl2sql_server().http_app(
+            path="/metric-mcp/", stateless_http=True, json_response=True,
+        )
+    elif os.environ.get("DE_SHARED_METRIC_MCP") == "1":
         from app.mcp.fastmcp_server import create_nl2sql_server
 
         # Explicit test host composition. Local trust must never override HTTP JWT.
@@ -111,7 +118,7 @@ async def run(args):
 
         app.router.lifespan_context = combined_lifespan
         app.mount("/metric-mcp", mcp_app)
-    server = uvicorn.Server(uvicorn.Config(app, log_level="error", lifespan="on"))
+    server = uvicorn.Server(uvicorn.Config(serving_app, log_level="error", lifespan="on"))
 
     @app.get("/probe/local-sessions", dependencies=[Depends(require_operator)])
     async def local_sessions():

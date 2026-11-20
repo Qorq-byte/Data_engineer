@@ -3,6 +3,7 @@
 import os
 from datetime import UTC, datetime, timedelta
 
+import httpx
 import jwt
 import pytest
 from fastmcp import Client
@@ -45,12 +46,19 @@ async def test_metric_mcp_network_auth_results_shared_session_and_restart(shared
                 (create_access_token(99999, "outsider"), 403)]
     catalogs = []
     for url, directory, _ in servers:
-        for token, status in rejected:
-            async with network_client(url, token) as client:
+        async with httpx.AsyncClient(base_url=url, timeout=15) as unauthenticated:
+            for token, status in rejected:
+                headers = {"Accept": "application/json, text/event-stream"}
+                if token:
+                    headers["Authorization"] = f"Bearer {token}"
                 for name, args in (("list_metrics", SCOPE), ("metric_query", QUERY)):
-                    result = await tool(client, name, args)
-                    assert result["status"] == "failed" and result["http_status"] == status
-                    assert result["rows"] == [] and "token" not in result["error"]
+                    result = await unauthenticated.post("/metric-mcp/", headers=headers, json={
+                        "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                        "params": {"name": name, "arguments": args},
+                    })
+                    assert result.status_code == status and set(result.json()) == {"detail"}
+                    if token:
+                        assert token not in result.text
         async with network_client(url, operator) as client:
             catalog = await tool(client, "list_metrics", SCOPE)
             rest = await http.get(url + "/api/v1/metrics?domain=ecommerce&database=fixture")
