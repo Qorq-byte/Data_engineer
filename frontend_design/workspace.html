@@ -212,10 +212,21 @@ const API_BASE = (() => {
   return '';
 })();
 
+const workspaceToken = localStorage.getItem('nl2sql_token') || '';
+const leaveWorkspace = destination => {
+  if ((localStorage.getItem('nl2sql_token') || '') !== workspaceToken) {
+    window.location.reload();
+    return;
+  }
+  localStorage.removeItem('nl2sql_token');
+  localStorage.removeItem('nl2sql_user');
+  window.location.replace(destination);
+};
+
 const api = {
   _offline: false,
   _token() {
-    return localStorage.getItem('nl2sql_token') || '';
+    return workspaceToken;
   },
   _headers(json) {
     const h = {};
@@ -238,6 +249,7 @@ const api = {
       const res = await fetch(url, { ...opts, headers: { ...api._headers(), ...opts.headers }, signal: controller.signal });
       clearTimeout(timer);
       if (!res.ok) {
+        if (res.status === 401 && path.startsWith('/api/v1/')) leaveWorkspace('/login');
         let errBody = {};
         try { errBody = await res.json(); } catch(_) {}
         const code = errBody.error?.code || errBody.detail?.code || errBody.code || `HTTP_${res.status}`;
@@ -280,6 +292,7 @@ const api = {
   health() { return api._fetch('/health'); },
 
   // ── Auth ──
+  workspace(signal) { return api._fetch('/api/v1/auth/workspace', { signal }); },
   login(email, password) {
     return api._fetch('/api/v1/auth/login', {
       method: 'POST', headers: api._headers(true),
@@ -783,7 +796,7 @@ const QueryEvidence = ({ evidence }) => {
   </div>;
 };
 
-const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
+const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWorkspace }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [cmds, setCmds] = useState([]);
@@ -810,7 +823,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
   const [showHistory, setShowHistory] = useState(false); // history sidebar toggle
   const [history, setHistory] = useState(() => {
     try {
-      const entries = JSON.parse(localStorage.getItem('nl2sql_query_history') || '[]');
+      const entries = JSON.parse(localStorage.getItem(historyKey) || '[]');
       return Array.isArray(entries) ? entries : [];
     } catch(e) { return []; }
   });
@@ -837,10 +850,10 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
   // ── History helpers ──
   useEffect(() => {
     try {
-      if (history.length) localStorage.setItem('nl2sql_query_history', JSON.stringify(history));
-      else localStorage.removeItem('nl2sql_query_history');
+      if (history.length) localStorage.setItem(historyKey, JSON.stringify(history));
+      else localStorage.removeItem(historyKey);
     } catch(e) {}
-  }, [history]);
+  }, [history, historyKey]);
 
   const saveToHistory = (run, msg, queryText, domain) => {
     const msgs = [...run.messages, msg];
@@ -886,9 +899,11 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
     if (!active) return;
     let current = true;
     api.isOnline().then(value => { if (current) setOnline(value); });
-    api._fetch('/health/ready').then(value => {
-      if (current) setReadiness(value);
-    }).catch(e => { if (current) setReadiness(e.body || { status: 'unavailable' }); });
+    if (!tenantWorkspace) {
+      api._fetch('/health/ready').then(value => {
+        if (current) setReadiness(value);
+      }).catch(e => { if (current) setReadiness(e.body || { status: 'unavailable' }); });
+    }
     // Fetch available databases for query execution
     api.databases().then(data => {
       if (current) setDbList(data.databases || []);
@@ -896,10 +911,13 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
     }).catch(() => {});
     // Fetch user-configured LLM models for the model selector
     api._fetch('/api/v1/settings/available-models').then(r => {
-      if (current && r && r.models) setChatModels(r.models.filter(m => m.available));
-    }).catch(() => {});
+      if (!current || !Array.isArray(r?.models)) return;
+      const available = r.models.filter(m => m.available);
+      setChatModels(available);
+      if (tenantWorkspace) setReadiness({ status: available.length ? 'ready' : 'unconfigured' });
+    }).catch(() => { if (current && tenantWorkspace) setReadiness({ status: 'unknown' }); });
     return () => { current = false; };
-  }, [active]);
+  }, [active, tenantWorkspace]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -908,13 +926,15 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
 
   // ── Auto-detect domain from NL text ──
   const detectDomain = async (text, isCurrent, signal) => {
+    const fallback = tenantWorkspace ? "" : "ecommerce";
     try {
       const result = await api.detectDomain(text, signal);
-      const domain = result.recommendation || result.best?.domain || "ecommerce";
+      const domain = result.recommendation || result.best?.domain || fallback;
       if (isCurrent()) setDetectedDomain(domain);
       return domain;
     } catch(e) { /* ignore */ }
-    return "ecommerce";
+    if (isCurrent()) setDetectedDomain(fallback);
+    return fallback;
   };
 
   // ── Run the real pipeline via API (with SSE streaming) ──
@@ -975,6 +995,11 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
         });
 
         if (!res.ok) {
+          if (res.status === 401) {
+            leaveWorkspace('/login');
+            controller.abort();
+            return;
+          }
           const detail = await res.json().catch(() => ({}));
           throw new Error(detail.detail?.message || (typeof detail.detail === 'string' ? detail.detail : '') || detail.error?.message || `HTTP ${res.status}`);
         }
@@ -1370,7 +1395,13 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
           + 新对话
         </button>
       </PanelHeader>
-      {readiness && readiness.status !== 'ready' && <p role="status" className="text-xs text-amber-700 dark:text-amber-400 px-4 py-2 m-0">生产查询尚未就绪：请检查模型、数据库与认证配置。测试模型输出不代表真实答案。</p>}
+      {readiness && readiness.status !== 'ready' && (
+        <p role="status" className="text-xs text-amber-700 dark:text-amber-400 px-4 py-2 m-0">
+          {tenantWorkspace
+            ? (readiness.status === 'unconfigured' ? '此租户尚无可用模型，请先完成模型设置。' : '暂时无法读取此租户的模型配置。')
+            : '生产查询尚未就绪：请检查模型、数据库与认证配置。测试模型输出不代表真实答案。'}
+        </p>
+      )}
 
 
       {/* ── History Sidebar ── */}
@@ -1539,7 +1570,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                               <div className="ml-4 text-[11px] text-red-500">执行错误: {c.execution.error}</div>
                             )}
                             {/* Per-candidate feedback buttons */}
-                            <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+                            {!tenantWorkspace && <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                               <span className="text-[10px] font-mono">候选 {ci + 1}</span>
                               <div className="flex-1" />
                               {candFeedback[`${idx}_${ci}`] === 'edit' ? (
@@ -1559,7 +1590,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                                   <button className="icon-btn !p-1" onClick={() => onSendToWorkbench(c.sql_text)} title="发送到工作台"><IconExternal className="h-3.5 w-3.5" /></button>
                                 </Fragment>
                               )}
-                            </div>
+                            </div>}
                             {/* Per-candidate edit textarea */}
                             {editingCandKey === `${idx}_${ci}` && (
                               <div className="flex flex-col gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-800">
@@ -1609,7 +1640,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
                             there are NO candidates or just one candidate.
                             When multiple candidates exist, each has its own
                             per-candidate feedback buttons (see above). */}
-                        {(!msg.candidates || msg.candidates.length <= 1) && (
+                        {!tenantWorkspace && (!msg.candidates || msg.candidates.length <= 1) && (
                         <div className="flex items-center gap-1.5 text-xs text-neutral-400">
                           <span className="font-mono text-[10px]">{msg.queryId || ''}</span>
                           <div className="flex-1" />
@@ -1748,7 +1779,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
               onChange={(e) => setSelectedModel(e.target.value)}
               title="选择本次查询使用的大模型"
             >
-              <option value="">跟随系统设置</option>
+              <option value="">{tenantWorkspace ? "跟随租户设置" : "跟随系统设置"}</option>
               {chatModels.map(m => (
                 <option key={`${m.provider}/${m.model}`} value={m.model}>{m.model} ({m.provider})</option>
               ))}
@@ -1806,7 +1837,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench }) => {
 /* ════════════════════════════════════════════════════════════════════════════
    2. 数据 Schema — fetches from GET /api/v1/databases & /api/v1/schema/{db_id}
    ════════════════════════════════════════════════════════════════════════════ */
-const SchemaPanel = () => {
+const SchemaPanel = ({ tenantWorkspace }) => {
   const [expanded, setExpanded] = useState(null);
   const [dbFilter, setDbFilter] = useState("全部");
   const [databases, setDatabases] = useState([]);
@@ -1880,40 +1911,34 @@ const SchemaPanel = () => {
     }
   };
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) { setSearchResults(null); return; }
+  const handleSearch = async (query = searchQuery) => {
+    if (!query.trim()) { setSearchResults(null); return; }
     const dbId = activeDbId || databases[0]?.db_id;
     if (!dbId) return;
     setLoading(true);
     try {
-      const data = await api.schemaSearch(dbId, searchQuery);
-      setSearchResults(data.results || []);
+      if (!tenantWorkspace) {
+        const data = await api.schemaSearch(dbId, query);
+        setSearchResults(data.results || []);
+        return;
+      }
     } catch(e) {
-      // Search across all loaded schemas locally
-      const results = [];
-      const q = searchQuery.toLowerCase();
-      Object.entries(schemas).forEach(([dbId, schema]) => {
-        if (!schema || !schema.tables) return;
-        Object.entries(schema.tables).forEach(([name, t]) => {
-          if (name.toLowerCase().includes(q)) {
-            results.push({ table_name: name, comment: t.comment, column_count: t.column_count || 0, db: schema.database_name || dbId, matched_columns: [], dbId: dbId });
-          }
-          if (t.columns) {
-            t.columns.forEach(c => {
-              if (c.name.toLowerCase().includes(q) || (c.comment && c.comment.toLowerCase().includes(q))) {
-                const existing = results.find(r => r.table_name === name);
-                if (!existing) {
-                  results.push({ table_name: name, comment: t.comment, column_count: t.column_count || 0, db: schema.database_name || dbId, dbId: dbId, matched_columns: [{ name: c.name, type: c.type, comment: c.comment }] });
-                } else if (!existing.matched_columns.find(mc => mc.name === c.name)) {
-                  existing.matched_columns.push({ name: c.name, type: c.type, comment: c.comment });
-                }
-              }
-            });
-          }
-        });
-      });
-      setSearchResults(results);
+      // Fall back to the loaded snapshots if indexed search is unavailable.
     } finally { setLoading(false); }
+    const results = [];
+    const q = query.trim().toLowerCase();
+    Object.entries(schemas).forEach(([id, schema]) => {
+      if (tenantWorkspace && id !== dbId || !schema?.tables) return;
+      Object.entries(schema.tables).forEach(([name, table]) => {
+        const columns = (table.columns || []).filter(column =>
+          column.name.toLowerCase().includes(q) || column.comment?.toLowerCase().includes(q));
+        if (name.toLowerCase().includes(q) || columns.length) {
+          results.push({ table_name: name, comment: table.comment, column_count: table.column_count || 0,
+            db: schema.database_name || id, matched_columns: columns, dbId: id });
+        }
+      });
+    });
+    setSearchResults(results);
   };
 
   // Debounced search
@@ -1924,7 +1949,7 @@ const SchemaPanel = () => {
       setSearchResults(null);
       return;
     }
-    searchTimerRef.current = setTimeout(() => handleSearch(), 350);
+    searchTimerRef.current = setTimeout(() => handleSearch(value), 350);
   };
 
   const handleDbSwitch = async (dbId) => {
@@ -1958,14 +1983,14 @@ const SchemaPanel = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      <PanelHeader title="数据 Schema" desc="数据库结构快照与检索索引；行数为快照估算">
+      <PanelHeader title="数据 Schema" desc={tenantWorkspace ? "已分配数据源的结构快照" : "数据库结构快照与检索索引；行数为快照估算"}>
         <div className="flex items-center gap-2">
           {/* View mode toggle */}
           <div className="flex items-center gap-0 border border-neutral-200 dark:border-neutral-700 rounded-full overflow-hidden">
             <button className={cn("text-[10px] px-2.5 py-1 bg-transparent border-none cursor-pointer transition-all", viewMode === "tables" ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900" : "text-neutral-400")} onClick={() => setViewMode("tables")}>表</button>
             <button className={cn("text-[10px] px-2.5 py-1 bg-transparent border-none cursor-pointer transition-all", viewMode === "compare" ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900" : "text-neutral-400")} onClick={() => setViewMode("compare")}>对比</button>
           </div>
-          {activeDbId && (
+          {activeDbId && !tenantWorkspace && (
             <button className="btn-outline flex items-center gap-1.5" onClick={() => handleRefreshSchema(activeDbId)} disabled={refreshingDb === activeDbId}>
               {refreshingDb === activeDbId ? (
                 <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
@@ -2001,7 +2026,11 @@ const SchemaPanel = () => {
       ))}
 
       <div className="grid grid-cols-3 gap-3">
-        {[["11", "数据库方言"], [String(allTables.length), "数据表"], [String(totalCols || "1.2K"), "已索引列"]].map(([v, l]) => (
+        {[
+          tenantWorkspace ? [String(databases.length), "数据源"] : ["11", "数据库方言"],
+          [String(allTables.length), "数据表"],
+          tenantWorkspace ? [String(totalCols), "字段"] : [String(totalCols || "1.2K"), "已索引列"],
+        ].map(([v, l]) => (
           <Card key={l} className="p-4 text-center">
             <div className="text-2xl font-semibold text-neutral-900 dark:text-neutral-100">{v}</div>
             <div className="text-xs text-neutral-400 mt-0.5">{l}</div>
@@ -2037,7 +2066,7 @@ const SchemaPanel = () => {
         <input className="input-light pl-9" placeholder="搜索表名或列名…" value={searchQuery}
           onChange={e => handleSearchInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleSearch(); }} />
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={handleSearch}>
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 cursor-pointer" onClick={() => handleSearch()}>
           <IconSearch className="h-4 w-4 text-neutral-400" />
         </div>
         {loading && <div className="absolute right-3 top-1/2 -translate-y-1/2"><svg className="animate-spin h-4 w-4 text-neutral-400" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></div>}
@@ -2238,7 +2267,7 @@ const ModalField = ({ label, value, onChange, placeholder, type, isTextarea }) =
   );
 };
 
-const DomainPanel = () => {
+const DomainPanel = ({ configurationReadOnly }) => {
   const [tab, setTab] = useState("terms");
   const [activeDomain, setActiveDomain] = useState(null);
   const [domains, setDomains] = useState([]);
@@ -2447,8 +2476,8 @@ const DomainPanel = () => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      <PanelHeader title="领域知识" desc="YAML 定义的业务术语、别名映射与计算规则">
-        <button className="btn-outline" onClick={() => setShowNewDomain(true)}>+ 新建领域</button>
+      <PanelHeader title="领域知识" desc={configurationReadOnly ? "当前发布中的业务术语和规则" : "业务术语、别名映射与计算规则"}>
+        {!configurationReadOnly && <button className="btn-outline" onClick={() => setShowNewDomain(true)}>+ 新建领域</button>}
       </PanelHeader>
 
       {/* Status message */}
@@ -2510,12 +2539,12 @@ const DomainPanel = () => {
               <span className="text-neutral-900 dark:text-neutral-100 text-sm font-medium">{d.name}</span>
               <div className="flex items-center gap-1">
                 {activeDomain === d.id && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot" />}
-                <button className="icon-btn !p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="删除领域"
+                {!configurationReadOnly && <button className="icon-btn !p-1 opacity-0 group-hover:opacity-100 transition-opacity" title="删除领域"
                   onClick={e => { e.stopPropagation(); handleDeleteDomain(d); }}>
                   <svg className="h-3.5 w-3.5 text-red-400 hover:text-red-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" />
                   </svg>
-                </button>
+                </button>}
               </div>
             </div>
             <div className="flex gap-3 text-xs text-neutral-400">
@@ -2535,8 +2564,8 @@ const DomainPanel = () => {
             onClick={() => setTab(k)}>{l}</button>
         ))}
         <div className="flex-1" />
-        {tab === "terms" && <button className="btn-outline !py-1 !px-3 !text-xs" onClick={openNewTerm}>+ 添加术语</button>}
-        {tab === "rules" && <button className="btn-outline !py-1 !px-3 !text-xs" onClick={openNewRule}>+ 添加规则</button>}
+        {!configurationReadOnly && tab === "terms" && <button className="btn-outline !py-1 !px-3 !text-xs" onClick={openNewTerm}>+ 添加术语</button>}
+        {!configurationReadOnly && tab === "rules" && <button className="btn-outline !py-1 !px-3 !text-xs" onClick={openNewRule}>+ 添加规则</button>}
       </div>
 
       {loading && <p className="text-sm text-neutral-400 text-center py-4">加载中…</p>}
@@ -2550,10 +2579,10 @@ const DomainPanel = () => {
                 {t.term_en && <span className="text-xs text-neutral-400">{t.term_en}</span>}
                 {t.tags && t.tags.map(tag => <span key={tag} className="text-[10px] text-neutral-400 bg-gray-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded">{tag}</span>)}
               </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {!configurationReadOnly && <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button className="icon-btn !p-1" title="编辑" onClick={() => openEditTerm(t)}><svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
                 <button className="icon-btn !p-1 !text-red-400 hover:!text-red-600" title="删除" onClick={() => handleDeleteTerm(t.term)}><IconTrash className="h-3.5 w-3.5" /></button>
-              </div>
+              </div>}
             </div>
             <p className="text-neutral-500 dark:text-neutral-400 text-xs m-0 mb-2">{t.description}</p>
             {t.mapping && (
@@ -2571,10 +2600,10 @@ const DomainPanel = () => {
                 <span className="text-neutral-400 text-xs font-mono">{r.id}</span>
                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 rounded-full">启用中</span>
               </div>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              {!configurationReadOnly && <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button className="icon-btn !p-1" title="编辑" onClick={() => openEditRule(r)}><svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
                 <button className="icon-btn !p-1 !text-red-400 hover:!text-red-600" title="删除" onClick={() => handleDeleteRule(r.id)}><IconTrash className="h-3.5 w-3.5" /></button>
-              </div>
+              </div>}
             </div>
             <p className="text-neutral-900 dark:text-neutral-100 text-sm font-mono m-0 mb-1">{r.sql_template || r.pattern}</p>
             <p className="text-neutral-500 dark:text-neutral-400 text-xs m-0">{r.description}</p>
@@ -2585,8 +2614,12 @@ const DomainPanel = () => {
             )}
           </Card>
         ))}
-        {!loading && tab === "terms" && glossary.length === 0 && <p className="text-sm text-neutral-400 text-center py-8">暂无术语数据，点击「+ 添加术语」创建</p>}
-        {!loading && tab === "rules" && rules.length === 0 && <p className="text-sm text-neutral-400 text-center py-8">暂无业务规则，点击「+ 添加规则」创建</p>}
+        {!loading && tab === "terms" && glossary.length === 0 && <p className="text-sm text-neutral-400 text-center py-8">
+          {configurationReadOnly ? "暂无术语数据" : "暂无术语数据，点击「+ 添加术语」创建"}
+        </p>}
+        {!loading && tab === "rules" && rules.length === 0 && <p className="text-sm text-neutral-400 text-center py-8">
+          {configurationReadOnly ? "暂无业务规则" : "暂无业务规则，点击「+ 添加规则」创建"}
+        </p>}
       </div>
     </div>
   );
@@ -3554,7 +3587,7 @@ const schemaIndexRows = (status, connections) => {
 };
 
 const llmConfigurationSnapshot = (value, status = 'ok') => {
-  if (!value || value.status !== status || !['database', 'memory'].includes(value.configuration_source)
+  if (!value || value.status !== status || !['database', 'memory', 'unconfigured'].includes(value.configuration_source)
       || typeof value.default_model !== 'string' || typeof value.fallback_model !== 'string'
       || value.routing_policy !== 'primary_then_fallback' || value.temperature_policy !== 'caller_supplied'
       || !Array.isArray(value.unsupported_fields) || !['routing_strategy', 'temperature'].every(key => value.unsupported_fields.includes(key))
@@ -3645,7 +3678,7 @@ const ragConfigurationSnapshot = (value, status = 'ok') => {
   return { ...value, configured_weights: { bm25_weight: value.bm25_weight, vector_weight: value.vector_weight } };
 };
 
-const SettingsPanel = ({ userName, onLogout }) => {
+const SettingsPanel = ({ userName, onLogout, tenantWorkspace, configurationReadOnly }) => {
   const [health, setHealth] = useState(null);
   const [llmSettings, setLlmSettings] = useState(null);
   const [llmLoading, setLlmLoading] = useState(false);
@@ -3776,17 +3809,17 @@ const SettingsPanel = ({ userName, onLogout }) => {
   const fetchSettings = useCallback(() => {
     setLoading(true);
     Promise.all([
-      api.health(),
+      tenantWorkspace ? Promise.resolve(null) : api.health(),
       api._fetch('/api/v1/settings/available-models').catch(() => null),
-      fetchRagConfig(),
-      fetchHarnessPolicy(),
-      fetchDatabaseCapabilities(),
       fetchLlmConfiguration(),
+      ...(tenantWorkspace ? [] : [fetchRagConfig(), fetchHarnessPolicy(), fetchDatabaseCapabilities()]),
     ]).then(([h, models]) => {
       setHealth(h);
-      if (models && models.models) setAvailableModels(models.models);
+      if (models && models.models) {
+        setAvailableModels(tenantWorkspace ? models.models.filter(model => model.available) : models.models);
+      }
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [fetchRagConfig, fetchHarnessPolicy, fetchDatabaseCapabilities, fetchLlmConfiguration]);
+  }, [tenantWorkspace, fetchRagConfig, fetchHarnessPolicy, fetchDatabaseCapabilities, fetchLlmConfiguration]);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
 
@@ -3817,6 +3850,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
       }
       setLlmSettings(snapshot);
       setAvailableModels(Object.entries(snapshot.providers).flatMap(([provider, cfg]) => cfg.enabled
+        && (!tenantWorkspace || (cfg.api_key_configured && cfg.base_url))
         ? cfg.models.map(model => ({ model, provider })) : []));
       setSaveMsg({ type: response.persistence === 'persisted' ? 'ok' : 'warn', text:
         `${response.persistence === 'persisted' ? 'LLM 配置已持久化并应用' : 'LLM 配置仅在当前进程生效，重启不保留'} · 当前模型: ${response.active_model}${response.mock_mode ? '（mock 模式）' : ''}` });
@@ -3842,7 +3876,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
       if (key.trim()) providers[name] = { api_key: key.trim() };
     }
     for (const [name, cfg] of Object.entries(llmSettings.providers)) {
-      if (!BUILTIN_PROVIDERS.includes(name)) providers[name] = { ...providers[name], base_url: (cfg.base_url || '').trim() };
+      if (!BUILTIN_PROVIDERS.includes(name) || tenantWorkspace) providers[name] = { ...providers[name], base_url: (cfg.base_url || '').trim() };
     }
     await commitLlmChange({ default_model: llmSettings.default_model, fallback_model: llmSettings.fallback_model,
       max_tokens: llmSettings.max_tokens, providers });
@@ -4170,12 +4204,12 @@ const SettingsPanel = ({ userName, onLogout }) => {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      <PanelHeader title="系统设置" desc="LLM 提供商、Harness 约束、RAG 检索与数据库连接管理">
+      <PanelHeader title={tenantWorkspace ? "模型设置" : "系统设置"} desc={tenantWorkspace ? "使用部署端为此租户批准的 HTTPS 端点和此租户的 API 密钥" : "LLM 提供商、Harness 约束、RAG 检索与数据库连接管理"}>
         <div className="flex items-center gap-2">
-          <span className="status-badge">
+          {!tenantWorkspace && <span className="status-badge">
             <span className={cn("w-1.5 h-1.5 rounded-full", health ? "bg-emerald-500 pulse-dot" : "bg-neutral-300")} />
             {health ? `v${health.version}` : "离线"}
-          </span>
+          </span>}
           <button className="btn-outline" onClick={fetchSettings}>
             <IconRefresh className="h-3.5 w-3.5" />
           </button>
@@ -4192,7 +4226,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
 
       {/* Settings tabs */}
       <div className="flex gap-1 border-b border-neutral-200 dark:border-neutral-700">
-        {[["llm", "LLM 提供商"], ["harness", "Harness 约束"], ["rag", "RAG 检索"], ["database", "数据库"], ["account", "账户"]].map(([k, l]) => (
+        {[["llm", "LLM 提供商"], ["harness", "Harness 约束"], ["rag", "RAG 检索"], ["database", "数据库"], ["account", "账户"]].filter(([key]) => !tenantWorkspace || key === "llm").map(([k, l]) => (
           <button key={k}
             className={cn("px-4 py-2 text-sm bg-transparent border-none cursor-pointer transition-all -mb-px",
               activeTab === k ? "text-neutral-900 dark:text-neutral-100 font-medium border-b-2 border-neutral-900 dark:border-neutral-100"
@@ -4212,7 +4246,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
                 {llmError && <p role="alert" className="text-sm text-red-600">{llmError}</p>}
                 {!llmError && !llmLoading && llmSettings && <p role="status" className="text-xs text-neutral-500">来源：{llmSettings.configuration_source} · 运行模型：{llmSettings.runtime.available ? llmSettings.runtime.active_model : '尚未就绪'}；保存字段不等于全部路由参数均生效。</p>}
               </div>
-              {llmSettings && !llmError && !llmLoading && <fieldset disabled={llmBusy} className="contents">
+              {llmSettings && !llmError && !llmLoading && <fieldset disabled={llmBusy || configurationReadOnly} className="contents">
               {/* LLM Provider Settings */}
               <Card className="p-5">
                 <div className="flex items-center justify-between mb-3">
@@ -4225,10 +4259,11 @@ const SettingsPanel = ({ userName, onLogout }) => {
                   <div>
                     <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400 block mb-1.5">默认模型</label>
                     <select className="input-light w-full text-sm py-2"
-                      value={llmSettings?.default_model || "deepseek-v4-flash"}
+                      value={llmSettings?.default_model || (tenantWorkspace ? "" : "deepseek-v4-flash")}
                       onChange={e => setLlmSettings(s => s ? { ...s, default_model: e.target.value } : s)}>
+                      {tenantWorkspace && <option value="">自动使用首个可用模型</option>}
                       {availableModels.map(m => <option key={m.model} value={m.model}>{m.model} ({m.provider})</option>)}
-                      {availableModels.length === 0 && (
+                      {!tenantWorkspace && availableModels.length === 0 && (
                         <Fragment>
                           <option>deepseek-v4-flash</option><option>gpt-4.1</option><option>claude-sonnet-4</option><option>claude-haiku-4.5</option>
                         </Fragment>
@@ -4242,7 +4277,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
                       onChange={e => setLlmSettings(s => s ? { ...s, fallback_model: e.target.value } : s)}>
                       <option value="">无</option>
                       {availableModels.filter(m => m.model !== (llmSettings?.default_model)).map(m => <option key={m.model} value={m.model}>{m.model}</option>)}
-                      {availableModels.length === 0 && (
+                      {!tenantWorkspace && availableModels.length === 0 && (
                         <Fragment>
                           <option>gpt-4.1</option><option>claude-sonnet-4</option>
                         </Fragment>
@@ -4293,7 +4328,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
                           onChange={e => setNewProvider(s => ({...s, models: e.target.value}))} />
                       </div>
                       <div>
-                        <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 block mb-1">接口地址 base_url（OpenAI 兼容,可选）</label>
+                        <label className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400 block mb-1">{tenantWorkspace ? "已批准的 HTTPS 接口地址" : "接口地址 base_url（OpenAI 兼容，可选）"}</label>
                         <input className="input-light text-sm" placeholder="https://api.example.com/v1" value={newProvider.base_url}
                           onChange={e => setNewProvider(s => ({...s, base_url: e.target.value}))} />
                       </div>
@@ -4347,7 +4382,7 @@ const SettingsPanel = ({ userName, onLogout }) => {
                           autoComplete="off"
                           onChange={e => setProviderKeys(s => ({...s, [name]: e.target.value}))} />
                       </div>
-                      {!BUILTIN_PROVIDERS.includes(name) && (
+                      {(!BUILTIN_PROVIDERS.includes(name) || tenantWorkspace) && (
                         <div className="mt-1.5">
                           <input className="input-light text-xs w-full"
                             placeholder="接口地址 base_url(OpenAI 兼容端点)"
@@ -4701,12 +4736,6 @@ const UserSettingsPanel = ({ userName, userAvatar, onLogout, onUserUpdate }) => 
       // Build full URL for avatar
       const fullUrl = avatarUrl.startsWith("http") ? avatarUrl : `${API_BASE}${avatarUrl}`;
       setPreviewAvatar(fullUrl);
-      // Update localStorage user
-      try {
-        const u = JSON.parse(localStorage.getItem("nl2sql_user") || "{}");
-        u.avatar_url = avatarUrl;
-        localStorage.setItem("nl2sql_user", JSON.stringify(u));
-      } catch (_) {}
       if (onUserUpdate) onUserUpdate({ avatar_url: avatarUrl });
       showMsg("头像更新成功");
     } catch (e) {
@@ -5262,68 +5291,73 @@ const PANELS = {
 };
 
 const DEFAULT_SQL = "SELECT * FROM users LIMIT 10;";
+const TENANT_PANELS = new Set(["query", "schema", "domain", "settings", "user"]);
+const workspaceHistoryKey = user => `nl2sql_query_history:v1:${user.tenant_id}:${user.id}`;
 
-const App = () => {
+const Workspace = ({ user }) => {
+  const tenantWorkspace = user.access === "tenant";
+  const canOpenPanel = key => user.access === "system" || key === "user"
+    || (tenantWorkspace && TENANT_PANELS.has(key));
   const [open, setOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState("query");
+  const [activePanel, setActivePanel] = useState(user.access === "account" ? "user" : "query");
   const [workbenchSql, setWorkbenchSql] = useState(DEFAULT_SQL);
   const [dbVersion, setDbVersion] = useState(0);
   const [panelRefreshKey, setPanelRefreshKey] = useState(0);
   const [userRefreshKey, setUserRefreshKey] = useState(0);
   const bumpDb = () => setDbVersion(v => v + 1);
 
-  let userName = "用户账户";
+  const userName = user.username;
   let userAvatar = "";
   try {
     const u = JSON.parse(localStorage.getItem("nl2sql_user") || "null");
-    if (u && u.username) {
-      userName = u.username;
-      if (u.avatar_url) {
+    if (u?.id === user.id && u.tenant_id === user.tenant_id) {
+      if (typeof u.avatar_url === 'string' && u.avatar_url) {
         userAvatar = u.avatar_url.startsWith("http") ? u.avatar_url : `${API_BASE}${u.avatar_url}`;
       }
     }
   } catch (e) { /* ignore */ }
 
-  const links = Object.entries(PANELS).map(([key, p]) => ({
-    label: p.label, href: "#" + key, icon: p.icon, key,
+  const links = Object.entries(PANELS).filter(([key]) => canOpenPanel(key)).map(([key, p]) => ({
+    label: tenantWorkspace && key === "settings" ? "模型设置" : p.label,
+    href: "#" + key, icon: p.icon, key,
   }));
 
   const handleLogout = () => {
-    localStorage.removeItem("nl2sql_token");
-    localStorage.removeItem("nl2sql_user");
-    window.location.href = "/";
+    leaveWorkspace("/");
   };
 
   const handleUserUpdate = (updates) => {
     try {
-      const u = JSON.parse(localStorage.getItem("nl2sql_user") || "{}");
-      Object.assign(u, updates);
-      localStorage.setItem("nl2sql_user", JSON.stringify(u));
+      if (localStorage.getItem("nl2sql_token") !== workspaceToken) return;
+      localStorage.setItem("nl2sql_user", JSON.stringify({ ...user, ...updates }));
       setUserRefreshKey(k => k + 1);
     } catch (_) {}
   };
 
   const handleSendToWorkbench = (sql) => {
+    if (!canOpenPanel("workbench")) return;
     setWorkbenchSql(sql);
     setActivePanel("workbench");
     setPanelRefreshKey(k => k + 1);
   };
 
   const switchPanel = (key) => {
+    if (!canOpenPanel(key)) return;
     setActivePanel(key);
     setPanelRefreshKey(k => k + 1);
   };
 
   const renderPanel = () => {
     switch (activePanel) {
-      case "schema":    return <SchemaPanel key={dbVersion} />;
+      case "schema":    return <SchemaPanel key={dbVersion} tenantWorkspace={tenantWorkspace} />;
       case "connect":   return <ConnectPanel onDbChange={bumpDb} />;
-      case "domain":    return <DomainPanel />;
+      case "domain":    return <DomainPanel configurationReadOnly={user.configuration_read_only === true} />;
       case "workbench": return <WorkbenchPanel key={panelRefreshKey} sql={workbenchSql} setSql={setWorkbenchSql} />;
       case "mcp":       return <McpPanel />;
       case "workflow":  return <WorkflowPanel key={panelRefreshKey} />;
       case "learning":  return <LearningPanel key={panelRefreshKey} />;
-      case "settings":  return <SettingsPanel userName={userName} onLogout={handleLogout} />;
+      case "settings":  return <SettingsPanel userName={userName} onLogout={handleLogout} tenantWorkspace={tenantWorkspace}
+        configurationReadOnly={user.configuration_read_only === true} />;
       case "user":      return <UserSettingsPanel key={userRefreshKey} userName={userName} userAvatar={userAvatar} onLogout={handleLogout} onUserUpdate={handleUserUpdate} />;
       default:          return null;
     }
@@ -5376,9 +5410,15 @@ const App = () => {
         <div
           className="p-2 md:p-8 md:rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col flex-1 w-full min-w-0 min-h-0 overflow-hidden"
         >
-          <div className={activePanel === "query" ? "flex flex-col flex-1 min-h-0 overflow-auto" : "hidden"}>
-            <ChatPanel active={activePanel === "query"} userName={userName} onSendToWorkbench={handleSendToWorkbench} />
-          </div>
+          {tenantWorkspace && <div className="mb-3 min-w-0 text-xs text-neutral-500 dark:text-neutral-400">
+            租户 {user.tenant_id}{user.configuration_read_only === true && " · 领域与模型配置在停服维护时更新"}
+          </div>}
+          {user.access === "account" && <p role="status" className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">当前账号可管理个人设置。工作台功能需要管理员授权。</p>}
+          {canOpenPanel("query") && <div className={activePanel === "query" ? "flex flex-col flex-1 min-h-0 overflow-auto" : "hidden"}>
+            <ChatPanel active={activePanel === "query"} userName={userName}
+              tenantWorkspace={tenantWorkspace} historyKey={workspaceHistoryKey(user)}
+              onSendToWorkbench={canOpenPanel("workbench") ? handleSendToWorkbench : undefined} />
+          </div>}
           {activePanel !== "query" && (
             <div key={activePanel} className="panel-enter flex flex-col flex-1 min-h-0 overflow-auto">
               {renderPanel()}
@@ -5393,6 +5433,50 @@ const App = () => {
 /* ════════════════════════════════════════════════════════════════════════════
    Render
    ════════════════════════════════════════════════════════════════════════════ */
+const App = () => {
+  const [user, setUser] = useState(null);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+
+  useEffect(() => {
+    const onStorage = event => {
+      if ((event.key === 'nl2sql_token' || event.key === null)
+          && (localStorage.getItem('nl2sql_token') || '') !== workspaceToken) window.location.reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
+    if (!workspaceToken) {
+      leaveWorkspace('/login');
+      return;
+    }
+    const controller = new AbortController();
+    api.workspace(controller.signal).then(value => {
+      if (controller.signal.aborted) return;
+      if (!Number.isSafeInteger(value?.id) || value.id < 1
+          || !Number.isSafeInteger(value.tenant_id) || value.tenant_id < 1
+          || typeof value.username !== 'string'
+          || !['system', 'tenant', 'account'].includes(value.access)) {
+        throw new Error('Invalid workspace access');
+      }
+      setUser(value);
+    }).catch(() => { if (!controller.signal.aborted) setError(true); });
+    return () => controller.abort();
+  }, [attempt]);
+
+  if (user) return <Workspace user={user} />;
+  return (
+    <main className="grid min-h-[100dvh] place-items-center bg-white dark:bg-neutral-900 p-6">
+      <div className="flex flex-col items-center gap-4 text-sm text-neutral-600 dark:text-neutral-300">
+        <p role="status">{error ? "暂时无法确认工作台权限。" : "正在确认工作台权限…"}</p>
+        {error && <button className="btn-outline" onClick={() => { setError(false); setAttempt(v => v + 1); }}>重试</button>}
+      </div>
+    </main>
+  );
+};
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<NotifProvider><App /></NotifProvider>);
 </script>

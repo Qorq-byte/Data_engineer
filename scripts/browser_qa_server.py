@@ -22,6 +22,7 @@ async def main():
     import uvicorn
 
     from app.api import create_app, query
+    from app.auth import database
     from app.auth.security import create_access_token
     from app.config.settings import settings
     from app.db.connections import ConnectionFactory, DatabaseType
@@ -46,7 +47,13 @@ async def main():
     conn.executemany("INSERT INTO orders VALUES (?)", [(1,), (2,), (3,)])
     conn.commit()
     Path(".verify_tmp_scripts").mkdir(exist_ok=True)
-    token = create_access_token(settings.admin_user_ids[0], "synthetic-browser-qa")
+    admin_id = settings.admin_user_ids[0]
+
+    async def read_token_state(user_id):
+        return (1, 0) if user_id == admin_id else None
+
+    database.read_token_state = read_token_state
+    token = create_access_token(admin_id, "synthetic-browser-qa")
     Path(".verify_tmp_scripts/browser_auth.js").write_text(
         'localStorage.setItem("nl2sql_token", ' + json.dumps(token) + ");\n"
         'localStorage.setItem("nl2sql_user", JSON.stringify({username:"合成测试", id:1}));',

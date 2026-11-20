@@ -37,6 +37,7 @@ B goto http://127.0.0.1:8018/workspace
 
 # 1. connection scope: the selector must list the registered fixture and accept a
 #    concrete db_id instead of only "all databases".
+B wait 'select:has(option[value="qa-fixture"])'
 B js 'const s=[...document.querySelectorAll("select")].find(x=>[...x.options].some(o=>o.value==="qa-fixture")); if(!s) throw new Error("query-scope select missing"); const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,"value").set; set.call(s,"qa-fixture"); s.dispatchEvent(new Event("change",{bubbles:true})); "PASS query scope offers qa-fixture"'
 Start-Sleep -Milliseconds 300
 B js 'const s=[...document.querySelectorAll("select")].find(x=>[...x.options].some(o=>o.value==="qa-fixture")); if(s.value!=="qa-fixture") throw new Error("scope not applied: "+s.value); ({scope:s.value, options:[...s.options].map(o=>o.value)})'
