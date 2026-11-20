@@ -12,6 +12,8 @@ from typing import Any
 
 import aiomysql
 
+from app.harness.session_keys import shared_session_digest
+
 
 class SessionStoreUnavailableError(RuntimeError):
     """Storage outcome is unconfirmed; read before retrying a write."""
@@ -95,7 +97,7 @@ class MySQLSessionStore:
             raise SessionStoreUnavailableError("Shared sessions are not initialized")
         if not isinstance(session_id, str) or not session_id or len(session_id) > 256:
             raise ValueError("Invalid session identity")
-        return hashlib.sha256(session_id.encode()).hexdigest()
+        return shared_session_digest(session_id)
 
     def _encode(self, session_id: str, payload: dict[str, Any]) -> str:
         if not isinstance(payload, dict) or payload.get("session_id") != session_id:

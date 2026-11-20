@@ -9,6 +9,7 @@ import uuid
 
 import aiomysql
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.workflow.contracts import QueryCapacityError
 
@@ -51,7 +52,11 @@ class MySQLProviderRateLimit:
             raise ValueError("Invalid rate provider")
         if type(rpm) is not int or not 0 <= rpm <= 10000:
             raise ValueError("Shared provider RPM must be 0..10000")
-        key = hashlib.sha256(provider.encode()).hexdigest()
+        tenant_id = get_current_tenant_id()
+        identity = provider.encode()
+        if tenant_id != DEFAULT_TENANT_ID:
+            identity = b"\xff" + str(tenant_id).encode("ascii") + b":" + identity
+        key = hashlib.sha256(identity).hexdigest()
         try:
             async with asyncio.timeout(5), self.pool.acquire() as conn:
                 try:

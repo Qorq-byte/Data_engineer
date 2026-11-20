@@ -5,6 +5,7 @@ import hashlib
 
 import pytest
 
+from app.auth.tenant import reset_current_tenant_id, set_current_tenant_id
 from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.harness.mysql_rate_limit import MySQLProviderRateLimit
 from app.workflow.contracts import QueryCapacityError
@@ -79,3 +80,23 @@ async def test_unlimited_still_detects_worker_configuration_mismatch(coordinatio
     for invalid in (-1, 10001, True):
         with pytest.raises(ValueError):
             await limiter.reserve("fixture", invalid)
+
+
+async def test_same_provider_has_independent_limits_per_tenant(coordination):
+    first, second = await limiter_for(coordination), await limiter_for(coordination)
+    await first.reserve("fixture", 1)
+    tenant = set_current_tenant_id(2)
+    try:
+        await first.reserve("fixture", 1)
+        with pytest.raises(QueryCapacityError):
+            await second.reserve("fixture", 1)
+    finally:
+        reset_current_tenant_id(tenant)
+    tenant = set_current_tenant_id(3)
+    try:
+        await first.reserve("fixture", 2)
+        await second.reserve("fixture", 2)
+        with pytest.raises(QueryCapacityError):
+            await second.reserve("fixture", 2)
+    finally:
+        reset_current_tenant_id(tenant)
