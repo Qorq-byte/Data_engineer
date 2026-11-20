@@ -21,6 +21,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
+
 # ── OpenAI embedding (optional — graceful degradation) ────────────────
 try:
     from openai import AsyncOpenAI
@@ -405,6 +407,14 @@ class EmbeddingGenerator:
         """Embed a single text string. Convenience wrapper around :meth:`embed`."""
         result = await self.provider.embed([text])
         return result.vectors[0]
+
+    async def embed_search_query(self, text: str) -> list[float] | None:
+        """Use sparse retrieval when the shared provider would send tenant text over HTTP."""
+        if get_current_tenant_id() != DEFAULT_TENANT_ID and not isinstance(
+            self.provider, (MockEmbeddingProvider, BGEEmbeddingProvider),
+        ):
+            return None
+        return await self.embed_single(text)
 
     async def batch_embed(
         self, texts: list[str], batch_size: int = 100

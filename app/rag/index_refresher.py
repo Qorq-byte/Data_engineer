@@ -18,8 +18,19 @@ import asyncio
 import contextlib
 import hashlib
 import json
+from collections import Counter
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+
+from app.auth.tenant import get_current_tenant_id
+
+
+@dataclass
+class _RefreshState:
+    versions: dict[str, str] = field(default_factory=dict)
+    last_refresh: dict[str, datetime] = field(default_factory=dict)
+    pending: Counter[str] = field(default_factory=Counter)
 
 
 class IndexRefresher:
@@ -40,9 +51,13 @@ class IndexRefresher:
         self._schema_rag = schema_rag
         self._metric_rag = metric_rag
         self._ttl_minutes = ttl_minutes
-        self._version_cache: dict[str, str] = {}
-        self._last_refresh: dict[str, datetime] = {}
-        self._pending: set[str] = set()
+        self._states: dict[int, _RefreshState] = {}
+
+    def _tenant_state(self) -> _RefreshState:
+        tenant_id = get_current_tenant_id()
+        if tenant_id not in self._states:
+            self._states[tenant_id] = _RefreshState()
+        return self._states[tenant_id]
 
     @staticmethod
     def _compute_schema_hash(schema_snapshot: Any) -> str:
@@ -58,17 +73,19 @@ class IndexRefresher:
         return hashlib.sha256(serialized.encode()).hexdigest()
 
     def check_schema_version(self, db_id: str, schema_snapshot: Any) -> bool:
+        versions = self._tenant_state().versions
         new_hash = self._compute_schema_hash(schema_snapshot)
-        old_hash = self._version_cache.get(db_id)
+        old_hash = versions.get(db_id)
         if old_hash is None or old_hash != new_hash:
-            self._version_cache[db_id] = new_hash
+            versions[db_id] = new_hash
             return True
         return False
 
     def needs_refresh(self, db_id: str) -> bool:
-        if db_id in self._pending:
+        state = self._tenant_state()
+        if db_id in state.pending:
             return True
-        last = self._last_refresh.get(db_id)
+        last = state.last_refresh.get(db_id)
         if last is None:
             return True
         age = (datetime.now(UTC) - last).total_seconds() / 60
@@ -76,18 +93,28 @@ class IndexRefresher:
 
     def invalidate_database(self, db_id: str) -> None:
         """Forget only this database's successful publication metadata after removal."""
-        self._version_cache.pop(db_id, None)
-        self._last_refresh.pop(db_id, None)
+        state = self._tenant_state()
+        state.versions.pop(db_id, None)
+        state.last_refresh.pop(db_id, None)
+
+    def invalidate_all(self) -> None:
+        """Forget successful refresh metadata for the current tenant."""
+        state = self._tenant_state()
+        state.versions.clear()
+        state.last_refresh.clear()
 
     async def refresh(self, db_id: str) -> bool:
-        self._pending.add(db_id)
+        state = self._tenant_state()
+        state.pending[db_id] += 1
         try:
             success = await self._rebuild_schema_index(db_id)
             if success:
-                self._last_refresh[db_id] = datetime.now(UTC)
+                state.last_refresh[db_id] = datetime.now(UTC)
             return success
         finally:
-            self._pending.discard(db_id)
+            state.pending[db_id] -= 1
+            if state.pending[db_id] == 0:
+                del state.pending[db_id]
 
     async def _rebuild_schema_index(self, db_id: str) -> bool:
         """Extract schema from a live connection and re-index into RAG.
@@ -103,7 +130,7 @@ class IndexRefresher:
             )
             if not result.rag_indexed:
                 return False
-            self._version_cache[db_id] = self._compute_schema_hash(result.snapshot)
+            self._tenant_state().versions[db_id] = self._compute_schema_hash(result.snapshot)
             return True
         except Exception:
             return False
@@ -139,11 +166,12 @@ class IndexRefresher:
 
     def get_refresh_status(self) -> dict[str, Any]:
         now = datetime.now(UTC)
-        last_times = {db_id: ts.isoformat() for db_id, ts in self._last_refresh.items()}
+        state = self._tenant_state()
+        last_times = {db_id: ts.isoformat() for db_id, ts in state.last_refresh.items()}
         return {
             "last_refresh_time": last_times,
-            "pending_count": len(self._pending),
-            "tracked_databases": len(self._version_cache),
+            "pending_count": len(state.pending),
+            "tracked_databases": len(state.versions),
             "ttl_minutes": self._ttl_minutes,
             "current_time": now.isoformat(),
         }

@@ -280,7 +280,7 @@ async def test_operator_status_and_public_readiness_have_distinct_scope(persiste
     assert public.get("/health/ready").json()["components"]["rag"] is True
     assert operator.get("/api/v1/learning/rag/status").json()["status"] == "ok"
     # Restoration failure is live state too, not a startup boolean.
-    current.schema_rag._unavailable_databases.add("target")
+    current.schema_rag._tenant_state().unavailable.add("target")
     failed = operator.get("/api/v1/learning/rag/status").json()
     assert failed["schema_index"]["recovery_failed_databases"] == ["target"]
     assert public.get("/health/ready").json()["rag"]["recovery_failed_database_count"] == 1

@@ -39,6 +39,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.embedding import EmbeddingGenerator, MockEmbeddingProvider
 from app.knowledge.retrieval.filters import literal
@@ -46,6 +47,7 @@ from app.knowledge.retrieval.lancedb_store import (
     NAMESPACE_SCHEMA_METADATA,
     LanceDBStore,
     schema_doc_to_record,
+    tenant_namespace,
 )
 from app.knowledge.retrieval.rrf_fusion import RRFFusion
 from app.models.rag_schema import (
@@ -140,6 +142,12 @@ def _row_to_schema_result(row: dict[str, Any]) -> SchemaSearchResult:
 # ── Main class ─────────────────────────────────────────────────────────
 
 
+@dataclass
+class _SchemaIndexState:
+    unavailable: set[str] = field(default_factory=set)
+    refresh_required: set[str] = field(default_factory=set)
+
+
 class SchemaMetadataRAG:
     """Hybrid (dense + sparse) search over table/column metadata.
 
@@ -171,18 +179,24 @@ class SchemaMetadataRAG:
             provider=MockEmbeddingProvider()
         )
         self._rrf = rrf_fusion or RRFFusion()
-        self._unavailable_databases: set[str] = set()
-        self._refresh_required_databases: set[str] = set()
+        self._states: dict[int, _SchemaIndexState] = {}
         self._state_dir = Path(state_dir) if state_dir is not None else None
 
         # Ensure both backends are connected and the namespace exists
         self._lancedb.connect()
         self._bm25.connect()
-        self._lancedb.ensure_namespace(self.NAMESPACE)
-        self._bm25.ensure_namespace(self.NAMESPACE)
-        # A marker left behind means a previous replacement never reported success,
-        # so the on-disk index cannot be trusted until a full replacement succeeds.
-        self._refresh_required_databases.update(self.pending_replacements())
+        namespace = tenant_namespace(self.NAMESPACE)
+        self._lancedb.ensure_namespace(namespace)
+        self._bm25.ensure_namespace(namespace)
+        self._tenant_state()
+
+    def _tenant_state(self) -> _SchemaIndexState:
+        tenant_id = get_current_tenant_id()
+        state = self._states.get(tenant_id)
+        if state is None:
+            state = _SchemaIndexState(refresh_required=set(self.pending_replacements()))
+            self._states[tenant_id] = state
+        return state
 
     # ── Properties ─────────────────────────────────────────────────────
 
@@ -222,12 +236,14 @@ class SchemaMetadataRAG:
         if replace_db_id is not None:
             from app.db.runtime import gate
 
-            marker = self._begin_replacement(replace_db_id)
-            async with gate(("schema-rag-replace", id(self), replace_db_id)):
+            self._tenant_state()  # Load existing recovery markers before writing a new one.
+            namespace = tenant_namespace(self.NAMESPACE)
+            async with gate(("schema-rag-replace", id(self), namespace, replace_db_id)):
+                marker = self._begin_replacement(replace_db_id)
                 result = await self._index_schemas(
                     docs, language, replace_db_id=replace_db_id, before_replace=before_replace,
                 )
-            self._finish_replacement(marker)
+                self._finish_replacement(marker)
             return result
         return await self._index_schemas(docs, language)
 
@@ -284,32 +300,35 @@ class SchemaMetadataRAG:
                 await before_replace()
             self._replace_database(replace_db_id, lancedb_records, bm25_docs, language)
         else:
+            namespace = tenant_namespace(self.NAMESPACE)
             doc_ids_str = ", ".join(literal(d.doc_id) for d in docs)
-            self._lancedb.delete(self.NAMESPACE, f"doc_id IN ({doc_ids_str})")
-            self._lancedb.insert(self.NAMESPACE, lancedb_records)
-            self._bm25.index(self.NAMESPACE, bm25_docs, language=language)
+            self._lancedb.delete(namespace, f"doc_id IN ({doc_ids_str})")
+            self._lancedb.insert(namespace, lancedb_records)
+            self._bm25.index(namespace, bm25_docs, language=language)
 
         return len(docs)
 
     @property
     def unavailable_databases(self) -> tuple[str, ...]:
         """Process-local recovery failures; a successful scoped replacement repairs them."""
-        return tuple(sorted(self._unavailable_databases))
+        return tuple(sorted(self._tenant_state().unavailable))
 
     @property
     def refresh_required_databases(self) -> tuple[str, ...]:
-        return tuple(sorted(self._refresh_required_databases))
+        return tuple(sorted(self._tenant_state().refresh_required))
 
     def require_refresh(self, db_ids: set[str]) -> None:
         """Block existing contents until a complete replacement or removal succeeds."""
-        self._refresh_required_databases.update(db_ids)
+        self._tenant_state().refresh_required.update(db_ids)
 
     def _marker_path(self, db_id: str) -> Path | None:
         """Where an in-flight replacement marker lives; ``None`` disables markers."""
         if self._state_dir is None:
             return None
         digest = hashlib.sha256(db_id.encode("utf-8")).hexdigest()[:16]
-        return self._state_dir / f"index-pending-{digest}.json"
+        tenant_id = get_current_tenant_id()
+        owner_prefix = "" if tenant_id == DEFAULT_TENANT_ID else f"tenant-{tenant_id}-"
+        return self._state_dir / f"index-pending-{owner_prefix}{digest}.json"
 
     def pending_replacements(self) -> tuple[str, ...]:
         """Database ids whose last replacement never reported success.
@@ -320,14 +339,16 @@ class SchemaMetadataRAG:
         """
         if self._state_dir is None or not self._state_dir.is_dir():
             return ()
+        tenant_id = get_current_tenant_id()
+        prefix = "[0-9a-f]" if tenant_id == DEFAULT_TENANT_ID else f"tenant-{tenant_id}-"
         pending: list[str] = []
-        for path in sorted(self._state_dir.glob("index-pending-*.json")):
+        for path in self._state_dir.glob(f"index-pending-{prefix}*.json"):
             try:
                 payload = json.loads(path.read_text(encoding="utf-8"))
             except (OSError, ValueError):
                 continue
             db_id = payload.get("db_id") if isinstance(payload, dict) else None
-            if isinstance(db_id, str) and db_id:
+            if isinstance(db_id, str) and db_id and self._marker_path(db_id) == path:
                 pending.append(db_id)
         return tuple(sorted(set(pending)))
 
@@ -355,39 +376,39 @@ class SchemaMetadataRAG:
         ids = [record["doc_id"] for record in records]
         if len(ids) != len(set(ids)):
             raise ValueError("Replacement document IDs must be unique")
-        old_dense = self._lancedb.snapshot_database(self.NAMESPACE, db_id, new_doc_ids=ids)
-        old_sparse = self._bm25.snapshot_database(self.NAMESPACE, db_id, new_doc_ids=ids)
-        was_unavailable = db_id in self._unavailable_databases
+        namespace = tenant_namespace(self.NAMESPACE)
+        state = self._tenant_state()
+        self._bm25.ensure_namespace(namespace)
+        old_dense = self._lancedb.snapshot_database(namespace, db_id, new_doc_ids=ids)
+        old_sparse = self._bm25.snapshot_database(namespace, db_id, new_doc_ids=ids)
+        was_unavailable = db_id in state.unavailable
         try:
-            self._lancedb.delete(self.NAMESPACE, f"db_id = {literal(db_id)}")
-            self._bm25.delete_database(self.NAMESPACE, db_id)
-            self._lancedb.insert(self.NAMESPACE, records)
-            self._bm25.index(self.NAMESPACE, sparse_docs, language=language)
+            self._lancedb.delete(namespace, f"db_id = {literal(db_id)}")
+            self._bm25.delete_database(namespace, db_id)
+            self._lancedb.insert(namespace, records)
+            self._bm25.index(namespace, sparse_docs, language=language)
         except Exception as exc:
             restored = not was_unavailable
             try:
-                self._lancedb.restore_database(self.NAMESPACE, db_id, old_dense)
+                self._lancedb.restore_database(namespace, db_id, old_dense)
             except Exception:
                 restored = False
             try:
-                self._bm25.restore_database(self.NAMESPACE, db_id, old_sparse)
+                self._bm25.restore_database(namespace, db_id, old_sparse)
             except Exception:
                 restored = False
             if not restored:
-                self._unavailable_databases.add(db_id)
+                state.unavailable.add(db_id)
             raise SchemaIndexWriteError(restored=restored) from exc
-        self._unavailable_databases.discard(db_id)
-        self._refresh_required_databases.discard(db_id)
+        state.unavailable.discard(db_id)
+        state.refresh_required.discard(db_id)
         return len(old_dense), len(old_sparse)
 
     def _check_available(self, db_id: str | None) -> None:
-        if (not db_id and self._unavailable_databases) or (
-            db_id in self._unavailable_databases
-        ):
+        state = self._tenant_state()
+        if (not db_id and state.unavailable) or db_id in state.unavailable:
             raise SchemaIndexWriteError(restored=False)
-        if (not db_id and self._refresh_required_databases) or (
-            db_id in self._refresh_required_databases
-        ):
+        if (not db_id and state.refresh_required) or db_id in state.refresh_required:
             raise SchemaIndexNotReadyError("Schema index requires successful source refresh")
 
     async def index_schema(self, doc: Any, language: str = "auto") -> int:
@@ -424,19 +445,20 @@ class SchemaMetadataRAG:
             List of :class:`SchemaSearchResult`, sorted by RRF score (best first).
         """
         fusion = self._rrf  # Keep one configuration across embedding awaits.
+        namespace = tenant_namespace(self.NAMESPACE)
         self._check_available(db_id)
         # 1. Generate query embedding
-        query_vec = await self._embedding.embed_single(query)
+        query_vec = await self._embedding.embed_search_query(query)
         self._check_available(db_id)
 
         # 2. Dense search (LanceDB)
         filter_expr = f"db_id = {literal(db_id)}" if db_id else None
         dense_raw = self._lancedb.search(
-            self.NAMESPACE,
+            namespace,
             query_vec,
             top_k=max(top_k * 2, 20),  # oversample for better fusion
             filter_expr=filter_expr,
-        )
+        ) if query_vec is not None else []
         # Normalise LanceDB distance → pseudo-score (lower distance = better)
         dense_results: list[dict[str, Any]] = []
         for row in dense_raw:
@@ -450,7 +472,7 @@ class SchemaMetadataRAG:
 
         # 3. Sparse search (BM25)
         sparse_raw = self._bm25.search(
-            self.NAMESPACE,
+            namespace,
             query,
             top_k=max(top_k * 2, 20),
             language=language,
@@ -483,16 +505,20 @@ class SchemaMetadataRAG:
         """Compensated scoped clear; the service also serializes full source refreshes."""
         from app.db.runtime import gate
 
-        async with gate(("schema-rag-replace", id(self), db_id)):
+        namespace = tenant_namespace(self.NAMESPACE)
+        async with gate(("schema-rag-replace", id(self), namespace, db_id)):
             dense_count, sparse_count = self._replace_database(db_id, [], [], "auto")
+            self._finish_replacement(self._marker_path(db_id))
             return SchemaIndexClearResult(dense_count, sparse_count)
 
     def clear(self) -> None:
         """Remove all indexed schema documents from both backends."""
-        self._lancedb.delete(self.NAMESPACE, "true")
-        self._bm25.clear(self.NAMESPACE)
-        self._unavailable_databases.clear()
-        self._refresh_required_databases.clear()
+        namespace = tenant_namespace(self.NAMESPACE)
+        state = self._tenant_state()
+        self._lancedb.delete(namespace, "true")
+        self._bm25.clear(namespace)
+        state.unavailable.clear()
+        state.refresh_required.clear()
 
     def remove_database(self, db_id: str) -> None:
         """Remove all schema documents for a specific *db_id* from both backends.
@@ -500,16 +526,20 @@ class SchemaMetadataRAG:
         Args:
             db_id: Database identifier to remove (e.g. ``"sqlite_test"``).
         """
-        self._lancedb.delete(self.NAMESPACE, f"db_id = {literal(db_id)}")
-        self._bm25.delete_database(self.NAMESPACE, db_id)
-        self._unavailable_databases.discard(db_id)
-        self._refresh_required_databases.discard(db_id)
+        namespace = tenant_namespace(self.NAMESPACE)
+        state = self._tenant_state()
+        self._bm25.ensure_namespace(namespace)
+        self._lancedb.delete(namespace, f"db_id = {literal(db_id)}")
+        self._bm25.delete_database(namespace, db_id)
+        state.unavailable.discard(db_id)
+        state.refresh_required.discard(db_id)
 
     def stats(self) -> dict[str, int]:
         """Return document counts for both backends."""
+        namespace = tenant_namespace(self.NAMESPACE)
         return {
-            "lancedb_count": self._lancedb.count(self.NAMESPACE),
-            "bm25_count": self._bm25.count(self.NAMESPACE),
+            "lancedb_count": self._lancedb.count(namespace),
+            "bm25_count": self._bm25.count(namespace),
         }
 
     # ── Convenience: table-level aggregation ───────────────────────────

@@ -90,10 +90,10 @@ async def test_scoped_counts_idempotence_and_metadata_invalidation(client, singl
     elif single_backend == "sparse":
         current.lancedb_store.delete("schema_metadata", "db_id = 'orphan'")
     refresher = current.index_refresher
-    refresher._version_cache.update({"target": "keep", "orphan": "remove"})
+    refresher._tenant_state().versions.update({"target": "keep", "orphan": "remove"})
     now = datetime.now(UTC)
-    refresher._last_refresh.update({"target": now, "orphan": now})
-    refresher._pending.add("target")
+    refresher._tenant_state().last_refresh.update({"target": now, "orphan": now})
+    refresher._tenant_state().pending["target"] += 1
     history = dict(current.startup_schema_results)
     response = await client.post("/api/v1/learning/rag/schema/orphan/clear")
     assert response.status_code == 200
@@ -101,9 +101,9 @@ async def test_scoped_counts_idempotence_and_metadata_invalidation(client, singl
         "lancedb_count": int(single_backend != "sparse"),
         "bm25_count": int(single_backend != "dense"),
     }
-    assert refresher._version_cache == {"target": "keep"}
-    assert refresher._last_refresh == {"target": now}
-    assert refresher._pending == {"target"}
+    assert refresher._tenant_state().versions == {"target": "keep"}
+    assert refresher._tenant_state().last_refresh == {"target": now}
+    assert refresher._tenant_state().pending == {"target": 1}
     assert current.startup_schema_results == history
     for db_id in ("orphan", "missing"):
         repeated = await client.post(f"/api/v1/learning/rag/schema/{db_id}/clear")
@@ -148,7 +148,7 @@ async def test_clear_failure_is_safe_visible_and_retryable(client, monkeypatch, 
     current = await engine.initialize_rag_engine()
     old_target, old_orphan = snapshots(current, "target"), snapshots(current, "orphan")
     refresher = current.index_refresher
-    refresher._version_cache["orphan"] = "keep-on-failure"
+    refresher._tenant_state().versions["orphan"] = "keep-on-failure"
     original_delete = current.bm25_index.delete_database
 
     def fail(*args, **kwargs):
@@ -174,13 +174,13 @@ async def test_clear_failure_is_safe_visible_and_retryable(client, monkeypatch, 
     if failure != "recovery":
         assert snapshots(current, "orphan") == old_orphan
     assert current.schema_rag.refresh_required_databases == ("orphan", "target")
-    assert refresher._version_cache["orphan"] == "keep-on-failure"
+    assert refresher._tenant_state().versions["orphan"] == "keep-on-failure"
     with pytest.raises(RuntimeError):
         await current.schema_rag.find_relevant_tables("sentinel", db_id="orphan")
     assert (await client.post("/api/v1/learning/rag/schema/orphan/clear")).status_code == 200
     assert current.schema_rag.refresh_required_databases == ("target",)
     assert current.schema_rag.unavailable_databases == ()
-    assert "orphan" not in refresher._version_cache
+    assert "orphan" not in refresher._tenant_state().versions
 
 
 async def test_unavailable_engine_is_fixed_503_and_empty_path_cannot_bulk_clear(client):
@@ -284,7 +284,7 @@ async def test_new_refresh_after_clear_can_rebuild_without_deadlock(client, monk
         return await refresh_schema("target")
 
     monkeypatch.setattr(current.schema_rag, "clear_database", announce_clear)
-    async with gate(("schema-rag-replace", id(current.schema_rag), "target")):
+    async with gate(("schema-rag-replace", id(current.schema_rag), "schema_metadata", "target")):
         clear = asyncio.create_task(client.post("/api/v1/learning/rag/schema/target/clear"))
         await asyncio.wait_for(clear_entered.wait(), 10)
         refresh = asyncio.create_task(refresh_later())
@@ -361,7 +361,7 @@ async def test_disconnect_cancellation_after_close_keeps_index_blocked(client, m
         closed.set()
 
     monkeypatch.setattr(ConnectionFactory, "aclose", announce_close)
-    async with gate(("schema-refresh", "target")):
+    async with gate(("schema-refresh", 1, "target")):
         disconnect = asyncio.create_task(client.delete("/api/v1/databases/target"))
         await asyncio.wait_for(closed.wait(), 10)
         disconnect.cancel()

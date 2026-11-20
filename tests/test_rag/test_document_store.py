@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.auth.tenant import reset_current_tenant_id, set_current_tenant_id
 from app.knowledge.retrieval.bm25_index import BM25Index
 from app.knowledge.retrieval.document_store import (
     DocumentSearchResult,
@@ -248,6 +249,27 @@ class TestDocumentStore:
 
     def test_namespace_is_documents(self, store: DocumentStore):
         assert store.NAMESPACE == "documents"
+
+    async def test_replace_and_clear_are_scoped_to_tenant(self, store: DocumentStore):
+        shared_id = "guide.same"
+        await store.index_document(_make_doc(shared_id, title="Default Tenant", content="retail"))
+
+        token = set_current_tenant_id(2)
+        try:
+            assert await store.search("retail") == []
+            await store.index_document(_make_doc(shared_id, title="Tenant Two", content="invoices"))
+            assert store.stats() == {"lancedb_count": 1, "bm25_count": 1}
+            assert [result.title for result in await store.search("invoices")] == ["Tenant Two"]
+            await store.index_document(_make_doc(shared_id, title="Updated", content="billing"))
+            assert store.stats() == {"lancedb_count": 1, "bm25_count": 1}
+            assert [result.title for result in await store.search("billing")] == ["Updated"]
+            store.clear()
+            assert await store.search("billing") == []
+        finally:
+            reset_current_tenant_id(token)
+
+        assert store.stats() == {"lancedb_count": 1, "bm25_count": 1}
+        assert [result.title for result in await store.search("retail")] == ["Default Tenant"]
 
     # ── Indexing ───────────────────────────────────────────────────────
 

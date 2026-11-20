@@ -26,11 +26,13 @@ import contextlib
 import json
 import logging
 import os
+import re
 from pathlib import Path
 from typing import Any, cast
 
 import pyarrow as pa
 
+from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.knowledge.retrieval.filters import literal
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,18 @@ ALL_NAMESPACES = {
     NAMESPACE_DOCUMENTS,
     NAMESPACE_QUERY_CACHE,
 }
+_TENANT_NAMESPACE = re.compile(r"(.+)_tenant_[1-9][0-9]*")
+
+
+def tenant_namespace(base: str) -> str:
+    """Use the legacy name for the default tenant and a separate table for each other tenant."""
+    tenant_id = get_current_tenant_id()
+    return base if tenant_id == DEFAULT_TENANT_ID else f"{base}_tenant_{tenant_id}"
+
+
+def _base_namespace(namespace: str) -> str:
+    match = _TENANT_NAMESPACE.fullmatch(namespace)
+    return match[1] if match else namespace
 
 # Name of the vector column in each table
 VECTOR_COL = "vector"
@@ -224,7 +238,11 @@ class LanceDBStore:
             else:
                 if self._read_only:
                     raise ValueError("Immutable embedding manifest missing")
-                for namespace in ALL_NAMESPACES:
+                namespaces = ALL_NAMESPACES | {
+                    path.stem for path in Path(self._uri).glob("*.lance")
+                    if _base_namespace(path.stem) in ALL_NAMESPACES
+                }
+                for namespace in namespaces:
                     try:
                         table = db.open_table(namespace)
                     except Exception:
@@ -325,15 +343,16 @@ class LanceDBStore:
         Raises:
             ValueError: If *namespace* is not a recognised name.
         """
-        if namespace not in ALL_NAMESPACES:
-            raise ValueError(f"Unknown namespace '{namespace}'. Expected one of: {ALL_NAMESPACES}")
         schemas = {
             NAMESPACE_SCHEMA_METADATA: _make_schema_metadata_schema,
             NAMESPACE_METRICS: _make_metrics_schema,
             NAMESPACE_DOCUMENTS: _make_documents_schema,
             NAMESPACE_QUERY_CACHE: _make_query_cache_schema,
         }
-        return self._open_or_create(namespace, schemas[namespace](self._dimension))
+        schema_factory = schemas.get(_base_namespace(namespace))
+        if schema_factory is None:
+            raise ValueError(f"Unknown namespace '{namespace}'. Expected one of: {ALL_NAMESPACES}")
+        return self._open_or_create(namespace, schema_factory(self._dimension))
 
     # ── CRUD operations ────────────────────────────────────────────────
 
@@ -465,7 +484,7 @@ class LanceDBStore:
         """Drop a namespace table entirely."""
         if self._read_only:
             raise ValueError("Immutable dense store cannot drop namespaces")
-        if namespace not in ALL_NAMESPACES:
+        if _base_namespace(namespace) not in ALL_NAMESPACES:
             raise ValueError(f"Unknown namespace '{namespace}'.")
         db = self._ensure_connected()
         self._drop_table_safe(db, namespace)
