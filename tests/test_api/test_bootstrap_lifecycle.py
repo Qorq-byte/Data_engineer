@@ -20,7 +20,8 @@ def test_catalog_registration_is_idempotent(monkeypatch, tmp_path):
     original = nodes.node_registry.get("execute_sql")
     initialize_catalogs()
     assert nodes.node_registry.get("execute_sql") is original
-    assert len(nodes.node_registry) == 12
+    assert len(nodes.node_registry) == 13
+    assert "candidate_review" in nodes.node_registry
     assert len(mcp.mcp_registry.list_names()) == 4
     assert len(agents.agent_registry.list_all()) == 6
 

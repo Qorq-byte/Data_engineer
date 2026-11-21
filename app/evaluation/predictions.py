@@ -97,7 +97,8 @@ def _objects(value: object, *, nonempty: bool = False) -> list[dict[str, Any]]:
     return value
 
 
-def _cases(dataset: object) -> list[dict[str, Any]]:
+def export_cases(dataset: object) -> list[dict[str, Any]]:
+    """Validate the dataset fields shared by capture and prediction export."""
     if not isinstance(dataset, dict):
         raise ValueError("Export requires a dataset object")
     cases = _objects(dataset.get("sql_cases"), nonempty=True)
@@ -155,7 +156,7 @@ def export_predictions(
         require_candidate_audit and audit_lookup is None
     ):
         raise ValueError("Candidate audit requirement needs an audit lookup")
-    cases = _cases(dataset)
+    cases = export_cases(dataset)
     sources = _objects(responses)
     selections = _objects(bindings, nonempty=True)
     hashes = {

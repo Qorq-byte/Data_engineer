@@ -99,8 +99,8 @@ async def list_workflows() -> dict[str, Any]:
 
     plans = []
     for item in _WORKFLOW_PLANS:
-        if item["id"] == "metric_query":
-            blocker = plan_blocker("metric_query")
+        if item["id"] in {"metric_query", "candidate_review"}:
+            blocker = plan_blocker(item["id"])
             item = {**item, "query_executable": not blocker, "blocker": blocker,
                     "category": "template" if blocker else "active"}
         plans.append(item)

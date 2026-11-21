@@ -128,8 +128,10 @@ def create_nl2sql_server(
     _register_validate_sql(mcp)
     _register_search_schema(mcp)
     from app.mcp.metric_tools import register_metric_tools
+    from app.mcp.subagent_tools import register_subagent_tools
 
     register_metric_tools(mcp, trust_local=trust_local_metric_tools)
+    register_subagent_tools(mcp)
 
     # ── Register resources ─────────────────────────────────────────────
 

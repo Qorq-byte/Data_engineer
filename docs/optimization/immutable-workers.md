@@ -16,7 +16,7 @@
 包括保留大小/mtime 的改写。目录升级须停服、重新封存并按新代统一启动。
 详细契约和本次证据见[共享指标目录](shared-metric-catalog.md)。
 
-验收使用一次性 MySQL 和合成模型传输，覆盖正常 lifespan、独立 worker 重启、会话恢复、配置变化、全局模型并发及流式租约断开。该阶段的目标数据库真实验收覆盖 MySQL。PostgreSQL 作为不可变目标的端到端部署仍需专项复核。
+初次验收使用一次性 MySQL 和合成模型传输，覆盖正常 lifespan、独立 worker 重启、会话恢复、配置变化、全局模型并发及流式租约断开。PostgreSQL 查询目标的后续证据见 [双租户 PostgreSQL 验收](#双租户-postgresql-验收)。
 
 ## 升级和回退演练（阶段 68A）
 
@@ -73,4 +73,50 @@ python -m scripts.run_real_db_tests --filter 'immutable_tenants or tenant_llm_ru
 python -m scripts.run_real_db_tests --filter 'immutable_workers or metric_mcp_network' --output data/immutable-tenant-acceptance/default-workers.json
 ```
 
-MySQL 8.4.13 上租户组合通过 3 项，默认 v1 组合通过 7 项。本地回归通过 840 项。实库覆盖两个独立 worker、独立启动的 MCP HTTP、重启、配置拒绝和真实只读目标。模型传输使用脚本化响应。PostgreSQL 目标和生产环境容量仍需专项验收。
+MySQL 8.4.13 上首轮租户组合通过 3 项，默认 v1 组合通过 7 项。本地回归通过 840 项。实库覆盖两个独立 worker、独立启动的 MCP HTTP、重启、配置拒绝和真实只读目标。模型传输使用脚本化响应。
+
+### 双租户 PostgreSQL 验收
+
+单机 v2 使用 MySQL 8.4.13 处理认证、控制面和共享会话，两个非默认租户分别连接 PostgreSQL 16.15 的独立只读目标。两个 worker 通过正式登录验证了同名数据源、指标和会话的租户隔离，覆盖 JSON、SSE、REST 指标发现及 MCP HTTP。两进程分别重启后恢复会话。配置漂移时拒绝新请求，旧令牌和跨租户 MCP 会话均被拒绝。模型响应使用脚本化传输，生产容量仍需专项验收。
+
+指标工作流使用 SQLGlot 的 `postgres` 方言名，连接器发布清单沿用 `postgresql`。两个数据库目标均验证了指标解析、校验、实际执行、目录哈希和零模型调用。该次组合验收通过 9 项，包含 MySQL 默认 v1 和 MCP HTTP 回归。重复验证命令如下。
+
+```powershell
+python -m scripts.run_real_db_tests --filter 'immutable_tenants or immutable_workers or metric_mcp_network' --output data/postgres-immutable-20261120/verified.json
+```
+
+### 封存共享 worker 的子 Agent 目录
+
+需要在共享部署启用子 Agent 时，在离线维护窗口用 `--subagent-catalog` 把受信 JSON 目录纳入新发布代。文件采用 `shared-subagents-v1`，最多容纳 128 个定义。以下示例为租户 2 的只读查询入口。
+
+```json
+{
+  "profile": "shared-subagents-v1",
+  "subagents": [{
+    "name": "analyst",
+    "tenant_id": 2,
+    "domain": "ecommerce",
+    "database_ids": ["reporting"],
+    "capabilities": ["nl_query", "metric_query"],
+    "allowed_users": ["2"],
+    "enable_execution": true,
+    "enable_multi_candidate": false
+  }]
+}
+```
+
+```powershell
+python -m scripts.build_worker_release --profiles <私有连接文件> `
+  --subagent-catalog <子 Agent 目录 JSON> --output <新发布清单>
+```
+
+构建器核对每个租户和数据库 ID 与连接清单匹配，拒绝租户内重名。`allowed_users` 使用用户 ID 字符串，空数组拒绝全部，`["*"]` 表示范围内所有已授权 operator。非默认租户在 worker 启动时核对领域快照，`default` 可使用该部署的默认领域行为。执行指标还需封存匹配的指标目录。
+
+REST、认证 MCP HTTP 与工作台按认证租户读取发布代的注册快照。worker 日常校验目录的 SHA-256，发现内容变化即拒绝查询并使 readiness 返回 `503`，即使文件大小和修改时间相同。旧发布代可继续运行既有查询，子 Agent 列表为空。目录更新使用新发布代和版本切换流程。
+
+两个 worker 在 MySQL 和 PostgreSQL 只读目标上验证了同名子 Agent 返回各自租户结果。独立 MCP HTTP 使用同一目录，目录改写使两个 worker 同时拒绝和退出就绪，指标 v2 的周分组与跨表总额与合成预期一致。复跑命令如下。
+
+```powershell
+python -m scripts.run_real_db_tests --filter immutable_tenants_queries_sessions_drift_and_restart `
+  --output data/sealed-subagents/verified.json
+```

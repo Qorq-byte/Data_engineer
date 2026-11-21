@@ -12,6 +12,7 @@ from app.auth.tenant import DEFAULT_TENANT_ID
 from app.harness.mysql_coordination import CoordinationUnavailableError
 from app.knowledge.metric_catalog import MetricCatalog, load_catalog
 from app.security.crypto import decrypt_secret, encrypt_secret
+from app.subagent.sealed_catalog import SealedSubagentCatalog, load_sealed_catalog
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -76,6 +77,10 @@ def _catalog_binding_check(
         raise ValueError("Metric catalog references an unsealed database identity")
 
 
+def _targets(groups: dict[int, list[dict[str, Any]]]) -> dict[int, set[str]]:
+    return {tenant: {item["db_id"] for item in profiles} for tenant, profiles in groups.items()}
+
+
 class WorkerRelease:
     def __init__(self, path: Path) -> None:
         try:
@@ -131,6 +136,18 @@ class WorkerRelease:
                 _catalog_binding_check(catalog, self.profile_groups)
                 self.metric_catalog_path = Path(name).resolve()
                 self.metric_catalog = catalog
+            self.subagent_catalog: SealedSubagentCatalog | None = None
+            subagents = raw.get("subagent_catalog")
+            if subagents is not None:
+                if not isinstance(subagents, dict) or set(subagents) != {"path", "sha256"}:
+                    raise ValueError("Invalid sealed subagent metadata")
+                name = subagents["path"]
+                if not isinstance(name, str) or not Path(name).is_absolute():
+                    raise ValueError("Absolute subagent catalog path required")
+                sealed = load_sealed_catalog(Path(name), _targets(self.profile_groups))
+                if sealed.sha256 != subagents["sha256"] or sealed.sha256 != self.files.get(name):
+                    raise ValueError("Sealed subagent catalog content does not match")
+                self.subagent_catalog = sealed
             roots = raw.get("index_roots", [])
             if not isinstance(roots, list) or not all(
                 isinstance(name, str) and Path(name).is_absolute() for name in roots
@@ -204,6 +221,8 @@ class WorkerRelease:
                 state = Path(name).stat()
                 if (state.st_size, state.st_mtime_ns) != expected:
                     raise ValueError("Release metadata changed")
+            if self.subagent_catalog is not None:
+                self.subagent_catalog.verify_contents()
         except Exception:
             raise CoordinationUnavailableError("Immutable worker files changed") from None
 
@@ -215,6 +234,7 @@ def write_release(
     *,
     index_roots: list[Path] | None = None,
     metric_catalog: Path | None = None,
+    subagent_catalog: Path | None = None,
 ) -> None:
     """Offline-only construction. Does not connect to databases or call embedding models."""
     tenant_release = isinstance(profiles, dict)
@@ -232,11 +252,17 @@ def write_release(
         _catalog_binding_check(catalog, groups)
         selected.add(path)
         metric = {"path": str(path), "version": catalog.version, "sha256": catalog.sha256}
+    sealed = None
+    if subagent_catalog is not None:
+        sealed = load_sealed_catalog(subagent_catalog.resolve(), _targets(groups))
+        selected.add(sealed.path)
     if len(selected) > 4096 or output.resolve() in selected:
         raise ValueError("Invalid release file inventory or output alias")
     file_hashes = {str(path): _digest(path) for path in sorted(selected)}
     if metric is not None and file_hashes[metric["path"]] != metric["sha256"]:
         raise ValueError("Metric catalog changed while sealing")
+    if sealed is not None and file_hashes[str(sealed.path)] != sealed.sha256:
+        raise ValueError("Subagent catalog changed while sealing")
     payload = {
         "format_version": 2 if tenant_release else 1,
         "connections_enc": encrypt_secret(json.dumps(
@@ -247,6 +273,8 @@ def write_release(
     }
     if metric is not None:
         payload["metric_catalog"] = metric
+    if sealed is not None:
+        payload["subagent_catalog"] = {"path": str(sealed.path), "sha256": sealed.sha256}
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     if len(encoded.encode("utf-8")) > 1024 * 1024:
         raise ValueError("Worker release exceeds 1 MiB")

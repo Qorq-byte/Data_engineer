@@ -14,6 +14,7 @@ import pytest_asyncio
 
 from app.auth.security import create_access_token, hash_password
 from app.config.settings import settings
+from app.harness.session_keys import shared_session_digest
 from app.security.crypto import encrypt_secret
 from app.storage.mysql_store import MySQLStore
 from tests.fixtures.shared_query_worker import SECRET
@@ -94,7 +95,9 @@ async def shared_servers(coordination, tmp_path, monkeypatch, request):
             config, tmp_path, with_metrics=getattr(request, "param", {}).get("metrics", False)
         ))
         environment["SHARED_WORKER_NAMESPACE"] = database
-        environment["MAX_CONCURRENT_QUERIES"] = "2"
+        environment["MAX_CONCURRENT_QUERIES"] = str(
+            getattr(request, "param", {}).get("query_slots", 2)
+        )
         environment["LLM_MAX_CONCURRENCY"] = "1"
     headers = {"Authorization": f"Bearer {create_access_token(1, 'fixture')}"}
     servers = ServingProcesses()
@@ -262,6 +265,98 @@ async def test_lost_lease_stops_model_and_records_unknown_usage(shared_servers, 
         if not pending.done():
             pending.cancel()
         await asyncio.gather(pending, return_exceptions=True)
+
+
+@pytest.mark.parametrize(
+    "shared_servers", [{"immutable": True, "query_slots": 1}], indirect=True,
+)
+async def test_sse_disconnect_cancels_model_and_releases_worker_slots(
+    shared_servers, coordination, record_testsuite_property,
+):
+    client, servers = shared_servers
+    first, directory, _ = servers[0]
+    second, other_directory, _ = servers[1]
+    database, pool, _, _ = coordination
+    session_id = "cancelled-sse"
+    query_namespace = hashlib.sha256(database.encode()).hexdigest()[:24]
+    model_namespace = hashlib.sha256(f"{database}:model".encode()).hexdigest()[:24]
+    session_digest = shared_session_digest(session_id)[:24]
+    lock_names = (
+        f"de:{query_namespace}:q:0",
+        f"de:{query_namespace}:s:{session_digest}",
+        f"de:{model_namespace}:q:0",
+    )
+
+    async def owners():
+        async with pool.acquire() as connection, connection.cursor() as cursor:
+            await cursor.execute("SELECT IS_USED_LOCK(%s), IS_USED_LOCK(%s), IS_USED_LOCK(%s)",
+                                 lock_names)
+            return await cursor.fetchone()
+
+    for index, url in enumerate((first, second)):
+        warmup = await client.post(url + "/api/v1/query", json=body(f"warmup-{index}"))
+        assert warmup.status_code == 200 and warmup.json()["status"] == "completed", warmup.text
+    assert await owners() == (None, None, None)
+    other_model_calls = (other_directory / "model-calls.txt").read_bytes()
+    block_model = directory / "block-model"
+    release_model = directory / "release-model"
+    block_model.touch()
+    try:
+        async with asyncio.timeout(10), client.stream(
+            "POST", first + "/api/v1/query/stream", json=body(session_id),
+        ) as stream:
+            assert stream.status_code == 200
+            events = stream.aiter_lines()
+            assert await anext(events) == "event: workflow_start"
+            data = await anext(events)
+            assert data.startswith("data: ")
+            query_id = json.loads(data.removeprefix("data: "))["query_id"]
+            while not (directory / "model-entered").exists():
+                await asyncio.sleep(0.02)
+            query_owner, session_owner, model_owner = await owners()
+            assert type(query_owner) is int and query_owner == session_owner
+            assert type(model_owner) is int and model_owner != query_owner
+
+            for url in (first, second):
+                rejected = await client.post(url + "/api/v1/query", json=body("occupied"))
+                assert rejected.status_code == 503, rejected.text
+                assert rejected.json()["detail"]["code"] == "QUERY_CAPACITY"
+            assert (other_directory / "model-calls.txt").read_bytes() == other_model_calls
+            assert not (directory / "model-cleaned-up").exists()
+            closing_at = asyncio.get_running_loop().time()
+
+        # Leaving the HTTP stream closes the client connection while the model is blocked.
+        async with asyncio.timeout_at(closing_at + 8):
+            while not (directory / "model-cleaned-up").exists():
+                await asyncio.sleep(0.02)
+            while await owners() != (None, None, None):
+                await asyncio.sleep(0.02)
+            audit = await client.get(first + f"/api/v1/usage-audits/{query_id}")
+            assert audit.status_code == 200, audit.text
+        record_testsuite_property(
+            "sse_disconnect_cleanup_ms",
+            round((asyncio.get_running_loop().time() - closing_at) * 1000, 1),
+        )
+        assert not release_model.exists()
+        record = audit.json()
+        assert record["query_id"] == query_id and record["outcome"] == "cancelled"
+        assert record["llm_calls"] == 1
+        attempts = record["usage"]["attempts"]
+        assert len(attempts) == 1 and attempts[0]["status"] == "cancelled"
+        assert attempts[0]["completion_tokens"] is None
+        previous = await client.get(second + f"/api/v1/sessions/{session_id}")
+        assert previous.status_code == 200 and previous.json()["session"]["turns"] == []
+
+        # The peer can reuse the same session lock. The original process can admit a new query.
+        block_model.unlink()
+        for url, session in ((second, session_id), (first, "local-recovered")):
+            recovered = await client.post(url + "/api/v1/query", json=body(session))
+            assert recovered.status_code == 200, recovered.text
+            result = recovered.json()
+            assert result["status"] == "completed", result
+            assert result["execution"]["rows"] == [[10], [20], [30], [40], [50]]
+    finally:
+        release_model.touch()
 
 
 async def test_shared_session_endpoints_preserve_operator_boundary(shared_servers):

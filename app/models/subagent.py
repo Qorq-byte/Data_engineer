@@ -62,6 +62,8 @@ class SubagentConfig:
     delivery: list[DeliveryConfig] = field(default_factory=list)
     llm_config: LLMConfig = field(default_factory=LLMConfig)
     access_control: AccessControl = field(default_factory=AccessControl)
+    tenant_id: int = 1
+    workflow_enabled: bool = False
 
     @property
     def label_zh(self) -> str:

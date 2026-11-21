@@ -57,13 +57,18 @@ def _limits(**overrides) -> ConstraintEnforcer:
     return ConstraintEnforcer(ConstraintLimits(**values))
 
 
-def test_only_metric_query_is_blocked(loader):
+def test_unconfigured_catalog_and_review_preview_are_blocked(loader, monkeypatch):
+    from app.config.settings import settings
+
+    monkeypatch.setattr(settings, "candidate_review_enabled", False)
     available = loader.list_available()
     blocked = {plan_id: plan_blocker(plan_id) for plan_id in available if plan_blocker(plan_id)}
 
-    assert set(blocked) == {"metric_query"}
+    assert set(blocked) == {"metric_query", "candidate_review"}
     assert "metric" in blocked["metric_query"].lower()
-    assert set(executable_plan_ids(available)) == set(available) - {"metric_query"}
+    assert set(executable_plan_ids(available)) == set(available) - set(blocked)
+    monkeypatch.setattr(settings, "candidate_review_enabled", True)
+    assert "candidate_review" in executable_plan_ids(available)
 
 
 @pytest.mark.parametrize("plan_id", EXECUTABLE)

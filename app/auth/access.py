@@ -14,7 +14,7 @@ from app.workflow.contracts import classify_query_failure
 
 _TENANT_ROUTES = {
     "GET": {
-        "/databases", "/schema/{db_id}", "/metrics",
+        "/databases", "/schema/{db_id}", "/metrics", "/subagents", "/subagents/{name}",
         "/domains", "/domains/{domain_id}/glossary", "/domains/{domain_id}/rules",
         "/settings/llm", "/settings/available-models",
         "/sessions/{session_id}", "/sessions/{session_id}/versions",
@@ -22,6 +22,7 @@ _TENANT_ROUTES = {
     },
     "POST": {
         "/query", "/query/stream", "/query/generate", "/query/explain", "/query/candidates",
+        "/subagents/{name}/query",
         "/domains", "/domains/detect",
         "/domains/{domain_id}/glossary", "/domains/{domain_id}/rules",
     },

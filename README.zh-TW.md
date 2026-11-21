@@ -70,13 +70,14 @@
 | 固定的五節點 `request_query` 流水線 | **已實作** —— JSON、SSE 與 MCP 均已接通 |
 | 約束、權限與 SQL 策略執行 | **已實作** |
 | Schema 連結、多階段驗證、混合檢索 | **已實作** |
-| 七個唯讀資料庫連接器 | **已實作並測試**；Snowflake 待驗收 |
-| 其餘六個工作流程計畫 | **預設五個可執行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`；確定性 `metric_query` v1 需設定目錄並明確指定指標名稱 |
+| 唯讀資料庫連接器 | **七個已通過實庫驗收**。Snowflake 已實作並通過本機策略測試，專用雲端環境驗收待完成。[驗收說明](docs/optimization/snowflake-acceptance.md) |
+| 其他工作流程計畫 | **預設五個可執行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`；`metric_query` 需設定指標目錄，`candidate_review` 需明確啟用預覽 |
 | 自動計畫選擇 | **已實作** —— `auto_plan=true` 依序走 L1 規則、L2 歷史與能力過濾後的預設；預設仍為 `request_query` |
-| 多代理協調器與子代理 | **部分實作** —— 限域 REST 自然語言查詢已接固定工作流程及存取檢查；自主協調仍屬實驗元件 |
+| 指標工作流程 | **已實作**。目錄 v2 支援日、週、月分組與主鍵查找維度，已在 SQLite、MySQL 和 PostgreSQL 執行測試。[指標目錄 v2](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#m2-日历分组与查找表维度) |
+| 候選複核與子代理 | 固定候選複核可明確預覽。子代理依租戶使用 REST、認證 MCP HTTP 和工作台，共用 worker 使用封存目錄。[子代理設定](docs/optimization/immutable-workers.md#封存共享-worker-的子-agent-目录) |
 | 回饋驅動的規則學習 | **已實作** —— 審查通過的規則進入生成提示與驗證，並在 `applied_rules` 回顯；規則不會自動改寫 SQL |
-| 多租戶隔離 | **部分實作** —— 單 worker 和單機不可變多 worker 支援租戶工作台、REST 和 MCP HTTP。[設定說明](docs/usage.md#tenant-operator-setup) |
-| 合成與校正基線 | **已記錄合成基線**，涵蓋檢索、SQL 契約和有界負載。業務準確率、召回率及正式環境容量仍待校正。[基線報告](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
+| 多租戶隔離 | **部分實作** —— 單 worker 和單機不可變多 worker 支援租戶工作台、REST 和 MCP HTTP。雙 worker 已在 MySQL 和 PostgreSQL 查詢目標驗收資料來源隔離、工作階段復原與拒絕設定漂移。[部署與驗收](docs/optimization/immutable-workers.md#v2-租户发布包) |
+| 品質與容量驗收 | 已實作凍結保留集評分、計畫配對擷取、租戶容量門檻及資源與帳單核驗，並通過合成情境測試。正式業務和生產驗收需要目標資料及部署。[驗收狀態](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#集中实施与正式验收状态) |
 
 ## 快速開始
 
@@ -146,7 +147,7 @@ pip install -e ".[snowflake]"               # 可選 Snowflake 驅動（不在 c
 |---|---|
 | `app/config/agent.yml` | 提供者預設值、節點→工具→權限對應、硬性約束 |
 | `app/workflow/plans/request_query.yml` | 可執行計畫：`node_order`、`failure_policy`、評估指標 |
-| `app/workflow/plans/*.yml` | 另外六個計畫；預設五個可執行，伺服器指標目錄可啟用 `metric_query` v1 |
+| `app/workflow/plans/*.yml` | 其他預設五個計畫、伺服器目錄啟用的 `metric_query` 與可選的 `candidate_review` 預覽 |
 | `app/config/domains/*.yml` | 依領域的詞彙表、業務規則與術語對應 |
 | `app/config/subagents/*.yaml` | 限定範圍的子代理定義與交付目標 |
 
@@ -245,7 +246,7 @@ MCP 也提供 `list_metrics`、`metric_query`；HTTP Bearer 驗證與本機行�
 [存取與使用](docs/optimization/metric-discovery-mcp.md)。
 獨立 stdio 與回環 HTTP 傳輸驗收見[指標 MCP 傳輸驗收](docs/optimization/metric-mcp-transports.md)。
 
-子代理 REST 請求共用固定五節點工作流程，需綁定明確的 `db_id`、允許 operator 的使用者 ID，執行預設關閉。
+子代理共用固定自然語言或指標工作流程，設定綁定租戶、`db_id` 和允許的 operator 使用者 ID，執行預設關閉。
 詳見 [REST 邊界](docs/optimization/subagent-rest-boundary.md)。
 
 把 `"auto_plan"` 設為 `true`，則由能力過濾後的選擇器在 `request_query` 與 `ez_query` 之間選擇。

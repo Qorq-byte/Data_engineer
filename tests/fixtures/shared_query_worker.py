@@ -107,7 +107,8 @@ async def run(args):
 
         # Explicit test host composition. Local trust must never override HTTP JWT.
         mcp_app = create_nl2sql_server(trust_local_metric_tools=True).http_app(
-            path="/", stateless_http=True, json_response=True,
+            path="/", stateless_http=os.environ.get("DE_SHARED_STATEFUL_MCP") != "1",
+            json_response=True,
         )
         application_lifespan = app.router.lifespan_context
 

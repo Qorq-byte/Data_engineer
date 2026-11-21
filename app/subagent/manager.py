@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from app.auth.tenant import get_current_tenant_id, normalize_tenant_id
 from app.models.subagent import (
     AccessControl,
     DeliveryConfig,
@@ -38,8 +39,8 @@ class SubagentManager:
     """
 
     def __init__(self, config_dir: str = "app/config/subagents") -> None:
-        self._instances: dict[str, SubagentInstance] = {}
-        self._usage_stats: dict[str, Any] = {}
+        self._instances: dict[tuple[int, str], SubagentInstance] = {}
+        self._usage_stats: dict[tuple[int, str], Any] = {}
         self._config_dir = Path(config_dir)
 
     # ── Registration ───────────────────────────────────────────────────
@@ -50,12 +51,16 @@ class SubagentManager:
         Overwrites any existing instance with the same name.
         """
         instance = SubagentInstance(config)
-        self._instances[config.name] = instance
+        if config.workflow_enabled:
+            instance.status = SubagentStatus.ACTIVE
+        self._instances[normalize_tenant_id(config.tenant_id), config.name] = instance
         return instance
 
     def unregister(self, name: str) -> None:
         """Remove a subagent instance (deactivates first if active)."""
-        inst = self._instances.pop(name, None)
+        key = (get_current_tenant_id(), name)
+        inst = self._instances.pop(key, None)
+        self._usage_stats.pop(key, None)
         if inst is not None and inst.status == SubagentStatus.ACTIVE:
             # Fire-and-forget deactivate (can't await in sync method)
             import asyncio
@@ -67,7 +72,7 @@ class SubagentManager:
 
     def get(self, name: str) -> SubagentInstance | None:
         """Look up a subagent instance by name."""
-        return self._instances.get(name)
+        return self._instances.get((get_current_tenant_id(), name))
 
     # ── Lifecycle ──────────────────────────────────────────────────────
 
@@ -78,7 +83,7 @@ class SubagentManager:
             KeyError: If the subagent is not registered.
             RuntimeError: If initialization fails.
         """
-        inst = self._instances.get(name)
+        inst = self.get(name)
         if inst is None:
             raise KeyError(
                 f"Subagent '{name}' not registered. "
@@ -89,7 +94,7 @@ class SubagentManager:
 
     async def deactivate(self, name: str) -> None:
         """Deactivate a subagent by name (no-op if not found or not active)."""
-        inst = self._instances.get(name)
+        inst = self.get(name)
         if inst is not None:
             await inst.deactivate()
 
@@ -101,16 +106,18 @@ class SubagentManager:
 
     # ── Listing ────────────────────────────────────────────────────────
 
+    def instances(self) -> list[tuple[str, SubagentInstance]]:
+        tenant = get_current_tenant_id()
+        return [(name, inst) for (owner, name), inst in self._instances.items() if owner == tenant]
+
     def list_all(self) -> list[str]:
         """Return names of all registered subagents."""
-        return list(self._instances.keys())
+        return [name for name, _ in self.instances()]
 
     def list_active(self) -> list[str]:
         """Return names of currently active subagents."""
         return [
-            name
-            for name, inst in self._instances.items()
-            if inst.status == SubagentStatus.ACTIVE
+            name for name, inst in self.instances() if inst.status == SubagentStatus.ACTIVE
         ]
 
     def list_details(self) -> list[dict[str, Any]]:
@@ -126,7 +133,7 @@ class SubagentManager:
                     for d in inst.config.delivery
                 ],
             }
-            for inst in self._instances.values()
+            for _, inst in self.instances()
         ]
 
     # ── YAML config loading ────────────────────────────────────────────
@@ -160,6 +167,14 @@ class SubagentManager:
             self.register(cfg)
         return self.list_all()
 
+    def register_configured(self) -> None:
+        """Load workspace-managed configurations without replacing live instances."""
+        for config in self.load_configs():
+            key = (config.tenant_id, config.name)
+            instance = self._instances.get(key)
+            if instance is None or instance.status == SubagentStatus.INACTIVE:
+                self.register(config)
+
     # ── Private YAML parser ────────────────────────────────────────────
 
     def _load_one(self, filepath: Path) -> SubagentConfig | None:
@@ -170,6 +185,9 @@ class SubagentManager:
             return None
 
         name = raw.get("name", filepath.stem)
+        workflow_enabled = raw.get("workflow_enabled", False)
+        if type(workflow_enabled) is not bool:
+            raise ValueError("workflow_enabled must be a boolean")
 
         # ── context ────────────────────────────────────────────────
         ctx_raw = raw.get("context", {})
@@ -218,6 +236,8 @@ class SubagentManager:
             delivery=delivery,
             llm_config=llm_config,
             access_control=access_control,
+            tenant_id=normalize_tenant_id(raw.get("tenant_id")),
+            workflow_enabled=workflow_enabled,
         )
 
     # ── Adaptive tuning (Phase 5.7) ─────────────────────────────────
@@ -233,7 +253,7 @@ class SubagentManager:
             latency_ms: Wall-clock latency in milliseconds.
         """
         metrics = self._usage_stats.setdefault(
-            subagent_name,
+            (get_current_tenant_id(), subagent_name),
             {
                 "total": 0,
                 "success": 0,
@@ -252,7 +272,7 @@ class SubagentManager:
 
     def get_effectiveness_score(self, subagent_name: str) -> float:
         """Return the rolling success rate (last 100 invocations)."""
-        metrics = self._usage_stats.get(subagent_name)
+        metrics = self._usage_stats.get((get_current_tenant_id(), subagent_name))
         if not metrics or metrics["total"] == 0:
             return 1.0
         recent = min(metrics["total"], 100)
@@ -267,7 +287,7 @@ class SubagentManager:
         """
         suggestions: list[str] = []
         score = self.get_effectiveness_score(subagent_name)
-        metrics = self._usage_stats.get(subagent_name, {})
+        metrics = self._usage_stats.get((get_current_tenant_id(), subagent_name), {})
 
         if score < 0.7 and metrics.get("total", 0) >= 10:
             suggestions.append(
@@ -298,11 +318,11 @@ class SubagentManager:
         if subagent_name:
             return self._metrics_for(subagent_name)
 
-        return [self._metrics_for(name) for name in self._instances]
+        return [self._metrics_for(name) for name in self.list_all()]
 
     def _metrics_for(self, subagent_name: str) -> dict[str, Any]:
         """Usage metrics for a single subagent."""
-        m = self._usage_stats.get(subagent_name, {})
+        m = self._usage_stats.get((get_current_tenant_id(), subagent_name), {})
         latencies = m.get("latencies", [])
         return {
             "subagent_name": subagent_name,

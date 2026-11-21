@@ -1,0 +1,31 @@
+id: candidate_review
+name: "SQL 候选复核"
+description: "显式启用的固定查询计划，先复核生成的候选，再校验与执行"
+plan:
+  node_order:
+    - id: parse
+      node: parse_nl
+    - id: link
+      node: schema_linking
+      depends_on: [parse]
+    - id: gen
+      node: generate_sql
+      depends_on: [link]
+    - id: review
+      node: candidate_review
+      depends_on: [gen]
+      on_failure: abort
+    - id: validate
+      node: validate_sql
+      depends_on: [review]
+    - id: exec
+      node: execute_sql
+      depends_on: [validate]
+  failure_policy:
+    max_retries: 0
+    on_exhausted: abort
+  evaluation:
+    enabled: true
+    metrics: [schema_compliant, execution_success]
+  max_iterations: 6
+  on_exhausted: abort

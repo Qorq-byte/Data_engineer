@@ -336,6 +336,12 @@ const api = {
   },
 
   // ── Query ──
+  listSubagents(signal) { return api._fetch('/api/v1/subagents', { signal }); },
+  querySubagent(name, body, signal) {
+    return api._fetch(`/api/v1/subagents/${encodeURIComponent(name)}/query`, {
+      method: 'POST', headers: api._headers(true), body: JSON.stringify(body), signal,
+    });
+  },
   async query(body) {
     return api._fetch('/api/v1/query', {
       method: 'POST', headers: api._headers(true),
@@ -806,6 +812,9 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
   const [online, setOnline] = useState(null); // null=checking, true, false
   const [detectedDomain, setDetectedDomain] = useState(null); // auto-detected domain
   const [database, setDatabase] = useState(""); // active database for queries (empty = all databases)
+  const [subagents, setSubagents] = useState([]);
+  const [subagentName, setSubagentName] = useState("");
+  const subagent = subagents.find(item => item.name === subagentName);
   const [dbDialect, setDbDialect] = useState("ansi");
   const [schemaDdl, setSchemaDdl] = useState("");
   const [schemaNotes, setSchemaNotes] = useState(""); // active DB dialect
@@ -846,6 +855,18 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
   }, []);
   const composingRef = useRef(false); // IME composition state
   const notify = useNotify();
+
+  useEffect(() => {
+    if (!active) return;
+    const controller = new AbortController();
+    api.listSubagents(controller.signal).then(result => {
+      if (controller.signal.aborted) return;
+      const eligible = (result.subagents || []).filter(item =>
+        item.status === 'active' && item.capabilities?.includes('nl_query') && item.database_ids?.length);
+      setSubagents(eligible);
+    }).catch(() => { if (!controller.signal.aborted) setSubagents([]); });
+    return () => controller.abort();
+  }, [active, historyKey]);
 
   // ── History helpers ──
   useEffect(() => {
@@ -967,6 +988,27 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
     setPending({ step: -1, statuses: {} });
     setStreamingText("");
     try {
+      if (subagentName) {
+        if (!subagent) throw new Error('当前子 Agent 不可用，请重新选择');
+        domain = subagent.domain;
+        const response = await api.querySubagent(subagentName, {
+          nl_text: text, database, execute: subagent.enable_execution && !forceResult,
+        }, controller.signal);
+        const data = response.data;
+        if (response.status !== 'completed' || !data?.primary_sql) {
+          throw new Error(response.errors?.join(' · ') || '子 Agent 查询失败');
+        }
+        finish({
+          role: 'assistant', kind: 'result', feedback: null, queryId: data.query_id,
+          text, language: data.language, intent: data.intent, confidence: data.confidence,
+          summary: `${subagent.label || subagentName} · ${data.execution ? `${data.execution.row_count} 行` : 'SQL 已生成'}`,
+          candidates: data.candidates, primarySql: data.primary_sql, linkedTables: data.linked_tables,
+          validation: data.validation, execution: data.execution, warnings: data.warnings,
+          errors: data.errors, detectedDomain: domain, source: data.source, sourceNote: data.source_note,
+          stageHistory: [],
+        });
+        return;
+      }
       domain = await detectDomain(text, isForeground, controller.signal);
       controller.signal.throwIfAborted();
       const body = {
@@ -1735,8 +1777,20 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
               ))}
             </div>
           )}
+          {subagents.length > 0 && (
+            <label className="flex items-center gap-2 mb-2 text-[11px] text-neutral-500">
+              子 Agent
+              <select value={subagentName} onChange={event => {
+                setSubagentName(event.target.value);
+                setDatabase("");
+              }} className="bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1">
+                <option value="">通用查询</option>
+                {subagents.map(item => <option key={item.name} value={item.name}>{item.label}</option>)}
+              </select>
+            </label>
+          )}
           {/* Database selector */}
-          {dbList.length > 0 && (
+          {(dbList.length > 0 || subagent) && (
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[11px] text-neutral-400">查询范围:</span>
               <select
@@ -1748,14 +1802,14 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
                   if (sel) setDbDialect(sel.db_type || "ansi");
                 }}
               >
-                <option value="">全部数据库 ({dbList.length})</option>
-                {dbList.map(d => (
+                <option value="">{subagent ? '自动选择已绑定的数据源' : `全部数据库 (${dbList.length})`}</option>
+                {subagent ? subagent.database_ids.map(id => <option key={id} value={id}>{id}</option>) : dbList.map(d => (
                   <option key={d.db_id} value={d.db_id}>{d.database_name || d.alias || d.db_id} ({d.db_type})</option>
                 ))}
               </select>
             </div>
           )}
-          <details className="mb-2 text-xs">
+          {!subagentName && <details className="mb-2 text-xs">
             <summary className="cursor-pointer">SQL 生成选项 · 方言 {dbList.length ? "跟随数据库" : dbDialect}</summary>
             <label className="block my-2">未连接数据库时采用的方言
               <select aria-label="SQL 方言" value={dbDialect} onChange={e => setDbDialect(e.target.value)} className="ml-2">
@@ -1769,9 +1823,9 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
               <textarea aria-label="表字段说明" value={schemaNotes} onChange={e => setSchemaNotes(e.target.value)} className="block w-full border rounded p-2 bg-transparent" placeholder="说明字段含义、关联条件、时区和统计口径" />
             </label>
             <p>连接数据库时以实际数据库结构和方言为准。未连接时可直接生成 SQL。</p>
-          </details>
+          </details>}
           {/* Model selector */}
-          <div className="flex items-center gap-2 mb-2">
+          {!subagentName && <div className="flex items-center gap-2 mb-2">
             <span className="text-[11px] text-neutral-400">模型:</span>
             <select
               className="text-[11px] bg-transparent border border-neutral-200 dark:border-neutral-700 rounded px-2 py-1 text-neutral-600 dark:text-neutral-400 outline-none cursor-pointer max-w-[240px]"
@@ -1787,7 +1841,7 @@ const ChatPanel = ({ active, userName, onSendToWorkbench, historyKey, tenantWork
             {chatModels.length === 0 && (
               <span className="text-[11px] text-amber-500" title="在「系统设置 → LLM」中配置 API Key 后即可选择模型">未配置可用模型</span>
             )}
-          </div>
+          </div>}
           <div className="relative">
             {cmdOpen && (
               <Card className="absolute bottom-full mb-2 left-0 w-60 p-1.5 z-20">

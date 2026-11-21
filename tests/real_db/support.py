@@ -41,8 +41,9 @@ def configured_service(kind: str) -> Service:
 
 
 @asynccontextmanager
-async def admin_connection(service):
+async def admin_connection(service, *, database: str = DATABASE):
     config = service.config(admin=True)
+    config["database"] = database
     if service.kind == "postgresql":
         import asyncpg
 

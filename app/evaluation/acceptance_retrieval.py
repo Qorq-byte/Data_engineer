@@ -43,13 +43,14 @@ def score_ranking(
             **metrics}
 
 
-def retrieval_self_check(suite: object) -> dict[str, Any]:
-    suite = data.validate_retrieval(suite)
+def retrieval_self_check(suite: object, *, business: bool = False) -> dict[str, Any]:
+    suite = data.validate_retrieval(suite, business=business)
     documents = {doc["id"]: doc for doc in suite["documents"]}
+    k = max(3, max(len(query["relevant"]) for query in suite["queries"])) if business else 3
     killed = []
     for query in suite["queries"]:
-        oracle = score_ranking(query, query["relevant"], documents, 3)
-        bad = score_ranking(query, query["bad_ranking"], documents, 3)
+        oracle = score_ranking(query, query["relevant"], documents, k)
+        bad = score_ranking(query, query["bad_ranking"], documents, k)
         if not oracle["ranking_valid"] or (
             oracle["recall_at_k"] != 1 if query["answerable"] else not oracle["no_answer_correct"]
         ):
@@ -62,13 +63,15 @@ def retrieval_self_check(suite: object) -> dict[str, Any]:
                        "recall_at_k": bad["recall_at_k"],
                        "no_answer_correct": bad["no_answer_correct"]})
     return {"qrels_checked": len(killed), "bad_rankings_rejected": len(killed),
-            "self_check_k": 3, "counterexample_details": killed}
+            "self_check_k": k, "counterexample_details": killed}
 
 
-def bm25_rankings(suite: object, k: int, split: str = "all") -> list[dict[str, Any]]:
+def bm25_rankings(
+    suite: object, k: int, split: str = "all", *, business: bool = False,
+) -> list[dict[str, Any]]:
     if type(k) is not int or not 1 <= k <= 1000:
         raise ValueError("Invalid retrieval K")
-    suite = data.validate_retrieval(suite)
+    suite = data.validate_retrieval(suite, business=business)
     queries = selected(suite["queries"], split)
     index = BM25Index()
     try:
@@ -100,11 +103,11 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def evaluate_retrieval(
-    suite: object, predictions: object, k: int = 3, split: str = "all",
+    suite: object, predictions: object, k: int = 3, split: str = "all", *, business: bool = False,
 ) -> dict[str, Any]:
     if type(k) is not int or not 1 <= k <= 1000:
         raise ValueError("Invalid retrieval K")
-    suite = data.validate_retrieval(suite)
+    suite = data.validate_retrieval(suite, business=business)
     by_id = predictions_by_id(predictions, suite["queries"])
     for prediction in by_id.values():
         data.fields(prediction, "id retrieved")

@@ -70,13 +70,14 @@
 | 固定五节点 `request_query` 流水线 | **已实现** —— JSON、SSE 与 MCP 均已接通 |
 | 约束、权限与 SQL 策略执行 | **已实现** |
 | Schema 链接、多阶段校验、混合检索 | **已实现** |
-| 7 个只读数据库连接器 | **已实现并测试**；Snowflake 待验收 |
-| 其余 6 个工作流计划 | **默认 5 个可执行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`；确定性 `metric_query` v1 需配置目录并显式给出指标名 |
+| 只读数据库连接器 | **7 个已通过实库验收**。Snowflake 已实现并通过本地策略测试，专用云环境验收待完成。[验收说明](docs/optimization/snowflake-acceptance.md) |
+| 其他工作流计划 | **默认 5 个可执行** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`；`metric_query` 需配置指标目录，`candidate_review` 需显式启用预览 |
 | 自动计划选择 | **已实现** —— `auto_plan=true` 依次走 L1 规则、L2 历史与能力过滤后的兜底；默认仍为 `request_query` |
-| 多 Agent 编排与子 Agent | **部分实现** —— 限域 REST 自然语言查询已接固定工作流及访问检查；自主编排仍属实验组件 |
+| 指标工作流 | **已实现**。目录 v2 支持日、周、月分组和主键查找维度，已在 SQLite、MySQL 和 PostgreSQL 执行测试。[指标目录 v2](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#m2-日历分组与查找表维度) |
+| 候选复核与子 Agent | 固定候选复核可显式预览。子 Agent 按租户接入 REST、认证 MCP HTTP 和工作台，共享 worker 使用封存目录。[子 Agent 配置](docs/optimization/immutable-workers.md#封存共享-worker-的子-agent-目录) |
 | 反馈驱动的规则学习 | **已实现** —— 审批通过的规则进入生成提示与校验，并在 `applied_rules` 回显；规则不自动改写 SQL |
-| 多租户隔离 | **部分实现** —— 单 worker 和单机不可变多 worker 支持租户工作台、REST 和 MCP HTTP。双 worker 已在 MySQL 上验收数据源隔离、会话恢复和漂移拒绝。[部署与验收](docs/optimization/immutable-workers.md#v2-租户发布包) |
-| 合成与校准基线 | **已记录合成基线**，覆盖检索、SQL 契约和有界负载。业务准确率、召回率和生产容量仍待校准。[基线报告](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
+| 多租户隔离 | **部分实现** —— 单 worker 和单机不可变多 worker 支持租户工作台、REST 和 MCP HTTP。双 worker 已在 MySQL 和 PostgreSQL 查询目标上验收数据源隔离、会话恢复和漂移拒绝。[部署与验收](docs/optimization/immutable-workers.md#v2-租户发布包) |
+| 质量与容量验收 | 已实现冻结留出集评分、计划成对采集、分租户容量门槛及资源和账单核验，并通过合成场景测试。正式业务和生产验收需要目标数据及部署。[验收状态](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#集中实施与正式验收状态) |
 
 ## 快速开始
 
@@ -146,7 +147,7 @@ pip install -e ".[snowflake]"               # 可选 Snowflake 驱动（不在 c
 |---|---|
 | `app/config/agent.yml` | 提供方默认值、节点→工具→权限映射、硬约束 |
 | `app/workflow/plans/request_query.yml` | 可执行计划：`node_order`、`failure_policy`、评估指标 |
-| `app/workflow/plans/*.yml` | 另外 6 个计划；默认 5 个可执行，服务端指标目录可启用 `metric_query` v1 |
+| `app/workflow/plans/*.yml` | 其他默认 5 个计划、服务端目录启用的 `metric_query` 和可选的 `candidate_review` 预览 |
 | `app/config/domains/*.yml` | 按领域的术语表、业务规则与术语映射 |
 | `app/config/subagents/*.yaml` | 限定范围的子 Agent 定义与交付目标 |
 
@@ -245,7 +246,7 @@ MCP 也提供 `list_metrics`、`metric_query`；HTTP Bearer 认证与本地进�
 [访问与使用](docs/optimization/metric-discovery-mcp.md)。
 独立 stdio 与回环 HTTP 传输验收见[指标 MCP 传输验收](docs/optimization/metric-mcp-transports.md)。
 
-子 Agent REST 请求复用固定五节点工作流，需绑定明确的 `db_id`、允许 operator 的用户 ID，执行默认关闭。
+子 Agent 复用固定自然语言或指标工作流，配置绑定租户、`db_id` 和允许的 operator 用户 ID，执行默认关闭。
 详见 [REST 边界](docs/optimization/subagent-rest-boundary.md)。
 
 把 `"auto_plan"` 设为 `true`，则由能力过滤后的选择器在 `request_query` 与 `ez_query` 之间选择。

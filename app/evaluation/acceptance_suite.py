@@ -1,4 +1,4 @@
-"""Frozen synthetic acceptance profile; self-check labels before saved-output scoring."""
+"""Self-check frozen acceptance labels before saved-output scoring."""
 
 from __future__ import annotations
 
@@ -19,22 +19,35 @@ def _statistics(rows: list[dict[str, Any]]) -> dict[str, Any]:
                                             for tag in row["tags"])) for split in data.SPLITS}}
 
 
-def self_check() -> dict[str, Any]:
-    manifest = data.verify_manifest()
-    sql = load_sql()
-    retrieval = load_retrieval()
-    return {"profile": "synthetic-acceptance-v3", "report_version": "acceptance-self-check-v1",
-            "manifest_sha256": fingerprint(manifest),
-            "input_sha256": manifest["files"],
-            "raw_input_sha256": {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-                                 for path in data.source_paths()},
+def self_check(dataset: data.BusinessDataset | None = None) -> dict[str, Any]:
+    if dataset is None:
+        manifest = data.verify_manifest()
+        sql, retrieval, snapshot = load_sql(), load_retrieval(), None
+        profile = "synthetic-acceptance-v3"
+        manifest_hash, input_hashes = fingerprint(manifest), manifest["files"]
+        raw_hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest()
+                      for path in data.source_paths()}
+        limitations = ("Manual public synthetic dev/holdout consistency, not model accuracy. "
+                       "No private business labels; public holdout is not blind.")
+    else:
+        sql, retrieval, snapshot = dataset.sql, dataset.retrieval, dataset.snapshot
+        profile = data.BUSINESS_PROFILE
+        manifest_hash = dataset.hashes["manifest"]
+        input_hashes = {name: dataset.hashes[name] for name in data.BUSINESS_FILES}
+        raw_hashes = {"manifest": manifest_hash, **input_hashes}
+        limitations = ("Manual business labels checked against one frozen SQLite snapshot. "
+                       "This label check contains no model predictions.")
+    return {"profile": profile, "report_version": "acceptance-self-check-v1",
+            "manifest_sha256": manifest_hash,
+            "input_sha256": input_hashes,
+            "raw_input_sha256": raw_hashes,
             "sql_dataset_sha256": fingerprint(sql),
             "retrieval_dataset_sha256": fingerprint(retrieval),
             "sql_statistics": _statistics(sql["sql_cases"]),
             "retrieval_statistics": _statistics(retrieval["queries"]),
             "document_count": len(retrieval["documents"]),
-            "sql": sql_self_check(sql), "retrieval": retrieval_self_check(retrieval),
+            "sql": sql_self_check(sql, snapshot=snapshot),
+            "retrieval": retrieval_self_check(retrieval, business=dataset is not None),
             "llm_calls": 0, "embedding_calls": 0, "actual_cost_usd": None,
-            "limitations": "Manual public synthetic dev/holdout consistency, not model accuracy. "
-                           "No private business labels; public holdout is not blind. "
-                           "Checksums detect drift, not authenticity or independent human review."}
+            "limitations": f"{limitations} Checksums detect drift, not authenticity or "
+                           "independent human review."}

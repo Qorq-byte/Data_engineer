@@ -28,6 +28,11 @@ agent:
         call_llm: allow  # authenticated operator explicitly requested generation
       streaming: true
 
+    candidate_review:
+      tools: [call_llm]
+      permissions:
+        call_llm: allow
+
     execute_sql:
       model: none  # non-LLM node
       tools: [execute_read_query]

@@ -257,6 +257,19 @@ async def immutable_worker_lifespan(
             runtime.verify_configuration = verify
             runtime.worker_release = release
             runtime.tenant_snapshots = tenant_snapshots
+            if release.subagent_catalog is not None:
+                from app.subagent.manager import SubagentManager
+
+                registry = SubagentManager()
+                for config in release.subagent_catalog.configs:
+                    tenant_snapshot = tenant_snapshots.get(config.tenant_id)
+                    if tenant_snapshot is not None and (
+                        config.domain != "default"
+                        and config.domain.casefold() not in tenant_snapshot.domains
+                    ):
+                        raise CoordinationUnavailableError("Sealed subagent domain is unavailable")
+                    registry.register(config)
+                runtime.subagents = registry
             publish_shared_runtime(runtime)
             app.state.components["shared_worker"] = True
             yield
@@ -294,4 +307,7 @@ def mutable_request_allowed(method: str, path: str) -> bool:
         "/api/v1/sql/translate",
         "/api/v1/sql/format",
         "/api/v1/sql/validate",
-    } or bool(re.fullmatch(r"/api/v1/sessions/[^/]+/versions/[0-9]+/(branch|rollback)", path))
+    } or bool(re.fullmatch(
+        r"/api/v1/(?:sessions/[^/]+/versions/[0-9]+/(?:branch|rollback)|subagents/[^/]+/query)",
+        path,
+    ))

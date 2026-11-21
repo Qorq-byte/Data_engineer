@@ -79,13 +79,14 @@ Status reflects running code, not design documents. The per-feature matrix is in
 | Fixed five-node `request_query` pipeline | **Implemented** — wired through JSON, SSE and MCP |
 | Constraint, permission and SQL-policy enforcement | **Implemented** |
 | Schema linking, multi-stage validation, hybrid retrieval | **Implemented** |
-| Seven read-only database connectors | **Implemented and tested**; Snowflake pending acceptance |
-| Six other workflow plans | **Five available by default** — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic`, `explore`; deterministic `metric_query` v1 additionally requires a configured catalog and explicit metric names |
+| Read-only database connectors | **Seven accepted**. Snowflake is implemented and has local policy tests, with dedicated cloud acceptance pending. [Snowflake acceptance](docs/optimization/snowflake-acceptance.md) |
+| Other workflow plans | **Five available by default** — `gensql_agentic`, `ez_query`, `reflection`, `chat_agentic`, `explore`; `metric_query` requires a catalog, and `candidate_review` requires explicit preview enablement |
 | Automatic plan selection | **Implemented** — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default |
-| Multi-agent orchestrator and sub-agents | **Partial** — scoped REST NL queries use the fixed workflow with access checks; autonomous orchestration remains experimental |
+| Metrics | **Implemented**. Catalog v2 supports day, week and month grouping and primary-key lookup dimensions. SQLite, MySQL and PostgreSQL have fixture-based execution evidence. [Metric catalog v2](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#m2-日历分组与查找表维度) |
+| Candidate review and subagents | Fixed candidate review is available as a preview. Tenant-scoped subagents run through REST, authenticated MCP HTTP and the workbench, with sealed catalogs on shared workers. [Subagent configuration](docs/optimization/immutable-workers.md#封存共享-worker-的子-agent-目录) |
 | Feedback-driven rule learning | **Implemented** — approved rules reach the generation prompt and validation, and are echoed in `applied_rules`; rules never rewrite SQL |
-| Multi-tenant isolation | **Partial** — tenant workbench, REST and MCP HTTP on single-worker and single-host immutable deployments. Two MySQL workers verified tenant-scoped query targets, session recovery and drift rejection. [Deployment and evidence](docs/optimization/immutable-workers.md#v2-租户发布包) |
-| Synthetic and calibrated baselines | **Synthetic baseline recorded** for retrieval, SQL contracts and bounded load. Calibrated business accuracy, recall and production capacity remain pending. [Baseline evidence](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
+| Multi-tenant isolation | **Partial** — tenant workbench, REST and MCP HTTP on single-worker and single-host immutable deployments. Two-worker acceptance covered MySQL and PostgreSQL query targets, session recovery and drift rejection. [Deployment and evidence](docs/optimization/immutable-workers.md#v2-租户发布包) |
+| Quality and capacity acceptance | Frozen holdout scoring, paired plan capture, tenant capacity gates and resource and billing review are implemented and tested with fixtures. Business and production acceptance require the target datasets and deployment. [Acceptance status](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#集中实施与正式验收状态) |
 
 ## Quick start
 
@@ -158,7 +159,7 @@ remaining knob is commented in the example file.
 |---|---|
 | `app/config/agent.yml` | Provider defaults, node→tool→permission mapping, hard constraints |
 | `app/workflow/plans/request_query.yml` | The executable plan: `node_order`, `failure_policy`, evaluation metrics |
-| `app/workflow/plans/*.yml` | Six additional plans; five available by default, `metric_query` v1 enabled by a server-owned catalog |
+| `app/workflow/plans/*.yml` | Five additional plans available by default, server-owned `metric_query` catalogs and the opt-in `candidate_review` preview |
 | `app/config/domains/*.yml` | Glossary, business rules and term mappings per domain |
 | `app/config/subagents/*.yaml` | Scoped sub-agent definitions and delivery targets |
 
@@ -260,8 +261,8 @@ MCP also exposes `list_metrics` and `metric_query`; see [access and usage](docs/
 for HTTP Bearer authentication and explicit local-process trust. Independent stdio and loopback HTTP
 transport evidence is recorded in [MCP transport acceptance](docs/optimization/metric-mcp-transports.md).
 
-Scoped subagent REST requests use the same five-node workflow. Bind an explicit `db_id`, allow the
-operator's user ID, and opt in to execution; see [the REST boundary](docs/optimization/subagent-rest-boundary.md).
+Scoped subagent requests use fixed natural-language or metric workflows. Bind the tenant, `db_id`
+and allowed operator IDs. Execution defaults to off. [Subagent access](docs/optimization/subagent-rest-boundary.md)
 
 Set `"auto_plan": true` to let the capability-filtered selector choose between `request_query` and
 `ez_query`. The response then carries a `plan_selection` object with `layer` (`L1` rule, `L2`

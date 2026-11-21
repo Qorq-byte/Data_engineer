@@ -10,6 +10,16 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Added
 
+- Frozen business holdout import, SQL response and retrieval ranking capture, stratified scoring,
+  and explicit acceptance thresholds.
+- Authenticated capacity probes with per-phase and per-tenant checks, SSE disconnect recovery
+  coverage, and offline resource and billing review.
+- Deterministic version 2 metric catalog with calendar grains and primary-key lookup dimensions,
+  with fixture-based execution evidence for SQLite, MySQL and PostgreSQL.
+- An opt-in fixed candidate review workflow plus paired capture, offline comparison and pilot
+  gates for latency, model calls and reviewed cost.
+- Tenant-scoped subagents in REST, MCP HTTP and the workbench, with optional immutable catalog
+  sealing and drift rejection across shared workers.
 - Tenant-scoped account authorization, query targets, sessions, retrieval, domain catalogs and
   model routing, plus a workbench that loads capabilities from the verified account.
 - Encrypted v2 immutable worker releases with tenant-scoped target restoration, fixed settings

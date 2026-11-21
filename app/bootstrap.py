@@ -13,12 +13,14 @@ def initialize_catalogs() -> None:
     from app.agents.sql_generator import SQLGenerationAgent
     from app.agents.sql_validator import ValidationAgent
     from app.agents.tool_executor import ToolExecutionAgent
+    from app.config.settings import settings
     from app.mcp.registry import mcp_registry
     from app.mcp.servers.db_server import db_mcp_config
     from app.mcp.servers.knowledge_server import knowledge_mcp_config
     from app.mcp.servers.learning_server import learning_mcp_config
     from app.mcp.servers.vector_server import vector_mcp_config
     from app.nodes.base import BaseNode
+    from app.nodes.candidate_review import CandidateReviewNode
     from app.nodes.dialect_translate import DialectTranslateNode
     from app.nodes.execute_sql import ExecuteSQLNode
     from app.nodes.explain_plan import ExplainPlanNode
@@ -39,6 +41,7 @@ def initialize_catalogs() -> None:
         SchemaLinkingNode,
         HybridSearchNode,
         GenerateSQLNode,
+        CandidateReviewNode,
         ValidateSQLNode,
         ExecuteSQLNode,
         MetricResolveNode,
@@ -65,6 +68,5 @@ def initialize_catalogs() -> None:
     for agent_type in agent_types:
         if agent_registry.get(agent_type.name) is None:
             agent_registry.register(agent_type())
-    for subagent_config in subagent_manager.load_configs():
-        if subagent_manager.get(subagent_config.name) is None:
-            subagent_manager.register(subagent_config)
+    if not settings.shared_worker_release:
+        subagent_manager.register_configured()
