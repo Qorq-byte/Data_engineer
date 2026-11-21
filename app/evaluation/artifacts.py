@@ -48,13 +48,22 @@ def _check_depth(root: object) -> None:
             stack.append((iterator, depth + 1))
 
 
-def read_json(path: Path, *, max_bytes: int = MAX_INPUT_BYTES) -> object:
+def read_bounded_bytes(path: Path, max_bytes: int = MAX_INPUT_BYTES) -> bytes:
     if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_INPUT_BYTES:
         raise ValueError("Invalid JSON input byte limit")
     with path.open("rb") as source:
         raw = source.read(max_bytes + 1)
     if len(raw) > max_bytes:
         raise ValueError("Export input size limit exceeded")
+    return raw
+
+
+def read_json(path: Path, *, max_bytes: int = MAX_INPUT_BYTES) -> object:
+    return parse_json(read_bounded_bytes(path, max_bytes))
+
+
+def parse_json(raw: bytes) -> object:
+    """Apply the same strict parsing to JSON bytes already captured for hashing."""
     try:
         result: object = json.loads(
             raw.decode("utf-8-sig"),
@@ -81,8 +90,9 @@ def write_atomic(
     rows: object,
     *,
     prefix: str = ".offline-report-",
+    indent: int | None = 2,
 ) -> None:
-    serialized = json.dumps(rows, ensure_ascii=False, indent=2, allow_nan=False)
+    serialized = json.dumps(rows, ensure_ascii=False, indent=indent, allow_nan=False)
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:
