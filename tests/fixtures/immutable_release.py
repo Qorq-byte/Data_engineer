@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import yaml
+
 from app.auth.tenant import tenant_scope
 from app.db.connections import ConnectionFactory, DatabaseType
 from app.db.schema_extractor import SchemaExtractor
@@ -15,7 +17,7 @@ from app.rag.converters import snapshot_to_schema_docs
 
 async def build_release(
     config, directory: Path, *, with_metrics: bool = False, code_root: Path = ROOT,
-    tenant_profiles=None,
+    tenant_profiles=None, subagent_catalog: Path | None = None,
 ):
     dense_path, sparse_path = directory / "lance", directory / "sparse.sqlite3"
     provider = MockEmbeddingProvider()
@@ -62,19 +64,28 @@ async def build_release(
     catalog = None
     if with_metrics:
         catalog = directory / "metrics.yml"
-        bindings = (
-            "  - domain: ecommerce\n    database: fixture\n"
-            f"    tenant_id: {tenant}\n    metrics:\n"
-            "      - {name: order_count, table: orders, column: '*', aggregation: count, "
-            "dimensions: [status]}\n"
-            "      - {name: id_sum, table: orders, column: id, aggregation: sum, "
-            "dimensions: [status]}\n"
-            for tenant in groups
-        )
-        catalog.write_text(
-            "version: shared-fixture-v1\nbindings:\n" + "".join(bindings),
-            encoding="utf-8",
-        )
+        bindings = []
+        for tenant in groups:
+            lookup = subagent_catalog is not None and tenant != "1"
+            dimensions = ["status", "branch"] if lookup else ["status"]
+            measures = (("order_count", "*", "count"), ("id_sum", "id", "sum"))
+            metrics = [
+                {"name": name, "table": "orders", "column": column, "aggregation": aggregation,
+                 "dimensions": list(dimensions), **({"date_column": "booked_on"} if lookup else {})}
+                for name, column, aggregation in measures
+            ]
+            binding = {"domain": "ecommerce", "database": "fixture", "tenant_id": int(tenant),
+                       "metrics": metrics}
+            if lookup:
+                binding["lookup"] = {
+                    "fact_table": "orders", "fact_key": "branch_id",
+                    "table": "branches", "key": "id", "dimensions": {"branch": "label"},
+                }
+            bindings.append(binding)
+        data = {"version": "shared-fixture-v1", "bindings": bindings}
+        if subagent_catalog is not None:
+            data["format"] = "metric-catalog-v2"
+        catalog.write_text(yaml.safe_dump(data), encoding="utf-8")
     bundle = directory / "release.json"
     write_release(
         groups if tenant_profiles else default_profiles,
@@ -82,6 +93,7 @@ async def build_release(
         bundle,
         index_roots=[dense_path],
         metric_catalog=catalog,
+        subagent_catalog=subagent_catalog,
     )
     return {
         "SHARED_WORKER_RELEASE": str(bundle),
