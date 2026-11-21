@@ -82,7 +82,7 @@ class SubagentRouter:
     def list_api_endpoints(self) -> list[dict[str, str]]:
         """Return API endpoint info for all registered subagents."""
         endpoints: list[dict[str, str]] = []
-        for name, inst in self._manager._instances.items():
+        for name, inst in self._manager.instances():
             for d in inst.config.delivery:
                 if d.type == "api":
                     endpoints.append({
@@ -106,7 +106,7 @@ class SubagentRouter:
     def list_web_subagents(self) -> list[dict[str, str]]:
         """Return Web UI info for all subagents with web delivery."""
         web_list: list[dict[str, str]] = []
-        for name, inst in self._manager._instances.items():
+        for name, inst in self._manager.instances():
             for d in inst.config.delivery:
                 if d.type == "web":
                     web_list.append({
@@ -134,7 +134,7 @@ class SubagentRouter:
     def list_mcp_subagents(self) -> list[dict[str, str]]:
         """Return MCP tool info for all subagents with MCP delivery."""
         mcp_list: list[dict[str, str]] = []
-        for name, inst in self._manager._instances.items():
+        for name, inst in self._manager.instances():
             for d in inst.config.delivery:
                 if d.type == "mcp":
                     mcp_list.append({
