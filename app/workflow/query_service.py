@@ -15,6 +15,7 @@ from app.audit.store import UsageAuditStore
 from app.auth.tenant import DEFAULT_TENANT_ID, get_current_tenant_id
 from app.core.query_evidence import candidate_evidence, supplied_schema
 from app.core.sql_validator import SQLValidator
+from app.db.dialect_adapter import PRESET_DIALECTS
 from app.db.query_targets import resolve_query_targets
 from app.harness.config_loader import ConfigLoader
 from app.harness.constraint import ConstraintEnforcer, ConstraintLimits
@@ -439,6 +440,9 @@ async def _run_query(
             for db_id, (schema, db_name, dialect) in schemas.items()
         ] or [("", (user_schema, "", body.dialect))]
         for db_id, (schema, db_name, dialect) in targets:
+            if selected_metrics is not None and (preset := PRESET_DIALECTS.get(dialect)):
+                # Metric SQL is built and parsed with SQLGlot's dialect name.
+                dialect = preset.dialect
             execution_error = ""
             metadata = (
                 _detect_metadata_query(body.nl_text, {db_id: (schema, db_name, dialect)})
