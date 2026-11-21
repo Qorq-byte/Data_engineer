@@ -7,6 +7,7 @@ import json
 import pytest
 
 from app.api import create_app, query
+from app.config.settings import settings
 from app.db.connections import ConnectionFactory, DatabaseType
 from app.llm.router import LiteLLMRouter, RouterConfig
 from app.workflow import plan_selection
@@ -126,6 +127,48 @@ async def test_reflection_plan_revises_after_execution_error(plan_env):
     trace = next(item for item in traces if item["plan"] == "reflection")
     assert "reflection" in trace["nodes_executed"]
     assert trace["nodes_executed"].count("generate_sql") >= 2
+
+
+async def test_candidate_review_requires_opt_in_and_cannot_replace_sql(plan_env, monkeypatch):
+    from app.workflow.query_service import _CONFIG_LOADER
+
+    class ReviewedRouter(ScriptedRouter):
+        async def complete(self, messages, **kwargs):
+            response = await super().complete(messages, **kwargs)
+            response["choices"][0]["finish_reason"] = "stop"
+            return response
+
+    candidate_sql = "SELECT id FROM orders ORDER BY id"
+    body = _body(plan_id="candidate_review")
+    router = ReviewedRouter([candidate_sql, '{"approved":true}'])
+    client = plan_env(router)
+    blocked = client.post("/api/v1/query", json=body)
+    assert blocked.status_code == 400 and router.calls == []
+
+    monkeypatch.setattr(settings, "candidate_review_enabled", True)
+    result = client.post("/api/v1/query", json=body).json()
+    assert result["status"] == "completed", result
+    assert result["plan_output"]["candidate_review"]["status"] == "approved"
+    assert result["llm_calls"] == 2 and result["execution"]["row_count"] == 5
+    assert result["plan_output"]["node_names"][-3:] == [
+        "candidate_review", "validate_sql", "execute_sql",
+    ]
+    for verdict in ('{"approved":false}', '{"approved":true,"sql":"SELECT 1"}'):
+        router.replies = [candidate_sql, verdict]
+        failed = client.post("/api/v1/query", json=body).json()
+        assert failed["status"] == "failed" and failed["execution"] is None
+    router.replies = [candidate_sql, '{"approved":true}']
+    preview = client.post("/api/v1/query", json={
+        **body, "execute": False, "run_validation": False,
+    }).json()
+    assert preview["status"] == "completed" and preview["execution"] is None
+    assert preview["validation"]["passed"] is True
+
+    monkeypatch.setattr(_CONFIG_LOADER.load().constraints, "max_llm_calls_per_query", 1)
+    router.replies = [candidate_sql, '{"approved":true}']
+    budgeted = client.post("/api/v1/query", json=body).json()
+    assert budgeted["status"] == "failed" and budgeted["execution"] is None
+    assert budgeted["llm_calls"] == 1
 
 
 async def test_chat_plan_returns_natural_language_response(plan_env):

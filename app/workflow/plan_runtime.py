@@ -18,6 +18,7 @@ from app.llm.budget import BudgetedRouter
 from app.llm.protocols import CompletionRouter
 from app.models.workflow import WorkflowPlan
 from app.nodes.base import BaseNode
+from app.nodes.candidate_review import CandidateReviewNode
 from app.nodes.dialect_translate import DialectTranslateNode
 from app.nodes.execute_sql import ExecuteSQLNode
 from app.nodes.explain_plan import ExplainPlanNode
@@ -42,6 +43,7 @@ STAGE_BY_NODE: dict[str, str] = {
     "schema_linking": "retrieve",
     "hybrid_search": "retrieve",
     "generate_sql": "generate",
+    "candidate_review": "review",
     "validate_sql": "validate",
     "execute_sql": "execute",
     "reflection": "reflect",
@@ -72,6 +74,11 @@ def stage_for(node_name: str) -> str:
 
 def plan_blocker(plan_id: str) -> str:
     """Return why *plan_id* cannot run, or an empty string when it can."""
+    if plan_id == "candidate_review":
+        from app.config.settings import settings
+
+        if not settings.candidate_review_enabled:
+            return "candidate_review requires CANDIDATE_REVIEW_ENABLED=true"
     if plan_id == "metric_query":
         from app.harness.metric_catalog_runtime import configured_metric_catalog
         from app.harness.mysql_coordination import CoordinationUnavailableError
@@ -140,6 +147,8 @@ def _build_node(name: str, deps: NodeDependencies) -> BaseNode:
         case "generate_sql":
             router = BudgetedRouter(deps.router) if deps.router is not None else None
             return GenerateSQLNode(router=router)
+        case "candidate_review":
+            return CandidateReviewNode(BudgetedRouter(deps.router) if deps.router else None)
         case "validate_sql":
             return ValidateSQLNode(dialect=deps.dialect)
         case "execute_sql":
@@ -237,13 +246,16 @@ def request_overrides(
             case "validate_sql":
                 config = {
                     "enabled": bool(
-                        body.run_validation or body.execute or plan.id == "metric_query"
+                        body.run_validation or body.execute
+                        or plan.id in {"metric_query", "candidate_review"}
                     ),
                     "dialect": dialect,
                     "skip_schema": bool(prepared),
                 }
             case "metric_resolve":
                 config = {"dialect": dialect, "db_id": db_id, "database_name": db_name}
+            case "candidate_review":
+                config = {"model": body.model}
             case "execute_sql":
                 config = {
                     "enabled": bool(body.execute and db_id),
@@ -287,6 +299,8 @@ def plan_output(plan: WorkflowPlan, context: dict[str, Any]) -> dict[str, Any]:
         output["response"] = _jsonable(context.get("response"))
     if "reflection" in context:
         output["reflection"] = _jsonable(context.get("reflection"))
+    if "candidate_review" in context:
+        output["candidate_review"] = _jsonable(context["candidate_review"])
     if "needs_revision" in context:
         output["needs_revision"] = bool(context.get("needs_revision"))
     if "fix_hints" in context:

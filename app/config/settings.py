@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     tenant_llm_endpoints: dict[PositiveInt, list[str]] = Field(default_factory=dict)
 
     query_timeout_seconds: float = Field(default=120, gt=0)
+    candidate_review_enabled: bool = False
     max_concurrent_queries: int = Field(default=8, ge=1)
     schema_cache_seconds: float = Field(default=30, ge=0)
     session_max_entries: int = Field(default=1000, ge=1)

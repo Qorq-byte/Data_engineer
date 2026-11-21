@@ -99,6 +99,11 @@ async def _resolve_plan(body: Any) -> tuple[WorkflowPlan, Any]:
     requested = (getattr(body, "plan_id", "") or "request_query").strip()
     decision = None
 
+    if requested == "candidate_review" and (
+        body.auto_plan or body.num_candidates != 1 or not body.database
+    ):
+        raise QueryPlanError("candidate_review requires an explicit database and one candidate")
+
     if getattr(body, "auto_plan", False):
         decision = await select_plan(body.nl_text, getattr(body, "domain", "") or "")
         plan_id = decision.plan_id

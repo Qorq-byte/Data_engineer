@@ -25,7 +25,7 @@ def _selector() -> PlanSelector:
 
 
 class TestAllPlansExist:
-    """Verify all 6 plan templates are present and loadable."""
+    """Verify the packaged plan templates are present and loadable."""
 
     EXPECTED = {
         "gensql_agentic",
@@ -35,13 +35,14 @@ class TestAllPlansExist:
         "chat_agentic",
         "explore",
         "metric_query",
+        "candidate_review",
     }
 
     @pytest.fixture
     def loader(self) -> PlanLoader:
         return _loader()
 
-    def test_all_six_plans_available(self, loader: PlanLoader):
+    def test_packaged_plans_available(self, loader: PlanLoader):
         available = set(loader.list_available())
         assert available == self.EXPECTED
 
@@ -243,7 +244,7 @@ class TestCrossPlanValidation:
         return {pid: loader.load(pid) for pid in loader.list_available()}
 
     def test_all_plans_have_unique_ids(self, all_plans):
-        assert len(all_plans) == 7
+        assert set(all_plans) == {plan.id for plan in all_plans.values()}
 
     def test_all_plans_have_non_empty_node_order(self, all_plans):
         for pid, plan in all_plans.items():
@@ -275,7 +276,7 @@ class TestCrossPlanValidation:
         valid = {
             "schema_linking", "parse_nl", "generate_sql", "validate_sql",
             "execute_sql", "hybrid_search", "metric_resolve", "reflection",
-            "format_sql", "respond",
+            "format_sql", "respond", "candidate_review",
         }
         for pid, plan in all_plans.items():
             for node in plan.node_order:
@@ -314,13 +315,9 @@ class TestPlanSelectorNewPlans:
         assert plan is not None
         assert plan.id == "metric_query"
 
-    def test_all_six_plans_in_available_list(self, selector: PlanSelector):
+    def test_packaged_plans_in_available_list(self, selector: PlanSelector):
         available = selector._available_plans()
-        assert len(available) == 7
-        assert "reflection" in available
-        assert "chat_agentic" in available
-        assert "explore" in available
-        assert "metric_query" in available
+        assert set(available) == TestAllPlansExist.EXPECTED
 
     def test_reload_preserves_new_plans(self):
         loader = _loader()
