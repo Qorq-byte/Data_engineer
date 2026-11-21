@@ -36,12 +36,18 @@ async def metric_catalog_view(domain: str, database: str) -> dict[str, Any]:
     )
     if binding is None:
         raise QueryPlanError("No metric binding for the requested domain and database")
+    lookup = binding.lookup
+    lookup_columns = dict(lookup.dimensions).keys() if lookup is not None else set()
     return {
         "version": catalog.version, "sha256": catalog.sha256,
         "domain": domain, "database": database,
         "metrics": [
             {"name": metric.name, "table": metric.table, "column": metric.column,
-             "aggregation": metric.aggregation, "dimensions": list(metric.dimensions)}
+             "aggregation": metric.aggregation, "dimensions": list(metric.dimensions),
+             **({"date_column": metric.date_column, "grains": ["day", "week", "month"]}
+                if metric.date_column else {}),
+             **({"lookup_dimensions": sorted(set(metric.dimensions) & lookup_columns)}
+                if lookup is not None and metric.table == lookup.fact_table else {})}
             for metric in sorted(binding.metrics, key=lambda item: item.name)
         ],
         "evidence": "configured_catalog; target_schema_and_business_semantics_unverified",
@@ -52,6 +58,7 @@ def metric_selection(body: Any, plan_id: str) -> MetricSelection | None:
     fields = (
         getattr(body, "metrics", []), getattr(body, "metric_catalog_version", ""),
         getattr(body, "metric_dimensions", []), getattr(body, "metric_filters", {}),
+        getattr(body, "metric_grain", ""),
     )
     if plan_id != "metric_query":
         if any(fields):
@@ -75,7 +82,7 @@ def metric_selection(body: Any, plan_id: str) -> MetricSelection | None:
         return configured_metric_catalog().select(
             version=fields[1], domain=body.domain, database=body.database,
             metrics=fields[0], dimensions=fields[2], filters=fields[3],
-            tenant_id=get_current_tenant_id(),
+            tenant_id=get_current_tenant_id(), grain=fields[4],
         )
     except CatalogError as exc:
         raise QueryPlanError(str(exc)) from None

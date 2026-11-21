@@ -71,6 +71,56 @@ async def test_aggregate_results_and_zero_llm_calls(metric_env, monkeypatch):
     assert not any("MOCK LLM" in warning for warning in payload["warnings"])
 
 
+async def test_v2_calendar_and_lookup_preserve_facts_and_require_live_primary_key(metric_env):
+    client, router, path, database = metric_env
+    with sqlite3.connect(database) as connection:
+        connection.executescript("""
+            CREATE TABLE metric_facts (booked DATE, amount INTEGER, branch_id INTEGER);
+            CREATE TABLE metric_branches (id INTEGER PRIMARY KEY, sector TEXT);
+            CREATE TABLE duplicated_branches (id INTEGER, sector TEXT);
+            INSERT INTO metric_branches VALUES (1, 'Retail'), (2, 'Retail');
+            INSERT INTO duplicated_branches VALUES (1, 'Retail'), (1, 'Wholesale');
+            INSERT INTO metric_facts VALUES ('2025-12-28', 5, 1), ('2025-12-29', 10, 1),
+              ('2026-01-04', 15, 2), ('2026-01-05', 20, NULL), (NULL, 25, 99);
+        """)
+    definition = {
+        "format": "metric-catalog-v2", "version": "calendar-v2", "bindings": [{
+            "domain": "ecommerce", "database": "metric-db",
+            "metrics": [{"name": "revenue", "table": "metric_facts", "column": "amount",
+                         "aggregation": "sum", "dimensions": ["sector"], "date_column": "booked"}],
+            "lookup": {"fact_table": "metric_facts", "fact_key": "branch_id",
+                       "table": "metric_branches", "key": "id", "dimensions": {"sector": "sector"}},
+        }],
+    }
+    path.write_text(yaml.safe_dump(definition), encoding="utf-8")
+    request = body(execute=True, metrics=["revenue"], metric_catalog_version="calendar-v2",
+                   metric_dimensions=["sector"], metric_grain="week")
+    payload = client.post("/api/v1/query", json=request).json()
+    assert payload["status"] == "completed", payload
+    result = payload["execution"]
+    assert result["columns"] == ["period_start", "sector", "revenue"]
+    assert result["rows"] == [
+        [None, None, 25], ["2025-12-22", "Retail", 5], ["2025-12-29", "Retail", 25],
+        ["2026-01-05", None, 20],
+    ]
+    assert payload["plan_output"]["metric_catalog"]["grain"] == "week"
+    done = next(data for event, data in stream_events(client.post(
+        "/api/v1/query/stream", json={**request, "metric_grain": "month"},
+    )) if event == "done")
+    assert done["execution"]["rows"] == [
+        [None, None, 25], ["2025-12-01", "Retail", 15],
+        ["2026-01-01", None, 20], ["2026-01-01", "Retail", 15],
+    ]
+    definition["bindings"][0]["lookup"]["table"] = "duplicated_branches"
+    definition["version"] = "invalid-lookup"
+    path.write_text(yaml.safe_dump(definition), encoding="utf-8")
+    rejected = client.post("/api/v1/query", json={
+        **request, "metric_catalog_version": "invalid-lookup",
+    }).json()
+    assert rejected["status"] == "failed" and rejected["execution"] is None
+    assert router.calls == []
+
+
 async def test_inactive_shared_runtime_rejects_metric_access_before_session(
     metric_env, monkeypatch,
 ):

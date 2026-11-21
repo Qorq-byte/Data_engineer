@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from fastapi import HTTPException
 
@@ -56,6 +56,7 @@ def register_metric_tools(mcp: FastMCP, *, trust_local: bool = False) -> None:
         metric_dimensions: list[str] | None = None,
         metric_filters: dict[str, str] | None = None,
         execute: bool = False,
+        metric_grain: Literal["", "day", "week", "month"] = "",
     ) -> dict[str, Any]:
         from app.api.query import QueryRequest, submit_query
         from app.mcp.query_projection import project_query, query_error
@@ -67,7 +68,7 @@ def register_metric_tools(mcp: FastMCP, *, trust_local: bool = False) -> None:
                 domain=domain, database=db_id, metrics=metrics,
                 metric_catalog_version=metric_catalog_version,
                 metric_dimensions=metric_dimensions or [], metric_filters=metric_filters or {},
-                execute=execute, num_candidates=1,
+                execute=execute, num_candidates=1, metric_grain=metric_grain,
             ))
             return project_query(response, require_execution=execute, include_plan_output=True)
         except Exception as exc:

@@ -8,7 +8,8 @@ import pytest
 import sqlglot
 import yaml
 
-from app.knowledge.metric_catalog import CatalogError, load_catalog
+from app.knowledge.metric_catalog import CatalogError, CatalogMetric, MetricSelection, load_catalog
+from app.models.schema import ColumnSchema, SchemaSnapshot, TableSchema
 
 FIXTURE = Path("tests/fixtures/metric_catalog.yml")
 
@@ -50,6 +51,17 @@ def test_filter_value_cannot_become_sql(sqlite_connection):
     assert len(sqlglot.parse(sql, read="sqlite")) == 1
     assert sqlite_connection.execute(sql).fetchone()[0] is None
     assert sqlite_connection.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 5
+
+
+@pytest.mark.parametrize("dialect", ["postgres", "mysql"])
+def test_v2_period_sql_preserves_case_sensitive_fact_identifier(dialect):
+    fact = TableSchema("Orders", columns=[ColumnSchema("Booked", "DATE")])
+    schema = SchemaSnapshot(dialect, "fixture", tables={fact.name: fact})
+    metric = CatalogMetric("counted", "Orders", "*", "count", (), "Booked")
+    selected = MetricSelection("v2", "h", "domain", "db", (metric,), (), (), "week")
+    statement = sqlglot.parse_one(selected.sql(dialect, schema=schema), read=dialect)
+    assert statement.args["from_"].this.this.args == {"this": "Orders", "quoted": True}
+    assert statement.named_selects == ["period_start", "counted"]
 
 
 @pytest.mark.parametrize("overrides", [

@@ -255,13 +255,13 @@ class MetricResolveNode(BaseNode):
             return NodeOutput(errors=["Metric catalog target does not match the captured database"])
         dialect = input.config.get("dialect", "ansi")
         try:
-            sql = selection.sql(dialect)
+            sql = selection.sql(dialect, schema=input.context.get("schema"))
         except ValueError:
             return NodeOutput(errors=["Metric SQL preparation failed the read-only policy"])
         names = [metric.name for metric in selection.metrics]
         result = MetricResolveOutput(
             metrics=names, sql=sql, dialect=dialect, table=selection.metrics[0].table,
-            columns=[*selection.dimensions, *names],
+            columns=list(selection.output_columns),
         )
         candidate = SQLCandidate(
             id="metric_1", sql_text=sql, generation_mode="metric_catalog",
@@ -276,10 +276,13 @@ class MetricResolveNode(BaseNode):
             context={
                 "metric_sql": sql, "metric_resolve_result": result,
                 "sql": sql, "primary_sql": sql, "candidates": [candidate],
-                "linked_tables": [selection.metrics[0].table],
+                "linked_tables": [selection.metrics[0].table] + (
+                    [selection.lookup.table] if selection.lookup is not None else []
+                ),
                 "metric_catalog": {
                     "version": selection.version, "sha256": selection.catalog_sha256,
                     "domain": selection.domain, "database": selection.database, "metrics": names,
+                    **({"grain": selection.grain} if selection.grain else {}),
                 },
             },
         )

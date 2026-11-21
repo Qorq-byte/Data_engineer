@@ -366,6 +366,7 @@ class QueryRequest(BaseModel):
     metric_catalog_version: str = Field(default="", max_length=128)
     metric_dimensions: list[str] = Field(default_factory=list, max_length=32)
     metric_filters: dict[str, str] = Field(default_factory=dict, max_length=32)
+    metric_grain: Literal["", "day", "week", "month"] = ""
 
 
 class CandidateResult(BaseModel):
