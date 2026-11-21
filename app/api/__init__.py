@@ -116,7 +116,7 @@ def create_app() -> FastAPI:
         raise ValueError("JWT_SECRET must be configured with at least 32 characters")
 
     app = FastAPI(
-        title="NL2SQL Data Engineering Agent",
+        title="QueryHarness",
         description="Natural Language to SQL — domain-aware, multi-LLM, multi-DB",
         version="0.1.0",
         docs_url="/docs",

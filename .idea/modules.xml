@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/data_engineer.iml" filepath="$PROJECT_DIR$/.idea/data_engineer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/QueryHarness.iml" filepath="$PROJECT_DIR$/.idea/QueryHarness.iml" />
     </modules>
   </component>
 </project>

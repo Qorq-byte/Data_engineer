@@ -8,9 +8,9 @@ from typing import Any
 
 def start_background(coroutine: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
     loop: Any = asyncio.get_running_loop()
-    if not hasattr(loop, "_data_engineer_background"):
-        loop._data_engineer_background = set()
-    tasks = loop._data_engineer_background
+    if not hasattr(loop, "_queryharness_background"):
+        loop._queryharness_background = set()
+    tasks = loop._queryharness_background
     task = asyncio.create_task(coroutine)
     tasks.add(task)
 
@@ -26,7 +26,7 @@ def start_background(coroutine: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
 
 
 async def stop_background() -> None:
-    tasks = list(getattr(asyncio.get_running_loop(), "_data_engineer_background", set()))
+    tasks = list(getattr(asyncio.get_running_loop(), "_queryharness_background", set()))
     for task in tasks:
         task.cancel()
     if tasks:

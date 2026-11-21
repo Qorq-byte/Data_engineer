@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -50,10 +51,21 @@ class TestLanceDBStore:
 
     # ── Construction ───────────────────────────────────────────────────
 
-    def test_default_uri(self):
+    def test_default_uri(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
         store = LanceDBStore(dimension=256)
-        assert ".data_engineer" in store.uri
+        assert Path(store.uri) == tmp_path / ".queryharness" / "lancedb"
         assert store.dimension == 256
+
+    def test_existing_legacy_uri(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(Path, "home", lambda: tmp_path)
+        legacy_path = tmp_path / ".data_engineer" / "lancedb"
+        legacy_path.mkdir(parents=True)
+        assert Path(LanceDBStore(dimension=128).uri) == legacy_path
+
+        new_path = tmp_path / ".queryharness" / "lancedb"
+        new_path.mkdir(parents=True)
+        assert Path(LanceDBStore(dimension=128).uri) == new_path
 
     def test_custom_uri(self, tmp_path):
         uri = str(tmp_path / "custom_lancedb")

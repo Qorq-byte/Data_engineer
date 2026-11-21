@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>NL2SQL — 智能数据工程工作台</title>
+<title>QueryHarness — 智能数据工程工作台</title>
 
 <!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -650,7 +650,7 @@ const MobileSidebar = ({ className, children, ...props }) => {
       <div className={cn("h-10 flex-shrink-0 px-4 py-4 flex flex-row md:hidden items-center justify-between bg-neutral-100 dark:bg-neutral-800 w-full")} {...props}>
         <a href="/" className="flex items-center gap-2 no-underline">
           <div className="h-4 w-5 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
-          <span className="text-sm font-medium text-black dark:text-white">NL2SQL</span>
+          <span className="text-sm font-medium text-black dark:text-white">QueryHarness</span>
         </a>
         <div className="flex justify-end z-20">
           <button type="button" aria-label="打开菜单" className="bg-transparent border-none p-1 cursor-pointer" onClick={() => setOpen(!open)}>
@@ -696,7 +696,7 @@ const SidebarLink = ({ link, className, onClick, active, ...props }) => {
 const Logo = () => (
   <a href="/" className="font-normal flex space-x-2 items-center text-sm text-black dark:text-white py-1 relative z-20 no-underline">
     <div className="h-5 w-6 bg-black dark:bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm flex-shrink-0" />
-    <MSpan initial={motion ? { opacity: 0 } : {}} animate={motion ? { opacity: 1 } : {}} className="font-medium text-black dark:text-white whitespace-pre">NL2SQL</MSpan>
+    <MSpan initial={motion ? { opacity: 0 } : {}} animate={motion ? { opacity: 1 } : {}} className="font-medium text-black dark:text-white whitespace-pre">QueryHarness</MSpan>
   </a>
 );
 

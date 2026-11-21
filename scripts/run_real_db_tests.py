@@ -18,7 +18,7 @@ from typing import Any
 from app.evaluation.artifacts import write_atomic
 
 ROOT = Path(__file__).resolve().parents[1]
-LABEL = "data-engineer.stage40.run"
+LABEL = "queryharness.real-db.run"
 IMAGES = {"postgresql": "postgres:16", "mysql": "mysql:8.4"}
 PASSWORD = "stage40-disposable-admin"  # Public disposable fixture account, never a host credential.
 

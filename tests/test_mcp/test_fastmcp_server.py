@@ -35,7 +35,7 @@ class TestCreateNL2SQLServer:
 
         server = create_nl2sql_server()
         assert server.name is not None
-        assert "NL2SQL" in (server.name or "")
+        assert server.name == "QueryHarness"
 
     def test_custom_name(self):
         from app.mcp.fastmcp_server import create_nl2sql_server

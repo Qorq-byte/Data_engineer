@@ -1,4 +1,4 @@
-"""NL2SQL Data Engineering Agent — application entry point.
+"""QueryHarness — application entry point.
 
 Starts the FastAPI server and optionally the MCP server.
 
@@ -16,7 +16,7 @@ import uvicorn
 async def initialize():
     """Initialize all system components before starting the server."""
     print("=" * 60)
-    print("  NL2SQL Data Engineering Agent v0.1.0")
+    print("  QueryHarness v0.1.0")
     print("=" * 60)
 
     # 1. Register built-in nodes

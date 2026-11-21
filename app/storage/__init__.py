@@ -1,4 +1,4 @@
-"""Storage backend — persistent data layer for the NL2SQL Data Engineer.
+"""Storage backend — persistent data layer for QueryHarness.
 
 Provides MySQL-backed storage for user settings, domain knowledge, query history,
 feedback, learning data, and connection configurations.

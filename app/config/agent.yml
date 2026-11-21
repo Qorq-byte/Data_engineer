@@ -2,7 +2,7 @@
 # See SPEC §3.4.5
 
 agent:
-  name: "NL2SQL Agent"
+  name: "QueryHarness"
   version: "0.1.0"
 
   # LLM provider (via LiteLLM)
@@ -167,7 +167,7 @@ agent:
 
     storage:
       subagent: ":memory:"
-      top_level: "~/.data_engineer/sessions/"
+      top_level: "~/.queryharness/sessions/"
 
     isolation: node_name
 

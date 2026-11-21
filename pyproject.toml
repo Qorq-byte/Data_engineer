@@ -6,9 +6,9 @@ build-backend = "hatchling.build"
 packages = ["app"]
 
 [project]
-name = "data-engineer"
+name = "queryharness"
 version = "0.1.0"
-description = "NL2SQL Data Engineering Agent - natural language to SQL with RAG, multi-LLM, and multi-DB support"
+description = "Domain-aware NL2SQL agent with fixed workflows, read-only SQL enforcement, and tenant-scoped access"
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12"

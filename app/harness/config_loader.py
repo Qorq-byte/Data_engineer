@@ -55,7 +55,7 @@ class UserSubagentsMemory:
 @dataclass
 class StorageMemory:
     subagent: str = ":memory:"
-    top_level: str = "~/.data_engineer/sessions/"
+    top_level: str = "~/.queryharness/sessions/"
 
 
 @dataclass
@@ -224,7 +224,7 @@ class ConfigLoader:
             ),
             storage=StorageMemory(
                 subagent=storage.get("subagent", ":memory:"),
-                top_level=storage.get("top_level", "~/.data_engineer/sessions/"),
+                top_level=storage.get("top_level", "~/.queryharness/sessions/"),
             ),
             isolation=raw.get("isolation", "node_name"),
         )

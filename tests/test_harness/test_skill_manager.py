@@ -231,7 +231,7 @@ def test_load_from_config_full_agent_yml_shape(skills_dir):
     """Accepts the full agent.yml mapping (agent.skills nesting)."""
     config = {
         "agent": {
-            "name": "NL2SQL Agent",
+            "name": "QueryHarness",
             "skills": {"mode": "auto", "directory": str(skills_dir), "preload": []},
         }
     }

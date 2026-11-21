@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Callable, Hashable
 from typing import Any
 
 type GateTable = dict[tuple[Hashable, int], asyncio.Semaphore]
-_GATES_ATTRIBUTE = "_data_engineer_gates"
+_GATES_ATTRIBUTE = "_queryharness_gates"
 
 
 def gate(key: Hashable, capacity: int = 1) -> asyncio.Semaphore:

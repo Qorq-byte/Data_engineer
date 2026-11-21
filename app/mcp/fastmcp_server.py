@@ -48,7 +48,7 @@ _APP_ROOT = Path(__file__).resolve().parents[1]
 
 
 def create_nl2sql_server(
-    name: str = "NL2SQL Agent",
+    name: str = "QueryHarness",
     host: str = "127.0.0.1",
     port: int = 8090,
     *,
@@ -114,7 +114,7 @@ def create_nl2sql_server(
     mcp = ConfiguredFastMCP(
         name=name,
         instructions=(
-            "NL2SQL Data Engineering Agent — converts natural language to SQL "
+            "QueryHarness — converts natural language to SQL "
             "with domain-aware schema linking, validation, and execution. "
             "Supports 11 database dialects."
         ),

@@ -25,7 +25,6 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
-import os
 import re
 from pathlib import Path
 from typing import Any, cast
@@ -47,8 +46,6 @@ except ImportError:
     _LANCEDB_AVAILABLE = False
 
 # ── Constants ──────────────────────────────────────────────────────────
-
-DEFAULT_LANCEDB_DIR = os.path.join(os.path.expanduser("~"), ".data_engineer", "lancedb")
 
 NAMESPACE_SCHEMA_METADATA = "schema_metadata"
 NAMESPACE_METRICS = "metrics"
@@ -177,7 +174,8 @@ class LanceDBStore:
     Args:
         dimension: Embedding vector dimension (e.g. 1536 for OpenAI, 1024 for BGE).
         uri: Path to the LanceDB data directory. Defaults to
-            ``~/.data_engineer/lancedb``.
+            ``~/.queryharness/lancedb``. An existing legacy index is reused
+            when the new directory does not exist.
     """
 
     def __init__(
@@ -195,7 +193,13 @@ class LanceDBStore:
         self._embedding_id = embedding_id
         self._read_only = read_only
         self._dimension = dimension
-        self._uri = uri or DEFAULT_LANCEDB_DIR
+        if not uri:
+            home = Path.home()
+            default_dir = home / ".queryharness" / "lancedb"
+            legacy_dir = home / ".data_engineer" / "lancedb"
+            use_legacy = not default_dir.exists() and legacy_dir.is_dir()
+            uri = str(legacy_dir if use_legacy else default_dir)
+        self._uri = uri
         self._db: Any = None
 
     # ── Connection management ──────────────────────────────────────────

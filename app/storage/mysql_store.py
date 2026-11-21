@@ -1,7 +1,7 @@
 """MySQL storage backend — persistent data layer.
 
 Provides a singleton MySQLStore that handles all CRUD operations for the
-NL2SQL Data Engineer application. Uses aiomysql for async MySQL access.
+QueryHarness application. Uses aiomysql for async MySQL access.
 
 Table mapping:
   - user_settings         → settings (LLM, harness, database, rag, mcp)
@@ -338,7 +338,7 @@ _DEFAULT_SETTINGS = {
 
 
 class MySQLStore:
-    """Singleton MySQL storage backend for the NL2SQL Data Engineer.
+    """Singleton MySQL storage backend for QueryHarness.
 
     Provides async CRUD operations for all application entities. Uses
     aiomysql connection pool for efficient connection management.
