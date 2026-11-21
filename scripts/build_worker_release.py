@@ -12,6 +12,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--profiles", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--subagent-catalog", type=Path)
     args = parser.parse_args()
     if len(settings.jwt_secret.strip()) < 32:
         raise ValueError("JWT_SECRET must have at least 32 characters to seal credentials")
@@ -46,6 +47,7 @@ def main() -> None:
         args.output,
         index_roots=[dense],
         metric_catalog=catalog,
+        subagent_catalog=args.subagent_catalog,
     )
     print("Immutable worker release created; credentials sealed, no external calls")
 
