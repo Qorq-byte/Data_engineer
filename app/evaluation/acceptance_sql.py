@@ -5,11 +5,12 @@ from __future__ import annotations
 import sqlite3
 from collections import Counter
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from typing import Any
 
 import sqlglot
 
+from app.db.sqlite_source import read_scope
 from app.evaluation import acceptance_data as data
 from app.evaluation.artifacts import read_json
 from app.evaluation.inputs import text
@@ -23,16 +24,21 @@ def load_sql() -> dict[str, Any]:
 
 
 @contextmanager
-def scenario_database(scenario: str) -> Iterator[sqlite3.Connection]:
+def scenario_database(scenario: str, snapshot: bytes | None = None) -> Iterator[sqlite3.Connection]:
     if scenario not in data.SCENARIOS:
         raise ValueError("Unknown acceptance scenario")
     conn = sqlite3.connect(":memory:")
     try:
-        conn.execute("PRAGMA foreign_keys=ON")
-        for name in ("schema.sql", f"{scenario}.sql"):
-            conn.executescript((data.DIRECTORY / name).read_text(encoding="utf-8"))
+        if snapshot is None:
+            conn.execute("PRAGMA foreign_keys=ON")
+            for name in ("schema.sql", f"{scenario}.sql"):
+                conn.executescript((data.DIRECTORY / name).read_text(encoding="utf-8"))
+        else:
+            conn.deserialize(snapshot)
+            conn.execute("PRAGMA trusted_schema=OFF")
         conn.execute("PRAGMA query_only=ON")
-        yield conn
+        with read_scope(conn) if snapshot is not None else nullcontext():
+            yield conn
     finally:
         conn.close()
 
@@ -48,12 +54,12 @@ def matches(case: dict[str, Any], scenario: str, result: QueryResult, sql: str) 
             Counter(result.rows) == Counter(expected))
 
 
-def sql_self_check(suite: object) -> dict[str, Any]:
-    suite = data.validate_sql(suite)
+def sql_self_check(suite: object, *, snapshot: bytes | None = None) -> dict[str, Any]:
+    suite = data.validate_sql(suite, business=snapshot is not None)
     checks = 0
     killed: dict[str, list[str]] = {}
-    for scenario in data.SCENARIOS:
-        with scenario_database(scenario) as conn:
+    for scenario in suite["fixtures"]:
+        with scenario_database(scenario, snapshot) as conn:
             for case in suite["sql_cases"]:
                 sql = case["gold_sql"]
                 if not matches(case, scenario, execute_query(conn, sql), sql):
@@ -68,9 +74,10 @@ def sql_self_check(suite: object) -> dict[str, Any]:
                         killed[identity].append(scenario)
     if any(not scenarios for scenarios in killed.values()):
         raise ValueError("Wrong SQL counterexample survived every scenario")
+    source = "manual fixture facts" if snapshot is None else "manual business facts"
     return {"gold_check_count": checks, "counterexample_count": len(killed),
             "counterexamples_killed": len(killed), "counterexample_witnesses": killed,
-            "label_source": "manual fixture facts; SQL execution only checks labels"}
+            "label_source": f"{source}; SQL execution only checks labels"}
 
 
 def selected(rows: list[dict[str, Any]], split: str) -> list[dict[str, Any]]:
@@ -80,7 +87,7 @@ def selected(rows: list[dict[str, Any]], split: str) -> list[dict[str, Any]]:
 
 
 def predictions_by_id(value: object, cases: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    predictions = data.objects(value, 30)
+    predictions = data.objects(value, len(cases))
     identities = data.labels([row.get("id") for row in predictions])
     if not set(identities) <= {case["id"] for case in cases}:
         raise ValueError("Unknown acceptance prediction id")
@@ -88,8 +95,10 @@ def predictions_by_id(value: object, cases: list[dict[str, Any]]) -> dict[str, d
     return dict(zip(identities, predictions, strict=True))
 
 
-def evaluate_sql(suite: object, predictions: object, split: str = "all") -> dict[str, Any]:
-    suite = data.validate_sql(suite)
+def evaluate_sql(
+    suite: object, predictions: object, split: str = "all", *, snapshot: bytes | None = None,
+) -> dict[str, Any]:
+    suite = data.validate_sql(suite, business=snapshot is not None)
     all_cases = suite["sql_cases"]
     by_id = predictions_by_id(predictions, all_cases)
     validate_exported_predictions(all_cases, list(by_id.values()), dataset=suite)
@@ -100,8 +109,8 @@ def evaluate_sql(suite: object, predictions: object, split: str = "all") -> dict
             text(row["sql"], empty=True, allow_nul=True)
     cases = selected(all_cases, split)
     details = []
-    for scenario in data.SCENARIOS:
-        with scenario_database(scenario) as conn:
+    for scenario in suite["fixtures"]:
+        with scenario_database(scenario, snapshot) as conn:
             for case in cases:
                 prediction = by_id.get(case["id"])
                 code = None
@@ -136,6 +145,7 @@ def evaluate_sql(suite: object, predictions: object, split: str = "all") -> dict
                                 "error_code": code})
     robust = sum(all(r["contract_match"] for r in details if r["id"] == case["id"])
                  for case in cases)
+    scope = "synthetic contracts" if snapshot is None else "frozen business SQLite snapshot"
     return {"split": split, "case_count": len(cases), "check_count": len(details),
             "prediction_count": sum(case["id"] in by_id for case in cases),
             "provided_prediction_count": len(by_id), "robust_match_count": robust,
@@ -144,5 +154,5 @@ def evaluate_sql(suite: object, predictions: object, split: str = "all") -> dict
             "contract_match_count": sum(r["contract_match"] for r in details),
             "error_counts": dict(Counter(r["error_code"] for r in details if r["error_code"])),
             "predictions_sha256": fingerprint(predictions), "actual_cost_usd": None,
-            "measurement_scope": "Saved predictions on synthetic contracts; not model calls",
+            "measurement_scope": f"Saved predictions on {scope}; not model calls",
             "details": details}
