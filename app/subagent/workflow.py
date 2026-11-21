@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from app.models.subagent import SubagentConfig
 
@@ -19,6 +19,11 @@ def scoped_query(
     execute: bool,
     num_candidates: int,
     context: dict[str, Any] | None,
+    metrics: list[str] | None = None,
+    metric_catalog_version: str = "",
+    metric_dimensions: list[str] | None = None,
+    metric_filters: dict[str, str] | None = None,
+    metric_grain: Literal["", "day", "week", "month"] = "",
 ) -> QueryRequest:
     """Translate only supported fields, rejecting overrides before any model/DB call.
 
@@ -28,7 +33,12 @@ def scoped_query(
     from app.api.query import QueryRequest
     from app.db.connections import ConnectionFactory
 
-    if "nl_query" not in config.capabilities:
+    use_metrics = any((
+        metrics, metric_catalog_version, metric_dimensions, metric_filters, metric_grain,
+    ))
+    if use_metrics and "metric_query" not in config.capabilities:
+        raise PermissionError("Subagent metric queries require the metric_query capability")
+    if not use_metrics and "nl_query" not in config.capabilities:
         raise NotImplementedError("Subagent REST queries require the nl_query capability")
     if context:
         raise ValueError("Subagent REST context overrides are unsupported; use explicit fields")
@@ -62,6 +72,9 @@ def scoped_query(
         database=database,
         execute=execute,
         num_candidates=num_candidates,
-        plan_id="request_query",
+        plan_id="metric_query" if use_metrics else "request_query",
         auto_plan=False,
+        metrics=metrics or [], metric_catalog_version=metric_catalog_version,
+        metric_dimensions=metric_dimensions or [], metric_filters=metric_filters or {},
+        metric_grain=metric_grain,
     )

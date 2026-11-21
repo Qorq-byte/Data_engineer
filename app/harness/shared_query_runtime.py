@@ -3,7 +3,7 @@
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from app.auth.tenant import get_current_tenant_id
@@ -16,6 +16,9 @@ from app.harness.mysql_rate_limit import MySQLProviderRateLimit
 from app.harness.worker_release import WorkerRelease
 from app.storage.shared_sessions import MySQLSessionStore
 from app.workflow.contracts import QueryCapacityError
+
+if TYPE_CHECKING:
+    from app.subagent.manager import SubagentManager
 
 
 @dataclass(frozen=True)
@@ -35,6 +38,7 @@ class SharedQueryRuntime:
         self.verify_configuration: Callable[[], Awaitable[None]] | None = None
         self.model_coordinator: MySQLCoordinator | None = None
         self.worker_release: WorkerRelease | None = None
+        self.subagents: SubagentManager | None = None
         self.tenant_snapshots: dict[int, TenantReleaseSnapshot] = {}
 
     async def initialize(self) -> None:
