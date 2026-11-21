@@ -13,8 +13,18 @@ from app.evaluation.predictions import fingerprint
 _IDENTITY = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}")
 _QUERY_ID = re.compile(r"q_[0-9a-f]{12}")
 _RATE = re.compile(r"(?:0|[1-9][0-9]{0,8})(?:\.[0-9]{1,12})?")
+_SIGNED_USD = re.compile(r"-?(?:0|[1-9][0-9]{0,8})(?:\.[0-9]{1,12})?")
 _UNCERTAIN = {"unknown", "redacted", "adapter", "mock"}
 _MAX_COUNT = 2**63 - 1
+
+
+def parse_usd(value: object, *, signed: bool = False) -> Decimal:
+    if not isinstance(value, str) or not _SIGNED_USD.fullmatch(value):
+        raise ValueError("USD amounts require bounded decimal strings")
+    number = Decimal(value)
+    if not signed and number < 0:
+        raise ValueError("Charges must be nonnegative")
+    return number
 
 
 @dataclass(frozen=True)
