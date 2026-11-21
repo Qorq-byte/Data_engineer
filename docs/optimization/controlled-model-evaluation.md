@@ -13,7 +13,7 @@ python -m scripts.run_model_evaluation --prepare --manifest data/stage38-manifes
 检查清单后，用输出的完整SHA显式执行：
 
 ```powershell
-python -m scripts.run_model_evaluation --execute --manifest data/stage38-manifest.json --confirm-manifest-sha256 <SHA256> --env-file D:/python/data_engineer/.env
+python -m scripts.run_model_evaluation --execute --manifest data/stage38-manifest.json --confirm-manifest-sha256 <SHA256> --env-file .env
 ```
 
 仅读取 `DEEPSEEK_API_KEY`，支持进程环境或指定env文件；不自动寻找env文件。显式mock开关会拒绝执行，不因失败降级Mock。默认 `deepseek-v4-flash` 是仓库配置中的模型名称，可在准备时用 `--model` 改名；该供应商别名不保证版本冻结。只允许公开 `https://api.deepseek.com/v1`，不接受代理或其他账号路由。`--execute`须在专用新CLI进程运行，不能在已启动应用的进程内调用main。

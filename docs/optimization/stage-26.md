@@ -29,4 +29,4 @@ Windows Python3.13.9/Node24/Ruff0.17.1/mypy2.4.0；沿用原site-packages/type-d
 
 ## Git与下一步
 
-代码[1ac0660](https://github.com/Qorq-byte/Data_engineer/commit/1ac0660a658266aab475ad6aec0011da76f0075c)已普通推送codex/llm-token-policy，远程SHA一致；[Actions39950303020](https://github.com/Qorq-byte/Data_engineer/actions/runs/39950303020)成功且headSha精确匹配。Linux干净安装、182前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3457 passed、1 warning，57.41秒**，uvloop实际执行；[结构化证据](results/stage-26-ci.json)。阶段26代码验收完成，远程补记文档另行提交推送并核对其CI；不合并main。下一候选核对模型响应截断/finish_reason是否在SQL生成与错误反馈中可见，先规划最小范围再实施。
+代码[1ac0660](https://github.com/Qorq-byte/QueryHarness/commit/1ac0660a658266aab475ad6aec0011da76f0075c)已普通推送codex/llm-token-policy，远程SHA一致；[Actions39950303020](https://github.com/Qorq-byte/QueryHarness/actions/runs/39950303020)成功且headSha精确匹配。Linux干净安装、182前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3457 passed、1 warning，57.41秒**，uvloop实际执行；[结构化证据](results/stage-26-ci.json)。阶段26代码验收完成，远程补记文档另行提交推送并核对其CI；不合并main。下一候选核对模型响应截断/finish_reason是否在SQL生成与错误反馈中可见，先规划最小范围再实施。

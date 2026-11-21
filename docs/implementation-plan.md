@@ -1,4 +1,4 @@
-# NL2SQL Data Engineering Agent — 技术实现方案
+# QueryHarness — 技术实现方案
 
 > 2026-10-20 状态说明：下文是历史设计/任务登记，勾选完成不代表所有路径已经联调。当前代码能力、验证证据和未完成项以 [MVP优化阶段报告](optimization/stage-5.md) 和接口契约为准；真实业务质量与生产容量尚无基线。
 
@@ -314,7 +314,7 @@ class Settings(BaseSettings):
 
 ```yaml
 agent:
-  name: "NL2SQL Agent"
+  name: "QueryHarness"
   version: "1.0.0"
 
   # LLM 提供商配置
@@ -363,7 +363,7 @@ agent:
     chat: true
     storage:
       subagent: ":memory:"
-      top_level: "~/.data_engineer/sessions/"
+      top_level: "~/.queryharness/sessions/"
     isolation: node_name
 
   # 全局上下文 — AGENTS.md 前 200 行注入所有 Node Prompt
@@ -2180,7 +2180,7 @@ event: done           → 完成
 ```python
 # app/api/__init__.py → create_app()
 def create_app() -> FastAPI:
-    app = FastAPI(title="NL2SQL Agent", version="0.1.0")
+    app = FastAPI(title="QueryHarness", version="0.1.0")
     
     # 中间件顺序 (后添加的先执行):
     app.add_middleware(RequestIDMiddleware)        # 1. 注入 X-Request-ID
@@ -2638,7 +2638,7 @@ CREATE TABLE rule_candidates (
 ### 7.3 存储路径布局
 
 ```
-~/.data_engineer/
+~/.queryharness/
 ├── sessions/                     # 持久化 Session
 │   ├── chat/{session_id}.db
 │   └── {subagent}/{session_id}.db
@@ -3025,7 +3025,7 @@ class AuditLogger:
 ## 13. 项目结构总览
 
 ```
-data_engineer/
+QueryHarness/
 ├── main.py                            # 入口: 初始化和启动
 ├── pyproject.toml                     # 项目配置 + 依赖
 ├── .env.example                       # 环境变量模板
@@ -3382,7 +3382,7 @@ services:
     volumes:
       - ./app:/app/app                    # 热加载
       - ./app/config/domains:/app/app/config/domains
-      - sessions_data:/home/appuser/.data_engineer
+      - sessions_data:/home/appuser/.queryharness
     environment:
       - APP_ENV=development
       - DATABASE_URL=postgresql+asyncpg://nl2sql:nl2sql@db:5432/nl2sql
@@ -3469,7 +3469,7 @@ spec:
           periodSeconds: 10
         volumeMounts:
         - name: sessions
-          mountPath: /home/appuser/.data_engineer
+          mountPath: /home/appuser/.queryharness
       volumes:
       - name: sessions
         persistentVolumeClaim: {claimName: nl2sql-sessions-pvc}
@@ -3838,7 +3838,7 @@ from starlette.middleware.cors import CORSMiddleware
 from app.middleware import TraceIDMiddleware, AuthMiddleware, RateLimitMiddleware
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="NL2SQL Agent", version="0.1.0")
+    app = FastAPI(title="QueryHarness", version="0.1.0")
     
     # 中间件顺序: 外 → 内 (后添加先执行)
     app.add_middleware(TraceIDMiddleware)        # 1. 关联 ID

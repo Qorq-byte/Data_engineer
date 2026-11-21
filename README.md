@@ -1,11 +1,11 @@
-# NL2SQL Data Engineering Agent
+# QueryHarness
 
 **Ask a relational database a question in plain language. Get SQL you can inspect, validate and defend — or an explicit reason why you cannot.**
 
 **English** · [简体中文](README.zh-CN.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-[![MVP checks](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml)
-[![Real database acceptance](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml)
+[![MVP checks](https://github.com/Qorq-byte/QueryHarness/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/QueryHarness/actions/workflows/checks.yml)
+[![Real database acceptance](https://github.com/Qorq-byte/QueryHarness/actions/workflows/real-databases.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/QueryHarness/actions/workflows/real-databases.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-3DA639.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](app/api/)
@@ -94,8 +94,8 @@ Status reflects running code, not design documents. The per-feature matrix is in
 The server still starts without MySQL, but login and registration are then disabled.
 
 ```bash
-git clone https://github.com/Qorq-byte/Data_engineer.git
-cd Data_engineer
+git clone https://github.com/Qorq-byte/QueryHarness.git
+cd QueryHarness
 
 python -m venv .venv
 source .venv/bin/activate                 # Windows: .venv\Scripts\activate

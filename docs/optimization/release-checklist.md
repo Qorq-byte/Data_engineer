@@ -152,4 +152,4 @@
 - 59（`55a373b`）：非空密文解密失败不得静默采用环境密钥。
 - 60（`0fb0bca`）：汇总设置只读组装，失败不污染内存，成功GET不发布运行时。
 
-最终阶段60的[常规CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/41961890262)和[真实双库CI](https://github.com/Qorq-byte/Data_engineer/actions/runs/41961890297)均通过，包含上述累计变更。阶段55–60尚未合并main；阶段44的真实模型分数没有在新运行时重跑。后续依赖与验收条件见[剩余执行计划](remaining-execution-plan.md)。
+最终阶段60的[常规CI](https://github.com/Qorq-byte/QueryHarness/actions/runs/41961890262)和[真实双库CI](https://github.com/Qorq-byte/QueryHarness/actions/runs/41961890297)均通过，包含上述累计变更。阶段55–60尚未合并main；阶段44的真实模型分数没有在新运行时重跑。后续依赖与验收条件见[剩余执行计划](remaining-execution-plan.md)。

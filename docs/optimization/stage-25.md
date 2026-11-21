@@ -31,4 +31,4 @@ Windows Python3.13.9/Node24/Ruff0.17.1/mypy2.4.0，沿用原site-packages与type
 
 ## Git与下一步
 
-代码[5e1bd01](https://github.com/Qorq-byte/Data_engineer/commit/5e1bd01ac4028c14fa90920fac57b4387c02b28e)已普通推送codex/llm-settings-persistence，远程SHA一致；[Actions39947535210](https://github.com/Qorq-byte/Data_engineer/actions/runs/39947535210)成功且headSha精确匹配。Linux干净安装、174前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3417 passed、1 warning，59.23秒**，uvloop实际执行；[结构化证据](results/stage-25-ci.json)。阶段25代码验收完成，远程补记文档另行提交推送并核对其CI；不合并main。下一候选核对已保存的路由/生成参数实际消费者，先规划最小范围再实施。
+代码[5e1bd01](https://github.com/Qorq-byte/QueryHarness/commit/5e1bd01ac4028c14fa90920fac57b4387c02b28e)已普通推送codex/llm-settings-persistence，远程SHA一致；[Actions39947535210](https://github.com/Qorq-byte/QueryHarness/actions/runs/39947535210)成功且headSha精确匹配。Linux干净安装、174前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3417 passed、1 warning，59.23秒**，uvloop实际执行；[结构化证据](results/stage-25-ci.json)。阶段25代码验收完成，远程补记文档另行提交推送并核对其CI；不合并main。下一候选核对已保存的路由/生成参数实际消费者，先规划最小范围再实施。

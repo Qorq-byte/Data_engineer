@@ -1,11 +1,11 @@
-# NL2SQL 数据工程 Agent
+# QueryHarness
 
 **用自然语言向关系型数据库提问，拿到可审查、可校验、可解释的 SQL —— 或者一句明确的「做不到」。**
 
 [English](README.md) · **简体中文** · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
 
-[![MVP checks](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/checks.yml)
-[![Real database acceptance](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/Data_engineer/actions/workflows/real-databases.yml)
+[![MVP checks](https://github.com/Qorq-byte/QueryHarness/actions/workflows/checks.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/QueryHarness/actions/workflows/checks.yml)
+[![Real database acceptance](https://github.com/Qorq-byte/QueryHarness/actions/workflows/real-databases.yml/badge.svg?branch=main)](https://github.com/Qorq-byte/QueryHarness/actions/workflows/real-databases.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-3DA639.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-3776AB.svg?logo=python&logoColor=white)](pyproject.toml)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](app/api/)
@@ -85,8 +85,8 @@
 服务仍能启动，但登录与注册会被禁用。
 
 ```bash
-git clone https://github.com/Qorq-byte/Data_engineer.git
-cd Data_engineer
+git clone https://github.com/Qorq-byte/QueryHarness.git
+cd QueryHarness
 
 python -m venv .venv
 source .venv/bin/activate                 # Windows: .venv\Scripts\activate

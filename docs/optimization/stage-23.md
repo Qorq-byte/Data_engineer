@@ -29,4 +29,4 @@ Windows Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0；沿用原site-packages�
 
 ## Git与下一步
 
-代码[6e40463](https://github.com/Qorq-byte/Data_engineer/commit/6e40463747a2b8498735f9057be8f10a13a68235)已普通推送codex/harness-policy-status，远程SHA一致；[Actions39921014380](https://github.com/Qorq-byte/Data_engineer/actions/runs/39921014380)成功，headSha精确匹配。Linux干净安装、112前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3367 passed、1 warning，36.82秒**，uvloop实际执行；[结构化证据](results/stage-23-ci.json)。阶段23代码验收完成，远程证据文档另行提交推送并核对其CI；不合并main。下一候选先核对数据库连接设置与实际连接池/方言能力，独立规划最小范围，避免无效保存。
+代码[6e40463](https://github.com/Qorq-byte/QueryHarness/commit/6e40463747a2b8498735f9057be8f10a13a68235)已普通推送codex/harness-policy-status，远程SHA一致；[Actions39921014380](https://github.com/Qorq-byte/QueryHarness/actions/runs/39921014380)成功，headSha精确匹配。Linux干净安装、112前端契约/构建完整性与重复性/失败保留/Ruff/strict35均通过，全量**3367 passed、1 warning，36.82秒**，uvloop实际执行；[结构化证据](results/stage-23-ci.json)。阶段23代码验收完成，远程证据文档另行提交推送并核对其CI；不合并main。下一候选先核对数据库连接设置与实际连接池/方言能力，独立规划最小范围，避免无效保存。

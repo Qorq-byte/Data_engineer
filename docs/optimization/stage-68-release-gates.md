@@ -5,7 +5,7 @@
 ## 已取得的证据
 
 - **浏览器链路。** 基线 `edcc099` 与修复前端 `58c684d` 在一次性 MySQL 上用本地 Ollama 生成 SQL。登录、选库、真实 SQL 五行结果和 390×844 历史重开均通过，浏览器候选来源与三次模型调用的持久化审计一致。检索使用测试嵌入。修复后嵌入告警仍可见，只有模拟生成显示 MOCK 标签。
-- **模型容量。** [Ollama 嵌入容量首轮](ollama-capacity-probe.md)已实测，结果对应固定输入、模型和本机环境。DeepSeek 容量工具提交 `edcc099` 的 [MVP checks](https://github.com/Qorq-byte/Data_engineer/actions/runs/42168250569) 与 [Real database acceptance](https://github.com/Qorq-byte/Data_engineer/actions/runs/42168250564) 通过。2026-11-12 执行的 DeepSeek 固定批次见[实测报告](deepseek-capacity-run-2026-11-12.md)；单批结果不构成容量 SLO，实际账单金额未知。
+- **模型容量。** [Ollama 嵌入容量首轮](ollama-capacity-probe.md)已实测，结果对应固定输入、模型和本机环境。DeepSeek 容量工具提交 `edcc099` 的 [MVP checks](https://github.com/Qorq-byte/QueryHarness/actions/runs/42168250569) 与 [Real database acceptance](https://github.com/Qorq-byte/QueryHarness/actions/runs/42168250564) 通过。2026-11-12 执行的 DeepSeek 固定批次见[实测报告](deepseek-capacity-run-2026-11-12.md)；单批结果不构成容量 SLO，实际账单金额未知。
 - **固定配置多 worker。** [同版本代际回退、独立 MySQL 恢复、跨代码版本回退](immutable-workers.md)均有一次性 MySQL 演练。前提是停服维护、独立发布清单和索引、单机同配置的 worker 以及共享 MySQL 控制面。
 - **新增本地方言。** [ClickHouse](clickhouse-acceptance.md)、[Trino](trino-acceptance.md) 和 [StarRocks](starrocks-acceptance.md) 已通过一次性独立实例的只读验收。各自的连接边界、引擎版本和复验方式见对应记录。
 - **Snowflake。** [连接器代码](stage-67-snowflake.md)已接入，但没有独立 Snowflake 实例验收；当前候选支持范围仍不包含 Snowflake。

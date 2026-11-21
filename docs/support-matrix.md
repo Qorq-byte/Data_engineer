@@ -25,7 +25,7 @@ a documented part of the surface does not work or is not reachable from the supp
 | Request-scoped usage record plus optional SQL-free audit | Implemented | `app/llm/usage.py`, `app/audit/store.py` |
 | Offline evaluation CLIs (SQL contracts, retrieval, NL2SQL batches) | Implemented | `app/evaluation/`, `scripts/` |
 | Scoped metric discovery and MCP metric tools | Wired and tested — REST operator gate, independent stdio client with explicit host trust, loopback HTTP MCP operator JWT, shared-worker drift fences | `app/api/metrics.py`, `app/mcp/metric_tools.py`, `app/mcp/query_projection.py`, `app/workflow/metric_runtime.py`. [REST and Streamable HTTP release acceptance](optimization/remaining-implementation-roadmap-2026-11-20.md#m1-指标结果验收命令) |
-| NL2SQL FastMCP HTTP authentication | Operator JWT required for Streamable HTTP and SSE sessions, tools and resources | [HTTP authentication](usage.md#nl2sql-mcp-over-http) |
+| QueryHarness FastMCP HTTP authentication | Operator JWT required for Streamable HTTP and SSE sessions, tools and resources | [HTTP authentication](usage.md#queryharness-mcp-over-http) |
 | Seven read-only database connectors | Implemented and tested | `app/db/connections.py` |
 | Automatic plan selection at runtime | Implemented — `auto_plan=true` routes through L1 rules, L2 history and a filtered default; off by default | `app/workflow/plan_selection.py` |
 | Template plans besides `request_query` | Five available by default. `metric_query` uses a valid server catalog. `candidate_review` is an explicit preview with fixed validation and execution | `app/workflow/plan_runtime.py`, `app/workflow/metric_runtime.py` |

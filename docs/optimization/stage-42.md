@@ -45,7 +45,7 @@ CLI保护全部冻结输入/预测路径及其硬链接，不覆盖输入；JSON
 
 ## 远程代码验收
 
-普通提交 [b043af1a79cd7919226705f52cca1553b0c498b9](https://github.com/Qorq-byte/Data_engineer/commit/b043af1a79cd7919226705f52cca1553b0c498b9) 已推送。[MVP40317311087](https://github.com/Qorq-byte/Data_engineer/actions/runs/40317311087) 与 [真实数据库40317311181](https://github.com/Qorq-byte/Data_engineer/actions/runs/40317311181) 的headSha均为该完整SHA且success；[MVP证据](results/stage-42-ci-code-mvp.json)、[双库证据](results/stage-42-ci-code-databases.json)。
+普通提交 [b043af1a79cd7919226705f52cca1553b0c498b9](https://github.com/Qorq-byte/QueryHarness/commit/b043af1a79cd7919226705f52cca1553b0c498b9) 已推送。[MVP40317311087](https://github.com/Qorq-byte/QueryHarness/actions/runs/40317311087) 与 [真实数据库40317311181](https://github.com/Qorq-byte/QueryHarness/actions/runs/40317311181) 的headSha均为该完整SHA且success；[MVP证据](results/stage-42-ci-code-mvp.json)、[双库证据](results/stage-42-ci-code-databases.json)。
 
 Linux离线 **4148通过、82明确排除、2既有SDK警告，88.79秒**；[摘要](results/stage-42-ci-code-checks.txt)包含新增strict与原完整门禁。真实 **82通过、0跳过、0失败**，PG19/MySQL63；[JUnit投影](results/stage-42-ci-code-services.json)核对PostgreSQL16.15/MySQL8.4.13，[真实摘要](results/stage-42-ci-code-real-tests.txt)。Stop containers成功；没有以本地结果或单项CI绿色代替双CI。
 

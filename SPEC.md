@@ -1,8 +1,8 @@
-# SPEC.md — NL2SQL 数据工程智能体
+# SPEC.md — QueryHarness
 
 > 2026-10-20 状态说明：下文是历史设计/任务登记，勾选完成不代表所有路径已经联调。当前代码能力、验证证据和未完成项以 [MVP优化阶段报告](docs/optimization/stage-5.md) 和接口契约为准；真实业务质量与生产容量尚无基线。
 
-> **项目名称:** NL2SQL Data Engineering Agent  
+> **项目名称:** QueryHarness<br>
 > **版本:** v0.1 (MVP)  
 > **许可证:** MIT  
 > **最后更新:** 2026-07-14
@@ -433,7 +433,7 @@ MCP (Model Context Protocol) 是 Anthropic 推出的开放协议，标准化了 
 ```python
 from fastmcp import FastMCP
 
-mcp = FastMCP("NL2SQL Agent")
+mcp = FastMCP("QueryHarness")
 
 @mcp.tool()
 def nl_query(nl_text: str, domain: str = None, db_id: str = None) -> dict:
@@ -467,7 +467,7 @@ mcp.run()  # 启动 MCP Server (stdio 或 SSE)
                    │      │  对外暴露 NL2SQL 工具  │     │
                    │      └──────────────────────┘     │
                    │                                   │
-                   │        本系统 (NL2SQL Agent)      │
+                   │        本系统 (QueryHarness)      │
                    │                                   │
                    │      ┌──── MCP Client ──────┐     │
                    │      │  消费数据库/知识服务    │     │
@@ -724,7 +724,7 @@ AgenticNode extends BaseNode
 ```yaml
 # agent.yml —— 声明式配置，LLM 无法突破 harness 约束
 agent:
-  name: "NL2SQL Agent"
+  name: "QueryHarness"
   version: "1.0.0"
 
   # LLM 提供商
@@ -794,7 +794,7 @@ agent:
     # 存储模式：:memory: (ephemeral) 或路径 (持久化)
     storage:
       subagent: ":memory:"                    # Sub-agent 使用 ephemeral，零持久化开销
-      top_level: "~/.data_engineer/sessions/" # 顶层交互持久化
+      top_level: "~/.queryharness/sessions/" # 顶层交互持久化
 
     # Memory 按 node_name 隔离——不同节点类型的 memory 目录独立
     isolation: node_name                      # gen_sql 和 chat 的 memory 互不干扰
@@ -895,14 +895,14 @@ Workflow A (gensql_agentic):                 Workflow B (chat_agentic):
 | **内置 subagent 默认不启用** | `gen_sql`、`schema_linking`、`validate_sql`、`execute_sql`、`reflection` 的 `memory: false`——聚焦单次任务，不受历史干扰 |
 | **chat 节点默认启用** | 多轮对话需要上下文连续 |
 | **用户自定义 subagent 默认启用** | `memory: true`，用户可按需关闭 |
-| **ephemeral vs 持久化** | Sub-agent 使用 `:memory:` 模式（零持久化开销）；顶层交互持久化到 `~/.data_engineer/sessions/` |
+| **ephemeral vs 持久化** | Sub-agent 使用 `:memory:` 模式（零持久化开销）；顶层交互持久化到 `~/.queryharness/sessions/` |
 | **按 node_name 隔离** | `chat` 和 `gen_sql` 的 memory 存储在不同目录，互不干扰 |
 | **AGENTS.md 全局共享** | 所有 Node 共享 AGENTS.md 前 200 行作为全局项目上下文，注入 Prompt 系统段 |
 
 ##### c) 存储路径
 
 ```
-~/.data_engineer/
+~/.queryharness/
 ├── sessions/                     # 持久化 Session（顶层交互）
 │   ├── chat/
 │   │   └── {session_id}.db
@@ -2724,7 +2724,7 @@ class AgenticNode(BaseNode):
 
 | # | 能力 | 职责 | 节点实现者感知 |
 |---|------|------|-------------|
-| ① | **AdvancedSQLiteSession** | Memory 按节点类型控制：内置 subagent（gen_sql 等）默认 `memory: false`；chat 节点和用户自定义 subagent 默认 `memory: true`。支持 `:memory:` ephemeral 模式和 `~/.data_engineer/sessions/` 持久化模式，按 `node_name` 隔离存储 | 在 `agent.yml` 声明 `memory: true/false` 或 `memory: ":memory:"` 即可 |
+| ① | **AdvancedSQLiteSession** | Memory 按节点类型控制：内置 subagent（gen_sql 等）默认 `memory: false`；chat 节点和用户自定义 subagent 默认 `memory: true`。支持 `:memory:` ephemeral 模式和 `~/.queryharness/sessions/` 持久化模式，按 `node_name` 隔离存储 | 在 `agent.yml` 声明 `memory: true/false` 或 `memory: ":memory:"` 即可 |
 | ② | **Tool 集成** | 统一管理 func tools + MCP servers，按名称路由 | 声明工具名即可，注册/调用由 Harness 处理 |
 | ③ | **PermissionManager** | 三级权限：`allow`（静默通过）/ `deny`（拒绝+日志）/ `ask`（弹窗确认） | 工具调用前 Harness 自动检查 |
 | ④ | **SkillManager + SkillFuncTool** | 加载 Skill 定义，将 Skill 函数注册为可调用工具 | 声明 `skills: ["my_skill"]` 即可 |
@@ -3078,9 +3078,9 @@ data: {"query_id": "...", "workflow": "standard", "total_time_ms": 3200, "cost_e
 | 用途 | 技术选型 | 说明 |
 |------|---------|------|
 | 主应用数据 | SQLite (本地) / PostgreSQL (生产) | 会话、反馈、配置 |
-| Session 存储 | SQLite（持久化） / :memory:（ephemeral） | `~/.data_engineer/sessions/`；Sub-agent 默认 :memory:，顶层 chat 持久化 |
-| Memory 隔离 | 按 node_name 分目录的 SQLite | `~/.data_engineer/memory/{node_name}/`，不同节点类型互不干扰 |
-| Workflow Trace | JSONL 文件 | `~/.data_engineer/traces/{date}/{workflow_id}.jsonl` |
+| Session 存储 | SQLite（持久化） / :memory:（ephemeral） | `~/.queryharness/sessions/`；Sub-agent 默认 :memory:，顶层 chat 持久化 |
+| Memory 隔离 | 按 node_name 分目录的 SQLite | `~/.queryharness/memory/{node_name}/`，不同节点类型互不干扰 |
+| Workflow Trace | JSONL 文件 | `~/.queryharness/traces/{date}/{workflow_id}.jsonl` |
 | Schema 缓存 | SQLite + 内存缓存 | 快速访问 Schema |
 | 向量存储 | **LanceDB** (主选) / pgvector (备选) | 语义搜索 Embedding，RAG 密集检索；列式存储，支持多模态和快速过滤 |
 | BM25 全文索引 | SQLite FTS5 / Tantivy (生产) | RAG 稀疏检索（关键词精确匹配） |
@@ -3489,7 +3489,7 @@ M5 (Week 14) — Evolvable Context 演化循环闭环 + 多数据库适配完成
 ### B. 目录结构建议
 
 ```
-data_engineer/
+QueryHarness/
 ├── main.py                     # 入口
 ├── pyproject.toml              # 项目配置
 ├── SPEC.md                     # 本文档

@@ -34,4 +34,4 @@ Harness固定YAML/节点生命周期、模型选择、预算、重试、SQL只�
 
 ## Git与远程验收
 
-代码1b4566d与测试跨平台修正 [2cc417c](https://github.com/Qorq-byte/Data_engineer/commit/2cc417c708fc1e886550f3c1dac93b48fec50e81) 均普通推送codex/llm-usage-audit；[Actions40073192813](https://github.com/Qorq-byte/Data_engineer/actions/runs/40073192813) 成功，headSha精确匹配，[结构化证据](results/stage-31-ci.json)。Linux干净安装 **3681通过、2警告，46.23秒**，平台项实际执行；前端182契约/完整构建、Ruff、原strict36、LLM边界strict2、审计strict2和评测strict1均通过。修正目录后的本地40项审计回归也通过（10.45秒），见stage-31-audit-final.txt。本次补记文档独立提交推送并核验最终CI；不强推、不自动合并main。
+代码1b4566d与测试跨平台修正 [2cc417c](https://github.com/Qorq-byte/QueryHarness/commit/2cc417c708fc1e886550f3c1dac93b48fec50e81) 均普通推送codex/llm-usage-audit；[Actions40073192813](https://github.com/Qorq-byte/QueryHarness/actions/runs/40073192813) 成功，headSha精确匹配，[结构化证据](results/stage-31-ci.json)。Linux干净安装 **3681通过、2警告，46.23秒**，平台项实际执行；前端182契约/完整构建、Ruff、原strict36、LLM边界strict2、审计strict2和评测strict1均通过。修正目录后的本地40项审计回归也通过（10.45秒），见stage-31-audit-final.txt。本次补记文档独立提交推送并核验最终CI；不强推、不自动合并main。

@@ -41,6 +41,6 @@
 
 ## 远程交付验收
 
-代码提交 [ac87480ec97defebf545cc88097bcfec0ddc26cc](https://github.com/Qorq-byte/Data_engineer/commit/ac87480ec97defebf545cc88097bcfec0ddc26cc) 已推送，ls-remote核对一致。[Actions39531961041](https://github.com/Qorq-byte/Data_engineer/actions/runs/39531961041) **success**：干净安装、前端编译、全仓Ruff、标准核心mypy均通过；核心检查24源文件无问题，Linux全量 **2965 passed，1 warning，31.35秒**，uvloop用例实际执行通过。Windows本地1项平台跳过没有被当成远程已验证；现已由Linux补足。
+代码提交 [ac87480ec97defebf545cc88097bcfec0ddc26cc](https://github.com/Qorq-byte/QueryHarness/commit/ac87480ec97defebf545cc88097bcfec0ddc26cc) 已推送，ls-remote核对一致。[Actions39531961041](https://github.com/Qorq-byte/QueryHarness/actions/runs/39531961041) **success**：干净安装、前端编译、全仓Ruff、标准核心mypy均通过；核心检查24源文件无问题，Linux全量 **2965 passed，1 warning，31.35秒**，uvloop用例实际执行通过。Windows本地1项平台跳过没有被当成远程已验证；现已由Linux补足。
 
 [远程状态证据](results/stage-7-ci.json)记录对应headSha与各步骤。全仓mypy230项是前述本机测量，远程此次执行的是核心门禁，不能将此Actions成功解释为全仓类型通过。后续本次文档补记不改变已验证代码。

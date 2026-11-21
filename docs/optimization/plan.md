@@ -1,6 +1,6 @@
 # MVP优化实施计划
 
-基准：118f9d6；分支codex/mvp-hardening；远程Qorq-byte/Data_engineer。原工作区pyproject.toml和评估文档保持原样；本分支工作树独立开发。
+基准：118f9d6；分支codex/mvp-hardening；远程Qorq-byte/QueryHarness。原工作区pyproject.toml和评估文档保持原样；本分支工作树独立开发。
 
 ## 决策与范围
 

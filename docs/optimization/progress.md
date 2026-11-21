@@ -1,6 +1,6 @@
 # 实施进度
 
-- **2026-10-26 当前权威状态：已完成并合并至阶段 40。** [PR #3](https://github.com/Qorq-byte/Data_engineer/pull/3) 将阶段 29–40 合入 main，合并提交 fecb7b9；更早阶段 1–28 已在 main。合并提交的 [MVP CI 40278433599](https://github.com/Qorq-byte/Data_engineer/actions/runs/40278433599) 与[真实双库 CI 40278433571](https://github.com/Qorq-byte/Data_engineer/actions/runs/40278433571) 均成功：离线 4037 通过，真实双库 38 通过。下文“不合并 main”等为历史执行记录，不能当作当前分支状态。后续见[剩余路线](post-stage-40-roadmap.md)；[阶段 41 计划](stage-41-plan.md)已写，实施未开始，阶段 42–48 为拟议计划。
+- **2026-10-26 当前权威状态：已完成并合并至阶段 40。** [PR #3](https://github.com/Qorq-byte/QueryHarness/pull/3) 将阶段 29–40 合入 main，合并提交 fecb7b9；更早阶段 1–28 已在 main。合并提交的 [MVP CI 40278433599](https://github.com/Qorq-byte/QueryHarness/actions/runs/40278433599) 与[真实双库 CI 40278433571](https://github.com/Qorq-byte/QueryHarness/actions/runs/40278433571) 均成功：离线 4037 通过，真实双库 38 通过。下文“不合并 main”等为历史执行记录，不能当作当前分支状态。后续见[剩余路线](post-stage-40-roadmap.md)；[阶段 41 计划](stage-41-plan.md)已写，实施未开始，阶段 42–48 为拟议计划。
 
 - 阶段40新增真实PG/MySQL服务验收及54项：本地双库各19/共38通过，离线4036通过/1平台跳过。修复SELECT角色PK/FK、PG空列、真实异步EXPLAIN、MySQL优化器SQL备注/会话恢复、取消重连候选连接/池泄漏；锁等待/并发/关闭在途/Harness真实驱动验证。真实子进程隔离工作目录与业务环境，记录PG16.15/MySQL8.4.13及两个临时容器核验移除。Ruff/strict/182前端/完整构建通过，178债务无新增，旧估算/预测/契约兼容；未新增LLM请求。主实现0aee8c1及工作流上下文修复776ba85已推送，精确修复SHA的MVP40257733859/真实40257733777均成功：Linux离线4037通过，真实38通过/零跳过/每库19，容器停止成功。见[阶段40](stage-40.md)，文档提交再核验两工作流，不合并main。
 

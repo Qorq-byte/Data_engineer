@@ -43,7 +43,7 @@ EXPLAIN 使用独立路径，不把结果 LIMIT 套在计划语句上；其计�
 
 ## 远程代码验收与交付
 
-主实现 [dbde250361feb4f45e34115f2de7026d7d60bbf8](https://github.com/Qorq-byte/Data_engineer/commit/dbde250361feb4f45e34115f2de7026d7d60bbf8) 已普通推送。[MVP 40284654003](https://github.com/Qorq-byte/Data_engineer/actions/runs/40284654003) 和 [真实服务 40284653154](https://github.com/Qorq-byte/Data_engineer/actions/runs/40284653154) 同一精确SHA均success；[MVP证据](results/stage-41-ci-code-mvp.json)、[双库证据](results/stage-41-ci-code-databases.json)。
+主实现 [dbde250361feb4f45e34115f2de7026d7d60bbf8](https://github.com/Qorq-byte/QueryHarness/commit/dbde250361feb4f45e34115f2de7026d7d60bbf8) 已普通推送。[MVP 40284654003](https://github.com/Qorq-byte/QueryHarness/actions/runs/40284654003) 和 [真实服务 40284653154](https://github.com/Qorq-byte/QueryHarness/actions/runs/40284653154) 同一精确SHA均success；[MVP证据](results/stage-41-ci-code-mvp.json)、[双库证据](results/stage-41-ci-code-databases.json)。
 
 Linux离线 **4052通过、82明确排除、2既有SDK警告，82.48秒**；真实 **82通过、0跳过**，PG19/MySQL63，[JUnit投影](results/stage-41-ci-code-services.json)核对服务器版本、四组缓冲2/2/101/101及SSCursor关闭排空999包。[真实摘要](results/stage-41-ci-code-real-tests.txt)、[完整门禁摘要](results/stage-41-ci-code-checks.txt)。真实作业Stop containers成功；没有把本地通过或仅一个CI绿色当双CI验收。
 

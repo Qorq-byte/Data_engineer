@@ -2,7 +2,7 @@
 
 ---
 
-## NL2SQL 数据工程智能体（个人项目）
+## QueryHarness（个人项目）
 
 **技术栈：** Python / FastAPI / LiteLLM / LanceDB / SQLGlot / FastMCP / Streamlit / DuckDB / PostgreSQL / MySQL
 

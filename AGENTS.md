@@ -27,7 +27,7 @@ npm run check:frontend:build           # 本地资源/可重复构建/编译失�
 
 ## 架构
 
-**NL2SQL 数据工程 Agent**——自然语言 → 领域感知的 SQL 生成。当前为 MVP（v0.1），主查询由固定 request_query 计划驱动 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql。生成和校验已有实现；RAG 接线和其他模板的生产可用性以优化阶段报告为准。
+**QueryHarness**——自然语言 → 领域感知的 SQL 生成。当前为 MVP（v0.1），主查询由固定 request_query 计划驱动 parse_nl → schema_linking → generate_sql → validate_sql → execute_sql。生成和校验已有实现；RAG 接线和其他模板的生产可用性以优化阶段报告为准。
 
 ### 核心约束：Harness 不变量（最重要的规则）
 

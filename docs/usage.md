@@ -143,7 +143,7 @@ payload = response.json()
 print(payload["primary_sql"], payload["validation"]["passed"])
 ```
 
-## NL2SQL MCP over HTTP
+## QueryHarness MCP over HTTP
 
 Configure the MCP client to send `Authorization: Bearer <access_token>` with every request.
 Use a token from `POST /api/v1/auth/login` for an allow-listed administrator.

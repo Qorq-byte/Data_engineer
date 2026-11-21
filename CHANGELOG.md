@@ -52,6 +52,7 @@ so `0.1.0` below denotes the current `main`, not a release artefact.
 
 ### Changed
 
+- Use QueryHarness as the project, frontend, API and MCP display name, and update repository links.
 - `reflection.yml` marks its first `execute_sql` as `on_failure: skip`: an execution error is the
   reflection input, and the revise step now receives the previous SQL plus the error analysis.
 - `agent.yml` allows the reflection node's declared `compare_results` tool; denying a declared tool
@@ -186,4 +187,4 @@ Initial MVP state of `main`.
 - No accuracy, recall or capacity baseline has been established on real data.
 - Single-tenant by design: one administrator group shares one data set.
 
-[Unreleased]: https://github.com/Qorq-byte/Data_engineer/compare/main...HEAD
+[Unreleased]: https://github.com/Qorq-byte/QueryHarness/compare/main...HEAD

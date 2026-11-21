@@ -27,7 +27,7 @@ python -m scripts.evaluate_sql_contracts --predictions data/saved-v2-predictions
 
 ```powershell
 python -m scripts.run_model_evaluation --prepare --profile synthetic-sqlite-model-v2 --manifest data/v2-manifest.json --run-name v2-first
-python -m scripts.run_model_evaluation --execute --manifest data/v2-manifest.json --confirm-manifest-sha256 <SHA256> --env-file D:/python/data_engineer/.env
+python -m scripts.run_model_evaluation --execute --manifest data/v2-manifest.json --confirm-manifest-sha256 <SHA256> --env-file .env
 ```
 
 默认profile仍为v1，v2必须显式选择。execute只接受清单绑定的profile；源文件/fixture/软件版本变化需重新prepare，目录须全新。清单包含4个明确问题、三个本地评测场景及来源哈希，不含gold/expected_rows或凭据。prepare和离线CLI不导入SDK；v2准备会做本地标签自检。

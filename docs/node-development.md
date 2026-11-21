@@ -1,6 +1,6 @@
 # Node 开发指南
 
-如何为 NL2SQL 数据工程 Agent 创建自定义节点。
+如何为 QueryHarness 创建自定义节点。
 
 ## 概述
 

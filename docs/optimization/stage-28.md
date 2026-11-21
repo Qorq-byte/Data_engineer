@@ -36,4 +36,4 @@ Windows Python3.13.9/Node24，Ruff0.17.1/mypy2.4.0；沿用原.venv site-package
 
 ## Git与远程验收
 
-代码[e0cf146](https://github.com/Qorq-byte/Data_engineer/commit/e0cf1464e2fce695f0af73e18542814bbb209e20)已普通推送codex/sql-evaluation-accounting，远程SHA一致；[Actions39990182348](https://github.com/Qorq-byte/Data_engineer/actions/runs/39990182348)成功，headSha精确匹配。Linux干净安装、182前端契约/完整构建及重复性/故意坏JS保留/Ruff/strict36与评测脚本strict1均通过，全量**3579 passed、1 warning，58.13秒**，uvloop实际执行；[结构化证据](results/stage-28-ci.json)。阶段28代码验收完成，补记文档另行提交推送并核验最终CI；不强推、不合并main，原工作区改动保留。
+代码[e0cf146](https://github.com/Qorq-byte/QueryHarness/commit/e0cf1464e2fce695f0af73e18542814bbb209e20)已普通推送codex/sql-evaluation-accounting，远程SHA一致；[Actions39990182348](https://github.com/Qorq-byte/QueryHarness/actions/runs/39990182348)成功，headSha精确匹配。Linux干净安装、182前端契约/完整构建及重复性/故意坏JS保留/Ruff/strict36与评测脚本strict1均通过，全量**3579 passed、1 warning，58.13秒**，uvloop实际执行；[结构化证据](results/stage-28-ci.json)。阶段28代码验收完成，补记文档另行提交推送并核验最终CI；不强推、不合并main，原工作区改动保留。

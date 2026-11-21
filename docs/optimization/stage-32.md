@@ -38,4 +38,4 @@ Ruff、核心strict36、LLM边界strict2、审计strict2、评测strict1和新�
 
 ## Git与远程验收
 
-代码 [06b3d2c](https://github.com/Qorq-byte/Data_engineer/commit/06b3d2cf5d573f3e911c8a5ccbf95f4c82ba6395) 已普通推送codex/sql-prediction-export；[Actions40087973387](https://github.com/Qorq-byte/Data_engineer/actions/runs/40087973387) 成功，headSha精确匹配，[结构化证据](results/stage-32-ci.json)。Linux干净安装 **3735通过、2警告，61.50秒**，平台项实际执行；182前端契约/完整构建、Ruff、strict36/LLM2/审计2/评测1/新增导出2均通过。本次补记文档另行提交推送并核验最终CI，不强推、不合并main。
+代码 [06b3d2c](https://github.com/Qorq-byte/QueryHarness/commit/06b3d2cf5d573f3e911c8a5ccbf95f4c82ba6395) 已普通推送codex/sql-prediction-export；[Actions40087973387](https://github.com/Qorq-byte/QueryHarness/actions/runs/40087973387) 成功，headSha精确匹配，[结构化证据](results/stage-32-ci.json)。Linux干净安装 **3735通过、2警告，61.50秒**，平台项实际执行；182前端契约/完整构建、Ruff、strict36/LLM2/审计2/评测1/新增导出2均通过。本次补记文档另行提交推送并核验最终CI，不强推、不合并main。

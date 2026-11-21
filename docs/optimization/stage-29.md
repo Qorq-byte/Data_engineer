@@ -28,4 +28,4 @@ JSON QueryResponse、SSE done 和 MCP nl_query 共用 llm_usage 投影。详细�
 
 ## Git与远程验收
 
-代码提交 [63e2f00](https://github.com/Qorq-byte/Data_engineer/commit/63e2f006f1efc027318a584e9b04052906d5bba6) 已普通推送 codex/request-llm-usage；[Actions40050574778](https://github.com/Qorq-byte/Data_engineer/actions/runs/40050574778) 成功，headSha精确匹配，[结构化证据](results/stage-29-ci.json)。本次仅补记验收文档及运行说明，再提交推送并核验最终CI。不强推、不合并main。
+代码提交 [63e2f00](https://github.com/Qorq-byte/QueryHarness/commit/63e2f006f1efc027318a584e9b04052906d5bba6) 已普通推送 codex/request-llm-usage；[Actions40050574778](https://github.com/Qorq-byte/QueryHarness/actions/runs/40050574778) 成功，headSha精确匹配，[结构化证据](results/stage-29-ci.json)。本次仅补记验收文档及运行说明，再提交推送并核验最终CI。不强推、不合并main。

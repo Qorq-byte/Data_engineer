@@ -37,8 +37,8 @@ Windows/Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0、SQLite3.51.0、DuckDB1.
 
 代码已审查范围/凭据并普通推送`codex/rag-effective-settings`：
 
-- 主实现[3c2b679](https://github.com/Qorq-byte/Data_engineer/commit/3c2b679369599a0f95a3c5a09ff74e3394076a84)，初版[Actions39903002994](https://github.com/Qorq-byte/Data_engineer/actions/runs/39903002994)成功。
-- 最终交错修复[77b9705](https://github.com/Qorq-byte/Data_engineer/commit/77b9705556e0f15c4a3c45b7b12925673e1a5331)，最终[Actions39903315109](https://github.com/Qorq-byte/Data_engineer/actions/runs/39903315109)成功，headSha精确匹配`77b9705556e0f15c4a3c45b7b12925673e1a5331`；[结构化证据](results/stage-22-ci.json)。Ubuntu/Python3.12.15/Node22.23.3干净安装，83项前端契约、构建完整性/重复性/失败保留、Ruff及strict35源文件均通过，Linux全量**3343 passed、1 warning，52.26秒**，uvloop实际执行。此处测试耗时不是性能压测结论。
+- 主实现[3c2b679](https://github.com/Qorq-byte/QueryHarness/commit/3c2b679369599a0f95a3c5a09ff74e3394076a84)，初版[Actions39903002994](https://github.com/Qorq-byte/QueryHarness/actions/runs/39903002994)成功。
+- 最终交错修复[77b9705](https://github.com/Qorq-byte/QueryHarness/commit/77b9705556e0f15c4a3c45b7b12925673e1a5331)，最终[Actions39903315109](https://github.com/Qorq-byte/QueryHarness/actions/runs/39903315109)成功，headSha精确匹配`77b9705556e0f15c4a3c45b7b12925673e1a5331`；[结构化证据](results/stage-22-ci.json)。Ubuntu/Python3.12.15/Node22.23.3干净安装，83项前端契约、构建完整性/重复性/失败保留、Ruff及strict35源文件均通过，Linux全量**3343 passed、1 warning，52.26秒**，uvloop实际执行。此处测试耗时不是性能压测结论。
 
 原工作区`pyproject.toml` SHA256仍为`E9DEAEC2052B3410FC0A3C54374DA73D3F41173D4FDDFD8FF78833A87F1011F3`，未跟踪`docs/audits/`和隔离工作区旧计划文件保留；未上传临时服务、令牌、私有数据或构建产物。阶段22代码验收完成，远程验收文档另行提交推送并核对其CI；不合并main。
 

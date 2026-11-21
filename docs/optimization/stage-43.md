@@ -40,6 +40,6 @@
 
 ## 远端验收
 
-代码提交 `1082b7a54f468a1cb4ee88c59e1d0dd8872ce03d` 的[常规检查](https://github.com/Qorq-byte/Data_engineer/actions/runs/40651171503)与[真实数据库检查](https://github.com/Qorq-byte/Data_engineer/actions/runs/40651171510)均成功。Linux离线4205项、真实双库82项（JUnit失败0/错误0）；前端、Ruff与16项strict门禁通过。见[代码CI证据](results/stage-43-code-ci.json)。本次文档补记提交也继续核验自己的精确SHA双CI，不将代码提交的结论替代文档提交的状态。
+代码提交 `1082b7a54f468a1cb4ee88c59e1d0dd8872ce03d` 的[常规检查](https://github.com/Qorq-byte/QueryHarness/actions/runs/40651171503)与[真实数据库检查](https://github.com/Qorq-byte/QueryHarness/actions/runs/40651171510)均成功。Linux离线4205项、真实双库82项（JUnit失败0/错误0）；前端、Ruff与16项strict门禁通过。见[代码CI证据](results/stage-43-code-ci.json)。本次文档补记提交也继续核验自己的精确SHA双CI，不将代码提交的结论替代文档提交的状态。
 
 下一步建议阶段44：基于冻结30条SQL任务规划单独受限profile，保留现有4次小集上限；登记调用数、token/超时/失败分类及结果契约后再申请真实执行。阶段43本次没有证明混合检索收益，因此阶段44先固定可解释的词法基线，不增设重排器或语义缓存。

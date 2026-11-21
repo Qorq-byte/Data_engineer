@@ -4,9 +4,9 @@
 
 ## 阶段1–19合并
 
-origin优化分支比main多34个提交，main无额外提交，GitHub没有其他待合并PR。通过[PR#1](https://github.com/Qorq-byte/Data_engineer/pull/1)使用merge commit保留各阶段历史，合并提交[30bff50a6d876938bc184688a9fcdd92ccaf8fad](https://github.com/Qorq-byte/Data_engineer/commit/30bff50a6d876938bc184688a9fcdd92ccaf8fad)，2026-10-22T11:41:51Z已合并。880文件差异含此前移除误跟踪node_modules，未将其当新阶段重写。
+origin优化分支比main多34个提交，main无额外提交，GitHub没有其他待合并PR。通过[PR#1](https://github.com/Qorq-byte/QueryHarness/pull/1)使用merge commit保留各阶段历史，合并提交[30bff50a6d876938bc184688a9fcdd92ccaf8fad](https://github.com/Qorq-byte/QueryHarness/commit/30bff50a6d876938bc184688a9fcdd92ccaf8fad)，2026-10-22T11:41:51Z已合并。880文件差异含此前移除误跟踪node_modules，未将其当新阶段重写。
 
-合并前PR检查[39772123196](https://github.com/Qorq-byte/Data_engineer/actions/runs/39772123196)及源分支最新检查通过；合并后[main Actions39772535204](https://github.com/Qorq-byte/Data_engineer/actions/runs/39772535204) success，核对headSha=30bff50。合并树与阶段19末f7b6f32无内容差异；主分支CI通过后开始阶段20实现。[PR合并证据](results/stage-20-merge.json)/[main CI证据](results/stage-20-main-ci.json)。原主工作区仍保留既有main检出及未提交pyproject.toml/docs/audits，没有强行同步覆盖。
+合并前PR检查[39772123196](https://github.com/Qorq-byte/QueryHarness/actions/runs/39772123196)及源分支最新检查通过；合并后[main Actions39772535204](https://github.com/Qorq-byte/QueryHarness/actions/runs/39772535204) success，核对headSha=30bff50。合并树与阶段19末f7b6f32无内容差异；主分支CI通过后开始阶段20实现。[PR合并证据](results/stage-20-merge.json)/[main CI证据](results/stage-20-main-ci.json)。原主工作区仍保留既有main检出及未提交pyproject.toml/docs/audits，没有强行同步覆盖。
 
 ## 问题与实现
 
@@ -38,6 +38,6 @@ Windows/Python3.13.9、Node24、Ruff0.17.1、mypy2.4.0、SQLite3.51.0、DuckDB1.
 
 ## Git 与远程验收
 
-2026-10-23补齐远程验收：代码已普通推送至codex/rag-maintenance-ui，[提交77c6919d45d15c81601f5844ce99bc072e707028](https://github.com/Qorq-byte/Data_engineer/commit/77c6919d45d15c81601f5844ce99bc072e707028)，核对远程分支SHA一致。[Actions39776823412](https://github.com/Qorq-byte/Data_engineer/actions/runs/39776823412)在该精确SHA成功：Ubuntu/Python3.12/Node22干净安装、前端49项契约、Ruff、核心strict34源文件及Linux全量**3299 passed、1 warning，50.22秒**，包括Windows跳过的uvloop。[结构化CI证据](results/stage-20-ci.json)。全仓mypy存量197项并未因此消除。
+2026-10-23补齐远程验收：代码已普通推送至codex/rag-maintenance-ui，[提交77c6919d45d15c81601f5844ce99bc072e707028](https://github.com/Qorq-byte/QueryHarness/commit/77c6919d45d15c81601f5844ce99bc072e707028)，核对远程分支SHA一致。[Actions39776823412](https://github.com/Qorq-byte/QueryHarness/actions/runs/39776823412)在该精确SHA成功：Ubuntu/Python3.12/Node22干净安装、前端49项契约、Ruff、核心strict34源文件及Linux全量**3299 passed、1 warning，50.22秒**，包括Windows跳过的uvloop。[结构化CI证据](results/stage-20-ci.json)。全仓mypy存量197项并未因此消除。
 
 本次追加仅更新验收文档与证据，提交前继续检查暂存范围、凭据与空白；不重复运行未改动的源码测试。文档提交推送后另核对其SHA与CI。本阶段不自动合并main；原主工作区保护检查继续保留。

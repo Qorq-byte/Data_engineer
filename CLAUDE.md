@@ -23,7 +23,7 @@ mypy app/                             # 严格模式
 
 ## 架构
 
-**NL2SQL 数据工程 Agent**——自然语言 → 领域感知的 SQL 生成。当前为 MVP（v0.1），架构已完整设计，但除 `ExecuteSQLNode` 外大部分节点仍为桩代码。
+**QueryHarness**——自然语言 → 领域感知的 SQL 生成。当前为 MVP（v0.1），架构已完整设计，但除 `ExecuteSQLNode` 外大部分节点仍为桩代码。
 
 ### 核心约束：Harness 不变量（最重要的规则）
 

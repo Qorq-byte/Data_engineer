@@ -1,6 +1,6 @@
 # 阶段15计划：DuckDB解析环境与缓存来源
 
-2026-10-22；基准024dd6c及成功CI；独立工作树codex/mvp-hardening，origin为Qorq-byte/Data_engineer。原工作区及既有未跟踪文件不动，计划先于实现。
+2026-10-22；基准024dd6c及成功CI；独立工作树codex/mvp-hardening，origin为Qorq-byte/QueryHarness。原工作区及既有未跟踪文件不动，计划先于实现。
 
 ## 范围与步骤
 

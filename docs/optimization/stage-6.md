@@ -1,6 +1,6 @@
 # 阶段6：全仓 Ruff 清零与 CI 门禁
 
-日期：2026-10-21。先完成阶段5提交3d638d55dc7b6ebdd5e8dfbd67974c604c1aff79及其[Actions验收](https://github.com/Qorq-byte/Data_engineer/actions/runs/39525221687)（Python3.12，2943 passed，30.61秒），再依照[六步计划](stage-6-plan.md)开始本阶段代码修改。原主工作区未动。
+日期：2026-10-21。先完成阶段5提交3d638d55dc7b6ebdd5e8dfbd67974c604c1aff79及其[Actions验收](https://github.com/Qorq-byte/QueryHarness/actions/runs/39525221687)（Python3.12，2943 passed，30.61秒），再依照[六步计划](stage-6-plan.md)开始本阶段代码修改。原主工作区未动。
 
 ## 完成内容与边界
 
@@ -33,4 +33,4 @@ Windows/Python3.13.9；既有site-packages，mock LLM/embedding，真实本地SQ
 
 ## 远程交付验收
 
-代码提交 [ff038f4db75d9745263877eddef2d1e3c6b95a94](https://github.com/Qorq-byte/Data_engineer/commit/ff038f4db75d9745263877eddef2d1e3c6b95a94) 已普通推送至codex/mvp-hardening，ls-remote核对一致。[Actions39526535897](https://github.com/Qorq-byte/Data_engineer/actions/runs/39526535897) **success**，实际完成干净安装、前端编译、全仓ruff check .与全量pytest；[远程状态证据](results/stage-6-ci.json)记录对应headSha与各步骤。后续本次文档补记不改变已验证代码。
+代码提交 [ff038f4db75d9745263877eddef2d1e3c6b95a94](https://github.com/Qorq-byte/QueryHarness/commit/ff038f4db75d9745263877eddef2d1e3c6b95a94) 已普通推送至codex/mvp-hardening，ls-remote核对一致。[Actions39526535897](https://github.com/Qorq-byte/QueryHarness/actions/runs/39526535897) **success**，实际完成干净安装、前端编译、全仓ruff check .与全量pytest；[远程状态证据](results/stage-6-ci.json)记录对应headSha与各步骤。后续本次文档补记不改变已验证代码。
