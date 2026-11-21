@@ -76,13 +76,14 @@ SQL を書き、固定の YAML プランと宣言的な制限が、次にどの�
 | 固定された五ノードの `request_query` パイプライン | **実装済み** —— JSON、SSE、MCP に接続 |
 | 制約、権限、SQL ポリシーの適用 | **実装済み** |
 | スキーマリンク、多段階検証、ハイブリッド検索 | **実装済み** |
-| 七つの読み取り専用データベースコネクタ | **実装・テスト済み**。Snowflake は受け入れ待ち |
-| 残り六つのワークフロープラン | **既定で五つが実行可能** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`。決定的な `metric_query` v1 はカタログ設定と明示的な指標名が必要 |
+| 読み取り専用データベースコネクタ | **七つが実機検証済み**。Snowflake は実装とローカルのポリシーテストを完了し、専用クラウド環境での受け入れを待っています。[検証手順](docs/optimization/snowflake-acceptance.md) |
+| その他のワークフロープラン | **既定で五つが実行可能** —— `gensql_agentic`、`ez_query`、`reflection`、`chat_agentic`、`explore`。`metric_query` には指標カタログ、`candidate_review` には明示的なプレビュー設定が必要 |
 | 自動プラン選択 | **実装済み** —— `auto_plan=true` で L1 ルール、L2 履歴、能力フィルタ後の既定の順に選択。既定は `request_query` |
-| マルチエージェントオーケストレーターとサブエージェント | **一部実装** —— スコープ付き REST クエリはアクセス確認と固定ワークフローを使用。自律的な協調は実験段階 |
+| 指標ワークフロー | **実装済み**。カタログ v2 は日・週・月の集計と主キー参照ディメンションに対応し、SQLite、MySQL、PostgreSQL で実行を確認済み。[指標カタログ v2](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#m2-日历分组与查找表维度) |
+| 候補レビューとサブエージェント | 候補レビューはプレビューとして利用可能。テナント別サブエージェントは REST、認証済み MCP HTTP、ワークベンチに対応し、共有ワーカーでは封印済みカタログを使用。[サブエージェントの設定](docs/optimization/immutable-workers.md#封存共享-worker-的子-agent-目录) |
 | フィードバック駆動のルール学習 | **実装済み** —— 承認済みルールは生成プロンプトと検証に反映され、`applied_rules` で返却。ルールが SQL を書き換えることはない |
-| マルチテナント分離 | **一部実装** —— 単一ワーカーおよび単一ホストの固定構成で、テナント別のワークベンチ、REST、MCP HTTP をサポート。[設定手順](docs/usage.md#tenant-operator-setup) |
-| 合成・校正済みベースライン | **合成ベースラインを記録済み**。検索、SQL 契約、負荷を検証。実業務の精度、再現率、本番容量の校正は今後の検証項目。[検証結果](docs/optimization/synthetic-quality-baseline-2026-11-18.md) |
+| マルチテナント分離 | **一部実装** —— 単一ワーカーおよび単一ホストの固定構成で、テナント別のワークベンチ、REST、MCP HTTP をサポート。2 ワーカーで MySQL と PostgreSQL を対象に、接続先の分離、セッション復元、構成変更時の要求拒否を確認済み。[デプロイと検証](docs/optimization/immutable-workers.md#v2-租户发布包) |
+| 品質と容量の受け入れ | 凍結したホールドアウトの採点、プランのペア別収集、テナント別の容量判定、リソースと請求の照合を実装し、合成データで検証済み。正式な受け入れには対象データとデプロイ環境が必要。[受け入れ状況](docs/optimization/remaining-implementation-roadmap-2026-11-20.md#集中实施与正式验收状态) |
 
 ## クイックスタート
 
@@ -155,7 +156,7 @@ pip install -e ".[snowflake]"               # 任意の Snowflake ドライバ�
 |---|---|
 | `app/config/agent.yml` | プロバイダのデフォルト、ノード→ツール→権限の対応、厳格な制約 |
 | `app/workflow/plans/request_query.yml` | 実行可能なプラン：`node_order`、`failure_policy`、評価指標 |
-| `app/workflow/plans/*.yml` | 追加の六つのプラン。既定で五つが実行可能、サーバー指標カタログで `metric_query` v1 を有効化 |
+| `app/workflow/plans/*.yml` | 既定の追加五プラン、サーバー指標カタログの `metric_query`、明示的に有効化する `candidate_review` |
 | `app/config/domains/*.yml` | ドメインごとの用語集、ビジネスルール、用語対応 |
 | `app/config/subagents/*.yaml` | 範囲を限定したサブエージェント定義と配信先 |
 
