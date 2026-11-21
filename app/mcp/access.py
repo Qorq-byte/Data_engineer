@@ -41,6 +41,7 @@ async def mcp_tenant_lifespan() -> AsyncIterator[None]:
     """Provide model storage and targets when running a tenant MCP host by itself."""
     from app.db.tenant_profiles import close_tenant_query_profiles, load_tenant_query_profiles
     from app.storage.mysql_store import get_store, init_db
+    from app.subagent.manager import subagent_manager
 
     if settings.shared_worker_release:
         if current_shared_runtime() is not None:
@@ -52,6 +53,7 @@ async def mcp_tenant_lifespan() -> AsyncIterator[None]:
             async with host.router.lifespan_context(host):
                 yield
         return
+    subagent_manager.register_configured()
     if not settings.tenant_admin_user_ids or get_store():
         yield
         return

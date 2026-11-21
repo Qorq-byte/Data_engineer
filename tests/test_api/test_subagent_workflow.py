@@ -3,6 +3,7 @@
 import json
 import os
 import sqlite3
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
@@ -10,13 +11,16 @@ from fastapi.testclient import TestClient
 
 from app.api import create_app, query
 from app.auth.security import create_access_token
+from app.auth.tenant import get_current_tenant_id, tenant_scope
 from app.config.settings import settings
 from app.db.connections import ConnectionFactory, DatabaseType
+from app.mcp.fastmcp_server import create_nl2sql_server
 from app.models.subagent import AccessControl, SubagentConfig, SubagentContext
 from app.subagent.instance import SubagentStatus
 from app.subagent.manager import SubagentManager
 from tests.api_client import authenticated_client
 from tests.test_api.test_plan_execution import ScriptedRouter
+from tests.test_mcp.test_metric_tools import http_call
 
 PATH = "/api/v1/subagents/scoped/query"
 
@@ -161,3 +165,78 @@ async def test_main_llm_budget_applies_before_provider_call(scoped_env, monkeypa
     assert payload["status"] == "failed"
     assert payload["data"]["llm_calls"] == 0
     assert model.calls == []
+
+
+async def test_same_subagent_and_database_names_are_tenant_scoped_over_rest_and_mcp(
+    scoped_env, auth_token_states, tmp_path, monkeypatch,
+):
+    from app.mcp import access
+    from app.subagent.manager import subagent_manager
+    from app.workflow import query_domain
+
+    class TenantDomains:
+        async def get_domain_snapshot(self, name):
+            assert (get_current_tenant_id(), name) == (2, "billing")
+            return {"name": name, **dict.fromkeys((
+                "glossary", "rules", "label_zh", "label_en", "description_zh", "description_en",
+                "keywords", "db_configs", "timezone", "currency",
+            ))}
+
+    @asynccontextmanager
+    async def local_tenant_lifespan():
+        yield  # The test supplies the tenant's SQLite query target directly.
+
+    default_client, _, model, _, app, _ = scoped_env
+    auth_token_states.update({2: (2, 0), 3: (3, 0), 4: (2, 0)})
+    monkeypatch.setattr(settings, "tenant_admin_user_ids", {2: [2], 3: [3]})
+    monkeypatch.setattr(query_domain, "get_store", TenantDomains)
+    monkeypatch.setattr(access, "mcp_tenant_lifespan", local_tenant_lifespan)
+    catalog = tmp_path / "tenant-metrics.yml"
+    catalog.write_text("""version: tenant-two
+bindings:
+  - tenant_id: 2
+    domain: billing
+    database: scoped-db
+    metrics:
+      - {name: invoice_count, table: invoices, column: '*', aggregation: count, dimensions: []}
+""", encoding="utf-8")
+    monkeypatch.setattr(settings, "metric_catalog_path", str(catalog))
+    target = tmp_path / "tenant-two.sqlite3"
+    with sqlite3.connect(target) as conn:
+        conn.execute("CREATE TABLE invoices (id INTEGER)")
+        conn.execute("INSERT INTO invoices VALUES (1),(2)")
+    subagent_manager.register(SubagentConfig(
+        name="scoped", domain="billing", tenant_id=2, workflow_enabled=True,
+        capabilities=["metric_query"],
+        context=SubagentContext(domain="billing", databases=[{"db_id": "scoped-db"}]),
+        access_control=AccessControl(allowed_users=["2"]),
+    ))
+    with tenant_scope(2):
+        await ConnectionFactory.create(DatabaseType.SQLITE, {"path": str(target)}, "scoped-db")
+    token = create_access_token(2, "tenant-two", tenant_id=2)
+    member = TestClient(app, headers={"Authorization": f"Bearer {token}"})
+    try:
+        detail = "/api/v1/subagents/scoped"
+        assert default_client.get(detail).json()["subagent"]["domain"] == "ecommerce"
+        assert member.get(detail).json()["subagent"]["domain"] == "billing"
+        values = {"nl_text": "Count invoices", "execute": True,
+                  "metrics": ["invoice_count"], "metric_catalog_version": "tenant-two"}
+        response = member.post(PATH, json=values)
+        assert response.status_code == 200, response.text
+        result = response.json()
+        assert result["status"] == "completed", result
+        assert result["data"]["execution"]["rows"] == [[2]] and result["data"]["llm_calls"] == 0
+        wrong = create_access_token(3, "tenant-three", tenant_id=3)
+        outside = member.post(PATH, json=values, headers={"Authorization": f"Bearer {wrong}"})
+        assert outside.status_code == 404
+        denied = create_access_token(4, "account", tenant_id=2)
+        forbidden = member.post(PATH, json=values, headers={"Authorization": f"Bearer {denied}"})
+        assert forbidden.status_code == 403
+        mcp = create_nl2sql_server()
+        projected = await http_call(mcp, "subagent_query", {"name": "scoped", **values}, token)
+        assert projected["data"]["execution"]["rows"] == [[2]]
+        listed = await http_call(mcp, "list_subagents", {}, wrong)
+        assert listed["subagents"] == [] and model.calls == []
+    finally:
+        with tenant_scope(2):
+            await ConnectionFactory.aclose("scoped-db")
